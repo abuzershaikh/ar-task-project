@@ -36,6 +36,15 @@ export class EarningRepository {
         return parseFloat(result?.total || 0);
     }
 
+    async sumTotalEarnings(): Promise<number> {
+        const result = await this.repository
+            .createQueryBuilder('earning')
+            .select('SUM(earning.amount)', 'total')
+            .getRawOne();
+
+        return parseFloat(result?.total || 0);
+    }
+
     async create(data: Partial<Earning>): Promise<Earning> {
         const earning = this.repository.create(data);
         return this.repository.save(earning);

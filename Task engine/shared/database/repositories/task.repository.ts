@@ -28,6 +28,10 @@ export class TaskRepository {
         private readonly repository: Repository<Task>,
     ) { }
 
+    async count(options?: any): Promise<number> {
+        return this.repository.count(options);
+    }
+
     private resolveStatuses(status: string): TaskStatus[] {
         const normalizedStatus = status.trim().toLowerCase();
         return TaskRepository.statusAliases[normalizedStatus] || [normalizedStatus as TaskStatus];

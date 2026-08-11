@@ -1,185 +1,108 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'core/di/injection.dart';
+import 'core/theme/app_theme.dart';
+import 'core/utils/logger.dart';
+import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/auth/presentation/pages/login_screen.dart';
+import 'features/dashboard/presentation/pages/dashboard_screen.dart';
 
-void main() {
+void main() async {
+  // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const TaskAdminApp());
+
+  // Set system UI overlay style
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  try {
+    // Initialize dependencies
+    await initializeDependencies();
+    AppLogger.info('Dependencies initialized successfully');
+
+    runApp(const AdminApp());
+  } catch (e, stackTrace) {
+    AppLogger.error('Failed to initialize app', e, stackTrace);
+    runApp(ErrorApp(error: e.toString()));
+  }
 }
 
-class TaskAdminApp extends StatelessWidget {
-  const TaskAdminApp({super.key});
+class AdminApp extends StatelessWidget {
+  const AdminApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Task Admin',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF4F46E5),
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF9FAFB),
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-          backgroundColor: Color(0xFF4F46E5),
-          foregroundColor: Colors.white,
+    return BlocProvider(
+      create: (context) => getIt<AuthBloc>()..add(const AuthCheckStatusRequested()),
+      child: MaterialApp(
+        title: 'EarnPost Admin',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        home: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is AuthLoading || state is AuthInitial) {
+              return const SplashScreen();
+            } else if (state is AuthAuthenticated) {
+              return const DashboardScreen();
+            } else {
+              return const LoginScreen();
+            }
+          },
         ),
       ),
-      home: const AdminDashboardScreen(),
     );
   }
 }
 
-class AdminDashboardScreen extends StatelessWidget {
-  const AdminDashboardScreen({super.key});
+class SplashScreen extends StatelessWidget {
+  const SplashScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Task Admin',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+      body: Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Welcome Header
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF4F46E5).withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome, Admin 👋',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'EarnPost Task Platform Control Center',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+              child: const Icon(
+                Icons.admin_panel_settings,
+                size: 64,
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 24),
-
-            // Quick Stats Grid
             const Text(
-              'Platform Overview',
+              'EarnPost Admin',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1F2937),
               ),
             ),
-            const SizedBox(height: 12),
-
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.4,
-              children: const [
-                _StatCard(
-                  title: 'Total Users',
-                  value: '12,450',
-                  icon: Icons.people_outline,
-                  color: Color(0xFF3B82F6),
-                ),
-                _StatCard(
-                  title: 'Active Tasks',
-                  value: '1,280',
-                  icon: Icons.assignment_outlined,
-                  color: Color(0xFF10B981),
-                ),
-                _StatCard(
-                  title: 'Total Revenue',
-                  value: '₹3,45,000',
-                  icon: Icons.account_balance_wallet_outlined,
-                  color: Color(0xFFF59E0B),
-                ),
-                _StatCard(
-                  title: 'Pending Reviews',
-                  value: '84',
-                  icon: Icons.rate_review_outlined,
-                  color: Color(0xFFEF4444),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Quick Management Actions
-            const Text(
-              'Quick Actions',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1F2937),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            _AdminActionTile(
-              icon: Icons.task_alt_outlined,
-              title: 'Task Management',
-              subtitle: 'Approve, reject or review task submissions',
-              onTap: () {},
-            ),
-            _AdminActionTile(
-              icon: Icons.people_alt_outlined,
-              title: 'Worker & Buyer Management',
-              subtitle: 'Manage user profiles, bans and permissions',
-              onTap: () {},
-            ),
-            _AdminActionTile(
-              icon: Icons.payments_outlined,
-              title: 'Withdrawal Approvals',
-              subtitle: 'Process pending worker payout requests',
-              onTap: () {},
-            ),
-            _AdminActionTile(
-              icon: Icons.insights_outlined,
-              title: 'System Analytics',
-              subtitle: 'View task engine revenue & execution stats',
-              onTap: () {},
-            ),
+            const SizedBox(height: 32),
+            const CircularProgressIndicator(),
           ],
         ),
       ),
@@ -187,104 +110,44 @@ class AdminDashboardScreen extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
+class ErrorApp extends StatelessWidget {
+  final String error;
 
-  const _StatCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
+  const ErrorApp({super.key, required this.error});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(icon, color: color, size: 28),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+    return MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red,
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF6B7280),
+                const SizedBox(height: 16),
+                const Text(
+                  'Failed to start app',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  error,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AdminActionTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _AdminActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE5E7EB)),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFEEF2FF),
-          child: Icon(icon, color: const Color(0xFF4F46E5)),
         ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-        ),
-        trailing: const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF)),
       ),
     );
   }

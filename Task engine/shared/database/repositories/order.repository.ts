@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindManyOptions } from 'typeorm';
 import { Order } from '../entities/order.entity';
 
 @Injectable()
@@ -9,6 +9,10 @@ export class OrderRepository {
         @InjectRepository(Order)
         private readonly repository: Repository<Order>,
     ) { }
+
+    async count(options?: FindManyOptions<Order>): Promise<number> {
+        return this.repository.count(options);
+    }
 
     async findById(id: string): Promise<Order | null> {
         return this.repository.findOne({ where: { id } });

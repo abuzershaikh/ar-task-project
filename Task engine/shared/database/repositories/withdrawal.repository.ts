@@ -49,6 +49,16 @@ export class WithdrawalRepository {
         return parseFloat(result?.total || 0);
     }
 
+    async sumPaidWithdrawals(): Promise<number> {
+        const result = await this.repository
+            .createQueryBuilder('withdrawal')
+            .select('SUM(withdrawal.amount)', 'total')
+            .where('withdrawal.status = :status', { status: WithdrawalStatus.PAID })
+            .getRawOne();
+
+        return parseFloat(result?.total || 0);
+    }
+
     async create(data: Partial<Withdrawal>): Promise<Withdrawal> {
         const withdrawal = this.repository.create(data);
         return this.repository.save(withdrawal);

@@ -3,8 +3,11 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Base URL: Use 10.0.2.2 for Android Emulator, or localhost for web/desktop
-  static const String baseUrl = 'http://10.0.2.2:3000/api/v1';
+  // Base URL: 10.0.2.2 for Android Emulator, local IP for physical Android device
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:3000/api/v1',
+  );
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -46,7 +49,7 @@ class ApiService {
       body: jsonEncode({
         'email': email,
         'password': password,
-        'name': name,
+        'fullName': name,
         'role': 'WORKER',
       }),
     );
@@ -69,8 +72,10 @@ class ApiService {
 
   static Future<List<dynamic>> getMyTasks(String stage) async {
     final headers = await _headers();
+    // Normalize stage string to match NestJS endpoints
+    final normalizedStage = stage.replaceAll('_', '-');
     final response = await http.get(
-      Uri.parse('$baseUrl/worker/tasks/$stage'),
+      Uri.parse('$baseUrl/worker/tasks/$normalizedStage'),
       headers: headers,
     );
     if (response.statusCode == 200) {
@@ -136,7 +141,7 @@ class ApiService {
   static Future<Map<String, dynamic>> requestPayout(double amount, String paymentMethodId) async {
     final headers = await _headers();
     final response = await http.post(
-      Uri.parse('$baseUrl/worker/earnings/payout'),
+      Uri.parse('$baseUrl/worker/earnings/withdraw'),
       headers: headers,
       body: jsonEncode({
         'amount': amount,

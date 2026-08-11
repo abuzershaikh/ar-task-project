@@ -20,6 +20,8 @@ import { EarningEngineModule } from '../../earning-engine/earning-engine.module'
 import { EligibilityEngineModule } from '../../eligibility-engine/eligibility-engine.module';
 import { ProgressEngineModule } from '../../progress-engine/progress-engine.module';
 import { PayoutEngineModule } from '../../payout-engine/payout-engine.module';
+import { FraudEngineModule } from '../../fraud-engine/fraud-engine.module';
+import { NotificationEngineModule } from '../../notification-engine/notification-engine.module';
 
 // Controllers
 import { AuthController } from './controllers/auth/auth.controller';
@@ -91,6 +93,8 @@ import { AdminSystemSettingsController } from './controllers/admin/system-settin
         EligibilityEngineModule,
         ProgressEngineModule,
         PayoutEngineModule,
+        FraudEngineModule,
+        NotificationEngineModule,
     ],
     controllers: [
         AuthController,

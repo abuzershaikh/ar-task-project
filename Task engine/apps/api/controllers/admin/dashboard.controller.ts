@@ -57,14 +57,20 @@ export class AdminDashboardController {
     @Get('orders')
     @ApiOperation({ summary: 'Admin Dashboard - Orders breakdown metrics' })
     async getOrdersDashboard() {
+        const total = await this.orderRepo.count();
+        const pending = await this.orderRepo.count({ where: { status: 'PENDING' } });
+        const active = await this.orderRepo.count({ where: { status: 'ACTIVE' } });
+        const completed = await this.orderRepo.count({ where: { status: 'COMPLETED' } });
+        const cancelled = await this.orderRepo.count({ where: { status: 'CANCELLED' } });
+
         return {
             success: true,
             ordersSummary: {
-                totalOrders: 150,
-                pendingOrders: 12,
-                activeOrders: 45,
-                completedOrders: 90,
-                cancelledOrders: 3,
+                totalOrders: total,
+                pendingOrders: pending,
+                activeOrders: active,
+                completedOrders: completed,
+                cancelledOrders: cancelled,
             },
         };
     }
@@ -72,17 +78,26 @@ export class AdminDashboardController {
     @Get('tasks')
     @ApiOperation({ summary: 'Admin Dashboard - Tasks status breakdown across platform' })
     async getTasksDashboard() {
+        const total = await this.taskRepo.count();
+        const pending = await this.taskRepo.count({ where: { status: 'PENDING' } });
+        const assigned = await this.taskRepo.count({ where: { status: 'ASSIGNED' } });
+        const inProgress = await this.taskRepo.count({ where: { status: 'IN_PROGRESS' } });
+        const submitted = await this.taskRepo.count({ where: { status: 'SUBMITTED' } });
+        const approved = await this.taskRepo.count({ where: { status: 'APPROVED' } });
+        const rejected = await this.taskRepo.count({ where: { status: 'REJECTED' } });
+        const completed = await this.taskRepo.count({ where: { status: 'COMPLETED' } });
+
         return {
             success: true,
             tasksSummary: {
-                totalTasks: 25000,
-                pending: 3000,
-                assigned: 2500,
-                inProgress: 4000,
-                submitted: 1500,
-                approved: 12000,
-                rejected: 1500,
-                completed: 13500,
+                totalTasks: total,
+                pending,
+                assigned,
+                inProgress,
+                submitted,
+                approved,
+                rejected,
+                completed,
             },
         };
     }
@@ -117,12 +132,15 @@ export class AdminDashboardController {
     @Get('earnings')
     @ApiOperation({ summary: 'Admin Dashboard - Gross platform revenue and worker earnings' })
     async getEarningsDashboard() {
+        const totalEarnings = await this.earningRepo.sumTotalEarnings();
+        const totalPayouts = await this.withdrawalRepo.sumPaidWithdrawals();
+
         return {
             success: true,
             financialSummary: {
-                grossPlatformVolume: 1250000.0,
-                workerPayoutsDisbursed: 750000.0,
-                platformNetMargin: 500000.0,
+                grossPlatformVolume: totalEarnings + (totalEarnings * 0.3),
+                workerPayoutsDisbursed: totalPayouts || 0.0,
+                platformNetMargin: totalEarnings * 0.3,
             },
         };
     }
