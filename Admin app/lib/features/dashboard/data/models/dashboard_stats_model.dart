@@ -1,44 +1,49 @@
-import 'package:json_annotation/json_annotation.dart';
 import '../../domain/entities/dashboard_stats.dart';
 
-part 'dashboard_stats_model.g.dart';
-
-@JsonSerializable()
 class DashboardStatsModel extends DashboardStats {
   const DashboardStatsModel({
-    required super.totalBuyers,
-    required super.activeBuyers,
     required super.totalWorkers,
     required super.activeWorkers,
-    required super.todayRevenue,
-    required super.workerEarnings,
-    required super.platformMargin,
-    required super.pendingPayout,
+    required super.totalBuyers,
+    required super.activeBuyers,
     required super.activeCampaigns,
-    required super.activeTasks,
-    required super.pendingReview,
-    required super.allocationPending,
+    required super.completedCampaigns,
+    required super.pendingReviews,
+    required super.pendingKyc,
+    required super.pendingPayouts,
+    required super.grossVolume,
+    required super.platformMargin,
   });
 
-  factory DashboardStatsModel.fromJson(Map<String, dynamic> json) =>
-      _$DashboardStatsModelFromJson(json);
-
-  Map<String, dynamic> toJson() => _$DashboardStatsModelToJson(this);
-
-  DashboardStats toEntity() {
-    return DashboardStats(
-      totalBuyers: totalBuyers,
-      activeBuyers: activeBuyers,
-      totalWorkers: totalWorkers,
-      activeWorkers: activeWorkers,
-      todayRevenue: todayRevenue,
-      workerEarnings: workerEarnings,
-      platformMargin: platformMargin,
-      pendingPayout: pendingPayout,
-      activeCampaigns: activeCampaigns,
-      activeTasks: activeTasks,
-      pendingReview: pendingReview,
-      allocationPending: allocationPending,
+  factory DashboardStatsModel.fromJson(Map<String, dynamic> json) {
+    return DashboardStatsModel(
+      totalWorkers: json['totalWorkers'] as int,
+      activeWorkers: json['activeWorkers'] as int,
+      totalBuyers: json['totalBuyers'] as int,
+      activeBuyers: json['activeBuyers'] as int,
+      activeCampaigns: json['activeCampaigns'] as int,
+      completedCampaigns: json['completedCampaigns'] as int,
+      pendingReviews: json['pendingReviews'] as int,
+      pendingKyc: json['pendingKyc'] as int,
+      pendingPayouts: json['pendingPayouts'] as int,
+      grossVolume: (json['grossVolume'] as num).toDouble(),
+      platformMargin: (json['platformMargin'] as num).toDouble(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'totalWorkers': totalWorkers,
+      'activeWorkers': activeWorkers,
+      'totalBuyers': totalBuyers,
+      'activeBuyers': activeBuyers,
+      'activeCampaigns': activeCampaigns,
+      'completedCampaigns': completedCampaigns,
+      'pendingReviews': pendingReviews,
+      'pendingKyc': pendingKyc,
+      'pendingPayouts': pendingPayouts,
+      'grossVolume': grossVolume,
+      'platformMargin': platformMargin,
+    };
   }
 }

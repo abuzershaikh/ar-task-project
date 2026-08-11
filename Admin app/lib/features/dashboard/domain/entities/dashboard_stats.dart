@@ -1,47 +1,57 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
 import 'package:equatable/equatable.dart';
 
 class DashboardStats extends Equatable {
-  final int totalBuyers;
-  final int activeBuyers;
   final int totalWorkers;
   final int activeWorkers;
-  final int todayRevenue;
-  final int workerEarnings;
-  final int platformMargin;
-  final int pendingPayout;
+  final int totalBuyers;
+  final int activeBuyers;
   final int activeCampaigns;
-  final int activeTasks;
-  final int pendingReview;
-  final int allocationPending;
+  final int completedCampaigns;
+  final int pendingReviews;
+  final int pendingKyc;
+  final int pendingPayouts;
+  final double grossVolume;
+  final double platformMargin;
 
   const DashboardStats({
-    required this.totalBuyers,
-    required this.activeBuyers,
     required this.totalWorkers,
     required this.activeWorkers,
-    required this.todayRevenue,
-    required this.workerEarnings,
-    required this.platformMargin,
-    required this.pendingPayout,
+    required this.totalBuyers,
+    required this.activeBuyers,
     required this.activeCampaigns,
-    required this.activeTasks,
-    required this.pendingReview,
-    required this.allocationPending,
+    required this.completedCampaigns,
+    required this.pendingReviews,
+    required this.pendingKyc,
+    required this.pendingPayouts,
+    required this.grossVolume,
+    required this.platformMargin,
   });
 
   @override
   List<Object?> get props => [
-        totalBuyers,
-        activeBuyers,
         totalWorkers,
         activeWorkers,
-        todayRevenue,
-        workerEarnings,
-        platformMargin,
-        pendingPayout,
+        totalBuyers,
+        activeBuyers,
         activeCampaigns,
-        activeTasks,
-        pendingReview,
-        allocationPending,
+        completedCampaigns,
+        pendingReviews,
+        pendingKyc,
+        pendingPayouts,
+        grossVolume,
+        platformMargin,
       ];
 }

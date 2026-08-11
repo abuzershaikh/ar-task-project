@@ -6,7 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'core/utils/logger.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/pages/login_screen.dart';
-import 'features/dashboard/presentation/pages/dashboard_screen.dart';
+import 'features/main/presentation/pages/main_navigation_screen.dart';
 
 void main() async {
   // Ensure Flutter binding is initialized
@@ -51,17 +51,7 @@ class AdminApp extends StatelessWidget {
         title: 'EarnPost Admin',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, state) {
-            if (state is AuthLoading || state is AuthInitial) {
-              return const SplashScreen();
-            } else if (state is AuthAuthenticated) {
-              return const DashboardScreen();
-            } else {
-              return const LoginScreen();
-            }
-          },
-        ),
+        home: const MainNavigationScreen(),
       ),
     );
   }

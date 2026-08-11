@@ -6,6 +6,8 @@ class AdminUser extends Equatable {
   final String email;
   final String name;
   final AdminRole role;
+  final String? phone;
+  final String? avatar;
   final bool isActive;
   final DateTime createdAt;
   final DateTime? lastLoginAt;
@@ -15,7 +17,9 @@ class AdminUser extends Equatable {
     required this.email,
     required this.name,
     required this.role,
-    required this.isActive,
+    this.phone,
+    this.avatar,
+    this.isActive = true,
     required this.createdAt,
     this.lastLoginAt,
   });
@@ -26,6 +30,8 @@ class AdminUser extends Equatable {
         email,
         name,
         role,
+        phone,
+        avatar,
         isActive,
         createdAt,
         lastLoginAt,

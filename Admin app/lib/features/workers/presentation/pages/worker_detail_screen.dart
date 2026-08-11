@@ -1,0 +1,220 @@
+import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../widgets/worker_detail_tabs/overview_tab.dart';
+import '../widgets/worker_detail_tabs/tasks_tab.dart';
+import '../widgets/worker_detail_tabs/kyc_tab.dart';
+import '../widgets/worker_detail_tabs/earnings_tab.dart';
+import '../widgets/worker_detail_tabs/ratings_tab.dart';
+import '../widgets/worker_detail_tabs/quality_score_tab.dart';
+import '../widgets/worker_detail_tabs/risk_tab.dart';
+import '../widgets/worker_detail_tabs/activity_tab.dart';
+
+class WorkerDetailScreen extends StatefulWidget {
+  final String workerId;
+
+  const WorkerDetailScreen({
+    super.key,
+    required this.workerId,
+  });
+
+  @override
+  State<WorkerDetailScreen> createState() => _WorkerDetailScreenState();
+}
+
+class _WorkerDetailScreenState extends State<WorkerDetailScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 8, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Worker Details'),
+            Text(
+              widget.workerId,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.primary,
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              _handleAction(value);
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'suspend',
+                child: Row(
+                  children: [
+                    Icon(Icons.pause_circle, color: AppColors.warning, size: 20),
+                    SizedBox(width: 8),
+                    Text('Suspend Worker'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'ban',
+                child: Row(
+                  children: [
+                    Icon(Icons.block, color: AppColors.error, size: 20),
+                    SizedBox(width: 8),
+                    Text('Ban Worker'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'change_status',
+                child: Row(
+                  children: [
+                    Icon(Icons.swap_horiz, color: AppColors.primary, size: 20),
+                    SizedBox(width: 8),
+                    Text('Change Status'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          indicatorColor: AppColors.white,
+          labelColor: AppColors.white,
+          unselectedLabelColor: AppColors.white.withOpacity(0.7),
+          tabs: const [
+            Tab(text: 'Overview'),
+            Tab(text: 'Tasks'),
+            Tab(text: 'KYC'),
+            Tab(text: 'Earnings'),
+            Tab(text: 'Ratings'),
+            Tab(text: 'Quality'),
+            Tab(text: 'Risk'),
+            Tab(text: 'Activity'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          OverviewTab(workerId: widget.workerId),
+          TasksTab(workerId: widget.workerId),
+          KycTab(workerId: widget.workerId),
+          EarningsTab(workerId: widget.workerId),
+          RatingsTab(workerId: widget.workerId),
+          QualityScoreTab(workerId: widget.workerId),
+          RiskTab(workerId: widget.workerId),
+          ActivityTab(workerId: widget.workerId),
+        ],
+      ),
+    );
+  }
+
+  void _handleAction(String action) {
+    switch (action) {
+      case 'suspend':
+        _showConfirmDialog('Suspend Worker', 'Are you sure you want to suspend this worker?');
+        break;
+      case 'ban':
+        _showConfirmDialog('Ban Worker', 'Are you sure you want to ban this worker? This action requires SUPER_ADMIN approval.');
+        break;
+      case 'change_status':
+        _showStatusChangeDialog();
+        break;
+    }
+  }
+
+  void _showConfirmDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(message),
+            const SizedBox(height: 16),
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Reason (Required)',
+                hintText: 'Enter reason for this action',
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Implement action
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showStatusChangeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change Worker Status'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Active'),
+              leading: Radio(value: 'ACTIVE', groupValue: 'ACTIVE', onChanged: (v) {}),
+            ),
+            ListTile(
+              title: const Text('Inactive'),
+              leading: Radio(value: 'INACTIVE', groupValue: 'ACTIVE', onChanged: (v) {}),
+            ),
+            ListTile(
+              title: const Text('Suspended'),
+              leading: Radio(value: 'SUSPENDED', groupValue: 'ACTIVE', onChanged: (v) {}),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Implement status change
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+}

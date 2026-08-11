@@ -8,6 +8,7 @@ import '../../../../core/utils/logger.dart';
 import '../../domain/entities/admin_user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_datasource.dart';
+import '../models/admin_user_model.dart';
 import 'dart:convert';
 
 class AuthRepositoryImpl implements AuthRepository {

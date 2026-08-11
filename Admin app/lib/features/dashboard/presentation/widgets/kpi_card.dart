@@ -4,19 +4,17 @@ import '../../../../core/theme/app_colors.dart';
 class KpiCard extends StatelessWidget {
   final String title;
   final String value;
+  final String subtitle;
   final IconData icon;
   final Color color;
-  final String? trend;
-  final bool? trendUp;
 
   const KpiCard({
     super.key,
     required this.title,
     required this.value,
+    required this.subtitle,
     required this.icon,
     required this.color,
-    this.trend,
-    this.trendUp,
   });
 
   @override
@@ -29,63 +27,42 @@ class KpiCard extends StatelessWidget {
         border: Border.all(color: AppColors.gray200),
         boxShadow: [
           BoxShadow(
-            color: AppColors.black.withAlpha(7),
-            blurRadius: 6,
+            color: AppColors.gray200.withOpacity(0.5),
+            blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.gray600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: color.withAlpha(25),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Icon(icon, size: 16, color: color),
               ),
-              if (trend != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: (trendUp ?? true)
-                        ? AppColors.success.withAlpha(25)
-                        : AppColors.error.withAlpha(25),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        (trendUp ?? true)
-                            ? Icons.trending_up
-                            : Icons.trending_down,
-                        size: 12,
-                        color: (trendUp ?? true)
-                            ? AppColors.success
-                            : AppColors.error,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        trend!,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: (trendUp ?? true)
-                              ? AppColors.success
-                              : AppColors.error,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             value,
             style: TextStyle(
@@ -94,13 +71,14 @@ class KpiCard extends StatelessWidget {
               color: color,
             ),
           ),
-          const SizedBox(height: 4),
           Text(
-            title,
+            subtitle,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: AppColors.gray500,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
