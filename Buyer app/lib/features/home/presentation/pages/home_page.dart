@@ -254,44 +254,14 @@ class _HomePageState extends State<HomePage> {
                     
                     const SizedBox(height: 12),
                     
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CampaignOverviewCard(
-                            icon: Icons.rocket_launch_outlined,
-                            iconColor: AppColors.info,
-                            label: 'Active\ncampaigns',
-                            value: state.dashboardData.activeCampaigns.toString(),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: CampaignOverviewCard(
-                            icon: Icons.check_circle_outline,
-                            iconColor: AppColors.success,
-                            label: 'Completed\ntasks',
-                            value: state.dashboardData.completedTasks.toString(),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: CampaignOverviewCard(
-                            icon: Icons.schedule_outlined,
-                            iconColor: AppColors.warning,
-                            label: 'In Progress\ntasks',
-                            value: state.dashboardData.inProgressTasks.toString(),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: CampaignOverviewCard(
-                            icon: Icons.pending_outlined,
-                            iconColor: AppColors.error,
-                            label: 'Pending\ntasks',
-                            value: state.dashboardData.pendingTasks.toString(),
-                          ),
-                        ),
-                      ],
+                    CampaignOverviewCard(
+                      activeCampaigns: state.dashboardData.activeCampaigns,
+                      completedCampaigns: state.dashboardData.completedCampaigns,
+                      totalTasks: state.dashboardData.pendingTasks + 
+                                 state.dashboardData.inProgressTasks + 
+                                 state.dashboardData.completedTasks,
+                      completedTasks: state.dashboardData.completedTasks,
+                      completionPercentage: state.dashboardData.overallCompletion,
                     ),
                     
                     const SizedBox(height: 24),

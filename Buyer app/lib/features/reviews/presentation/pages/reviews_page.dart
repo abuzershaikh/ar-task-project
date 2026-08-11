@@ -1,59 +1,84 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 
-class ReviewsPage extends StatefulWidget {
+class ReviewsPage extends StatelessWidget {
   const ReviewsPage({super.key});
 
   @override
-  State<ReviewsPage> createState() => _ReviewsPageState();
-}
-
-class _ReviewsPageState extends State<ReviewsPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reviews'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppColors.primary,
-          labelColor: AppColors.primary,
-          tabs: const [
-            Tab(text: 'Pending'),
-            Tab(text: 'Approved'),
-            Tab(text: 'Rejected'),
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Reviews'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Pending'),
+              Tab(text: 'Approved'),
+              Tab(text: 'Rejected'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _buildReviewList(context, 'pending'),
+            _buildReviewList(context, 'approved'),
+            _buildReviewList(context, 'rejected'),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildEmptyState('No pending reviews'),
-          _buildEmptyState('No approved reviews'),
-          _buildEmptyState('No rejected reviews'),
-        ],
       ),
     );
   }
 
-  Widget _buildEmptyState(String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.check_circle_outline, size: 64, color: AppColors.textTertiary),
-          const SizedBox(height: 16),
-          Text(message, style: AppTextStyles.bodyMedium),
-        ],
+  Widget _buildReviewList(BuildContext context, String type) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 5,
+      itemBuilder: (context, index) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Task #T-1024',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                if (type == 'pending')
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text('Pending', style: TextStyle(fontSize: 11)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text('Campaign: Product Testing'),
+            const SizedBox(height: 4),
+            const Text('📷 2 Images   🔗 1 Link'),
+            const SizedBox(height: 8),
+            const Text('Submitted 8 min ago', style: TextStyle(fontSize: 12)),
+            if (type == 'pending') ...[
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () {
+                  // Navigate to review detail
+                },
+                child: const Text('Review'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -1,19 +1,22 @@
 # Marketing Pro - Buyer App
 
-Complete Campaign Management Platform for Buyers
+Complete Campaign Management Platform for Buyers with Enterprise-Grade UX
 
 ## Features
 
-### Core Modules
-- **Home Dashboard** - Overview of campaigns, stats, and quick actions
-- **Services** - Browse and select available services
-- **Campaigns** - Create and manage campaigns
-- **Reviews** - Review worker submissions and approve/reject tasks
-- **Analytics** - Detailed reports and insights
-- **Payments** - Payment management and history
-- **Invoices** - Download and view invoices
-- **Notifications** - Real-time updates
-- **Profile** - Business profile and settings
+### Core Modules (5-Tab Navigation)
+- **Home Dashboard** - Balance, campaigns overview, stats, quick actions, and pending reviews
+- **Campaigns** - Browse, create, and manage campaigns with dedicated detail screens
+- **Reviews** - Review worker submissions, approve/reject tasks, and rate workers
+- **Analytics** - Detailed performance reports and insights with charts
+- **More** - Wallet, payments, invoices, notifications, profile, settings, and support
+
+### Key Features
+- **Wallet System** - Prepaid balance with Available/Reserved split for secure payments
+- **Step-by-Step Campaign Creation** - Guided wizard from service selection to payment
+- **Campaign Detail Tabs** - Overview, Tasks, Reviews, Activity, Analytics per campaign
+- **Real-Time Balance** - Dynamic balance updates with reservation system
+- **Worker Rating** - Rate worker performance after approval
 
 ## Project Structure
 
