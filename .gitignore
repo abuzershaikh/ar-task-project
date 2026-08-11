@@ -11,6 +11,10 @@
 .svn/
 .swiftpm/
 
+# Node / JS
+**/node_modules/
+**/dist/
+
 # IntelliJ / Android Studio
 *.iml
 *.ipr
