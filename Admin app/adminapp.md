@@ -1,9 +1,10 @@
-# 👑 Task Admin Flutter App — Complete UI Blueprint & Architecture Specification (`adminapp.md`)
+# 👑 Task Admin Flutter App — Core Platform Blueprint & Specification (`adminapp.md`)
 
 ## 📌 Executive Overview
-The **Task Admin App** (`com.task.admin.earnpost`) is the central command center for managing the EarnPost Task Platform. It controls multi-tenant SaaS Buyers, Worker operations, Task Engine matching brain, Service Catalog pricing, Finance & Payouts, Fraud detection, and Real-time Auditing.
+The **Task Admin App** (`com.task.admin.earnpost`) is the central command center for managing the EarnPost Task Platform. It provides full control over Core Buyer Management, Worker Operations, Task Engine Matching Brain, Service Catalog & Pricing Engine, Finance & Payouts, Fraud Detection, and Real-time System Auditing.
 
-This document serves as the **100% complete UI Blueprint, Navigation Flow, Screen Breakdown, and API Contract Mapping** for the Flutter Admin Application.
+> [!NOTE]
+> **SaaS & External Developer API features** (API Keys Manager, Webhooks Subscriptions, Developer Portal, API Usage Metrics) have been **completely removed** from the current active Admin App blueprint and will be added later as an isolated add-on module.
 
 ---
 
@@ -26,31 +27,30 @@ This document serves as the **100% complete UI Blueprint, Navigation Flow, Scree
 graph TD
     Root[Task Admin Navigation] --> Tab1[Tab 1: Dashboard]
     Root --> Tab2[Tab 2: Campaigns & Orders]
-    Root --> Tab3[Tab 3: Worker Operations]
-    Root --> Tab4[Tab 4: Buyer SaaS]
+    Root --> Tab3[Tab 3: Workers]
+    Root --> Tab4[Tab 4: Buyers]
     Root --> Tab5[Tab 5: Control Center / More]
 
     Tab1 --> D1[Master Overview KPIs]
-    Tab1 --> D2[Alert Banners]
-    Tab1 --> D3[Financial Quick Stats]
+    Tab1 --> D2[Platform Queues & Alert Banners]
+    Tab1 --> D3[Financial Volume & Margins]
 
     Tab2 --> C1[Filterable Campaign List]
     Tab2 --> C2[Campaign Detail & Task Matrix]
     Tab2 --> C3[Task Review & Proof Inspector Modal]
 
     Tab3 --> W1[Worker Directory]
-    Tab3 --> W2[Deep Worker Profile]
-    Tab3 --> W3[KYC Verification Modal]
-    Tab3 --> W4[Score & Risk Breakdown]
+    Tab3 --> W2[Worker Profile & KYC Modal]
+    Tab3 --> W3[Quality Score & Risk Assessment]
 
-    Tab4 --> B1[Buyer SaaS Directory]
-    Tab4 --> B2[API Keys & Webhooks Manager]
-    Tab4 --> B3[Buyer Ledger & Billing]
+    Tab4 --> B1[Buyer Management Directory]
+    Tab4 --> B2[Buyer Profile & Campaign History]
+    Tab4 --> B3[Buyer Balance & Payments Ledger]
 
     Tab5 --> M1[Service & Pricing Engine]
     Tab5 --> M2[Matching Brain & Candidate Audit]
-    Tab5 --> M3[Payout & Withdrawal Approval Queue]
-    Tab5 --> M4[System Audit Logs & Settings]
+    Tab5 --> M3[Payout Approval Queue]
+    Tab5 --> M4[Finance, Audit Logs & Settings]
 ```
 
 ---
@@ -64,15 +64,18 @@ graph TD
   - Admin Welcome Avatar with Quick Notification Badge icon.
   - Active Environment Badge (`Production / Staging`).
 - **Real-Time Alert Banner**:
-  - Dynamic cards highlighting urgent queues: `3 Pending KYC Requests`, `14 Task Reviews Needed`, `5 Pending Payouts`.
-- **KPI Summary Grid (4 Cards)**:
-  1. **Total Users**: Total Workers vs Total Buyers count with growth trend.
-  2. **Active Campaigns**: Orders in progress vs completed count.
-  3. **Gross Platform Volume**: Total money flowing through platform (`₹`).
-  4. **System Net Margin**: Calculated platform profit (`₹`).
-- **Platform Queues Health Widget**:
-  - Horizontal progress indicators for Review Queue, KYC Verification Queue, and Payout Approval Queue.
-- **Quick Action Row**:
+  - Dynamic cards highlighting urgent queues: `Pending KYC Queue`, `Task Reviews Needed`, `Pending Payouts`.
+- **Master KPI Summary Grid**:
+  1. **Total Workers**: Active vs Total Registered Workers count.
+  2. **Total Buyers**: Active vs Total Registered Buyers count.
+  3. **Active Campaigns**: Orders in progress count.
+  4. **Completed Campaigns**: Orders finished count.
+  5. **Pending Reviews**: Submissions waiting for approval count.
+  6. **Pending KYC**: Worker identity verification requests count.
+  7. **Pending Payouts**: Worker withdrawal requests count.
+  8. **Gross Volume (`₹`)**: Total transaction volume processed on platform.
+  9. **Platform Margin (`₹`)**: Total net platform profit earned.
+- **Quick Action Bar**:
   - `[ Verify KYC ]`, `[ Approve Payouts ]`, `[ Review Tasks ]`, `[ Add Service ]`.
 
 ---
@@ -82,15 +85,15 @@ graph TD
 #### Screen 2.1: `CampaignsListScreen`
 - **Filter Pills**: `[ All ]` `[ Payment Pending ]` `[ Active ]` `[ Paused ]` `[ Completed ]` `[ Failed/Blocked ]`.
 - **Search Bar**: Search by Order ID, Campaign Title, or Buyer Email.
-- **Campaign Card Component**:
+- **Campaign Card Component (Admin Internal View)**:
   - Title, Buyer Name, Task Type Badge (e.g. `YOUTUBE_LIKE`).
   - Completion Progress Bar (`450 / 1000 tasks completed`).
-  - Unit Price vs Worker Reward breakdown.
-  - Status Tag with color coding.
+  - **Internal Financial Breakdown (Admin Only)**: Buyer Unit Price (`₹2.00`) vs Platform Margin (`₹0.50`) vs Net Worker Reward (`₹1.50`).
+  - Status Tag with color coding (`ACTIVE` green, `PAUSED` yellow, `COMPLETED` blue).
   - Expiry Date counter.
 
 #### Screen 2.2: `CampaignDetailScreen`
-- **Overview Card**: Full description, requirements JSON format viewer, review mode (`AUTO` vs `MANUAL`).
+- **Overview Card**: Full description, requirements JSON viewer, review mode (`AUTO` vs `MANUAL`).
 - **Task Generation Matrix**:
   - Total tasks required, Generated count, Available count, Assigned count, Completed count, Expired count.
 - **Action Toolbar**:
@@ -122,76 +125,94 @@ graph TD
 #### Screen 3.2: `WorkerProfileDetailScreen`
 - **Tabbed Layout**:
   - **Tab A: Overview & Stats**: Quality Score breakdown (Experience, Reliability, Rating, Completion).
-  - **Tab B: KYC Verification**:
+  - **Tab B: KYC Verification Modal**:
     - Document Type (Aadhaar / PAN / Passport), Document Number.
     - Document Front & Back images preview.
     - Action: `[ Verify KYC ]` or `[ Reject KYC ]` with reason text input.
-  - **Tab C: Task Execution History**: Full table of completed, rejected, and timed-out task assignments.
-  - **Tab D: Financial Ledger**: Total Earnings, Available Wallet Balance, Withdrawal History list.
+  - **Tab C: Task Execution History**: Table of completed, rejected, and timed-out task assignments.
+  - **Tab D: Financial & Withdrawal History**: Total Earnings (`₹`), Available Wallet Balance, Withdrawal Requests list.
   - **Tab E: Risk & Anti-Fraud**:
     - Risk Score Card (`Low Risk 0-30`, `Medium Risk 31-70`, `High Risk 71-100`).
-    - Device Fingerprint history, IP logs, Action: `[ Suspend Worker ]` / `[ Ban Worker ]`.
+    - Device Fingerprint history, IP logs.
+    - Action: `[ Suspend Worker ]` / `[ Ban Worker ]`.
 
 ---
 
-### 💜 TAB 4: BUYER SAAS OPERATIONS (B2B SaaS Management)
+### 💜 TAB 4: BUYER MANAGEMENT (Core Platform Buyer Operations)
+
+> [!IMPORTANT]
+> **No SaaS / API features**. Purely core platform Buyer account management, spending analytics, campaign history, and prepaid balance ledger.
 
 #### Screen 4.1: `BuyerDirectoryScreen`
+- **Search & Filter**: Search buyer by Company Name, Email, or Phone.
 - **Buyer List Tile**:
   - Business / Company Name, Contact Person Email.
-  - Account Status (`ACTIVE`, `SUSPENDED`).
-  - Total Spend (`₹`), Active Campaigns Count, API Tier (`Starter`, `Enterprise`).
+  - Account Status Badge (`ACTIVE` green, `SUSPENDED` red).
+  - Total Platform Spend (`₹`), Total Campaigns Created, Current Prepaid Balance (`₹`).
 
 #### Screen 4.2: `BuyerDetailScreen`
-- **Business Profile Overview**: Tax ID / GSTIN, Business Address, Contact Details.
-- **API Keys Manager Widget**:
-  - Active API Key list with masked key (`sk_live_****8f9a`).
-  - Action: `[ Generate New Key ]`, `[ Rotate Key ]`, `[ Revoke Key ]`.
-- **Webhook Subscriptions & Logs**:
-  - Webhook Endpoint URL, Event Subscriptions (`order.created`, `task.completed`, `payment.captured`).
-  - Webhook Delivery History list with response status codes (`200 OK`, `500 Error`) and `[ Retry Delivery ]` button.
-- **Buyer Financial Ledger & Billing**:
+- **Business Profile Overview**: Business Name, GSTIN/Tax ID, Address, Phone, Email.
+- **Buyer Status & Control**:
+  - Status Toggle (`ACTIVE` / `SUSPENDED`).
+- **Buyer Campaign History**:
+  - List of all campaigns created by this buyer with completion status and total spend per campaign.
+- **Buyer Payments & Spending Analytics**:
+  - Total Money Deposited (`₹`), Total Spend (`₹`), Average Campaign Budget (`₹`).
+- **Buyer Prepaid Ledger & Credit Management**:
   - Current Prepaid Credit Balance (`₹`).
   - Reserved Balance (Locked in active campaigns) vs Available Balance.
-  - Action: `[ Add Manual Credit ]` modal, Invoice PDF viewer.
+  - Action: `[ Add Manual Credit / Refund ]` modal with reason notes.
 
 ---
 
-### ⚙️ TAB 5: CONTROL CENTER & MORE (Engine & System Admin)
+### ⚙️ TAB 5: CONTROL CENTER / MORE (Engine & System Admin)
 
-#### Screen 5.1: `ServiceCatalogScreen`
-- **Service Catalog List**:
-  - Code (e.g. `YOUTUBE_LIKE`), Service Name, Active Status Toggle.
-  - Current Active Pricing Version, Buyer Unit Price, Margin Type (`FIXED` vs `PERCENTAGE`), Worker Reward.
-- **Modal: `CreateEditServiceModal`**:
-  - Form inputs: Service Code, Name, Description.
-  - Buyer Price field, Margin Selector (`FIXED ₹` or `PERCENTAGE %`), Margin Value.
-  - **Live Preview Calculator**: Real-time display showing exact Buyer Price, Calculated Margin, and Net Worker Reward before saving.
-- **Modal: `PricingHistoryModal`**:
-  - Timeline of all historical pricing versions with effective dates and change author.
-
-#### Screen 5.2: `MatchingBrainScreen`
-- **Engine Status Dashboard**:
-  - Matching Engine status (`ONLINE`), Allocation Queue load.
-- **Worker Scoring & Candidate Selection Audit**:
-  - Input Order ID -> View candidate worker pool ranking list.
-  - Rationale Inspector: Shows exact reason why **Worker X** was selected (high score 92.5) vs why **Worker Y** was rejected (already completed task under same campaign / low rating).
-- **Used-Worker Exclusion & Reallocation Policies**:
-  - Configure timeout hours (`timeToAcceptHours`, `timeToCompleteHours`).
-
-#### Screen 5.3: `PayoutManagementScreen`
-- **Pending Withdrawals Queue**:
-  - Worker Name, Payment Method Type (`UPI` / `BANK`), Masked UPI ID / Account Number.
-  - Requested Amount (`₹`), Requested Time.
-  - Actions: `[ Approve Payout ]` -> Triggers Bank Transfer, `[ Reject Payout ]` with reason, `[ Bulk Approve All ]`.
-
-#### Screen 5.4: `AuditLogsScreen`
-- **Real-Time Audit Stream**:
-  - Timestamp, Actor Name & Role (`ADMIN`, `SYSTEM`), Action Code (`SERVICE_CREATED`, `WORKER_BANNED`, `PAYOUT_APPROVED`), IP Address, User Agent.
+#### Control Center Navigation Menu:
+1. **Services & Pricing Engine**:
+   - Service Catalog list (e.g. `YOUTUBE_LIKE`, `APP_INSTALL`).
+   - Create / Edit Service definition.
+   - Buyer Price vs Margin (`FIXED ₹` or `PERCENTAGE %`) vs Net Worker Reward calculation.
+   - Live Preview Calculator & Historical Version Timeline.
+2. **Matching Brain**:
+   - Engine Status Dashboard & Candidate Worker Ranking list.
+   - Candidate Rationale Inspector: Rationale for selecting Worker X vs rejecting Worker Y.
+   - Used-Worker Exclusion & Reallocation Policies setup.
+3. **Payouts Management**:
+   - Pending Worker Withdrawals queue (Bank / UPI details).
+   - `[ Approve Payout ]`, `[ Reject Payout ]`, `[ Bulk Approve All ]`.
+4. **KYC Management Queue**:
+   - Global list of all pending worker identity verifications.
+5. **Task Reviews Queue**:
+   - Global list of all pending task proof reviews.
+6. **Finance & Ledger**:
+   - Platform Gross Revenue, Worker Disbursed Earnings, Net Platform Profit ledger.
+7. **Risk & Fraud Control**:
+   - Suspicious activity alerts, Flagged Workers, Anti-abuse rules.
+8. **Audit Logs Stream**:
+   - Real-time audit stream of all Admin & System actions with IP logs.
+9. **System Settings**:
+   - Platform configuration parameters & Maintenance Mode toggle.
+10. **Notifications**:
+    - System announcement broadcaster to Workers or Buyers.
+11. **Admin Profile**:
+    - Admin user profile details & Security settings.
 
 ---
 
-## ⚡ Complete NestJS Backend API Endpoint Mapping
+## 🚫 EXPLICITLY REMOVED MODULES (SaaS Exclusions)
+The following SaaS/Developer features have been **completely removed**:
+- ❌ Buyer SaaS Portal
+- ❌ API Keys Manager (Generation, Rotation, Revocation)
+- ❌ Webhooks Manager & Event Subscriptions
+- ❌ API Tiers (Starter, Enterprise)
+- ❌ API Usage & Throttle Metrics
+- ❌ External API Created Orders Log
+- ❌ Developer Portal Management
+- ❌ Webhook Delivery Logs & Retry Engine
+
+---
+
+## ⚡ Active NestJS Backend API Endpoint Mapping
 
 | Domain | Feature / Screen | HTTP Method & Endpoint Path |
 |--------|-----------------|-----------------------------|
@@ -242,9 +263,9 @@ Admin app/lib/
 │   ├── dashboard/ (Data, Domain, BLoC, DashboardScreen)
 │   ├── orders/ (Data, Domain, BLoC, CampaignsList, Detail, ReviewModal)
 │   ├── workers/ (Data, Domain, BLoC, WorkerDirectory, ProfileDetail, KYCModal)
-│   ├── buyers/ (Data, Domain, BLoC, BuyerDirectory, Detail, ApiKeys, Billing)
+│   ├── buyers/ (Data, Domain, BLoC, BuyerDirectory, Detail, PrepaidLedger)
 │   └── control_center/ (ServicesCatalog, MatchingBrain, Payouts, AuditLogs)
 └── main.dart
 ```
 
-This specification represents the **100% complete, production-ready blueprint** for the Task Admin Flutter Application! 👑
+This specification represents the **100% clean, core platform blueprint** for the Task Admin Flutter Application! 👑
