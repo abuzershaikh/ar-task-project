@@ -6,6 +6,7 @@ import 'core/routes/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/home/presentation/bloc/dashboard_bloc.dart';
+import 'features/wallet/presentation/bloc/wallet_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,7 @@ class MarketingProApp extends StatelessWidget {
       providers: [
         BlocProvider(create: (_) => getIt<AuthBloc>()..add(CheckAuthStatusEvent())),
         BlocProvider(create: (_) => getIt<DashboardBloc>()),
+        BlocProvider(create: (_) => getIt<WalletBloc>()),
       ],
       child: MaterialApp(
         title: 'Marketing Pro',

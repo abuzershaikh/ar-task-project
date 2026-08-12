@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../features/home/presentation/pages/home_page.dart';
 import '../../../features/campaigns/presentation/pages/campaigns_page.dart';
-import '../../../features/reviews/presentation/pages/reviews_page.dart';
-import '../../../features/analytics/presentation/pages/analytics_page.dart';
+import '../../../features/campaigns/presentation/pages/create_campaign_page.dart';
+import '../../../features/wallet/presentation/pages/wallet_screen.dart';
 import '../../../features/profile/presentation/pages/profile_page.dart';
 
 class MainNavigationPage extends StatefulWidget {
@@ -16,24 +16,28 @@ class MainNavigationPage extends StatefulWidget {
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
-    const HomePage(),
-    const CampaignsPage(),
-    const ReviewsPage(),
-    const AnalyticsPage(),
+  final List<Widget> _pages = const [
+    HomePage(),
+    CampaignsPage(),
+    CreateCampaignPage(),
+    WalletScreen(),
+    ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, -3),
             ),
           ],
         ),
@@ -48,8 +52,9 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           backgroundColor: Colors.white,
           selectedItemColor: AppColors.primary,
           unselectedItemColor: AppColors.textTertiary,
-          selectedFontSize: 12,
-          unselectedFontSize: 12,
+          selectedFontSize: 11,
+          unselectedFontSize: 11,
+          elevation: 8,
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
@@ -62,14 +67,19 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
               label: 'Campaigns',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.check_circle_outline),
-              activeIcon: Icon(Icons.check_circle),
-              label: 'Reviews',
+              icon: Icon(Icons.add_circle_outline, size: 28),
+              activeIcon: Icon(Icons.add_circle, size: 28),
+              label: 'Create',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart_outlined),
-              activeIcon: Icon(Icons.bar_chart),
-              label: 'Reports',
+              icon: Icon(Icons.account_balance_wallet_outlined),
+              activeIcon: Icon(Icons.account_balance_wallet),
+              label: 'Wallet',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profile',
             ),
           ],
         ),

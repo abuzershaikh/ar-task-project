@@ -21,6 +21,7 @@
 *.iws
 .idea/
 .gradle/
+.gradle-home/
 
 # Flutter/Dart/Pub
 **/doc/api/

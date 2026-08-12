@@ -33,7 +33,6 @@ class AppConstants {
   static const List<String> allowedDocFormats = ['pdf', 'doc', 'docx'];
   
   // Payment
-  static const String razorpayKey = 'YOUR_RAZORPAY_KEY';
   static const String currency = 'INR';
   
   // App Info
