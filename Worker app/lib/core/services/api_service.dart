@@ -6,7 +6,7 @@ class ApiService {
   // Base URL: 10.0.2.2 for Android Emulator, local IP for physical Android device
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000/api/v1',
+    defaultValue: 'http://95.179.178.6:3000/api/v1',
   );
 
   static Future<String?> getToken() async {
@@ -38,6 +38,15 @@ class ApiService {
       Uri.parse('$baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> googleLogin(String idToken) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/google'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'idToken': idToken, 'role': 'WORKER'}),
     );
     return jsonDecode(response.body);
   }

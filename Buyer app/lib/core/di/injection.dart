@@ -17,6 +17,14 @@ import '../../features/home/data/repositories/dashboard_repository_impl.dart';
 import '../../features/home/domain/repositories/dashboard_repository.dart';
 import '../../features/home/domain/usecases/get_dashboard_data_usecase.dart';
 import '../../features/home/presentation/bloc/dashboard_bloc.dart';
+import '../../features/wallet/data/datasources/wallet_remote_datasource.dart';
+import '../../features/wallet/data/repositories/wallet_repository_impl.dart';
+import '../../features/wallet/domain/repositories/wallet_repository.dart';
+import '../../features/wallet/domain/usecases/get_wallet_balance.dart';
+import '../../features/wallet/domain/usecases/get_transactions.dart';
+import '../../features/wallet/domain/usecases/add_balance.dart';
+import '../../features/wallet/domain/usecases/verify_balance_payment.dart';
+import '../../features/wallet/presentation/bloc/wallet_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -68,6 +76,7 @@ Future<void> initializeDependencies() async {
     loginUseCase: getIt(),
     logoutUseCase: getIt(),
     secureStorage: getIt(),
+    authRepository: getIt(),
   ));
   
   // Home/Dashboard Feature
@@ -83,5 +92,24 @@ Future<void> initializeDependencies() async {
   
   getIt.registerFactory(() => DashboardBloc(getIt()));
   
-  // Add more features here...
+  // Wallet Feature
+  getIt.registerLazySingleton<WalletRemoteDataSource>(
+    () => WalletRemoteDataSourceImpl(client: getIt()),
+  );
+  
+  getIt.registerLazySingleton<WalletRepository>(
+    () => WalletRepositoryImpl(remoteDataSource: getIt()),
+  );
+  
+  getIt.registerLazySingleton(() => GetWalletBalance(getIt()));
+  getIt.registerLazySingleton(() => GetTransactions(getIt()));
+  getIt.registerLazySingleton(() => AddBalance(getIt()));
+  getIt.registerLazySingleton(() => VerifyBalancePayment(getIt()));
+  
+  getIt.registerFactory(() => WalletBloc(
+    getWalletBalance: getIt(),
+    getTransactions: getIt(),
+    addBalance: getIt(),
+    verifyBalancePayment: getIt(),
+  ));
 }

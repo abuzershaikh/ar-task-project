@@ -24,6 +24,7 @@ import { OrderStateMachineService } from './order-state-machine.service';
 import { OrderActivatedListener } from './order-activated.listener';
 import { TaskEngineModule } from '../../task-engine/task-engine.module';
 import { MatchingEngineModule } from '../../matching-engine/matching-engine.module';
+import { ScoringEngineModule } from '../../scoring-engine/scoring-engine.module';
 
 // Reallocation Engine Services
 import { TaskReleaseService } from '../engines/reallocation-engine/services/task-release.service';
@@ -56,7 +57,7 @@ const providers = [
 
 @Global()
 @Module({
-    imports: [DatabaseModule, forwardRef(() => TaskEngineModule), forwardRef(() => MatchingEngineModule)],
+    imports: [DatabaseModule, forwardRef(() => TaskEngineModule), forwardRef(() => MatchingEngineModule), ScoringEngineModule],
     providers,
     exports: providers,
 })

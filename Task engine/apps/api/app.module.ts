@@ -26,6 +26,7 @@ import { NotificationEngineModule } from '../../notification-engine/notification
 // Controllers
 import { AuthController } from './controllers/auth/auth.controller';
 import { FileController } from './controllers/common/file.controller';
+import { HealthController } from './controllers/common/health.controller';
 import { WebhookController } from './controllers/webhooks/webhook.controller';
 
 // Worker Controllers
@@ -99,6 +100,7 @@ import { AdminSystemSettingsController } from './controllers/admin/system-settin
     controllers: [
         AuthController,
         FileController,
+        HealthController,
         WebhookController,
 
         // Worker

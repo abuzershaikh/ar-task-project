@@ -52,6 +52,34 @@ class AuthProvider extends ChangeNotifier {
     return false;
   }
 
+  Future<bool> loginWithGoogle(String idToken) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await ApiService.googleLogin(idToken);
+      final data = response['data'];
+      if (data != null && (data['token'] != null || data['accessToken'] != null)) {
+        final token = data['token'] ?? data['accessToken'];
+        await ApiService.saveToken(token);
+        _isAuthenticated = true;
+        _user = data['user'];
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = response['message'] ?? 'Google login failed';
+      }
+    } catch (e) {
+      _errorMessage = 'Network error: $e';
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+
   Future<bool> register(String email, String password, String name) async {
     _isLoading = true;
     _errorMessage = null;

@@ -31,9 +31,16 @@ export class WorkerTaskController {
     @Get()
     @ApiOperation({ summary: 'Get worker tasks with optional status filter' })
     @ApiQuery({ name: 'status', required: false })
-    async getTasks(@CurrentUser() user: User, @Query('status') status?: string) {
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiQuery({ name: 'offset', required: false, type: Number })
+    async getTasks(
+        @CurrentUser() user: User,
+        @Query('status') status?: string,
+        @Query('limit') limit?: number,
+        @Query('offset') offset?: number,
+    ) {
         if (status === 'available') {
-            const tasks = await this.taskEngine.getAvailableTasks(user.id);
+            const tasks = await this.taskEngine.getAvailableTasks(user.id, limit, offset);
             return { success: true, tasks };
         }
 
@@ -43,8 +50,14 @@ export class WorkerTaskController {
 
     @Get('available')
     @ApiOperation({ summary: 'Get available tasks for worker' })
-    async getAvailableTasks(@CurrentUser() user: User) {
-        const tasks = await this.taskEngine.getAvailableTasks(user.id);
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiQuery({ name: 'offset', required: false, type: Number })
+    async getAvailableTasks(
+        @CurrentUser() user: User,
+        @Query('limit') limit?: number,
+        @Query('offset') offset?: number,
+    ) {
+        const tasks = await this.taskEngine.getAvailableTasks(user.id, limit, offset);
         return {
             success: true,
             tasks,

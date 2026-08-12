@@ -6,6 +6,8 @@ import '../../../features/campaigns/presentation/pages/create_campaign_page.dart
 import '../../../features/wallet/presentation/pages/wallet_screen.dart';
 import '../../../features/profile/presentation/pages/profile_page.dart';
 
+import '../../../features/services/presentation/pages/service_catalog_screen.dart';
+
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});
 

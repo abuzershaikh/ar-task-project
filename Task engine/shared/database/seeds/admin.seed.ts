@@ -11,11 +11,11 @@ export async function seedAdminAndServices(dataSource: DataSource) {
   const pricingRepo = dataSource.getRepository(ServicePricing);
 
   // 1. Seed Super Admin User
-  const adminEmail = 'admin@taskpost.com';
+  const adminEmail = 'snapbizux@gmail.com';
   let admin = await userRepo.findOne({ where: { email: adminEmail } });
 
   if (!admin) {
-    const hashedPassword = await bcrypt.hash('Admin@123456', 10);
+    const hashedPassword = await bcrypt.hash('80978097', 10);
     admin = userRepo.create({
       email: adminEmail,
       fullName: 'Super Admin',
@@ -26,7 +26,7 @@ export async function seedAdminAndServices(dataSource: DataSource) {
       phoneVerified: true,
     });
     await userRepo.save(admin);
-    console.log('✅ SuperAdmin created: admin@taskpost.com / Admin@123456');
+    console.log('✅ SuperAdmin created: snapbizux@gmail.com / 80978097');
   }
 
   // 2. Seed Default Service Catalog & Pricing

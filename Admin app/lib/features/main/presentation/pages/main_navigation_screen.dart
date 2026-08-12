@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../dashboard/presentation/pages/dashboard_screen.dart';
 import '../../../orders/presentation/pages/campaigns_list_screen.dart';
+import '../../../service_builder/presentation/pages/services_list_screen.dart';
 import '../../../workers/presentation/pages/worker_directory_screen.dart';
 import '../../../buyers/presentation/pages/buyer_directory_screen.dart';
 import '../../../more/presentation/pages/control_center_screen.dart';
@@ -19,6 +20,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = const [
     DashboardScreen(),
     CampaignsListScreen(),
+    ServicesListScreen(),
     WorkerDirectoryScreen(),
     BuyerDirectoryScreen(),
     ControlCenterScreen(),
@@ -50,6 +52,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             icon: Icon(Icons.campaign_outlined),
             selectedIcon: Icon(Icons.campaign, color: AppColors.primary),
             label: 'Campaigns',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_customize_outlined),
+            selectedIcon: Icon(Icons.dashboard_customize, color: AppColors.primary),
+            label: 'Services',
           ),
           NavigationDestination(
             icon: Icon(Icons.people_outline),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
@@ -30,6 +31,30 @@ class AuthRepositoryImpl implements AuthRepository {
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
+      return Left(ServerFailure('Unexpected error occurred'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthData>> loginWithGoogle(String idToken) async {
+    try {
+      debugPrint('[AUTH REPO] Sending Google token to backend.');
+      final result = await remoteDataSource.loginWithGoogle(idToken);
+      debugPrint('[AUTH REPO] Backend returned Google auth data for userId=${result.userId}');
+      
+      await secureStorage.saveAccessToken(result.accessToken);
+      await secureStorage.saveRefreshToken(result.refreshToken);
+      await secureStorage.saveUserId(result.userId);
+      
+      return Right(result);
+    } on UnauthorizedException catch (e) {
+      return Left(AuthFailure(e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(e.message));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      debugPrint('[AUTH REPO] Unexpected Google login error: $e');
       return Left(ServerFailure('Unexpected error occurred'));
     }
   }

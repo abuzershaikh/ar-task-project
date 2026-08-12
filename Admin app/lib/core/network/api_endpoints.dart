@@ -2,10 +2,10 @@
 /// Aligned with API_CONTRACT_ADMIN_V1.md
 class ApiEndpoints {
   // ==================== Auth ====================
-  static const String login = '/admin/auth/login';
-  static const String logout = '/admin/auth/logout';
-  static const String refreshToken = '/admin/auth/refresh';
-  static const String profile = '/admin/auth/profile';
+  static const String login = '/auth/login';
+  static const String logout = '/auth/logout';
+  static const String refreshToken = '/auth/refresh';
+  static const String profile = '/auth/me';
   
   // ==================== Dashboard ====================
   static const String dashboardStats = '/admin/dashboard/stats';

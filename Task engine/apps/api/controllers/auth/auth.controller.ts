@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post } from '@nestjs/common';
 import { AuthService } from '../../../../shared/auth/auth.service';
 import { RegisterDto } from '../../../../shared/auth/dto/register.dto';
 import { LoginDto } from '../../../../shared/auth/dto/login.dto';
+import { GoogleAuthDto } from '../../../../shared/auth/dto/google-auth.dto';
 import { RefreshTokenDto } from '../../../../shared/auth/dto/refresh-token.dto';
 import { ForgotPasswordDto } from '../../../../shared/auth/dto/forgot-password.dto';
 import { ResetPasswordDto } from '../../../../shared/auth/dto/reset-password.dto';
@@ -32,6 +33,17 @@ export class AuthController {
             success: true,
             data: result,
             message: 'Login successful',
+        };
+    }
+
+    @Public()
+    @Post('google')
+    async googleLogin(@Body() dto: GoogleAuthDto) {
+        const result = await this.authService.googleLogin(dto);
+        return {
+            success: true,
+            data: result,
+            message: 'Google login successful',
         };
     }
 

@@ -94,7 +94,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       final apiResponse = ApiResponse.fromJson(response.data, null);
 
       if (apiResponse.success && apiResponse.data != null) {
-        return apiResponse.data['accessToken'] as String;
+        return (apiResponse.data['accessToken'] ?? apiResponse.data['access_token'] ?? '').toString();
       } else {
         throw AuthException(
           apiResponse.message ?? 'Token refresh failed',

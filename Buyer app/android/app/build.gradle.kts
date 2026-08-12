@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -23,9 +24,21 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("customRelease") {
+            storeFile = file("buyer-key.jks")
+            storePassword = "buyerpassword123"
+            keyAlias = "buyerkey"
+            keyPassword = "buyerpassword123"
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("customRelease")
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("customRelease")
         }
     }
 }

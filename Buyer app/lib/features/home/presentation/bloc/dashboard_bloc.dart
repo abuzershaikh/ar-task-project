@@ -68,7 +68,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     RefreshDashboardEvent event,
     Emitter<DashboardState> emit,
   ) async {
-    // Keep current data while refreshing
     final currentState = state;
     if (currentState is DashboardLoaded) {
       final result = await getDashboardDataUseCase();

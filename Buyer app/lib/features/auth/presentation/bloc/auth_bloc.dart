@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../../../core/storage/secure_storage_service.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
 
@@ -20,6 +22,15 @@ class LoginEvent extends AuthEvent {
 
   @override
   List<Object?> get props => [email, password];
+}
+
+class GoogleLoginEvent extends AuthEvent {
+  final String idToken;
+
+  GoogleLoginEvent(this.idToken);
+
+  @override
+  List<Object?> get props => [idToken];
 }
 
 class LogoutEvent extends AuthEvent {}
@@ -59,14 +70,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase loginUseCase;
   final LogoutUseCase logoutUseCase;
   final SecureStorageService secureStorage;
+  final AuthRepository authRepository;
 
   AuthBloc({
     required this.loginUseCase,
     required this.logoutUseCase,
     required this.secureStorage,
+    required this.authRepository,
   }) : super(AuthInitial()) {
     on<CheckAuthStatusEvent>(_onCheckAuthStatus);
     on<LoginEvent>(_onLogin);
+    on<GoogleLoginEvent>(_onGoogleLogin);
     on<LogoutEvent>(_onLogout);
   }
 
@@ -93,6 +107,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     result.fold(
       (failure) => emit(AuthError(failure.message)),
       (authData) {
+        emit(AuthSuccess(authData.accessToken));
+      },
+    );
+  }
+
+  Future<void> _onGoogleLogin(
+    GoogleLoginEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    debugPrint('[AUTH BLOC] Google login event received.');
+    emit(AuthLoading());
+
+    final result = await authRepository.loginWithGoogle(event.idToken);
+
+    result.fold(
+      (failure) {
+        debugPrint('[AUTH BLOC] Google login failed: ${failure.message}');
+        emit(AuthError(failure.message));
+      },
+      (authData) {
+        debugPrint('[AUTH BLOC] Google login succeeded for userId=${authData.userId}');
         emit(AuthSuccess(authData.accessToken));
       },
     );

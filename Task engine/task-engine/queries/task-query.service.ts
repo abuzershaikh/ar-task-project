@@ -14,8 +14,8 @@ export class TaskQueryService {
         return this.taskRepository.findById(taskId);
     }
 
-    async getAvailableTasks(workerId: string): Promise<Task[]> {
-        const availableTasks = await this.taskRepository.findAvailableForAssignment();
+    async getAvailableTasks(workerId: string, limit: number = 50, offset: number = 0): Promise<Task[]> {
+        const availableTasks = await this.taskRepository.findAvailableForAssignment(limit, offset);
         const excludedCampaignIds = new Set(await this.participationRepo.findCampaignIdsByWorker(workerId));
 
         return availableTasks.filter((task) => !excludedCampaignIds.has(task.campaignId || task.orderId));

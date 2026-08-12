@@ -57,9 +57,12 @@ export class TaskRepository {
         return this.repository.find({ where: { assignedTo: workerId } });
     }
 
-    async findAvailableForAssignment(): Promise<Task[]> {
+    async findAvailableForAssignment(limit: number = 50, offset: number = 0): Promise<Task[]> {
         return this.repository.find({
             where: { status: TaskStatus.ACTIVE, assignedTo: null },
+            take: limit,
+            skip: offset,
+            order: { createdAt: 'DESC' },
         });
     }
 

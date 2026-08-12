@@ -20,6 +20,16 @@ class WalletBalanceModel extends WalletBalance {
     );
   }
 
+  factory WalletBalanceModel.empty() {
+    return WalletBalanceModel(
+      totalBalance: 0.0,
+      availableBalance: 0.0,
+      reservedBalance: 0.0,
+      currency: 'INR',
+      lastUpdated: DateTime.now(),
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'totalBalance': totalBalance,

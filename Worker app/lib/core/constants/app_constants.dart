@@ -10,7 +10,7 @@ class AppConstants {
   // ── API ───────────────────────────────────────────────────────────────
   // 10.0.2.2 = Android Emulator ↔ host machine localhost
   // For physical device on same Wi-Fi, use machine's LAN IP.
-  static const String apiBaseUrl = 'http://10.0.2.2:3000/api/v1';
+  static const String apiBaseUrl = 'http://95.179.178.6:3000/api/v1';
 
   // ── Task Stages (backend-aligned) ────────────────────────────────────
   static const String stageAccepted = 'accepted';

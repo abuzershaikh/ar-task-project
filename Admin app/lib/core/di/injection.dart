@@ -13,6 +13,10 @@ import '../../features/auth/domain/usecases/logout_usecase.dart';
 import '../../features/auth/domain/usecases/get_current_user_usecase.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 
+import '../../features/service_builder/domain/repositories/service_builder_repository.dart';
+import '../../features/service_builder/data/repositories/service_builder_repository_impl.dart';
+import '../../features/service_builder/presentation/bloc/service_builder_bloc.dart';
+
 final getIt = GetIt.instance;
 
 Future<void> initializeDependencies() async {
@@ -53,12 +57,23 @@ Future<void> initializeDependencies() async {
   getIt.registerLazySingleton(() => LogoutUseCase(getIt()));
   getIt.registerLazySingleton(() => GetCurrentUserUseCase(getIt()));
   
+  // Service Builder Feature
+  getIt.registerLazySingleton<ServiceBuilderRepository>(
+    () => ServiceBuilderRepositoryImpl(),
+  );
+
   // BLoC
   getIt.registerFactory(
     () => AuthBloc(
       loginUseCase: getIt(),
       logoutUseCase: getIt(),
       getCurrentUserUseCase: getIt(),
+    ),
+  );
+
+  getIt.registerFactory(
+    () => ServiceBuilderBloc(
+      repository: getIt(),
     ),
   );
 }

@@ -14,6 +14,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GoogleAuthDto } from './dto/google-auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -114,6 +115,98 @@ export class AuthService {
             throw new UnauthorizedException('Invalid credentials');
         }
 
+        await this.userRepo.resetLoginAttempts(user.id);
+        await this.userRepo.update(user.id, { lastLogin: new Date() });
+
+        const tokens = await this.generateTokens(user);
+        await this.userRepo.updateRefreshToken(
+            user.id,
+            await this.hashToken(tokens.refreshToken),
+        );
+
+        return {
+            user: this.sanitizeUser(user),
+            ...tokens,
+        };
+    }
+
+    async googleLogin(dto: GoogleAuthDto) {
+        let payload: { email: string; name?: string; picture?: string; sub?: string };
+
+        try {
+            const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${dto.idToken}`);
+            if (!res.ok) {
+                const fbRes = await fetch(
+                    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY || ''}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ idToken: dto.idToken }),
+                    },
+                );
+                if (!fbRes.ok) {
+                    throw new UnauthorizedException('Invalid Google or Firebase ID token');
+                }
+                const fbData = await fbRes.json();
+                const fbUser = fbData.users?.[0];
+                if (!fbUser || !fbUser.email) {
+                    throw new UnauthorizedException('Invalid token payload');
+                }
+                payload = {
+                    email: fbUser.email,
+                    name: fbUser.displayName,
+                    picture: fbUser.photoUrl,
+                    sub: fbUser.localId,
+                };
+            } else {
+                const data = await res.json();
+                if (!data.email) {
+                    throw new UnauthorizedException('Token missing email claim');
+                }
+                payload = {
+                    email: data.email,
+                    name: data.name,
+                    picture: data.picture,
+                    sub: data.sub,
+                };
+            }
+        } catch (err: any) {
+            if (err instanceof UnauthorizedException) throw err;
+            throw new UnauthorizedException(`Failed to verify Google token: ${err?.message || err}`);
+        }
+
+        const normalizedRole =
+            typeof dto.role === 'string'
+                ? (dto.role.toUpperCase() as UserRole)
+                : dto.role;
+        const role = normalizedRole || UserRole.BUYER;
+        let user = await this.userRepo.findByEmail(payload.email);
+
+        if (!user) {
+            const randomPassword = await bcrypt.hash(randomBytes(16).toString('hex'), 10);
+            user = await this.userRepo.create({
+                email: payload.email,
+                password: randomPassword,
+                fullName: payload.name || payload.email.split('@')[0],
+                role: role,
+                status: UserStatus.ACTIVE,
+            });
+
+            if (role === UserRole.WORKER) {
+                await this.workerRepo.create({
+                    userId: user.id,
+                    status: 'inactive',
+                    kycStatus: 'pending',
+                    totalTasksCompleted: 0,
+                    totalTasksRejected: 0,
+                    successRate: 0,
+                    averageRating: 0,
+                    totalEarnings: 0,
+                });
+            }
+        }
+
+        this.assertAccountCanAuthenticate(user);
         await this.userRepo.resetLoginAttempts(user.id);
         await this.userRepo.update(user.id, { lastLogin: new Date() });
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_router.dart';
@@ -195,6 +196,63 @@ class _LoginPageState extends State<LoginPage> {
                               )
                             : const Text('Sign In'),
                       );
+                    },
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  const Row(
+                    children: [
+                      Expanded(child: Divider(color: AppColors.border)),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('OR', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      ),
+                      Expanded(child: Divider(color: AppColors.border)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.g_mobiledata_rounded, size: 28, color: AppColors.primary),
+                    label: const Text('Continue with Google', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                    onPressed: () async {
+                      try {
+                        debugPrint('[GOOGLE SIGN IN] Starting Google Sign-In process...');
+                        final googleSignIn = GoogleSignIn(
+                          scopes: const ['email'],
+                          serverClientId: '311090572825-jve8b44v1m0p7smmudr6hnhe5ib5qcuc.apps.googleusercontent.com',
+                        );
+                        final account = await googleSignIn.signIn();
+                        debugPrint('[GOOGLE SIGN IN] Account result: $account');
+                        if (account != null) {
+                          final auth = await account.authentication;
+                          final String? googleIdToken = auth.idToken ?? auth.accessToken;
+                          debugPrint(
+                            '[GOOGLE SIGN IN] Google token obtained: ${googleIdToken != null ? "YES (${googleIdToken.substring(0, 10)}...)" : "NULL"}',
+                          );
+                          if (googleIdToken != null && context.mounted) {
+                            context.read<AuthBloc>().add(GoogleLoginEvent(googleIdToken));
+                          } else if (googleIdToken == null && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Google Sign-In failed: Google token is null')),
+                            );
+                          }
+                        } else {
+                          debugPrint('[GOOGLE SIGN IN] User canceled sign-in dialog.');
+                        }
+                      } catch (e, stack) {
+                        debugPrint('[GOOGLE SIGN IN ERROR] Exception: $e\n$stack');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Google Sign-In failed: $e')),
+                          );
+                        }
+                      }
                     },
                   ),
                   

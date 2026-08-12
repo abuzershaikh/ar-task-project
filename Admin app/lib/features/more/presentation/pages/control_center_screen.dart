@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
-import 'services_pricing_screen.dart';
+import '../../../service_builder/presentation/pages/services_list_screen.dart';
 import 'matching_brain_screen.dart';
 import 'payouts_queue_screen.dart';
 import 'kyc_queue_screen.dart';
@@ -29,7 +29,7 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const ServicesPricingScreen()),
+                  MaterialPageRoute(builder: (context) => const ServicesListScreen()),
                 );
               },
             ),

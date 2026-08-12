@@ -63,8 +63,8 @@ export class TaskEngineService {
         return this.queryService.getTaskById(taskId);
     }
 
-    async getAvailableTasks(workerId: string) {
-        return this.queryService.getAvailableTasks(workerId);
+    async getAvailableTasks(workerId: string, limit?: number, offset?: number) {
+        return this.queryService.getAvailableTasks(workerId, limit, offset);
     }
 
     async getWorkerTasks(workerId: string, status?: string) {

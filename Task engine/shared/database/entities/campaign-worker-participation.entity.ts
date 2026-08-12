@@ -16,7 +16,6 @@ export enum ParticipationStatus {
 
 @Entity('campaign_worker_participation')
 @Index(['campaignId', 'workerId'], { unique: true })
-@Index(['campaignId'])
 @Index(['workerId'])
 export class CampaignWorkerParticipation {
     @PrimaryGeneratedColumn('uuid')
@@ -47,10 +46,10 @@ export class CampaignWorkerParticipation {
     @Column({ name: 'rejected_count', type: 'int', default: 0 })
     rejectedCount: number;
 
-    @CreateDateColumn({ name: 'first_assigned_at' })
+    @Column({ name: 'first_assigned_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     firstAssignedAt: Date;
 
-    @UpdateDateColumn({ name: 'last_assigned_at' })
+    @Column({ name: 'last_assigned_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     lastAssignedAt: Date;
 
     @CreateDateColumn({ name: 'created_at' })

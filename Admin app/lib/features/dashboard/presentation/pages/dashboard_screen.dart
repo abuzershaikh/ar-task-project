@@ -3,6 +3,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../widgets/kpi_card.dart';
 import '../widgets/action_banner.dart';
 import '../widgets/quick_action_button.dart';
+import '../../../service_builder/presentation/pages/services_list_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -206,10 +207,17 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: QuickActionButton(
+                child: QuickActionButton(
                       icon: Icons.add_business,
                       label: 'Add Service',
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ServicesListScreen(),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],

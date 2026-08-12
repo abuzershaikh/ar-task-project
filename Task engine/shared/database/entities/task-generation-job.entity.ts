@@ -15,7 +15,6 @@ export enum TaskGenerationJobStatus {
 }
 
 @Entity('task_generation_jobs')
-@Index(['orderId'], { unique: true })
 export class TaskGenerationJob {
     @PrimaryGeneratedColumn('uuid')
     id: string;
