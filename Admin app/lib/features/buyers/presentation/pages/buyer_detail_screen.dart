@@ -95,9 +95,14 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
+          tabAlignment: TabAlignment.start,
           indicatorColor: AppColors.white,
+          indicatorWeight: 3,
           labelColor: AppColors.white,
           unselectedLabelColor: AppColors.white.withOpacity(0.7),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 20.0),
           tabs: const [
             Tab(text: 'Overview'),
             Tab(text: 'Orders'),

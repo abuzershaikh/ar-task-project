@@ -102,7 +102,7 @@ class DashboardScreen extends StatelessWidget {
                 mainAxisSpacing: 12,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 1.4,
+                childAspectRatio: 1.1,
                 children: const [
                   KpiCard(
                     title: 'Total Workers',
