@@ -10,9 +10,10 @@ import { TaskAttemptService } from './handlers/task-attempt.service';
 import { TaskCancellationService } from './handlers/task-cancellation.service';
 import { DatabaseModule } from '../shared/database/database.module';
 import { MatchingEngineModule } from '../matching-engine/matching-engine.module';
+import { ServiceTemplateEngineModule } from '../service-template-engine/service-template-engine.module';
 
 @Module({
-    imports: [DatabaseModule, forwardRef(() => MatchingEngineModule)],
+    imports: [DatabaseModule, forwardRef(() => MatchingEngineModule), ServiceTemplateEngineModule],
     providers: [
         TaskEngineService,
         TaskStateMachine,
