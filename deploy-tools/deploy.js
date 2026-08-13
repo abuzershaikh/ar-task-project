@@ -8,7 +8,8 @@ const ssh = new NodeSSH();
 const config = {
   host: '95.179.178.6',
   username: 'root',
-  password: 'i_G72#y}(6gACDDU'
+  password: 'i_G72#y}(6gACDDU',
+  readyTimeout: 60000,
 };
 
 const SRC_DIR = path.resolve(__dirname, '../Task engine');

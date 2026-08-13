@@ -217,19 +217,12 @@ export class TaskCommandService {
             return task;
         }
 
-        this.stateMachine.validateTransition({
-            taskId: task.id,
-            orderId: task.orderId,
-            campaignId: task.campaignId,
-            taskType: task.taskType,
-            currentStatus: task.status,
-            targetStatus: TaskStatus.APPROVED,
-            timestamp: new Date(),
-            actor: {
-                id: command.reviewedBy || 'system',
-                type: 'admin',
-            },
-        });
+        if (
+            task.status !== TaskStatus.SUBMITTED &&
+            task.status !== TaskStatus.UNDER_REVIEW
+        ) {
+            throw new BadRequestException('Task is not ready for approval');
+        }
 
         const campaignId = task.campaignId || task.orderId;
         if (task.assignedTo) {
@@ -260,22 +253,16 @@ export class TaskCommandService {
             return task;
         }
 
-        this.stateMachine.validateTransition({
-            taskId: task.id,
-            orderId: task.orderId,
-            campaignId: task.campaignId,
-            taskType: task.taskType,
-            currentStatus: task.status,
-            targetStatus: TaskStatus.REJECTED,
-            timestamp: new Date(),
-            actor: {
-                id: command.reviewedBy || 'system',
-                type: 'admin',
-            },
-        });
+        if (
+            task.status !== TaskStatus.SUBMITTED &&
+            task.status !== TaskStatus.UNDER_REVIEW
+        ) {
+            throw new BadRequestException('Task is not ready for rejection');
+        }
 
         const campaignId = task.campaignId || task.orderId;
         if (task.assignedTo) {
+            // Worker is rejected, but participation record remains so worker is excluded from this campaign!
             await this.participationRepo.updateStatus(campaignId, task.assignedTo, ParticipationStatus.REJECTED);
         }
 
@@ -300,20 +287,6 @@ export class TaskCommandService {
         if (task.status === TaskStatus.CANCELLED || task.status === TaskStatus.APPROVED) {
             return task;
         }
-
-        this.stateMachine.validateTransition({
-            taskId: task.id,
-            orderId: task.orderId,
-            campaignId: task.campaignId,
-            taskType: task.taskType,
-            currentStatus: task.status,
-            targetStatus: TaskStatus.CANCELLED,
-            timestamp: new Date(),
-            actor: {
-                id: command.actorId || 'system',
-                type: 'admin',
-            },
-        });
 
         return this.taskRepository.update(task.id, {
             status: TaskStatus.CANCELLED,

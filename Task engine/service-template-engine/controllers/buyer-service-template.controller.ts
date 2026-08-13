@@ -1,8 +1,10 @@
 import { Controller, Get, Param, Query, Post, Body } from '@nestjs/common';
+import { Public } from '../../shared/auth/decorators/public.decorator';
 import { ServiceTemplateService } from '../services/service-template.service';
 import { TemplateRendererService } from '../services/template-renderer.service';
 import { PricingCalculatorService } from '../services/pricing-calculator.service';
 
+@Public()
 @Controller('buyer/service-templates')
 export class BuyerServiceTemplateController {
   constructor(

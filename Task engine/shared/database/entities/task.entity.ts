@@ -6,7 +6,6 @@ import {
     UpdateDateColumn,
     ManyToOne,
     JoinColumn,
-    Index,
 } from 'typeorm';
 
 @Entity('tasks')
@@ -15,18 +14,15 @@ export class Task {
     id: string;
 
     @Column({ name: 'order_id' })
-    @Index()
     orderId: string;
 
     @Column({ name: 'campaign_id' })
-    @Index()
     campaignId: string;
 
     @Column({ name: 'task_type' })
     taskType: string;
 
     @Column({ type: 'varchar', length: 50 })
-    @Index()
     status: string;
 
     @Column({ type: 'json', nullable: true })
@@ -36,7 +32,6 @@ export class Task {
     metadata: any;
 
     @Column({ name: 'assigned_to', nullable: true })
-    @Index()
     assignedTo: string;
 
     @Column({ name: 'assigned_at', type: 'timestamp', nullable: true })

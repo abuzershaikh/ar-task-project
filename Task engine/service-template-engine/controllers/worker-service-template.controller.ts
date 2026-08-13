@@ -1,7 +1,9 @@
 import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+import { Public } from '../../shared/auth/decorators/public.decorator';
 import { ServiceTemplateService } from '../services/service-template.service';
 import { TemplateRendererService } from '../services/template-renderer.service';
 
+@Public()
 @Controller('worker/service-templates')
 export class WorkerServiceTemplateController {
   constructor(

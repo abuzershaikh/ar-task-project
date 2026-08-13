@@ -1,6 +1,8 @@
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Public } from '../../shared/auth/decorators/public.decorator';
 import { ServiceTemplateService, IServiceTemplate } from '../services/service-template.service';
 
+@Public()
 @Controller('admin/service-templates')
 export class AdminServiceTemplateController {
   constructor(private readonly serviceTemplateService: ServiceTemplateService) {}

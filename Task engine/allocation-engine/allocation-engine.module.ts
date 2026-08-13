@@ -4,10 +4,8 @@ import { AllocationEngineService } from './allocation.service';
 import { AssignmentService } from './services/assignment.service';
 import { BatchService } from './services/batch.service';
 
-import { MatchingEngineModule } from '../matching-engine/matching-engine.module';
-
 @Module({
-    imports: [DatabaseModule, MatchingEngineModule],
+    imports: [DatabaseModule],
     providers: [AllocationEngineService, AssignmentService, BatchService],
     exports: [AllocationEngineService],
 })

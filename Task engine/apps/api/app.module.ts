@@ -22,12 +22,10 @@ import { ProgressEngineModule } from '../../progress-engine/progress-engine.modu
 import { PayoutEngineModule } from '../../payout-engine/payout-engine.module';
 import { FraudEngineModule } from '../../fraud-engine/fraud-engine.module';
 import { NotificationEngineModule } from '../../notification-engine/notification-engine.module';
-import { ServiceTemplateEngineModule } from '../../service-template-engine/service-template-engine.module';
 
 // Controllers
 import { AuthController } from './controllers/auth/auth.controller';
 import { FileController } from './controllers/common/file.controller';
-import { HealthController } from './controllers/common/health.controller';
 import { WebhookController } from './controllers/webhooks/webhook.controller';
 
 // Worker Controllers
@@ -97,12 +95,10 @@ import { AdminSystemSettingsController } from './controllers/admin/system-settin
         PayoutEngineModule,
         FraudEngineModule,
         NotificationEngineModule,
-        ServiceTemplateEngineModule,
     ],
     controllers: [
         AuthController,
         FileController,
-        HealthController,
         WebhookController,
 
         // Worker

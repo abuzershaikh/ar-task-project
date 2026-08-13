@@ -22,6 +22,8 @@ export enum UserStatus {
 }
 
 @Entity('users')
+@Index(['email'], { unique: true })
+@Index(['phone'], { unique: true })
 export class User {
     @PrimaryGeneratedColumn('uuid')
     id: string;
