@@ -4,6 +4,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_router.dart';
+import '../../../../core/storage/secure_storage_service.dart';
+import '../../../../core/di/injection.dart';
 import '../bloc/auth_bloc.dart';
 
 class LoginPage extends StatefulWidget {
@@ -26,11 +28,17 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
+      final email = _emailController.text.trim();
+      final storage = getIt<SecureStorageService>();
+      await storage.saveUserEmail(email);
+      await storage.saveUserName(email.split('@')[0]);
+
+      if (!mounted) return;
       context.read<AuthBloc>().add(
         LoginEvent(
-          email: _emailController.text.trim(),
+          email: email,
           password: _passwordController.text,
         ),
       );
@@ -230,6 +238,17 @@ class _LoginPageState extends State<LoginPage> {
                         final account = await googleSignIn.signIn();
                         debugPrint('[GOOGLE SIGN IN] Account result: $account');
                         if (account != null) {
+                          final storage = getIt<SecureStorageService>();
+                          if (account.displayName != null && account.displayName!.isNotEmpty) {
+                            await storage.saveUserName(account.displayName!);
+                          }
+                          if (account.email.isNotEmpty) {
+                            await storage.saveUserEmail(account.email);
+                          }
+                          if (account.photoUrl != null && account.photoUrl!.isNotEmpty) {
+                            await storage.saveUserPhoto(account.photoUrl!);
+                          }
+
                           final auth = await account.authentication;
                           final String? googleIdToken = auth.idToken ?? auth.accessToken;
                           debugPrint(
