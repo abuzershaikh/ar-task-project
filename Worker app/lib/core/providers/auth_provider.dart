@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../services/api_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -22,7 +23,17 @@ class AuthProvider extends ChangeNotifier {
       _isAuthenticated = true;
       notifyListeners();
       fetchProfile();
+      _updateFCMToken();
     }
+  }
+
+  Future<void> _updateFCMToken() async {
+    try {
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken != null) {
+        await ApiService.updateDeviceToken(fcmToken);
+      }
+    } catch (_) {}
   }
 
   Future<bool> login(String email, String password) async {
@@ -32,17 +43,20 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final response = await ApiService.login(email, password);
-      if (response['token'] != null || response['accessToken'] != null) {
-        final token = response['token'] ?? response['accessToken'];
-        await ApiService.saveToken(token);
-        _isAuthenticated = true;
-        _user = response['user'];
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = response['message'] ?? 'Login failed';
+      if (response['success'] == true) {
+        final data = response['data'] ?? response;
+        final token = data['token'] ?? data['accessToken'];
+        if (token != null) {
+          await ApiService.saveToken(token);
+          _isAuthenticated = true;
+          _user = data['user'];
+          _isLoading = false;
+          notifyListeners();
+          _updateFCMToken();
+          return true;
+        }
       }
+      _errorMessage = response['message'] ?? 'Login failed';
     } catch (e) {
       _errorMessage = 'Network error: $e';
     }
@@ -59,18 +73,20 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final response = await ApiService.googleLogin(idToken);
-      final data = response['data'];
-      if (data != null && (data['token'] != null || data['accessToken'] != null)) {
+      if (response['success'] == true) {
+        final data = response['data'] ?? response;
         final token = data['token'] ?? data['accessToken'];
-        await ApiService.saveToken(token);
-        _isAuthenticated = true;
-        _user = data['user'];
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _errorMessage = response['message'] ?? 'Google login failed';
+        if (token != null) {
+          await ApiService.saveToken(token);
+          _isAuthenticated = true;
+          _user = data['user'];
+          _isLoading = false;
+          notifyListeners();
+          _updateFCMToken();
+          return true;
+        }
       }
+      _errorMessage = response['message'] ?? 'Google login failed';
     } catch (e) {
       _errorMessage = 'Network error: $e';
     }
@@ -87,18 +103,20 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final response = await ApiService.register(email, password, name);
-      if (response['token'] != null || response['accessToken'] != null || response['id'] != null) {
-        // Auto login if token returned
-        if (response['token'] != null) {
-          await ApiService.saveToken(response['token']);
+      if (response['success'] == true) {
+        final data = response['data'] ?? response;
+        final token = data['token'] ?? data['accessToken'];
+        if (token != null) {
+          await ApiService.saveToken(token);
           _isAuthenticated = true;
+          _user = data['user'];
+          _updateFCMToken();
         }
         _isLoading = false;
         notifyListeners();
         return true;
-      } else {
-        _errorMessage = response['message'] ?? 'Registration failed';
       }
+      _errorMessage = response['message'] ?? 'Registration failed';
     } catch (e) {
       _errorMessage = 'Network error: $e';
     }
@@ -110,9 +128,9 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> fetchProfile() async {
     try {
-      final dashboard = await ApiService.getDashboard();
-      if (dashboard.containsKey('worker')) {
-        _user = dashboard['worker'];
+      final profileResponse = await ApiService.getProfile();
+      if (profileResponse['success'] == true && profileResponse.containsKey('worker')) {
+        _user = profileResponse['worker'];
         notifyListeners();
       }
     } catch (_) {}

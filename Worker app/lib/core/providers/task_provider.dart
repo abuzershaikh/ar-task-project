@@ -37,7 +37,25 @@ class TaskProvider extends ChangeNotifier {
 
   Future<void> fetchDashboardStats() async {
     try {
-      _dashboardStats = await ApiService.getDashboard();
+      final res = await ApiService.getDashboard();
+      if (res['success'] == true && res.containsKey('dashboard')) {
+        _dashboardStats = res['dashboard'];
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Map<String, dynamic> _walletData = {};
+  Map<String, dynamic> get walletData => _walletData;
+
+  Future<void> fetchWalletData() async {
+    try {
+      final res = await ApiService.getWallet();
+      if (res['success'] == true && res.containsKey('wallet')) {
+        _walletData = res['wallet'];
+      } else if (res['success'] == true && res.containsKey('earnings')) {
+        _walletData = {'balance': 0.0, 'earnings': res['earnings']};
+      }
       notifyListeners();
     } catch (_) {}
   }
@@ -47,6 +65,17 @@ class TaskProvider extends ChangeNotifier {
       final res = await ApiService.acceptTask(taskId);
       if (res['success'] == true || res['status'] == 'assigned' || res['status'] == 'ASSIGNED') {
         fetchAvailableTasks();
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  Future<bool> startTask(String taskId) async {
+    try {
+      final res = await ApiService.startTask(taskId);
+      if (res['success'] == true || res['status'] == 'IN_PROGRESS' || res['status'] == 'in_progress') {
+        fetchMyTasks(_selectedStage);
         return true;
       }
     } catch (_) {}

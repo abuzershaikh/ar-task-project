@@ -5,6 +5,7 @@ import '../../auth/screens/login_screen.dart';
 import 'edit_profile_screen.dart';
 import 'day_streak_screen.dart';
 import 'quality_score_screen.dart';
+import '../../../core/providers/profile_provider.dart';
 
 /// Main Profile Overview Screen:
 /// - Styled with Warm Gold Amber (#F59E0B / #D97706) & Slate theme tokens.
@@ -14,18 +15,33 @@ import 'quality_score_screen.dart';
 ///   2) "Daily Streak" (7 Days Streak 🔥)
 ///   3) "Quality Score & Rating" (98.5% / 4.9★ ⭐)
 /// - Logout Account button.
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProfileProvider>().fetchProfile();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final profileProvider = Provider.of<ProfileProvider>(context);
     final user = authProvider.user;
+    final profile = profileProvider.profileData;
 
-    final name = user?['name'] ?? 'Alex Morgan';
-    final email = user?['email'] ?? 'alex.worker@taskreward.com';
-    const mobile = '+91 98765 43210';
-    const age = '24';
+    final name = profile['name'] ?? profile['fullName'] ?? user?['name'] ?? 'Worker Name';
+    final email = profile['email'] ?? user?['email'] ?? 'worker@example.com';
+    final mobile = profile['mobile'] ?? profile['phoneNumber'] ?? 'Not Set';
+    final age = profile['age']?.toString() ?? 'Not Set';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),

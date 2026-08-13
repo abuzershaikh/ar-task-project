@@ -4,8 +4,19 @@ import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/providers/task_provider.dart';
+import 'core/providers/profile_provider.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/navigation/screens/main_nav_screen.dart';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // If you're going to use other Firebase services in the background, such as Firestore,
+  // make sure you call `initializeApp` before using other Firebase services.
+  await Firebase.initializeApp();
+  print("Handling a background message: ${message.messageId}");
+}
 
 // Set to false to enable authentication screens
 const bool kBypassAuth = false;
@@ -13,6 +24,7 @@ const bool kBypassAuth = false;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   runApp(const TaskRewardApp());
 }
 
@@ -25,6 +37,7 @@ class TaskRewardApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => TaskProvider()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
       ],
       child: MaterialApp(
         title: 'Task Reward',

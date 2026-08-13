@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/providers/profile_provider.dart';
 
 /// Separate Edit Profile Screen:
 /// - Editable: Name, Mobile Number, Age.
@@ -46,14 +48,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  void _saveProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile details updated successfully!'),
-        backgroundColor: Color(0xFFD97706),
-      ),
-    );
-    Navigator.of(context).pop();
+  void _saveProfile() async {
+    final provider = context.read<ProfileProvider>();
+    final success = await provider.updateProfile({
+      'name': _nameController.text,
+      'mobile': _mobileController.text,
+      'age': int.tryParse(_ageController.text) ?? 0,
+    });
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile details updated successfully!'),
+          backgroundColor: Color(0xFFD97706),
+        ),
+      );
+      Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update profile. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override

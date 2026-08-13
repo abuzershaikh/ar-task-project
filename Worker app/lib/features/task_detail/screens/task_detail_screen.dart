@@ -38,7 +38,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   void initState() {
     super.initState();
     final status = (widget.task['status'] ?? 'AVAILABLE').toString().toUpperCase();
-    if (status == 'ACCEPTED' || status == 'IN_PROGRESS') {
+    if (status == 'ACCEPTED' || status == 'ASSIGNED' || status == 'IN_PROGRESS') {
       _isTaskAccepted = true;
       _startTimer();
     }
@@ -58,7 +58,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     });
   }
 
-  /// Accept Task function - Worker task ko accept karke timer start karta hai
   void _acceptTask() async {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     final taskId = widget.task['id'] ?? widget.task['_id'] ?? 'T-101';
@@ -68,6 +67,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
     try {
       await taskProvider.acceptTask(taskId);
+      await taskProvider.startTask(taskId);
     } catch (_) {}
 
     if (mounted) {

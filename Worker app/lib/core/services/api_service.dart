@@ -122,6 +122,42 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  // --- Worker Profile APIs ---
+  static Future<Map<String, dynamic>> getProfile() async {
+    final headers = await _headers();
+    final response = await http.get(
+      Uri.parse('$baseUrl/worker/profile'),
+      headers: headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return {};
+  }
+
+  static Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
+    final headers = await _headers();
+    final response = await http.put(
+      Uri.parse('$baseUrl/worker/profile'),
+      headers: headers,
+      body: jsonEncode(data),
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<void> updateDeviceToken(String token) async {
+    try {
+      final headers = await _headers();
+      await http.put(
+        Uri.parse('$baseUrl/worker/notifications/device-token'),
+        headers: headers,
+        body: jsonEncode({'deviceToken': token}),
+      );
+    } catch (_) {
+      // Ignore if not supported by backend yet
+    }
+  }
+
   // --- Worker Dashboard & Earnings APIs ---
   static Future<Map<String, dynamic>> getDashboard() async {
     final headers = await _headers();
@@ -139,6 +175,18 @@ class ApiService {
     final headers = await _headers();
     final response = await http.get(
       Uri.parse('$baseUrl/worker/earnings'),
+      headers: headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return {};
+  }
+
+  static Future<Map<String, dynamic>> getWallet() async {
+    final headers = await _headers();
+    final response = await http.get(
+      Uri.parse('$baseUrl/worker/earnings/wallet'),
       headers: headers,
     );
     if (response.statusCode == 200) {
