@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import '../../../../core/network/dio_client.dart';
 import '../../domain/models/service_model.dart';
 import '../../domain/models/pricing_config.dart';
 import '../../domain/models/template_element.dart';
@@ -10,9 +12,9 @@ import '../../domain/models/action_type.dart';
 import '../../domain/repositories/service_builder_repository.dart';
 
 class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
-  final Dio? dio;
+  final DioClient? dioClient;
 
-  // In-memory store for instant UI editing & versioning
+  // In-memory fallback store
   final List<ServiceModel> _mockServices = [
     ServiceModel(
       id: 'srv_yt_sub_01',
@@ -131,17 +133,72 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
     ),
   ];
 
-  ServiceBuilderRepositoryImpl({this.dio});
+  ServiceBuilderRepositoryImpl({this.dioClient});
 
   @override
   Future<List<ServiceModel>> getServices() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    if (dioClient != null) {
+      try {
+        final response = await dioClient!.get('/admin/service-templates');
+        if (response.statusCode == 200 && response.data != null) {
+          final List<dynamic> list = response.data['data'] ?? [];
+          final remoteServices = list.map((json) {
+            return ServiceModel(
+              id: (json['id'] ?? '').toString(),
+              code: (json['id'] ?? 'CUSTOM_SRV').toString().toUpperCase(),
+              name: (json['title'] ?? 'Custom Service').toString(),
+              description: (json['description'] ?? '').toString(),
+              icon: 'settings_suggest_rounded',
+              isActive: json['isPublished'] ?? true,
+              currentVersion: 1,
+              pricing: PricingConfig.calculate(
+                buyerPrice: ((json['pricing']?['unitPriceBuyer'] as num?) ?? 50.0).toDouble(),
+                adminMarginPercent: 20.0,
+              ),
+              elements: [],
+              updatedAt: DateTime.now(),
+            );
+          }).toList();
+
+          if (remoteServices.isNotEmpty) {
+            return remoteServices;
+          }
+        }
+      } catch (e) {
+        debugPrint('[ADMIN REPO] Remote service templates fetch exception: $e');
+      }
+    }
     return List.from(_mockServices);
   }
 
   @override
   Future<ServiceModel> getServiceById(String id) async {
-    await Future.delayed(const Duration(milliseconds: 200));
+    if (dioClient != null) {
+      try {
+        final response = await dioClient!.get('/admin/service-templates/$id');
+        if (response.statusCode == 200 && response.data != null) {
+          final json = response.data['data'] ?? response.data;
+          return ServiceModel(
+            id: (json['id'] ?? id).toString(),
+            code: (json['id'] ?? id).toString().toUpperCase(),
+            name: (json['title'] ?? 'Custom Service').toString(),
+            description: (json['description'] ?? '').toString(),
+            icon: 'settings_suggest_rounded',
+            isActive: json['isPublished'] ?? true,
+            currentVersion: 1,
+            pricing: PricingConfig.calculate(
+              buyerPrice: ((json['pricing']?['unitPriceBuyer'] as num?) ?? 50.0).toDouble(),
+              adminMarginPercent: 20.0,
+            ),
+            elements: [],
+            updatedAt: DateTime.now(),
+          );
+        }
+      } catch (e) {
+        debugPrint('[ADMIN REPO] Remote getServiceById exception: $e');
+      }
+    }
+
     return _mockServices.firstWhere(
       (s) => s.id == id,
       orElse: () => _mockServices.first,
@@ -150,7 +207,38 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
 
   @override
   Future<ServiceModel> saveServiceDraft(ServiceModel service) async {
-    await Future.delayed(const Duration(milliseconds: 400));
+    if (dioClient != null) {
+      try {
+        final payload = {
+          'title': service.name,
+          'category': 'Custom Service',
+          'description': service.description,
+          'platform': 'GENERAL',
+          'pricing': {
+            'modelType': 'countBased',
+            'unitPriceBuyer': service.pricing.buyerPrice,
+            'workerRewardPerUnit': service.pricing.workerReward,
+            'minQuantity': 10,
+            'maxQuantity': 10000,
+          },
+          'elements': service.elements.map((e) => {
+            'id': e.id,
+            'type': e.type.toString().split('.').last,
+            'label': e.label,
+            'visibility': e.visibility.toString().split('.').last.toUpperCase(),
+            'editability': e.editability.toString().split('.').last.toUpperCase(),
+            'order': e.orderIndex,
+          }).toList(),
+          'isPublished': service.isActive,
+        };
+
+        final response = await dioClient!.post('/admin/service-templates', data: payload);
+        debugPrint('[ADMIN REPO] Remote saveServiceDraft response: ${response.data}');
+      } catch (e) {
+        debugPrint('[ADMIN REPO] Remote saveServiceDraft exception: $e');
+      }
+    }
+
     final index = _mockServices.indexWhere((s) => s.id == service.id);
     if (index >= 0) {
       _mockServices[index] = service;
@@ -162,7 +250,6 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
 
   @override
   Future<ServiceModel> publishServiceVersion(String serviceId) async {
-    await Future.delayed(const Duration(milliseconds: 500));
     final index = _mockServices.indexWhere((s) => s.id == serviceId);
     if (index >= 0) {
       final existing = _mockServices[index];
@@ -171,6 +258,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
         updatedAt: DateTime.now(),
       );
       _mockServices[index] = published;
+      await saveServiceDraft(published);
       return published;
     }
     throw Exception('Service not found for publishing');
@@ -178,7 +266,6 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
 
   @override
   Future<void> deleteService(String serviceId) async {
-    await Future.delayed(const Duration(milliseconds: 300));
     _mockServices.removeWhere((s) => s.id == serviceId);
   }
 }
