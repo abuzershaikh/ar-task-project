@@ -21,11 +21,19 @@ class _WalletScreenState extends State<WalletScreen> {
   bool _isBalanceVisible = true;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TaskProvider>().fetchWalletData();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
-    final stats = taskProvider.dashboardStats;
-    final double walletBalance =
-        (stats['walletBalance'] ?? stats['totalEarned'] ?? 150.0).toDouble();
+    final wallet = taskProvider.walletData;
+    final double walletBalance = 
+        (wallet['balance'] ?? wallet['availableBalance'] ?? 0.0).toDouble();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -33,7 +41,7 @@ class _WalletScreenState extends State<WalletScreen> {
         child: RefreshIndicator(
           color: const Color(0xFF2563EB),
           onRefresh: () async {
-            taskProvider.fetchAvailableTasks();
+            await taskProvider.fetchWalletData();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),

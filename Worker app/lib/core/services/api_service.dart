@@ -3,8 +3,11 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Base URL: Use 10.0.2.2 for Android Emulator, or localhost for web/desktop
-  static const String baseUrl = 'http://10.0.2.2:3000/api/v1';
+  // Base URL: 10.0.2.2 for Android Emulator, local IP for physical Android device
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://95.179.178.6:3000/api/v1',
+  );
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -39,6 +42,15 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  static Future<Map<String, dynamic>> googleLogin(String idToken) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/google'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'idToken': idToken, 'role': 'WORKER'}),
+    );
+    return jsonDecode(response.body);
+  }
+
   static Future<Map<String, dynamic>> register(String email, String password, String name) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/register'),
@@ -46,7 +58,7 @@ class ApiService {
       body: jsonEncode({
         'email': email,
         'password': password,
-        'name': name,
+        'fullName': name,
         'role': 'WORKER',
       }),
     );
@@ -69,8 +81,10 @@ class ApiService {
 
   static Future<List<dynamic>> getMyTasks(String stage) async {
     final headers = await _headers();
+    // Normalize stage string to match NestJS endpoints
+    final normalizedStage = stage.replaceAll('_', '-');
     final response = await http.get(
-      Uri.parse('$baseUrl/worker/tasks/$stage'),
+      Uri.parse('$baseUrl/worker/tasks/$normalizedStage'),
       headers: headers,
     );
     if (response.statusCode == 200) {
@@ -108,6 +122,42 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  // --- Worker Profile APIs ---
+  static Future<Map<String, dynamic>> getProfile() async {
+    final headers = await _headers();
+    final response = await http.get(
+      Uri.parse('$baseUrl/worker/profile'),
+      headers: headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return {};
+  }
+
+  static Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
+    final headers = await _headers();
+    final response = await http.put(
+      Uri.parse('$baseUrl/worker/profile'),
+      headers: headers,
+      body: jsonEncode(data),
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<void> updateDeviceToken(String token) async {
+    try {
+      final headers = await _headers();
+      await http.put(
+        Uri.parse('$baseUrl/worker/notifications/device-token'),
+        headers: headers,
+        body: jsonEncode({'deviceToken': token}),
+      );
+    } catch (_) {
+      // Ignore if not supported by backend yet
+    }
+  }
+
   // --- Worker Dashboard & Earnings APIs ---
   static Future<Map<String, dynamic>> getDashboard() async {
     final headers = await _headers();
@@ -133,10 +183,22 @@ class ApiService {
     return {};
   }
 
+  static Future<Map<String, dynamic>> getWallet() async {
+    final headers = await _headers();
+    final response = await http.get(
+      Uri.parse('$baseUrl/worker/earnings/wallet'),
+      headers: headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return {};
+  }
+
   static Future<Map<String, dynamic>> requestPayout(double amount, String paymentMethodId) async {
     final headers = await _headers();
     final response = await http.post(
-      Uri.parse('$baseUrl/worker/earnings/payout'),
+      Uri.parse('$baseUrl/worker/earnings/withdraw'),
       headers: headers,
       body: jsonEncode({
         'amount': amount,
