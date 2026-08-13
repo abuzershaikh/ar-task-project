@@ -165,63 +165,7 @@ class DashboardScreen extends StatelessWidget {
               
               const SizedBox(height: 24),
               
-              // Quick Actions
-              const Text(
-                'Quick Actions',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.gray900,
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              Row(
-                children: [
-                  Expanded(
-                    child: QuickActionButton(
-                      icon: Icons.verified_user,
-                      label: 'Verify KYC',
-                      onTap: () {},
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: QuickActionButton(
-                      icon: Icons.account_balance_wallet,
-                      label: 'Approve Payouts',
-                      onTap: () {},
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: QuickActionButton(
-                      icon: Icons.rate_review,
-                      label: 'Review Tasks',
-                      onTap: () {},
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                child: QuickActionButton(
-                      icon: Icons.add_business,
-                      label: 'Add Service',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ServicesListScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
+
             ],
           ),
         ),
