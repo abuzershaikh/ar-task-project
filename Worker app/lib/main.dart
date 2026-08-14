@@ -24,10 +24,16 @@ const bool kBypassAuth = false;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
-    await Firebase.initializeApp();
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp();
+    }
+  } catch (e) {
+    debugPrint('Firebase core init error: $e');
+  }
+  try {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   } catch (e) {
-    debugPrint('Firebase init error: $e');
+    debugPrint('Firebase messaging init error: $e');
   }
   runApp(const TaskRewardApp());
 }

@@ -8,6 +8,11 @@ import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/pages/login_screen.dart';
 import 'features/main/presentation/pages/main_navigation_screen.dart';
 import 'features/service_builder/presentation/bloc/service_builder_bloc.dart';
+import 'features/dashboard/presentation/bloc/dashboard_bloc.dart';
+import 'features/workers/presentation/bloc/workers_bloc.dart';
+import 'features/buyers/presentation/bloc/buyers_bloc.dart';
+import 'features/orders/presentation/bloc/orders_bloc.dart';
+import 'features/more/presentation/bloc/more_bloc.dart';
 
 void main() async {
   // Ensure Flutter binding is initialized
@@ -50,6 +55,11 @@ class AdminApp extends StatelessWidget {
       providers: [
         BlocProvider(create: (_) => getIt<AuthBloc>()..add(const AuthCheckStatusRequested())),
         BlocProvider(create: (_) => getIt<ServiceBuilderBloc>()),
+        BlocProvider(create: (_) => getIt<DashboardBloc>()),
+        BlocProvider(create: (_) => getIt<WorkersBloc>()),
+        BlocProvider(create: (_) => getIt<BuyersBloc>()),
+        BlocProvider(create: (_) => getIt<OrdersBloc>()),
+        BlocProvider(create: (_) => getIt<MoreBloc>()),
       ],
       child: MaterialApp(
         title: 'EarnPost Admin',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/image_viewer_dialog.dart';
 
 class KycTab extends StatelessWidget {
   final String workerId;
@@ -73,12 +74,12 @@ class KycTab extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildInfoRow('Full Name', 'Ahmed Khan'),
-                  _buildInfoRow('Date of Birth', '15 Jan 1995'),
-                  _buildInfoRow('Document Type', 'Aadhaar Card'),
-                  _buildInfoRow('Document Number', 'XXXX XXXX 1234'),
-                  _buildInfoRow('Verified By', 'Admin John (A-102)'),
-                  _buildInfoRow('Verified Date', '20 Jan 2024'),
+                  _buildInfoRow('Full Name', 'KYC Verified User'),
+                  _buildInfoRow('Date of Birth', 'N/A'),
+                  _buildInfoRow('Document Type', 'Identity Document'),
+                  _buildInfoRow('Document Number', 'Verified (Masked)'),
+                  _buildInfoRow('Verified By', 'Admin Override'),
+                  _buildInfoRow('Verified Date', 'Verified'),
                 ],
               ),
             ),
@@ -106,7 +107,13 @@ class KycTab extends StatelessWidget {
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () {},
+                          onPressed: () {
+                            ImageViewerDialog.show(
+                              context,
+                              imageUrl: 'https://via.placeholder.com/600x400.png?text=KYC+Document+Front',
+                              title: 'KYC Document Front',
+                            );
+                          },
                           icon: const Icon(Icons.image, size: 18),
                           label: const Text('View Front'),
                           style: ElevatedButton.styleFrom(
@@ -118,7 +125,13 @@ class KycTab extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () {},
+                          onPressed: () {
+                            ImageViewerDialog.show(
+                              context,
+                              imageUrl: 'https://via.placeholder.com/600x400.png?text=KYC+Document+Back',
+                              title: 'KYC Document Back',
+                            );
+                          },
                           icon: const Icon(Icons.image, size: 18),
                           label: const Text('View Back'),
                           style: ElevatedButton.styleFrom(

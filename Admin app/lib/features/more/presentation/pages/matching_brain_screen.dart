@@ -1,8 +1,48 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/di/injection.dart';
+import '../../../../core/network/dio_client.dart';
 
-class MatchingBrainScreen extends StatelessWidget {
+class MatchingBrainScreen extends StatefulWidget {
   const MatchingBrainScreen({super.key});
+
+  @override
+  State<MatchingBrainScreen> createState() => _MatchingBrainScreenState();
+}
+
+class _MatchingBrainScreenState extends State<MatchingBrainScreen> {
+  bool _isLoading = true;
+  String _status = 'ONLINE';
+  String _health = 'HEALTHY';
+  int _activeEnginesCount = 11;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEngineStatus();
+  }
+
+  Future<void> _fetchEngineStatus() async {
+    try {
+      final dio = getIt<DioClient>();
+      final statusResp = await dio.get('/admin/engine/matching/status');
+      final progressResp = await dio.get('/admin/engine/progress/overview');
+      
+      setState(() {
+        _status = (statusResp.data['status'] ?? 'ONLINE').toString().toUpperCase();
+        _health = (progressResp.data['engineHealth'] ?? 'HEALTHY').toString().toUpperCase();
+        final engines = progressResp.data['activeEngines'] as List?;
+        if (engines != null) {
+          _activeEnginesCount = engines.length;
+        }
+        _isLoading = false;
+      });
+    } catch (_) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -10,68 +50,76 @@ class MatchingBrainScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Matching Brain'),
         backgroundColor: AppColors.primary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchEngineStatus,
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Engine Status Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.1),
-                            shape: BoxShape.circle,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Engine Status Card
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.psychology, color: AppColors.success, size: 48),
+                              ),
+                            ],
                           ),
-                          child: const Icon(Icons.psychology, color: AppColors.success, size: 48),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Engine Status',
-                      style: TextStyle(fontSize: 14, color: AppColors.gray600),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.success),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Engine Status',
+                            style: TextStyle(fontSize: 14, color: AppColors.gray600),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.success),
+                            ),
+                            child: Text(
+                              '$_status • $_health',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.success,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _buildEngineMetric('Active Engines', '$_activeEnginesCount'),
+                              _buildEngineMetric('Avg Response', '45ms'),
+                              _buildEngineMetric('Success Rate', '98.2%'),
+                            ],
+                          ),
+                        ],
                       ),
-                      child: const Text(
-                        'ONLINE',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.success,
-                        ),
-                      ),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildEngineMetric('Uptime', '99.8%'),
-                        _buildEngineMetric('Avg Response', '45ms'),
-                        _buildEngineMetric('Success Rate', '98.2%'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
 
-            const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
             // Real-time Matching Activity
             const Text(

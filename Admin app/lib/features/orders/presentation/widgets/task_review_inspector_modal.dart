@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/di/injection.dart';
+import '../../../../core/network/dio_client.dart';
+import '../../../../core/widgets/image_viewer_dialog.dart';
 
 class TaskReviewInspectorModal extends StatelessWidget {
   final String taskId;
   final String workerId;
+  final String? proofUrl;
 
   const TaskReviewInspectorModal({
     super.key,
     required this.taskId,
     required this.workerId,
+    this.proofUrl,
   });
 
   @override
@@ -44,9 +49,9 @@ class TaskReviewInspectorModal extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'Task Review Inspector',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
@@ -94,9 +99,9 @@ class TaskReviewInspectorModal extends StatelessWidget {
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text('Worker Name', style: TextStyle(fontWeight: FontWeight.w600)),
-                                    Text('Quality Score: 92.5', style: TextStyle(fontSize: 12, color: AppColors.gray600)),
+                                  children: [
+                                    Text('Worker: $workerId', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    const Text('Quality Score: 92.5', style: TextStyle(fontSize: 12, color: AppColors.gray600)),
                                   ],
                                 ),
                               ),
@@ -122,8 +127,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
                           const Divider(height: 1),
                           const SizedBox(height: 12),
                           _buildInfoRow('Task ID', taskId),
-                          _buildInfoRow('Submitted', '2 hours ago'),
-                          _buildInfoRow('Time Taken', '8 minutes'),
+                          _buildInfoRow('Submitted', 'Recent'),
                         ],
                       ),
                     ),
@@ -140,20 +144,29 @@ class TaskReviewInspectorModal extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Screenshot Preview
-                        Container(
-                          height: 300,
-                          width: double.infinity,
-                          color: AppColors.gray100,
-                          child: const Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.image, size: 64, color: AppColors.gray400),
-                                SizedBox(height: 8),
-                                Text('Screenshot Preview', style: TextStyle(color: AppColors.gray600)),
-                                Text('(Tap to zoom)', style: TextStyle(fontSize: 12, color: AppColors.gray500)),
-                              ],
-                            ),
+                        InkWell(
+                          onTap: () {
+                            if (proofUrl != null && proofUrl!.isNotEmpty) {
+                              ImageViewerDialog.show(context, imageUrl: proofUrl!, title: 'Proof Screenshot');
+                            }
+                          },
+                          child: Container(
+                            height: 240,
+                            width: double.infinity,
+                            color: AppColors.gray100,
+                            child: proofUrl != null && proofUrl!.startsWith('http')
+                                ? Image.network(proofUrl!, fit: BoxFit.contain)
+                                : const Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.image, size: 64, color: AppColors.gray400),
+                                        SizedBox(height: 8),
+                                        Text('Screenshot Preview', style: TextStyle(color: AppColors.gray600)),
+                                        Text('(Tap to view full screen)', style: TextStyle(fontSize: 12, color: AppColors.gray500)),
+                                      ],
+                                    ),
+                                  ),
                           ),
                         ),
                         
@@ -165,58 +178,22 @@ class TaskReviewInspectorModal extends StatelessWidget {
                               Row(
                                 children: [
                                   ElevatedButton.icon(
-                                    onPressed: () {},
+                                    onPressed: () {
+                                      if (proofUrl != null && proofUrl!.isNotEmpty) {
+                                        ImageViewerDialog.show(context, imageUrl: proofUrl!, title: 'Proof Screenshot');
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('No image URL available')),
+                                        );
+                                      }
+                                    },
                                     icon: const Icon(Icons.zoom_in, size: 18),
                                     label: const Text('View Full Size'),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColors.primary,
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  OutlinedButton.icon(
-                                    onPressed: () {},
-                                    icon: const Icon(Icons.download, size: 18),
-                                    label: const Text('Download'),
-                                  ),
                                 ],
-                              ),
-                              
-                              const SizedBox(height: 16),
-                              const Text('Submitted URL:', style: TextStyle(fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: AppColors.gray100,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Expanded(
-                                      child: Text(
-                                        'https://youtube.com/watch?v=example123',
-                                        style: TextStyle(fontSize: 13, color: AppColors.primary),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.copy, size: 18),
-                                      onPressed: () {
-                                        Clipboard.setData(const ClipboardData(text: 'https://youtube.com/watch?v=example123'));
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('URL copied to clipboard')),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              
-                              const SizedBox(height: 16),
-                              const Text('Comments/Notes:', style: TextStyle(fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Completed the task successfully. Liked the video and left a positive comment.',
-                                style: TextStyle(color: AppColors.gray700),
                               ),
                             ],
                           ),
@@ -285,18 +262,30 @@ class TaskReviewInspectorModal extends StatelessWidget {
   void _showApproveDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Approve Task'),
-        content: const Text('This will mark the task as approved and post earnings to the worker.'),
+        content: const Text('This will mark the task submission as approved and credit earnings to worker.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Task approved successfully')),
-              );
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              try {
+                final dio = getIt<DioClient>();
+                await dio.post('/admin/reviews/$taskId/approve');
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Submission approved successfully')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to approve: $e'), backgroundColor: AppColors.error),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
             child: const Text('Approve'),
@@ -308,10 +297,11 @@ class TaskReviewInspectorModal extends StatelessWidget {
 
   void _showRejectDialog(BuildContext context) {
     String? selectedReason;
-    
+    final notesController = TextEditingController();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Reject Task'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -334,6 +324,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             TextField(
+              controller: notesController,
               decoration: const InputDecoration(
                 labelText: 'Additional Notes',
                 hintText: 'Provide detailed feedback',
@@ -344,14 +335,32 @@ class TaskReviewInspectorModal extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Task rejected')),
-              );
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              try {
+                final dio = getIt<DioClient>();
+                await dio.post(
+                  '/admin/reviews/$taskId/reject',
+                  data: {
+                    'reason': selectedReason ?? 'INVALID_PROOF',
+                    'notes': notesController.text,
+                  },
+                );
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Submission rejected')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to reject: $e'), backgroundColor: AppColors.error),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Reject'),
@@ -361,3 +370,4 @@ class TaskReviewInspectorModal extends StatelessWidget {
     );
   }
 }
+

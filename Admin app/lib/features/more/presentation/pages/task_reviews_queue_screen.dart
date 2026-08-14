@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../bloc/more_bloc.dart';
 import '../../../orders/presentation/widgets/task_review_inspector_modal.dart';
 
 class TaskReviewsQueueScreen extends StatefulWidget {
@@ -10,7 +12,11 @@ class TaskReviewsQueueScreen extends StatefulWidget {
 }
 
 class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
-  String _selectedFilter = 'All';
+  @override
+  void initState() {
+    super.initState();
+    context.read<MoreBloc>().add(LoadReviewsQueueEvent());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,207 +24,182 @@ class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
       appBar: AppBar(
         title: const Text('Task Reviews Queue'),
         backgroundColor: AppColors.primary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => context.read<MoreBloc>().add(LoadReviewsQueueEvent()),
+          ),
+        ],
       ),
-      body: Column(
-        children: [
-          // Stats Bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: AppColors.white,
-            child: Row(
-              children: [
-                Expanded(child: _buildStatCard('Pending', '234', AppColors.warning)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildStatCard('High Priority', '45', AppColors.error)),
-                const SizedBox(width: 8),
-                Expanded(child: _buildStatCard('Reviewed Today', '89', AppColors.success)),
-              ],
-            ),
-          ),
-          
-          // Filter Pills
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            color: AppColors.white,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: ['All', 'High Priority', 'Low Quality', 'Flagged'].map((filter) {
-                  final isSelected = filter == _selectedFilter;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(filter),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() => _selectedFilter = filter);
-                      },
-                      selectedColor: AppColors.primary.withOpacity(0.15),
-                      backgroundColor: AppColors.gray100,
-                      side: BorderSide(color: isSelected ? AppColors.primary : AppColors.gray300),
-                      showCheckmark: false,
-                    ),
-                  );
-                }).toList(),
+      body: BlocBuilder<MoreBloc, MoreState>(
+        builder: (context, state) {
+          if (state is MoreLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is MoreError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(state.message, style: const TextStyle(color: AppColors.error)),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () => context.read<MoreBloc>().add(LoadReviewsQueueEvent()),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
-            ),
-          ),
-          
-          const Divider(height: 1),
-          
-          // Task List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 20,
-              itemBuilder: (context, index) {
-                final isHighPriority = index % 5 == 0;
+            );
+          }
+
+          if (state is ReviewsQueueLoaded) {
+            final items = state.items;
+
+            if (items.isEmpty) {
+              return const Center(child: Text('No pending task reviews in queue'));
+            }
+
+            return Column(
+              children: [
+                // Stats Bar
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  color: AppColors.white,
+                  child: Row(
+                    children: [
+                      Expanded(child: _buildStatCard('Pending Submissions', '${items.length}', AppColors.warning)),
+                    ],
+                  ),
+                ),
                 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: InkWell(
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (context) => TaskReviewInspectorModal(
-                          taskId: 'T-${10000 + index}',
-                          workerId: 'W-${1000 + index}',
+                const Divider(height: 1),
+                
+                // Task List
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      final item = items[index];
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: InkWell(
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              builder: (context) => TaskReviewInspectorModal(
+                                taskId: item.taskId,
+                                workerId: item.workerId,
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Submission #${item.id}',
+                                        style: const TextStyle(fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.warning.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        item.status,
+                                        style: const TextStyle(fontSize: 11, color: AppColors.warning, fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                
+                                const SizedBox(height: 8),
+                                
+                                Row(
+                                  children: [
+                                    const Icon(Icons.task, size: 14, color: AppColors.gray500),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'Task ID: ${item.taskId}',
+                                        style: const TextStyle(fontSize: 13, color: AppColors.gray600),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                
+                                const SizedBox(height: 8),
+                                
+                                Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 12,
+                                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                                      child: const Text('W', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text('Worker ID: ${item.workerId}', style: const TextStyle(fontSize: 12)),
+                                    ),
+                                  ],
+                                ),
+                                
+                                const SizedBox(height: 12),
+                                
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          context.read<MoreBloc>().add(ApproveReviewEvent(item.id));
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          backgroundColor: AppColors.success,
+                                        ),
+                                        child: const Text('Approve Submission', style: TextStyle(fontSize: 13)),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      icon: const Icon(Icons.arrow_forward, size: 20),
+                                      onPressed: () {
+                                        showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          builder: (context) => TaskReviewInspectorModal(
+                                            taskId: item.taskId,
+                                            workerId: item.workerId,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              if (isHighPriority)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.error,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'HIGH PRIORITY',
-                                    style: TextStyle(fontSize: 9, color: AppColors.white, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              if (isHighPriority) const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Task #T-${10000 + index}',
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                              Text(
-                                '${index + 1}h ago',
-                                style: const TextStyle(fontSize: 11, color: AppColors.gray500),
-                              ),
-                            ],
-                          ),
-                          
-                          const SizedBox(height: 8),
-                          
-                          Row(
-                            children: [
-                              const Icon(Icons.campaign, size: 14, color: AppColors.gray500),
-                              const SizedBox(width: 4),
-                              const Expanded(
-                                child: Text(
-                                  'YouTube Like Campaign',
-                                  style: TextStyle(fontSize: 13, color: AppColors.gray600),
-                                ),
-                              ),
-                            ],
-                          ),
-                          
-                          const SizedBox(height: 8),
-                          
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 12,
-                                backgroundColor: AppColors.primary.withOpacity(0.1),
-                                child: const Text('W', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Worker W-${1000 + index}', style: const TextStyle(fontSize: 12)),
-                                    Text('Score: ${85 + index % 15}', style: const TextStyle(fontSize: 11, color: AppColors.gray500)),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.warning.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'PENDING',
-                                  style: TextStyle(fontSize: 11, color: AppColors.warning, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ],
-                          ),
-                          
-                          const SizedBox(height: 12),
-                          
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () {},
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    foregroundColor: AppColors.error,
-                                    side: const BorderSide(color: AppColors.error),
-                                  ),
-                                  child: const Text('Reject', style: TextStyle(fontSize: 13)),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () {},
-                                  style: ElevatedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    backgroundColor: AppColors.success,
-                                  ),
-                                  child: const Text('Approve', style: TextStyle(fontSize: 13)),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.arrow_forward, size: 20),
-                                onPressed: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    builder: (context) => TaskReviewInspectorModal(
-                                      taskId: 'T-${10000 + index}',
-                                      workerId: 'W-${1000 + index}',
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
-                );
-              },
-            ),
-          ),
-        ],
+                ),
+              ],
+            );
+          }
+
+          return const SizedBox();
+        },
       ),
     );
   }

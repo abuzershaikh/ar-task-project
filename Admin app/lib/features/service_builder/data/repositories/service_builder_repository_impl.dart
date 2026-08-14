@@ -139,24 +139,48 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
   Future<List<ServiceModel>> getServices() async {
     if (dioClient != null) {
       try {
-        final response = await dioClient!.get('/admin/service-templates');
+        final response = await dioClient!.get('/admin/services');
         if (response.statusCode == 200 && response.data != null) {
-          final List<dynamic> list = response.data['data'] ?? [];
-          final remoteServices = list.map((json) {
+          final List<dynamic> list = response.data['services'] ?? response.data['data'] ?? [];
+          final remoteServices = list.map((item) {
+            final Map<String, dynamic> s = Map<String, dynamic>.from(item['service'] ?? item);
+            final Map<String, dynamic>? pricingMap = item['activePricing'] != null
+                ? Map<String, dynamic>.from(item['activePricing'])
+                : (s['pricing'] != null ? Map<String, dynamic>.from(s['pricing']) : null);
+
+            final double buyerPrice = pricingMap != null
+                ? ((pricingMap['buyerUnitPrice'] ?? pricingMap['buyerPrice'] as num?) ?? 50.0).toDouble()
+                : 50.0;
+            final double marginVal = pricingMap != null
+                ? ((pricingMap['marginValue'] ?? pricingMap['adminMarginPercent'] as num?) ?? 20.0).toDouble()
+                : 20.0;
+            final String marginType = pricingMap?['marginType']?.toString() ?? 'PERCENTAGE';
+
+            List<TemplateElement> parsedElements = [];
+            if (s['elements'] != null && s['elements'] is List) {
+              try {
+                parsedElements = (s['elements'] as List)
+                    .map((e) => TemplateElement.fromJson(Map<String, dynamic>.from(e as Map)))
+                    .toList();
+              } catch (_) {}
+            }
+
             return ServiceModel(
-              id: (json['id'] ?? '').toString(),
-              code: (json['id'] ?? 'CUSTOM_SRV').toString().toUpperCase(),
-              name: (json['name'] ?? json['title'] ?? 'Custom Service').toString(),
-              description: (json['description'] ?? '').toString(),
+              id: (s['id'] ?? '').toString(),
+              code: (s['code'] ?? s['id'] ?? 'CUSTOM_SRV').toString().toUpperCase(),
+              name: (s['name'] ?? s['title'] ?? 'Custom Service').toString(),
+              description: (s['description'] ?? '').toString(),
               icon: 'settings_suggest_rounded',
-              isActive: json['isActive'] ?? json['isPublished'] ?? true,
-              currentVersion: 1,
+              isActive: s['isActive'] ?? s['isPublished'] ?? true,
+              currentVersion: (s['version'] as num?)?.toInt() ?? 1,
               pricing: PricingConfig.calculate(
-                buyerPrice: ((json['pricing']?['unitPriceBuyer'] ?? json['pricing']?['buyerPrice'] as num?) ?? 50.0).toDouble(),
-                adminMarginPercent: 20.0,
+                buyerPrice: buyerPrice,
+                adminMarginPercent: marginVal,
+                marginType: marginType,
               ),
-              elements: [],
-              updatedAt: DateTime.now(),
+              elements: parsedElements,
+              reviewMode: (s['reviewMode'] ?? 'MANUAL').toString().toUpperCase(),
+              updatedAt: s['updatedAt'] != null ? DateTime.tryParse(s['updatedAt']) ?? DateTime.now() : DateTime.now(),
             );
           }).toList();
 
@@ -165,7 +189,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
           }
         }
       } catch (e) {
-        debugPrint('[ADMIN REPO] Remote service templates fetch exception: $e');
+        debugPrint('[ADMIN REPO] Remote services fetch exception: $e');
       }
     }
     return List.from(_mockServices);
@@ -175,23 +199,46 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
   Future<ServiceModel> getServiceById(String id) async {
     if (dioClient != null) {
       try {
-        final response = await dioClient!.get('/admin/service-templates/$id');
+        final response = await dioClient!.get('/admin/services/$id');
         if (response.statusCode == 200 && response.data != null) {
-          final json = response.data['data'] ?? response.data;
+          final s = Map<String, dynamic>.from(response.data['service'] ?? response.data);
+          final Map<String, dynamic>? pricingMap = response.data['activePricing'] != null
+              ? Map<String, dynamic>.from(response.data['activePricing'])
+              : null;
+
+          final double buyerPrice = pricingMap != null
+              ? ((pricingMap['buyerUnitPrice'] as num?) ?? 50.0).toDouble()
+              : 50.0;
+          final double marginVal = pricingMap != null
+              ? ((pricingMap['marginValue'] as num?) ?? 20.0).toDouble()
+              : 20.0;
+          final String marginType = pricingMap?['marginType']?.toString() ?? 'PERCENTAGE';
+
+          List<TemplateElement> parsedElements = [];
+          if (s['elements'] != null && s['elements'] is List) {
+            try {
+              parsedElements = (s['elements'] as List)
+                  .map((e) => TemplateElement.fromJson(Map<String, dynamic>.from(e as Map)))
+                  .toList();
+            } catch (_) {}
+          }
+
           return ServiceModel(
-            id: (json['id'] ?? id).toString(),
-            code: (json['id'] ?? id).toString().toUpperCase(),
-            name: (json['name'] ?? json['title'] ?? 'Custom Service').toString(),
-            description: (json['description'] ?? '').toString(),
+            id: (s['id'] ?? id).toString(),
+            code: (s['code'] ?? s['id'] ?? id).toString().toUpperCase(),
+            name: (s['name'] ?? s['title'] ?? 'Custom Service').toString(),
+            description: (s['description'] ?? '').toString(),
             icon: 'settings_suggest_rounded',
-            isActive: json['isActive'] ?? json['isPublished'] ?? true,
-            currentVersion: 1,
+            isActive: s['isActive'] ?? s['isPublished'] ?? true,
+            currentVersion: (s['version'] as num?)?.toInt() ?? 1,
             pricing: PricingConfig.calculate(
-              buyerPrice: ((json['pricing']?['unitPriceBuyer'] ?? json['pricing']?['buyerPrice'] as num?) ?? 50.0).toDouble(),
-              adminMarginPercent: 20.0,
+              buyerPrice: buyerPrice,
+              adminMarginPercent: marginVal,
+              marginType: marginType,
             ),
-            elements: [],
-            updatedAt: DateTime.now(),
+            elements: parsedElements,
+            reviewMode: (s['reviewMode'] ?? 'MANUAL').toString().toUpperCase(),
+            updatedAt: s['updatedAt'] != null ? DateTime.tryParse(s['updatedAt']) ?? DateTime.now() : DateTime.now(),
           );
         }
       } catch (e) {
@@ -209,31 +256,37 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
   Future<ServiceModel> saveServiceDraft(ServiceModel service) async {
     if (dioClient != null) {
       try {
+        final elementsJson = service.elements.map((e) => e.toJson()).toList();
+
         final payload = {
+          'code': service.code.isNotEmpty ? service.code : 'SRV_${DateTime.now().millisecondsSinceEpoch}',
           'name': service.name,
-          'category': 'Custom Service',
           'description': service.description,
-          'platform': 'GENERAL',
-          'pricing': {
-            'modelType': 'countBased',
-            'unitPriceBuyer': service.pricing.buyerPrice,
-            'workerRewardPerUnit': service.pricing.workerReward,
-            'minQuantity': 10,
-            'maxQuantity': 10000,
-          },
-          'elements': service.elements.map((e) => {
-            'id': e.id,
-            'type': e.type.toString().split('.').last,
-            'label': e.label,
-            'visibility': e.visibility.toString().split('.').last.toUpperCase(),
-            'editability': e.editability.toString().split('.').last.toUpperCase(),
-            'order': e.orderIndex,
-          }).toList(),
+          'buyerUnitPrice': service.pricing.buyerPrice,
+          'marginType': 'FIXED',
+          'marginValue': service.pricing.adminMarginPercent,
+          'elements': elementsJson,
+          'reviewMode': service.reviewMode,
           'isActive': service.isActive,
         };
 
-        final response = await dioClient!.post('/admin/service-templates', data: payload);
-        debugPrint('[ADMIN REPO] Remote saveServiceDraft response: ${response.data}');
+        if (service.id.isNotEmpty && !service.id.startsWith('mock_')) {
+          await dioClient!.patch('/admin/services/${service.id}', data: {
+            'name': service.name,
+            'description': service.description,
+            'isActive': service.isActive,
+            'elements': elementsJson,
+            'reviewMode': service.reviewMode,
+          });
+          await dioClient!.post('/admin/services/${service.id}/pricing', data: {
+            'buyerUnitPrice': service.pricing.buyerPrice,
+            'marginType': 'FIXED',
+            'marginValue': service.pricing.adminMarginPercent,
+          });
+        } else {
+          final response = await dioClient!.post('/admin/services', data: payload);
+          debugPrint('[ADMIN REPO] Remote saveServiceDraft response: ${response.data}');
+        }
       } catch (e) {
         debugPrint('[ADMIN REPO] Remote saveServiceDraft exception: $e');
       }

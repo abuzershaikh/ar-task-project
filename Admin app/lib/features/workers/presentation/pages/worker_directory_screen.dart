@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../widgets/worker_card.dart';
-import '../../presentation/widgets/filter_chip_row.dart';
+import '../widgets/filter_chip_row.dart';
+import '../bloc/workers_bloc.dart';
 import 'worker_detail_screen.dart';
 
 class WorkerDirectoryScreen extends StatefulWidget {
@@ -13,17 +15,13 @@ class WorkerDirectoryScreen extends StatefulWidget {
 
 class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
   String _selectedFilter = 'All';
-  String _selectedSort = 'Highest Score';
   final TextEditingController _searchController = TextEditingController();
 
-  final List<String> _sortOptions = [
-    'Highest Score',
-    'Highest Rating',
-    'Most Tasks',
-    'Lowest Completion',
-    'Highest Earnings',
-    'Recent Activity',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    context.read<WorkersBloc>().add(LoadWorkersEvent());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,29 +29,6 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
       appBar: AppBar(
         title: const Text('Worker Operations'),
         backgroundColor: AppColors.primary,
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.sort),
-            onSelected: (value) {
-              setState(() {
-                _selectedSort = value;
-              });
-            },
-            itemBuilder: (context) => _sortOptions
-                .map((option) => PopupMenuItem(
-                      value: option,
-                      child: Row(
-                        children: [
-                          if (_selectedSort == option)
-                            const Icon(Icons.check, color: AppColors.primary, size: 18),
-                          if (_selectedSort == option) const SizedBox(width: 8),
-                          Text(option),
-                        ],
-                      ),
-                    ))
-                .toList(),
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -83,66 +58,92 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                   borderSide: BorderSide.none,
                 ),
               ),
-              onChanged: (value) {
-                setState(() {});
-              },
+              onChanged: (_) => setState(() {}),
             ),
           ),
 
           // Filter Chips
           FilterChipRow(
-            filters: const [
-              'All',
-              'Active',
-              'Inactive',
-              'KYC Pending',
-              'KYC Rejected',
-              'Suspended',
-              'Banned',
-              'High Risk',
-            ],
+            filters: const ['All', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'BANNED'],
             selectedFilter: _selectedFilter,
-            onFilterSelected: (filter) {
-              setState(() {
-                _selectedFilter = filter;
-              });
-            },
+            onFilterSelected: (filter) => setState(() => _selectedFilter = filter),
           ),
 
           // Worker List
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                // TODO: Implement refresh
-              },
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: 20, // TODO: Replace with actual data
-                itemBuilder: (context, index) {
-                  return WorkerCard(
-                    workerId: 'W-${1000 + index}',
-                    name: 'Worker ${index + 1}',
-                    phone: '+91 XXXXXXXX${12 + index}',
-                    rating: 4.5 + (index % 5) * 0.1,
-                    score: 85.0 + (index % 15),
-                    totalTasks: 1000 + (index * 100),
-                    kycVerified: index % 3 != 0,
-                    status: index % 6 == 0 ? 'SUSPENDED' : 'ACTIVE',
-                    totalEarned: 15000.0 + (index * 1000),
-                    availableBalance: 2000.0 + (index * 100),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => WorkerDetailScreen(
-                            workerId: 'W-${1000 + index}',
-                          ),
+            child: BlocBuilder<WorkersBloc, WorkersState>(
+              builder: (context, state) {
+                if (state is WorkersLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (state is WorkersError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(state.message, style: const TextStyle(color: Colors.red)),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: () => context.read<WorkersBloc>().add(LoadWorkersEvent()),
+                          child: const Text('Retry'),
                         ),
-                      );
-                    },
+                      ],
+                    ),
                   );
-                },
-              ),
+                }
+
+                if (state is WorkersLoaded) {
+                  final query = _searchController.text.trim().toLowerCase();
+                  final filtered = state.workers.where((w) {
+                    final matchesFilter = _selectedFilter == 'All' || w.status == _selectedFilter;
+                    final matchesQuery = query.isEmpty ||
+                        w.name.toLowerCase().contains(query) ||
+                        w.email.toLowerCase().contains(query) ||
+                        w.id.toLowerCase().contains(query);
+                    return matchesFilter && matchesQuery;
+                  }).toList();
+
+                  if (filtered.isEmpty) {
+                    return const Center(child: Text('No workers found'));
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      context.read<WorkersBloc>().add(LoadWorkersEvent());
+                    },
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final w = filtered[index];
+                        return WorkerCard(
+                          workerId: w.id,
+                          name: w.name,
+                          phone: w.phone,
+                          rating: w.rating,
+                          score: 90.0,
+                          totalTasks: w.completedTasks,
+                          kycVerified: w.kycStatus == 'VERIFIED',
+                          status: w.status,
+                          totalEarned: w.totalEarnings,
+                          availableBalance: 0.0,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => WorkerDetailScreen(workerId: w.id),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  );
+                }
+
+                return const SizedBox();
+              },
             ),
           ),
         ],

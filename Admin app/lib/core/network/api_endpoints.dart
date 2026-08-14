@@ -62,20 +62,20 @@ class ApiEndpoints {
   static String matchingDecisions(String taskId) => '/admin/matching/decisions/$taskId';
   
   // ==================== Reviews ====================
-  static const String reviews = '/admin/reviews';
+  static const String reviews = '/admin/reviews/pending';
   static String reviewById(String id) => '/admin/reviews/$id';
   static String reviewApprove(String id) => '/admin/reviews/$id/approve';
   static String reviewReject(String id) => '/admin/reviews/$id/reject';
   static String reviewRequestChanges(String id) => '/admin/reviews/$id/request-changes';
   
   // ==================== KYC ====================
-  static const String kyc = '/admin/kyc';
+  static const String kyc = '/admin/kyc/pending';
   static String kycById(String id) => '/admin/kyc/$id';
   static String kycVerify(String id) => '/admin/kyc/$id/verify';
   static String kycReject(String id) => '/admin/kyc/$id/reject';
   
   // ==================== Payouts ====================
-  static const String payouts = '/admin/payouts';
+  static const String payouts = '/admin/payouts/pending';
   static String payoutById(String id) => '/admin/payouts/$id';
   static String payoutProcess(String id) => '/admin/payouts/$id/process';
   static String payoutReject(String id) => '/admin/payouts/$id/reject';

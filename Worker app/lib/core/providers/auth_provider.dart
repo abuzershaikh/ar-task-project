@@ -19,11 +19,15 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _checkInitialAuth() async {
-    final firebaseUser = FirebaseAuth.instance.currentUser;
-    if (firebaseUser != null) {
-      _isAuthenticated = true;
-      _user = await FirestoreService.getUserProfile(firebaseUser.uid);
-      notifyListeners();
+    try {
+      final firebaseUser = FirebaseAuth.instance.currentUser;
+      if (firebaseUser != null) {
+        _isAuthenticated = true;
+        _user = await FirestoreService.getUserProfile(firebaseUser.uid);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Auth check error: $e');
     }
   }
 

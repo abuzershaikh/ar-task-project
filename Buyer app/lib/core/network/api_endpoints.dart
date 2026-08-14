@@ -100,7 +100,7 @@ class ApiEndpoints {
   static String rateWorker(String taskId) => '$buyer/tasks/$taskId/rating';
   
   // ============ ANALYTICS ============
-  static String campaignAnalytics(String id) => '$buyer/orders/$id/analytics';
+  static const String analyticsOverview = '$buyer/analytics/overview';
   
   // ============ PAYMENTS ============
   /// Initiate payment for campaign
@@ -117,7 +117,7 @@ class ApiEndpoints {
   static String paymentDetail(String id) => '$buyer/payments/$id';
   
   // ============ INVOICES ============
-  static String campaignInvoice(String id) => '$buyer/orders/$id/invoice';
+  static const String invoices = '$buyer/invoices';
   
   // ============ NOTIFICATIONS ============
   static const String notifications = '$buyer/notifications';
