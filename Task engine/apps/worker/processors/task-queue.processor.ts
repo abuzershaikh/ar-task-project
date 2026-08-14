@@ -26,11 +26,24 @@ export class TaskQueueProcessor {
     async handleCreateTasks(job: Job) {
         const { orderId, count, taskType, requirements, rewardAmount, jobId } = job.data;
 
-        this.logger.log(`📝 Processing 'create-tasks' job from Redis Queue. Creating ${count} tasks for Order '${orderId}'`);
+        this.logger.log(`📝 Processing 'create-tasks' job from Redis Queue for Order '${orderId}'`);
 
         try {
+            let currentGenerated = 0;
+            const jobRecord = await this.jobRepo.findByOrderId(orderId);
+            if (jobRecord) {
+                currentGenerated = jobRecord.generatedTasksCount || 0;
+                if (currentGenerated >= count) {
+                    this.logger.log(`Tasks already fully generated (${currentGenerated}/${count}) for Order '${orderId}'. Skipping duplicate generation.`);
+                    return { success: true, count, orderId, matchingEnqueued: false };
+                }
+            }
+
+            const remainingCount = count - currentGenerated;
+            this.logger.log(`Creating ${remainingCount} tasks (already generated: ${currentGenerated}) for Order '${orderId}'`);
+
             const createdTasks = [];
-            for (let i = 0; i < count; i++) {
+            for (let i = currentGenerated; i < count; i++) {
                 const taskReqs = {
                     ...(requirements || {}),
                     sequenceIndex: i,
@@ -49,7 +62,7 @@ export class TaskQueueProcessor {
 
             // Update TaskGenerationJob status in DB to COMPLETED
             if (jobId) {
-                await this.jobRepo.updateProgress(jobId, count, TaskGenerationJobStatus.COMPLETED);
+                await this.jobRepo.updateProgress(jobId, currentGenerated + createdTasks.length, TaskGenerationJobStatus.COMPLETED);
             }
 
             this.logger.log(`✅ Bull Worker created ${count} tasks in MySQL for Order '${orderId}'`);

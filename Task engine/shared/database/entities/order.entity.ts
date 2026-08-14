@@ -77,6 +77,12 @@ export class Order {
     @Column({ name: 'campaign_expiry_date_snapshot', type: 'timestamp', nullable: true })
     campaignExpiryDateSnapshot: Date;
 
+    @Column({ name: 'extension_count', type: 'int', default: 0 })
+    extensionCount: number;
+
+    @Column({ name: 'extension_history', type: 'json', nullable: true })
+    extensionHistory: any;
+
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 

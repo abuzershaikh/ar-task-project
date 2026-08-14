@@ -100,13 +100,26 @@ export class DeadlineMonitorService {
 
         const activeOrders = await this.orderRepo.findActiveOrders();
         for (const order of activeOrders) {
-            const expiryDate = order.campaignExpiryDateSnapshot || order.campaignExpiryDate;
-            if (expiryDate && new Date(expiryDate) < now && order.tasksCompleted < order.totalTasksRequired) {
-                const newExpiryDate = new Date(now.getTime() + extensionHours * 3600 * 1000);
+            const currentExpiry = order.campaignExpiryDate;
+            const originalExpiry = order.campaignExpiryDateSnapshot || currentExpiry;
+            
+            if (currentExpiry && new Date(currentExpiry) < now && order.tasksCompleted < order.totalTasksRequired) {
+                const newExpiryDate = new Date(new Date(currentExpiry).getTime() + extensionHours * 3600 * 1000);
+                
+                const extensionHistory = order.extensionHistory || [];
+                extensionHistory.push({
+                    extendedAt: now.toISOString(),
+                    previousExpiry: currentExpiry.toISOString(),
+                    newExpiry: newExpiryDate.toISOString(),
+                    extensionHours,
+                });
+
                 await this.orderRepo.update(order.id, {
                     campaignExpiryDate: newExpiryDate,
-                    campaignExpiryDateSnapshot: newExpiryDate,
+                    extensionCount: (order.extensionCount || 0) + 1,
+                    extensionHistory,
                 });
+                
                 extendedCampaignsCount++;
                 this.logger.log(
                     `CAMPAIGN_AUTO_EXTENDED_NEW_ALLOCATION_WINDOW_OPEN: Order '${order.id}' extended by +${extensionHours} hours to ${newExpiryDate.toISOString()} for remaining ${order.totalTasksRequired - order.tasksCompleted} tasks. Candidate recruitment reopened.`,
