@@ -8,7 +8,6 @@ import { ResponseInterceptor } from '../../shared/common/interceptors/response.i
 import { RequestIdMiddleware } from '../../shared/common/middleware/request-id.middleware';
 import { RequestLoggingMiddleware } from '../../shared/common/middleware/request-logging.middleware';
 import { SecurityHeadersMiddleware } from '../../shared/common/middleware/security-headers.middleware';
-import { InMemoryRateLimitMiddleware } from '../../shared/common/middleware/rate-limit.middleware';
 import { JwtAuthGuard } from '../../shared/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../shared/auth/guards/roles.guard';
 
@@ -21,7 +20,6 @@ async function bootstrap() {
     const requestIdMiddleware = new RequestIdMiddleware();
     const loggingMiddleware = new RequestLoggingMiddleware();
     const securityHeadersMiddleware = new SecurityHeadersMiddleware();
-    const rateLimitMiddleware = new InMemoryRateLimitMiddleware();
 
     app.use(json({ limit: '1mb' }));
     app.use(urlencoded({ extended: true, limit: '1mb' }));
@@ -29,10 +27,24 @@ async function bootstrap() {
     app.use((req, res, next) => requestIdMiddleware.use(req, res, next));
     app.use((req, res, next) => securityHeadersMiddleware.use(req, res, next));
     app.use((req, res, next) => loggingMiddleware.use(req, res, next));
-    app.use((req, res, next) => rateLimitMiddleware.use(req, res, next));
+    // Rate limiting is handled by Nginx in production to support multi-process PM2
+
+    const allowedOrigins = process.env.CORS_ORIGINS 
+        ? process.env.CORS_ORIGINS.split(',') 
+        : [
+            'http://localhost:3000', 
+            'http://localhost:5173', // Vite default
+            'http://localhost:8080'
+          ]; // Default fallback for local dev if env not set
 
     app.enableCors({
-        origin: true,
+        origin: (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         credentials: true,
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
         exposedHeaders: ['X-Request-Id'],

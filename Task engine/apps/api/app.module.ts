@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { TerminusModule } from '@nestjs/terminus';
 
 // Database & Core Services
 import { validateEnvironment } from '../../shared/config/app.config';
@@ -80,6 +81,7 @@ import { AdminSystemSettingsController } from './controllers/admin/system-settin
         AuthModule,
         ServicesModule,
         AppQueueModule,
+        TerminusModule,
 
         // Event Emitter
         EventEmitterModule.forRoot(),
