@@ -14,6 +14,7 @@ import { StartTaskCommand } from '../commands/start-task.command';
 import { SubmitTaskCommand } from '../commands/submit-task.command';
 import { ApproveTaskCommand } from '../commands/approve-task.command';
 import { RejectTaskCommand } from '../commands/reject-task.command';
+import { RequestChangesCommand } from '../commands/request-changes.command';
 import { CancelTaskCommand } from '../commands/cancel-task.command';
 
 @Injectable()
@@ -244,6 +245,41 @@ export class TaskCommandService {
                 ...(task.metadata || {}),
                 reviewedBy: command.reviewedBy,
                 reviewNotes: command.notes,
+            },
+        });
+    }
+
+    async requestChangesTask(command: RequestChangesCommand) {
+        const task = await this.ensureTask(command.taskId);
+
+        if (
+            task.status !== TaskStatus.SUBMITTED &&
+            task.status !== TaskStatus.UNDER_REVIEW
+        ) {
+            throw new BadRequestException('Task is not ready for requesting changes');
+        }
+
+        this.stateMachine.validateTransition({
+            taskId: task.id,
+            orderId: task.orderId,
+            campaignId: task.campaignId,
+            taskType: task.taskType,
+            currentStatus: task.status,
+            targetStatus: TaskStatus.IN_PROGRESS,
+            timestamp: new Date(),
+            actor: {
+                id: command.reviewedBy || 'system',
+                type: 'system',
+            },
+        });
+
+        return this.taskRepository.update(task.id, {
+            status: TaskStatus.IN_PROGRESS,
+            metadata: {
+                ...(task.metadata || {}),
+                reviewedBy: command.reviewedBy,
+                reviewNotes: command.notes,
+                changesRequestedAt: new Date()
             },
         });
     }

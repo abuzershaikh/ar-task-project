@@ -186,7 +186,7 @@ export class BuyerReviewController {
 
         const reasonCode = body.reasonCode || 'CHANGES_REQUESTED';
         const review = await this.reviewEngine.reviewSubmission(submissionId, {
-            action: 'rejected',
+            action: 'changes_requested',
             reviewedBy: user.id,
             notes: `[${reasonCode}] Changes requested: ${body.note}`,
         });

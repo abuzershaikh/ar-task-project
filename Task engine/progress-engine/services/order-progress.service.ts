@@ -23,10 +23,10 @@ export class OrderProgressService {
         const total = order.totalTasksRequired;
         const created = tasks.length;
         const assigned = tasks.filter(t => t.status === 'assigned' || t.assignedTo).length;
-        const inProgress = tasks.filter(t => ['accepted', 'in_progress'].includes(t.status)).length;
-        const submitted = tasks.filter(t => t.status === 'submitted').length;
-        const approved = tasks.filter(t => t.status === 'completed').length;
-        const rejected = tasks.filter(t => t.status === 'rejected').length;
+        const inProgress = this.taskRepo.filterByStatus(tasks, 'in_progress').length;
+        const submitted = this.taskRepo.filterByStatus(tasks, 'submitted').length;
+        const approved = this.taskRepo.filterByStatus(tasks, 'completed').length;
+        const rejected = this.taskRepo.filterByStatus(tasks, 'rejected').length;
         const pending = assigned - (approved + rejected + submitted + inProgress);
 
         const completionRate = total > 0 ? (approved / total) * 100 : 0;

@@ -31,14 +31,17 @@ export class MatchingDecisionService {
         const workerIds = candidates.map(c => c.workerId);
         const scores = await this.scoringEngine.calculateBatchScores(workerIds);
 
-        // Step 2: Assign scores to candidates
+        // Step 2: Assign scores to candidates and prepare map for ranking
+        const freshScoresMap = new Map<string, number>();
         candidates.forEach(candidate => {
             const score = scores.get(candidate.workerId);
-            candidate.score = score ? score.totalScore : 0;
+            const totalScore = score ? score.totalScore : 0;
+            candidate.score = totalScore;
+            freshScoresMap.set(candidate.workerId, totalScore);
         });
 
-        // Step 3: Rank candidates
-        const ranked = await this.rankingEngine.rankWorkers(workerIds, context.taskId);
+        // Step 3: Rank candidates using fresh scores
+        const ranked = await this.rankingEngine.rankWorkers(workerIds, context.taskId, freshScoresMap);
 
         // Step 4: Assign ranks
         candidates.forEach(candidate => {

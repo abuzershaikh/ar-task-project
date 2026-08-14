@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
+import { TaskEngineService } from '../../task-engine/task-engine.service';
 import { AllocationRequest, AllocationResult } from '../types';
 
 /**
@@ -7,7 +8,11 @@ import { AllocationRequest, AllocationResult } from '../types';
  */
 @Injectable()
 export class AssignmentService {
-    constructor(private readonly taskRepo: TaskRepository) { }
+    constructor(
+        private readonly taskRepo: TaskRepository,
+        @Inject(forwardRef(() => TaskEngineService))
+        private readonly taskEngine: TaskEngineService,
+    ) { }
 
     async assign(request: AllocationRequest): Promise<AllocationResult> {
         const { taskIds, workerIds, strategy } = request;
@@ -22,10 +27,10 @@ export class AssignmentService {
                 const task = await this.taskRepo.findById(taskIds[i]);
 
                 if (task && !task.assignedTo) {
-                    await this.taskRepo.update(taskIds[i], {
-                        assignedTo: workerIds[i],
-                        assignedAt: new Date(),
-                        status: 'assigned',
+                    await this.taskEngine.assignTask({
+                        taskId: taskIds[i],
+                        workerId: workerIds[i],
+                        actorId: 'system',
                     });
 
                     assignments.push({
@@ -40,7 +45,7 @@ export class AssignmentService {
                 }
             } catch (error) {
                 failedCount++;
-                console.error(`Failed to assign task ${taskIds[i]}:`, error);
+                console.error(`Failed to assign task ${taskIds[i]}:`, error.message || error);
             }
         }
 

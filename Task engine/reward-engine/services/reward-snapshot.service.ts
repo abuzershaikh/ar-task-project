@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { Reward } from '../types/reward';
 
 /**
@@ -7,24 +8,38 @@ import { Reward } from '../types/reward';
  */
 @Injectable()
 export class RewardSnapshotService {
-    private snapshots = new Map<string, Reward>();
+    constructor(private readonly taskRepo: TaskRepository) { }
 
     async create(taskId: string, reward: Reward): Promise<void> {
-        this.snapshots.set(taskId, {
-            ...reward,
-            taskId,
-        });
+        const task = await this.taskRepo.findById(taskId);
+        if (task) {
+            const metadata = task.metadata || {};
+            metadata.rewardSnapshot = {
+                ...reward,
+                taskId,
+            };
+            await this.taskRepo.update(taskId, { metadata });
+        }
     }
 
     async get(taskId: string): Promise<Reward | null> {
-        return this.snapshots.get(taskId) || null;
+        const task = await this.taskRepo.findById(taskId);
+        if (task && task.metadata && task.metadata.rewardSnapshot) {
+            return task.metadata.rewardSnapshot as Reward;
+        }
+        return null;
     }
 
     async exists(taskId: string): Promise<boolean> {
-        return this.snapshots.has(taskId);
+        const snapshot = await this.get(taskId);
+        return snapshot !== null;
     }
 
     async delete(taskId: string): Promise<void> {
-        this.snapshots.delete(taskId);
+        const task = await this.taskRepo.findById(taskId);
+        if (task && task.metadata && task.metadata.rewardSnapshot) {
+            delete task.metadata.rewardSnapshot;
+            await this.taskRepo.update(taskId, { metadata: task.metadata });
+        }
     }
 }

@@ -21,7 +21,7 @@ export class BatchService {
     ): Promise<AllocationResult[]> {
         // Get all pending tasks for this order
         const tasks = await this.taskRepo.findByOrderId(orderId);
-        const pendingTasks = tasks.filter(t => t.status === 'pending');
+        const pendingTasks = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'pending'));
 
         console.log(`📦 Processing ${pendingTasks.length} tasks in batches of ${batchSize}`);
 

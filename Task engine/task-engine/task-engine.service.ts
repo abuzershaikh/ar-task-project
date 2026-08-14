@@ -8,6 +8,7 @@ import { StartTaskCommand } from './commands/start-task.command';
 import { SubmitTaskCommand } from './commands/submit-task.command';
 import { ApproveTaskCommand } from './commands/approve-task.command';
 import { RejectTaskCommand } from './commands/reject-task.command';
+import { RequestChangesCommand } from './commands/request-changes.command';
 import { CancelTaskCommand } from './commands/cancel-task.command';
 
 @Injectable()
@@ -47,6 +48,11 @@ export class TaskEngineService {
     async approveTask(command: ApproveTaskCommand) {
         this.logger.log(`Approving task ${command.taskId}`);
         return this.commandService.approveTask(command);
+    }
+
+    async requestChangesTask(command: RequestChangesCommand) {
+        this.logger.log(`Requesting changes for task ${command.taskId}`);
+        return this.commandService.requestChangesTask(command);
     }
 
     async rejectTask(command: RejectTaskCommand) {

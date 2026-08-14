@@ -9,11 +9,14 @@ import { RankedWorker } from '../types/ranked-worker';
 export class RankingCalculator {
     constructor(private readonly scoreRepo: WorkerScoreRepository) { }
 
-    async rank(workerIds: string[], taskId: string | null): Promise<RankedWorker[]> {
-        // Get scores for all workers
-        const scores = await this.scoreRepo.findByWorkerIds(workerIds);
-
-        const scoreMap = new Map(scores.map(s => [s.workerId, s.totalScore]));
+    async rank(workerIds: string[], taskId: string | null, precalculatedScores?: Map<string, number>): Promise<RankedWorker[]> {
+        let scoreMap: Map<string, number>;
+        if (precalculatedScores) {
+            scoreMap = precalculatedScores;
+        } else {
+            const scores = await this.scoreRepo.findByWorkerIds(workerIds);
+            scoreMap = new Map(scores.map(s => [s.workerId, s.totalScore]));
+        }
 
         // Build ranked list
         const ranked: RankedWorker[] = workerIds.map(workerId => ({

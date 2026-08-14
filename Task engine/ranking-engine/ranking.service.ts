@@ -13,8 +13,9 @@ export class RankingEngineService {
     async rankWorkers(
         workerIds: string[],
         taskId: string,
+        precalculatedScores?: Map<string, number>
     ): Promise<RankedWorker[]> {
-        const ranked = await this.calculator.rank(workerIds, taskId);
+        const ranked = await this.calculator.rank(workerIds, taskId, precalculatedScores);
         return ranked;
     }
 

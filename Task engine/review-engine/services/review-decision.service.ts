@@ -30,15 +30,7 @@ export class ReviewDecisionService {
 
         const { action, notes, reviewedBy } = decision;
 
-        // Update submission
-        await this.submissionRepo.update(submissionId, {
-            reviewStatus: action,
-            reviewedBy,
-            reviewedAt: new Date(),
-            reviewNotes: notes,
-        });
-
-        // Delegate state machine transitions to TaskEngineService
+        // Delegate state machine transitions to TaskEngineService FIRST
         if (action === 'approved') {
             await this.taskEngine.approveTask({
                 taskId: submission.taskId,
@@ -46,8 +38,7 @@ export class ReviewDecisionService {
                 notes,
             });
 
-            // Process earning (Note: if TaskEngine is eventually extended to handle earning, 
-            // this can be moved there, but for now we keep it here to satisfy rule 33)
+            // Process earning
             const earning = await this.earningEngine.calculateEarning(
                 submission.taskId,
                 submission.workerId,
@@ -63,7 +54,23 @@ export class ReviewDecisionService {
             });
 
             console.log(`❌ Task rejected via state machine: ${submission.taskId}`);
+        } else if (action === 'changes_requested') {
+            await this.taskEngine.requestChangesTask({
+                taskId: submission.taskId,
+                reviewedBy,
+                notes,
+            });
+
+            console.log(`🔄 Task changes requested via state machine: ${submission.taskId}`);
         }
+
+        // Update submission ONLY IF task engine succeeds
+        await this.submissionRepo.update(submissionId, {
+            reviewStatus: action,
+            reviewedBy,
+            reviewedAt: new Date(),
+            reviewNotes: notes,
+        });
 
         return {
             submissionId,

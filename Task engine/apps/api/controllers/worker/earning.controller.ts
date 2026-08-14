@@ -131,6 +131,18 @@ export class WorkerEarningController {
 
         const status = await this.payoutEngine.processPayout(withdrawalId);
 
+        if (status.status === 'completed') {
+            await this.withdrawalRepo.update(withdrawalId, {
+                status: WithdrawalStatus.PAID,
+                paidAt: status.processedAt,
+                transactionId: status.transactionId,
+            });
+        } else if (status.status === 'processing' || status.status === 'pending') {
+            await this.withdrawalRepo.update(withdrawalId, {
+                status: WithdrawalStatus.PROCESSING,
+            });
+        }
+
         return {
             success: true,
             withdrawalId,

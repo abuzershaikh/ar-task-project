@@ -1,13 +1,13 @@
 export interface Review {
     submissionId: string;
-    action: 'approved' | 'rejected' | 'pending';
+    action: 'approved' | 'rejected' | 'pending' | 'changes_requested';
     reviewedBy: string;
     reviewedAt: Date;
     notes?: string;
 }
 
 export interface ReviewDecision {
-    action: 'approved' | 'rejected';
+    action: 'approved' | 'rejected' | 'changes_requested';
     reviewedBy: string;
     notes?: string;
 }
