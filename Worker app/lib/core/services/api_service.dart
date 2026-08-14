@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ApiService {
   // Base URL: 10.0.2.2 for Android Emulator, local IP for physical Android device
@@ -10,6 +11,10 @@ class ApiService {
   );
 
   static Future<String?> getToken() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      return await currentUser.getIdToken();
+    }
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token');
   }
@@ -25,11 +30,21 @@ class ApiService {
   }
 
   static Future<Map<String, String>> _headers() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
     final token = await getToken();
-    return {
+    final headers = <String, String>{
       'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
     };
+    if (currentUser?.email != null) {
+      headers['x-user-email'] = currentUser!.email!;
+    }
+    if (currentUser?.uid != null) {
+      headers['x-user-id'] = currentUser!.uid;
+    }
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
   }
 
   // --- Auth APIs ---
@@ -192,6 +207,20 @@ class ApiService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
+    return {};
+  }
+
+  static Future<Map<String, dynamic>> pingPresence() async {
+    try {
+      final headers = await _headers();
+      final response = await http.get(
+        Uri.parse('$baseUrl/worker/availability/ping'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
     return {};
   }
 

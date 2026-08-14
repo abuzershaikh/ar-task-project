@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/firestore_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../navigation/screens/main_nav_screen.dart';
+import 'user_profile_form.dart';
 
 /// Clean Google-only Login Screen for Worker App.
 class LoginScreen extends StatefulWidget {
@@ -44,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.4),
+                          color: AppTheme.primaryColor.withOpacity(0.4),
                           blurRadius: 24,
                           offset: const Offset(0, 12),
                         ),
@@ -124,30 +127,55 @@ class _LoginScreenState extends State<LoginScreen> {
                                           scopes: const ['email'],
                                           serverClientId: '311090572825-jve8b44v1m0p7smmudr6hnhe5ib5qcuc.apps.googleusercontent.com',
                                         );
+                                        try {
+                                          await googleSignIn.signOut();
+                                        } catch (_) {}
                                         final account = await googleSignIn.signIn();
                                         debugPrint('[GOOGLE SIGN IN] Account result: $account');
                                         if (account != null) {
                                           final auth = await account.authentication;
-                                          final String? googleIdToken = auth.idToken ?? auth.accessToken;
-                                          debugPrint(
-                                            '[GOOGLE SIGN IN] Google token obtained: ${googleIdToken != null ? "YES (${googleIdToken.substring(0, 10)}...)" : "NULL"}',
+                                          debugPrint('[GOOGLE SIGN IN] Google auth tokens obtained.');
+                                          
+                                          // Authenticate with Firebase Auth
+                                          final AuthCredential credential = GoogleAuthProvider.credential(
+                                            accessToken: auth.accessToken,
+                                            idToken: auth.idToken,
                                           );
-                                          if (googleIdToken != null) {
-                                            final response = await ApiService.googleLogin(googleIdToken);
-                                            final token = response['data']?['accessToken'] ?? response['accessToken'] ?? response['token'];
-                                            if (token != null) {
-                                              await ApiService.saveToken(token);
-                                              await authProvider.fetchProfile();
-                                              if (mounted) {
+                                          final UserCredential userCredential =
+                                              await FirebaseAuth.instance.signInWithCredential(credential);
+                                          final User? firebaseUser = userCredential.user;
+
+                                          if (firebaseUser != null) {
+                                            final userData = await FirestoreService.syncUserProfile(
+                                              uid: firebaseUser.uid,
+                                              email: firebaseUser.email ?? account.email,
+                                              displayName: firebaseUser.displayName ?? account.displayName,
+                                              role: 'WORKER',
+                                            );
+
+                                            final String? firebaseIdToken = await firebaseUser.getIdToken();
+                                            if (firebaseIdToken != null) {
+                                              await ApiService.saveToken(firebaseIdToken);
+                                            }
+
+                                            final String phone = userData['phone'] ?? '';
+                                            if (mounted) {
+                                              if (phone.isEmpty) {
+                                                Navigator.of(context).pushReplacement(
+                                                  MaterialPageRoute(
+                                                    builder: (_) => UserProfileFormScreen(
+                                                      uid: firebaseUser.uid,
+                                                      initialName: userData['name'] ?? account.displayName ?? '',
+                                                      email: firebaseUser.email ?? account.email,
+                                                    ),
+                                                  ),
+                                                );
+                                              } else {
                                                 Navigator.of(context).pushReplacement(
                                                   MaterialPageRoute(builder: (_) => const MainNavScreen()),
                                                 );
                                               }
                                             }
-                                          } else if (googleIdToken == null && mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Google Sign-In failed: Google token is null')),
-                                            );
                                           }
                                         } else {
                                           debugPrint('[GOOGLE SIGN IN] User canceled sign-in dialog.');
@@ -156,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         debugPrint('[GOOGLE SIGN IN ERROR] Exception: $e\n$stack');
                                         if (mounted) {
                                           ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Google Sign-In failed: $e')),
+                                            SnackBar(content: Text('Sign-In Error: $e')),
                                           );
                                         }
                                       } finally {
@@ -165,6 +193,49 @@ class _LoginScreenState extends State<LoginScreen> {
                                         }
                                       }
                                     },
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Demo Login Fallback
+                          TextButton(
+                            onPressed: () async {
+                              setState(() => _isLoading = true);
+                              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                              try {
+                                final res = await ApiService.login('worker@example.com', 'worker123');
+                                final token = res['data']?['accessToken'] ?? res['accessToken'] ?? res['token'];
+                                if (token != null) {
+                                  await ApiService.saveToken(token);
+                                  await authProvider.fetchProfile();
+                                  if (mounted) {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(builder: (_) => const MainNavScreen()),
+                                    );
+                                  }
+                                } else {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Demo Login: Entering app as Worker')),
+                                    );
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(builder: (_) => const MainNavScreen()),
+                                    );
+                                  }
+                                }
+                              } catch (_) {
+                                if (mounted) {
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(builder: (_) => const MainNavScreen()),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) setState(() => _isLoading = false);
+                              }
+                            },
+                            child: const Text(
+                              'Demo Worker Login',
+                              style: TextStyle(color: Colors.white60, fontSize: 13, decoration: TextDecoration.underline),
                             ),
                           ),
                         ],

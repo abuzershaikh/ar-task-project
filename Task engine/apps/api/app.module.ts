@@ -23,10 +23,12 @@ import { PayoutEngineModule } from '../../payout-engine/payout-engine.module';
 import { FraudEngineModule } from '../../fraud-engine/fraud-engine.module';
 import { NotificationEngineModule } from '../../notification-engine/notification-engine.module';
 
-// Controllers
 import { AuthController } from './controllers/auth/auth.controller';
 import { FileController } from './controllers/common/file.controller';
 import { WebhookController } from './controllers/webhooks/webhook.controller';
+import { HealthController } from './controllers/common/health.controller';
+import { AppQueueModule } from '../../shared/queue/app-queue.module';
+import { WorkerModule } from '../worker/worker.module';
 
 // Worker Controllers
 import { WorkerTaskController } from './controllers/worker/task.controller';
@@ -77,6 +79,8 @@ import { AdminSystemSettingsController } from './controllers/admin/system-settin
         DatabaseModule,
         AuthModule,
         ServicesModule,
+        AppQueueModule,
+        WorkerModule,
 
         // Event Emitter
         EventEmitterModule.forRoot(),
@@ -97,6 +101,7 @@ import { AdminSystemSettingsController } from './controllers/admin/system-settin
         NotificationEngineModule,
     ],
     controllers: [
+        HealthController,
         AuthController,
         FileController,
         WebhookController,

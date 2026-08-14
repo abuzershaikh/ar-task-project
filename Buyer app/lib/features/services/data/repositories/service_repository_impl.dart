@@ -24,7 +24,7 @@ class ServiceRepositoryImpl implements ServiceRepository {
   Future<List<ServiceModel>> getPublishedServices() async {
     try {
       // Backend API request to fetch published service templates
-      final response = await _dio.get('/services');
+      final response = await _dio.get('/buyer/service-templates');
       if (response.statusCode == 200 && response.data != null) {
         final List list = response.data['data'] ?? response.data;
         return list.map((json) => ServiceModel.fromJson(json as Map<String, dynamic>)).toList();
@@ -39,7 +39,7 @@ class ServiceRepositoryImpl implements ServiceRepository {
   @override
   Future<ServiceModel?> getServiceById(String serviceId) async {
     try {
-      final response = await _dio.get('/services/$serviceId');
+      final response = await _dio.get('/buyer/service-templates/$serviceId');
       if (response.statusCode == 200 && response.data != null) {
         return ServiceModel.fromJson(response.data['data'] ?? response.data);
       }

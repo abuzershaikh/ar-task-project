@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/routes/app_router.dart';
@@ -22,7 +23,12 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _checkAuthAndNavigate() async {
     await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, AppRouter.mainNavigation);
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      Navigator.pushReplacementNamed(context, AppRouter.mainNavigation);
+    } else {
+      Navigator.pushReplacementNamed(context, AppRouter.login);
+    }
   }
 
   @override

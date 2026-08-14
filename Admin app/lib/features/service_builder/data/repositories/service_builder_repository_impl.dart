@@ -146,13 +146,13 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
             return ServiceModel(
               id: (json['id'] ?? '').toString(),
               code: (json['id'] ?? 'CUSTOM_SRV').toString().toUpperCase(),
-              name: (json['title'] ?? 'Custom Service').toString(),
+              name: (json['name'] ?? json['title'] ?? 'Custom Service').toString(),
               description: (json['description'] ?? '').toString(),
               icon: 'settings_suggest_rounded',
-              isActive: json['isPublished'] ?? true,
+              isActive: json['isActive'] ?? json['isPublished'] ?? true,
               currentVersion: 1,
               pricing: PricingConfig.calculate(
-                buyerPrice: ((json['pricing']?['unitPriceBuyer'] as num?) ?? 50.0).toDouble(),
+                buyerPrice: ((json['pricing']?['unitPriceBuyer'] ?? json['pricing']?['buyerPrice'] as num?) ?? 50.0).toDouble(),
                 adminMarginPercent: 20.0,
               ),
               elements: [],
@@ -181,13 +181,13 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
           return ServiceModel(
             id: (json['id'] ?? id).toString(),
             code: (json['id'] ?? id).toString().toUpperCase(),
-            name: (json['title'] ?? 'Custom Service').toString(),
+            name: (json['name'] ?? json['title'] ?? 'Custom Service').toString(),
             description: (json['description'] ?? '').toString(),
             icon: 'settings_suggest_rounded',
-            isActive: json['isPublished'] ?? true,
+            isActive: json['isActive'] ?? json['isPublished'] ?? true,
             currentVersion: 1,
             pricing: PricingConfig.calculate(
-              buyerPrice: ((json['pricing']?['unitPriceBuyer'] as num?) ?? 50.0).toDouble(),
+              buyerPrice: ((json['pricing']?['unitPriceBuyer'] ?? json['pricing']?['buyerPrice'] as num?) ?? 50.0).toDouble(),
               adminMarginPercent: 20.0,
             ),
             elements: [],
@@ -210,7 +210,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
     if (dioClient != null) {
       try {
         final payload = {
-          'title': service.name,
+          'name': service.name,
           'category': 'Custom Service',
           'description': service.description,
           'platform': 'GENERAL',
@@ -229,7 +229,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
             'editability': e.editability.toString().split('.').last.toUpperCase(),
             'order': e.orderIndex,
           }).toList(),
-          'isPublished': service.isActive,
+          'isActive': service.isActive,
         };
 
         final response = await dioClient!.post('/admin/service-templates', data: payload);

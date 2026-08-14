@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../../../core/services/firestore_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/routes/app_router.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../core/di/injection.dart';
+import '../../../home/presentation/pages/home_page.dart';
+import 'user_profile_form.dart';
 import '../bloc/auth_bloc.dart';
 
 class LoginPage extends StatefulWidget {
@@ -235,31 +239,50 @@ class _LoginPageState extends State<LoginPage> {
                           scopes: const ['email'],
                           serverClientId: '311090572825-jve8b44v1m0p7smmudr6hnhe5ib5qcuc.apps.googleusercontent.com',
                         );
+                        try {
+                          await googleSignIn.signOut();
+                        } catch (_) {}
                         final account = await googleSignIn.signIn();
                         debugPrint('[GOOGLE SIGN IN] Account result: $account');
                         if (account != null) {
-                          final storage = getIt<SecureStorageService>();
-                          if (account.displayName != null && account.displayName!.isNotEmpty) {
-                            await storage.saveUserName(account.displayName!);
-                          }
-                          if (account.email.isNotEmpty) {
-                            await storage.saveUserEmail(account.email);
-                          }
-                          if (account.photoUrl != null && account.photoUrl!.isNotEmpty) {
-                            await storage.saveUserPhoto(account.photoUrl!);
-                          }
-
                           final auth = await account.authentication;
-                          final String? googleIdToken = auth.idToken ?? auth.accessToken;
-                          debugPrint(
-                            '[GOOGLE SIGN IN] Google token obtained: ${googleIdToken != null ? "YES (${googleIdToken.substring(0, 10)}...)" : "NULL"}',
+                          
+                          // Authenticate with Firebase Auth
+                          final AuthCredential credential = GoogleAuthProvider.credential(
+                            accessToken: auth.accessToken,
+                            idToken: auth.idToken,
                           );
-                          if (googleIdToken != null && context.mounted) {
-                            context.read<AuthBloc>().add(GoogleLoginEvent(googleIdToken));
-                          } else if (googleIdToken == null && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Google Sign-In failed: Google token is null')),
+                          final UserCredential userCredential =
+                              await FirebaseAuth.instance.signInWithCredential(credential);
+                          final User? firebaseUser = userCredential.user;
+
+                          if (firebaseUser != null) {
+                            final userData = await FirestoreService.syncUserProfile(
+                              uid: firebaseUser.uid,
+                              email: firebaseUser.email ?? account.email,
+                              displayName: firebaseUser.displayName ?? account.displayName,
+                              role: 'BUYER',
                             );
+
+                            final String phone = userData['phone'] ?? '';
+                            if (context.mounted) {
+                              if (phone.isEmpty) {
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                    builder: (_) => UserProfileFormScreen(
+                                      uid: firebaseUser.uid,
+                                      initialName: userData['name'] ?? account.displayName ?? '',
+                                      email: firebaseUser.email ?? account.email,
+                                      nextScreen: const HomePage(),
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(builder: (_) => const HomePage()),
+                                );
+                              }
+                            }
                           }
                         } else {
                           debugPrint('[GOOGLE SIGN IN] User canceled sign-in dialog.');

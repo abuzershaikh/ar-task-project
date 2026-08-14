@@ -51,11 +51,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "311090572825-2bln7ai0aru2p2tq3b2pdtqnc9c9t0cu.apps.googleusercontent.com",
+          "client_id": "311090572825-1r5dprj47ncjrkc1i2tocefsejc4vov4.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.taskearning.earning.money.app",
-            "certificate_hash": "b5eb49e86aff62448a9d37cfe5b78ee8cb614159"
+            "certificate_hash": "0eae3be869459053006446677eeb9d0665c173d8"
           }
         },
         {

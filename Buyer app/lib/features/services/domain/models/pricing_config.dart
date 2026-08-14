@@ -130,12 +130,12 @@ class PricingConfig {
 
     return PricingConfig(
       modelType: parsedModel,
-      buyerPrice: (json['buyerPrice'] as num?)?.toDouble() ?? 0.0,
-      unitPrice: (json['unitPrice'] as num?)?.toDouble() ?? 1.0,
+      buyerPrice: (json['buyerPrice'] ?? json['unitPriceBuyer'] as num?)?.toDouble() ?? 0.0,
+      unitPrice: (json['unitPrice'] ?? json['unitPriceBuyer'] as num?)?.toDouble() ?? 1.0,
       minQuantity: (json['minQuantity'] as num?)?.toInt() ?? 1,
       maxQuantity: (json['maxQuantity'] as num?)?.toInt() ?? 10000,
       adminMarginPercent: (json['adminMarginPercent'] as num?)?.toDouble() ?? 20.0,
-      workerReward: (json['workerReward'] as num?)?.toDouble() ?? 0.0,
+      workerReward: (json['workerReward'] ?? json['workerRewardPerUnit'] as num?)?.toDouble() ?? 0.0,
       chips: parsedChips,
     );
   }

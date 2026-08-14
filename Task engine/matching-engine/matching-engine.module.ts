@@ -13,8 +13,11 @@ import { CategoryFilterService } from './filters/category-filter.service';
 import { CapacityFilterService } from './filters/capacity-filter.service';
 import { DuplicateFilterService } from './filters/duplicate-filter.service';
 
+import { ScoringEngineModule } from '../scoring-engine/scoring-engine.module';
+import { RankingEngineModule } from '../ranking-engine/ranking-engine.module';
+
 @Module({
-    imports: [DatabaseModule],
+    imports: [DatabaseModule, ScoringEngineModule, RankingEngineModule],
     providers: [
         MatchingEngineService,
         CandidateService,

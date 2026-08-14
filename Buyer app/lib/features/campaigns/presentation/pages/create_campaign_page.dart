@@ -36,6 +36,28 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   int _selectedQuantity = 100;
   bool _isSubmitting = false;
 
+  // Service card gradient colors
+  static const _cardGradients = [
+    [Color(0xFF667EEA), Color(0xFF764BA2)],
+    [Color(0xFF11998E), Color(0xFF38EF7D)],
+    [Color(0xFFFC5C7D), Color(0xFF6A82FB)],
+    [Color(0xFFF093FB), Color(0xFFF5576C)],
+    [Color(0xFF4FACFE), Color(0xFF00F2FE)],
+    [Color(0xFF43E97B), Color(0xFF38F9D7)],
+  ];
+
+  // Service icons mapping
+  IconData _getServiceIcon(String code) {
+    final c = code.toUpperCase();
+    if (c.contains('YOUTUBE') || c.contains('YT')) return Icons.play_circle_fill_rounded;
+    if (c.contains('INSTAGRAM') || c.contains('INSTA')) return Icons.camera_alt_rounded;
+    if (c.contains('TELEGRAM') || c.contains('TG')) return Icons.send_rounded;
+    if (c.contains('TWITTER') || c.contains('X_')) return Icons.flutter_dash_rounded;
+    if (c.contains('WEBSITE') || c.contains('WEB')) return Icons.language_rounded;
+    if (c.contains('FACEBOOK') || c.contains('FB')) return Icons.facebook_rounded;
+    return Icons.rocket_launch_rounded;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -139,52 +161,54 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
+                gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.verified_rounded, color: AppColors.success, size: 24),
+              child: const Icon(Icons.verified_rounded, color: Colors.white, size: 22),
             ),
-            const SizedBox(width: 10),
-            const Text('Campaign Published!', style: TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('Campaign Launched!', style: TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Service: ${_selectedService!.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
-            const SizedBox(height: 4),
-            Text('Paid Amount: ₹${_calculateTotalCost().toStringAsFixed(0)}', style: const TextStyle(color: Colors.cyan, fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 10),
-            const Text('Generated Form Payload Metadata:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.black54)),
+            Text(_selectedService!.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF334155))),
+            const SizedBox(height: 6),
             Container(
-              padding: const EdgeInsets.all(8),
-              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                payloadData.toString(),
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 10, color: Colors.black87),
-              ),
+              child: Text('₹${_calculateTotalCost().toStringAsFixed(0)} paid', style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 14)),
             ),
+            const SizedBox(height: 12),
+            const Text('Your campaign is now live and workers will start completing tasks shortly.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4)),
           ],
         ),
         actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+              ),
+              child: const Text('Back to Services', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              onPressed: () {
+                Navigator.pop(ctx);
+                setState(() => _selectedService = null);
+              },
             ),
-            child: const Text('Back to Catalog', style: TextStyle(fontWeight: FontWeight.bold)),
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() => _selectedService = null);
-            },
           ),
         ],
       ),
@@ -194,9 +218,26 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0F172A),
-        body: Center(child: CircularProgressIndicator(color: Colors.cyanAccent)),
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 4))],
+                ),
+                child: const CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF2563EB)),
+              ),
+              const SizedBox(height: 16),
+              const Text('Loading services...', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
       );
     }
 
@@ -212,18 +253,25 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   /// VIEW A: Published Services Catalog Selector Grid
   Widget _buildServicesCatalogView() {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Create New Campaign'),
-        backgroundColor: const Color(0xFF0F172A),
+        title: const Text('Services', style: TextStyle(color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.w700)),
+        backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Color(0xFF334155)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFE2E8F0)),
+        ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         children: [
-          const Text('Select a Service Template:', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          // Header
+          const Text('Choose a Service', style: TextStyle(color: Color(0xFF0F172A), fontSize: 20, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          const Text('Choose from active published templates configured by Admin.', style: TextStyle(color: Colors.white60, fontSize: 12)),
+          const Text('Select a service to launch your marketing campaign.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w400, height: 1.4)),
           const SizedBox(height: 16),
 
           // Category Filter Chips
@@ -234,89 +282,152 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 final isSelected = _selectedCategoryFilter == cat;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
-                  child: FilterChip(
-                    label: Text(cat, style: TextStyle(color: isSelected ? Colors.black : Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                    selected: isSelected,
-                    selectedColor: Colors.cyanAccent,
-                    backgroundColor: const Color(0xFF1E293B),
-                    onSelected: (val) => setState(() => _selectedCategoryFilter = cat),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedCategoryFilter = cat),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF2563EB) : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0)),
+                        boxShadow: isSelected
+                            ? [BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 2))]
+                            : [],
+                      ),
+                      child: Text(
+                        cat,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : const Color(0xFF64748B),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
                   ),
                 );
               }).toList(),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
           // Service Cards List
-          ..._publishedServices.map((service) {
+          ..._publishedServices.asMap().entries.map((entry) {
+            final index = entry.key;
+            final service = entry.value;
             final p = service.pricing;
+            final gradientColors = _cardGradients[index % _cardGradients.length];
 
-            String pricingBadgeText = '';
+            String pricingText = '';
+            String pricingSubText = '';
             if (p.modelType == PricingModelType.tieredChips && p.chips.isNotEmpty) {
-              pricingBadgeText = 'PACKAGES FROM ₹${p.chips.first.price.toStringAsFixed(0)}';
+              pricingText = '₹${p.chips.first.price.toStringAsFixed(0)}';
+              pricingSubText = 'starting from';
             } else if (p.modelType == PricingModelType.countBased) {
-              pricingBadgeText = '₹${p.unitPrice.toStringAsFixed(1)} / UNIT';
+              pricingText = '₹${p.unitPrice.toStringAsFixed(1)}';
+              pricingSubText = 'per unit';
             } else {
-              pricingBadgeText = 'FLAT RATE ₹${p.buyerPrice.toStringAsFixed(0)}';
+              pricingText = '₹${p.buyerPrice.toStringAsFixed(0)}';
+              pricingSubText = 'flat rate';
             }
 
-            return Card(
-              color: const Color(0xFF1E293B),
+            return Container(
               margin: const EdgeInsets.only(bottom: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: InkWell(
+              decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                onTap: () => _selectService(service),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.cyanAccent.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => _selectService(service),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        // Service Icon with gradient
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: gradientColors,
                             ),
-                            child: Text(service.code, style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 11)),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.amberAccent.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(pricingBadgeText, style: const TextStyle(color: Colors.amberAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(service.name, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text(service.description, style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                      const Divider(color: Colors.white12, height: 24),
+                          child: Icon(_getServiceIcon(service.code), color: Colors.white, size: 22),
+                        ),
+                        const SizedBox(width: 14),
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Pricing: ${p.modelType.label}', style: const TextStyle(color: Colors.white54, fontSize: 11)),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.cyanAccent,
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                            label: const Text('Select Service', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                            onPressed: () => _selectService(service),
+                        // Service Info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                service.name,
+                                style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                service.description,
+                                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, height: 1.3),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0F9FF),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  p.modelType.label,
+                                  style: const TextStyle(color: Color(0xFF0369A1), fontSize: 9, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(width: 10),
+
+                        // Price Badge
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(pricingSubText, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 9, fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 2),
+                            Text(pricingText, style: TextStyle(color: gradientColors[0], fontSize: 18, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('Select', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+                                  SizedBox(width: 3),
+                                  Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 12),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -338,46 +449,67 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(service.name),
-        backgroundColor: const Color(0xFF0F172A),
+        title: Text(service.name, style: const TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.w600)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF334155), size: 20),
           onPressed: () => setState(() => _selectedService = null),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: const Color(0xFFE2E8F0)),
         ),
       ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(
-          color: Color(0xFF1E293B),
-          border: Border(top: BorderSide(color: Colors.white12)),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 16, offset: const Offset(0, -4))],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Total Budget', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                Text('₹${totalCost.toStringAsFixed(0)}', style: const TextStyle(color: Colors.cyanAccent, fontSize: 20, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.cyanAccent,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: SafeArea(
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Total Budget', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 2),
+                    Text('₹${totalCost.toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFF0F172A), fontSize: 22, fontWeight: FontWeight.w700)),
+                  ],
+                ),
               ),
-              icon: _isSubmitting
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                  : const Icon(Icons.rocket_launch_rounded),
-              label: Text(_isSubmitting ? 'Launching...' : 'Pay & Launch Campaign', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              onPressed: _isSubmitting ? null : _submitCampaign,
-            ),
-          ],
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                onPressed: _isSubmitting ? null : _submitCampaign,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isSubmitting)
+                      const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    else
+                      const Icon(Icons.rocket_launch_rounded, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      _isSubmitting ? 'Launching...' : 'Pay & Launch',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       body: Form(
@@ -385,160 +517,272 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // Service Summary Header
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _cardGradients[_publishedServices.indexOf(service) % _cardGradients.length],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(_getServiceIcon(service.code), color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(service.name, style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 2),
+                        Text(service.description, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // 1. Dynamic Pricing Package Selector Card
             if (pricing.modelType == PricingModelType.tieredChips && pricing.chips.isNotEmpty) ...[
-              Card(
-                color: const Color(0xFF1E293B),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                child: Padding(
-                  padding: const EdgeInsets.all(14.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Select Package Chip:', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: pricing.chips.map((chip) {
-                          final isSelected = _selectedChip?.id == chip.id;
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0F9FF),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.local_offer_rounded, color: Color(0xFF2563EB), size: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Choose Package', style: TextStyle(color: Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    ...pricing.chips.map((chip) {
+                      final isSelected = _selectedChip?.id == chip.id;
 
-                          return InkWell(
-                            onTap: () {
-                              setState(() {
-                                _selectedChip = chip;
-                                _selectedQuantity = chip.quantity;
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isSelected ? Colors.cyanAccent : const Color(0xFF0F172A),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected ? Colors.cyanAccent : Colors.white24,
-                                  width: isSelected ? 1.5 : 1.0,
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedChip = chip;
+                            _selectedQuantity = chip.quantity;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                              width: isSelected ? 1.5 : 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isSelected ? const Color(0xFF2563EB) : Colors.white,
+                                  border: Border.all(color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFCBD5E1), width: 2),
+                                ),
+                                child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 12) : null,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(chip.label, style: TextStyle(color: const Color(0xFF0F172A), fontSize: 12, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500)),
+                                        if (chip.isPopular) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFEF4444)]),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: const Text('POPULAR', style: TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.w700)),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (chip.isPopular)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      margin: const EdgeInsets.only(bottom: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.amberAccent,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: const Text('MOST POPULAR', style: TextStyle(color: Colors.black, fontSize: 8, fontWeight: FontWeight.bold)),
-                                    ),
-                                  Text(
-                                    chip.label,
-                                    style: TextStyle(
-                                      color: isSelected ? Colors.black : Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '₹${chip.price.toStringAsFixed(0)}',
-                                    style: TextStyle(
-                                      color: isSelected ? Colors.black87 : Colors.amberAccent,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
+                              Text('₹${chip.price.toStringAsFixed(0)}', style: TextStyle(color: isSelected ? const Color(0xFF2563EB) : const Color(0xFF334155), fontSize: 15, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
             ],
 
             if (pricing.modelType == PricingModelType.countBased) ...[
-              Card(
-                color: const Color(0xFF1E293B),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                child: Padding(
-                  padding: const EdgeInsets.all(14.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Target Quantity:', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                          Text('Rate: ₹${pricing.unitPrice}/unit', style: const TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline, color: Colors.cyanAccent, size: 28),
-                            onPressed: _selectedQuantity > pricing.minQuantity
-                                ? () => setState(() => _selectedQuantity -= 10)
-                                : null,
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0F172A),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '$_selectedQuantity Units',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
+                          child: const Icon(Icons.tune_rounded, color: Color(0xFF16A34A), size: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(child: Text('Target Quantity', style: TextStyle(color: Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600))),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0F9FF),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text('₹${pricing.unitPrice.toStringAsFixed(1)}/unit', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 10, fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        _buildQuantityButton(Icons.remove_rounded, _selectedQuantity > pricing.minQuantity
+                            ? () => setState(() => _selectedQuantity -= 10)
+                            : null),
+                        Expanded(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Text(
+                              '$_selectedQuantity',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w700, fontSize: 18),
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.add_circle_outline, color: Colors.cyanAccent, size: 28),
-                            onPressed: () => setState(() => _selectedQuantity += 10),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                        _buildQuantityButton(Icons.add_rounded, () => setState(() => _selectedQuantity += 10)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Min: ${pricing.minQuantity}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
+                        Text('Max: ${pricing.maxQuantity}', style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
             ],
 
             // 2. Dynamic Template Form Elements Card
-            Card(
-              color: const Color(0xFF1E293B),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Form Details & Requirements', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                    const Divider(color: Colors.white12, height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.edit_note_rounded, color: Color(0xFFF59E0B), size: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Campaign Details', style: TextStyle(color: Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text('Fill in the required information for your campaign.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, height: 1.3)),
+                  const SizedBox(height: 14),
+                  Container(height: 1, color: const Color(0xFFF1F5F9)),
+                  const SizedBox(height: 14),
 
-                    ...buyerElements.map((element) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 14.0),
-                        child: _renderElementInputWidget(element),
-                      );
-                    }),
-                  ],
-                ),
+                  ...buyerElements.map((element) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14.0),
+                      child: _renderElementInputWidget(element),
+                    );
+                  }),
+                ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuantityButton(IconData icon, VoidCallback? onPressed) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onPressed,
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: onPressed != null ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: onPressed != null ? Colors.white : const Color(0xFF94A3B8), size: 20),
         ),
       ),
     );
@@ -550,41 +794,75 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       case ElementType.heading:
         return Text(
           element.label,
-          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
         );
       case ElementType.paragraph:
         return Text(
           element.label,
-          style: const TextStyle(color: Colors.white70, fontSize: 13),
+          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, height: 1.4),
         );
       case ElementType.textField:
         final controller = _formControllers[element.key];
-        return TextFormField(
-          controller: controller,
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-          validator: (val) {
-            if (element.isRequired && (val == null || val.trim().isEmpty)) {
-              return 'Please enter ${element.label}';
-            }
-            return null;
-          },
-          decoration: InputDecoration(
-            labelText: element.label,
-            labelStyle: const TextStyle(color: Colors.cyanAccent, fontSize: 12),
-            filled: true,
-            fillColor: const Color(0xFF0F172A),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(element.label, style: const TextStyle(color: Color(0xFF334155), fontSize: 12, fontWeight: FontWeight.w500)),
+                if (element.isRequired) const Text(' *', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: controller,
+              style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+              validator: (val) {
+                if (element.isRequired && (val == null || val.trim().isEmpty)) {
+                  return 'This field is required';
+                }
+                return null;
+              },
+              decoration: InputDecoration(
+                hintText: element.properties['placeholder'] as String? ?? 'Enter ${element.label.toLowerCase()}',
+                hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFEF4444)),
+                ),
+              ),
+            ),
+          ],
         );
       default:
         return Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
-            borderRadius: BorderRadius.circular(8),
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
-          child: Text('${element.type.label}: ${element.label}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline_rounded, color: Color(0xFF94A3B8), size: 16),
+              const SizedBox(width: 8),
+              Expanded(child: Text('${element.type.label}: ${element.label}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 11))),
+            ],
+          ),
         );
     }
   }

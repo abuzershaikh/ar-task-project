@@ -1,5 +1,5 @@
 const { NodeSSH } = require('node-ssh');
-const archiver = require('archiver');
+const AdmZip = require('adm-zip');
 const fs = require('fs');
 const path = require('path');
 
@@ -17,22 +17,12 @@ const ZIP_FILE = path.resolve(__dirname, 'task-engine.zip');
 
 async function createZip() {
   console.log('Creating ZIP archive...');
-  return new Promise((resolve, reject) => {
-    const output = fs.createWriteStream(ZIP_FILE);
-    const archive = archiver.create('zip', { zlib: { level: 9 } });
-
-    output.on('close', () => resolve());
-    archive.on('error', err => reject(err));
-
-    archive.pipe(output);
-
-    archive.glob('**/*', {
-      cwd: SRC_DIR,
-      ignore: ['node_modules/**', 'dist/**', '.git/**', '.env', '*.log']
-    });
-
-    archive.finalize();
+  const zip = new AdmZip();
+  zip.addLocalFolder(SRC_DIR, '', (filename) => {
+    return !filename.includes('node_modules') && !filename.includes('dist') && !filename.includes('.git') && !filename.endsWith('.env');
   });
+  zip.writeZip(ZIP_FILE);
+  console.log('ZIP archive created!');
 }
 
 async function execCommand(cmd) {
@@ -45,6 +35,7 @@ async function execCommand(cmd) {
 
 async function deploy() {
   try {
+    await createZip();
     console.log('Connecting to server...');
     
     await ssh.connect(config);
@@ -85,7 +76,7 @@ REDIS_PORT=6379
     await execCommand(`echo "${envContent.replace(/\\n/g, '\\\\n').replace(/\n/g, '\\n')}" > /var/www/task-engine/.env`);
 
     console.log('Installing project dependencies & building...');
-    await execCommand('cd /var/www/task-engine && npm ci');
+    await execCommand('cd /var/www/task-engine && npm install');
     await execCommand('cd /var/www/task-engine && npm run build');
 
     console.log('Starting PM2...');

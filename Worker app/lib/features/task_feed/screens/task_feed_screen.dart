@@ -313,7 +313,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -509,7 +509,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                   boxShadow: [
                     if (!isSelected)
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.02),
+                        color: Colors.black.withOpacity(0.02),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),

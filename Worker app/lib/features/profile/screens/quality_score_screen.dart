@@ -46,7 +46,7 @@ class QualityScoreScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
+                      color: Colors.black.withOpacity(0.15),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -115,7 +115,7 @@ class QualityScoreScreen extends StatelessWidget {
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
+                      color: Colors.black.withOpacity(0.02),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
@@ -194,7 +194,7 @@ class QualityScoreScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 18),
@@ -228,7 +228,7 @@ class QualityScoreScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: textColor.withValues(alpha: 0.3)),
+        border: Border.all(color: textColor.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,7 +246,7 @@ class QualityScoreScreen extends StatelessWidget {
           Text(
             subtitle,
             style: TextStyle(
-              color: textColor.withValues(alpha: 0.8),
+              color: textColor.withOpacity(0.8),
               fontSize: 10.5,
               fontWeight: FontWeight.w500,
             ),

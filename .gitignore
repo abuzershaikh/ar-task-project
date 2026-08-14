@@ -38,3 +38,13 @@
 **/android/app/release
 **/android/.gradle/
 **/android/local.properties
+
+# Deploy temporary files and archives
+**/deploy-tools/*.zip
+vps_workspace/
+vps_workspace2/
+deploy-tools/test-queue.js
+deploy-tools/fix-db.js
+deploy-tools/reset-mysql-user.js
+Task engine/.env.backup.
+

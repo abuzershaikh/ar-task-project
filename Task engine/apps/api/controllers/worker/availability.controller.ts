@@ -4,20 +4,41 @@ import { WorkerRepository } from '../../../../shared/database/repositories/worke
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
+import { UserSyncService } from '../../../../shared/services/user-sync.service';
 
 @ApiTags('Worker - Availability & Capacity')
 @Roles(UserRole.WORKER)
 @ApiBearerAuth('bearer')
 @Controller('worker/availability')
 export class WorkerAvailabilityController {
-    constructor(private readonly workerRepo: WorkerRepository) { }
+    constructor(
+        private readonly workerRepo: WorkerRepository,
+        private readonly userSyncService: UserSyncService,
+    ) { }
 
     private async getOrCreateWorker(userId: string) {
         let worker = await this.workerRepo.findByUserId(userId);
         if (!worker) {
-            worker = await this.workerRepo.create({ userId, status: 'active', kycStatus: 'pending' });
+            worker = await this.workerRepo.create({ userId, status: 'active', kycStatus: 'APPROVED' });
         }
         return worker;
+    }
+
+    @Get('ping')
+    @Post('ping')
+    @ApiOperation({ summary: 'Ping online presence when Worker App main activity opens' })
+    async pingPresence(@CurrentUser() user: User) {
+        const pingResult = await this.userSyncService.pingLastOnline(user.email || user.id);
+        const worker = await this.getOrCreateWorker(user.id);
+        return {
+            success: true,
+            userId: user.id,
+            email: user.email,
+            workerId: worker.id,
+            status: worker.status,
+            lastOnline: pingResult.lastOnline,
+            message: 'Worker presence updated in MySQL',
+        };
     }
 
     @Get()
@@ -49,7 +70,7 @@ export class WorkerAvailabilityController {
             maxConcurrentTasks: body.maxConcurrentTasks || worker.preferences?.maxConcurrentTasks || 5,
         };
 
-        const updated = await this.workerRepo.update(worker.id, {
+        await this.workerRepo.update(worker.id, {
             preferences: updatedPreferences,
         });
 

@@ -98,7 +98,11 @@ const repositories = [
 
 @Module({
     imports: [
-        TypeOrmModule.forRoot(databaseConfig),
+        TypeOrmModule.forRoot({
+            ...databaseConfig,
+            entities,
+            autoLoadEntities: false,
+        }),
         TypeOrmModule.forFeature(entities),
     ],
     providers: [...repositories],

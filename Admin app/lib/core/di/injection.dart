@@ -59,7 +59,7 @@ Future<void> initializeDependencies() async {
   
   // Service Builder Feature
   getIt.registerLazySingleton<ServiceBuilderRepository>(
-    () => ServiceBuilderRepositoryImpl(),
+    () => ServiceBuilderRepositoryImpl(dioClient: getIt()),
   );
 
   // BLoC

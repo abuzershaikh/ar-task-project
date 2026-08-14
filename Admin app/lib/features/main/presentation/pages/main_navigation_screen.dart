@@ -45,18 +45,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ],
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildNavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard', 0),
-                _buildNavItem(Icons.campaign_outlined, Icons.campaign, 'Campaigns', 1),
-                _buildNavItem(Icons.dashboard_customize_outlined, Icons.dashboard_customize, 'Services', 2),
-                _buildNavItem(Icons.people_outline, Icons.people, 'Workers', 3),
-                _buildNavItem(Icons.business_outlined, Icons.business, 'Buyers', 4),
-                _buildNavItem(Icons.more_horiz_outlined, Icons.more_horiz, 'More', 5),
-              ],
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Expanded(child: _buildNavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard', 0)),
+              Expanded(child: _buildNavItem(Icons.campaign_outlined, Icons.campaign, 'Campaigns', 1)),
+              Expanded(child: _buildNavItem(Icons.dashboard_customize_outlined, Icons.dashboard_customize, 'Services', 2)),
+              Expanded(child: _buildNavItem(Icons.people_outline, Icons.people, 'Workers', 3)),
+              Expanded(child: _buildNavItem(Icons.business_outlined, Icons.business, 'Buyers', 4)),
+              Expanded(child: _buildNavItem(Icons.more_horiz_outlined, Icons.more_horiz, 'More', 5)),
+            ],
           ),
         ),
       ),
@@ -72,13 +70,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        constraints: const BoxConstraints(minWidth: 80),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
                 borderRadius: BorderRadius.circular(16),
@@ -86,15 +83,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               child: Icon(
                 isSelected ? selectedIcon : icon,
                 color: isSelected ? AppColors.primary : AppColors.gray500,
+                size: 22,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? AppColors.primary : AppColors.gray500,
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? AppColors.primary : AppColors.gray500,
+                ),
               ),
             ),
           ],
