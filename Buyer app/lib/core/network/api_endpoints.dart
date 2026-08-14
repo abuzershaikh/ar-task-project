@@ -92,22 +92,22 @@ class ApiEndpoints {
   // ============ REVIEWS (SUBMISSIONS) ============
   /// Get pending submissions for review
   /// Query params: ?status=pending|approved|rejected&page=1&limit=20
-  static const String submissions = '$buyer/submissions';
+  static const String submissions = '$buyer/reviews/pending';
   
   /// Get submission detail with proof
-  static String submissionDetail(String id) => '$buyer/submissions/$id';
+  static String submissionDetail(String id) => '$buyer/reviews/$id';
   
   /// Approve submission
-  static String approveSubmission(String id) => '$buyer/submissions/$id/approve';
+  static String approveSubmission(String id) => '$buyer/reviews/$id/approve';
   
   /// Reject submission
-  static String rejectSubmission(String id) => '$buyer/submissions/$id/reject';
+  static String rejectSubmission(String id) => '$buyer/reviews/$id/reject';
   
   /// Request changes to submission
-  static String requestChanges(String id) => '$buyer/submissions/$id/request-changes';
+  static String requestChanges(String id) => '$buyer/reviews/$id/request-changes';
   
   /// Rate worker after approval
-  static String rateWorker(String submissionId) => '$buyer/submissions/$submissionId/rate';
+  static String rateWorker(String submissionId) => '$buyer/reviews/$submissionId/rate';
   
   // ============ ANALYTICS ============
   /// Get overall analytics

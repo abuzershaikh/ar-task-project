@@ -32,13 +32,31 @@ export class FileController {
     @ApiBearerAuth('bearer')
     @ApiOperation({ summary: 'Upload a file (proof, image, doc)' })
     @ApiConsumes('multipart/form-data')
-    @UseInterceptors(FileInterceptor('file'))
+    @UseInterceptors(FileInterceptor('file', {
+        limits: {
+            fileSize: 5 * 1024 * 1024, // 5 MB limit
+        },
+        fileFilter: (req, file, cb) => {
+            const allowedMimeTypes = [
+                'image/jpeg',
+                'image/png',
+                'image/webp',
+                'image/gif',
+                'application/pdf',
+            ];
+            if (allowedMimeTypes.includes(file.mimetype)) {
+                cb(null, true);
+            } else {
+                cb(new BadRequestException('Invalid file type. Only JPEG, PNG, WEBP, GIF, and PDF are allowed.'), false);
+            }
+        },
+    }))
     async uploadFile(
         @UploadedFile() file: any,
         @CurrentUser() user: User,
     ) {
         if (!file) {
-            throw new BadRequestException('No file provided');
+            throw new BadRequestException('No file provided or file type rejected');
         }
 
         let type = FileType.DOCUMENT;

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/di/injection.dart';
+import '../../../../core/network/dio_client.dart';
+import '../data/repositories/review_repository.dart';
 
 /// ReviewDetailPage - Worker Task Proof Verification & Approval Screen
 /// Is page par Buyer worker dwara submit kiya hua task proof (Screenshot / Text proof) review karke Approve ya Reject karta hai.
@@ -15,24 +18,42 @@ class ReviewDetailPage extends StatefulWidget {
 class _ReviewDetailPageState extends State<ReviewDetailPage> {
   bool _isProcessing = false;
   String _status = 'PENDING';
+  
+  late final ReviewRepository _reviewRepo;
+
+  @override
+  void initState() {
+    super.initState();
+    _reviewRepo = ReviewRepository(getIt<DioClient>());
+  }
 
   /// Worker task proof approval handler function
   void _approveTaskProof() async {
     setState(() => _isProcessing = true);
-    await Future.delayed(const Duration(milliseconds: 800));
+    final success = await _reviewRepo.approveTaskProof(widget.submissionId);
     if (!mounted) return;
 
-    setState(() {
-      _isProcessing = false;
-      _status = 'APPROVED';
-    });
+    if (success) {
+      setState(() {
+        _isProcessing = false;
+        _status = 'APPROVED';
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Task proof approved! Worker reward released.'),
-        backgroundColor: AppColors.success,
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Task proof approved! Worker reward released.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } else {
+      setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to approve task proof.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   /// Worker task proof rejection handler function (opens reason dialog)
@@ -74,20 +95,34 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
             onPressed: () async {
               Navigator.pop(ctx);
               setState(() => _isProcessing = true);
-              await Future.delayed(const Duration(milliseconds: 800));
+              final success = await _reviewRepo.rejectTaskProof(
+                widget.submissionId, 
+                'INVALID_PROOF', 
+                reasonController.text.isNotEmpty ? reasonController.text : 'Submission rejected by buyer',
+              );
               if (!mounted) return;
 
-              setState(() {
-                _isProcessing = false;
-                _status = 'REJECTED';
-              });
+              if (success) {
+                setState(() {
+                  _isProcessing = false;
+                  _status = 'REJECTED';
+                });
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Task proof rejected with feedback.'),
-                  backgroundColor: AppColors.error,
-                ),
-              );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Task proof rejected with feedback.'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              } else {
+                setState(() => _isProcessing = false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Failed to reject task proof.'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
             },
           ),
         ],

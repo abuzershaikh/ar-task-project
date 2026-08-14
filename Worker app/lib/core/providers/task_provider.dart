@@ -82,12 +82,22 @@ class TaskProvider extends ChangeNotifier {
     return false;
   }
 
-  Future<bool> submitTaskProof(String taskId, String textProof, String? imageUrl) async {
+  Future<bool> submitTaskProof(String taskId, String textProof, String? imagePath) async {
     try {
+      String? finalImageUrl;
+      
+      if (imagePath != null && imagePath.isNotEmpty) {
+        final uploadRes = await ApiService.uploadFile(imagePath);
+        if (uploadRes['success'] == true && uploadRes['file'] != null) {
+          finalImageUrl = uploadRes['file']['filePath'] ?? uploadRes['file']['id'];
+        }
+      }
+
       final res = await ApiService.submitTaskProof(taskId, {
         'textProof': textProof,
-        'imageUrl': imageUrl,
+        'imageUrl': finalImageUrl,
       });
+      
       if (res['success'] == true || res['status'] == 'SUBMITTED' || res['status'] == 'submitted') {
         fetchMyTasks('submitted');
         return true;

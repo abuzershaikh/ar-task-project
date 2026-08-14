@@ -3,20 +3,25 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Public } from '../../../../shared/auth/decorators/public.decorator';
 
+import { HealthCheckService, HealthCheck, TypeOrmHealthIndicator } from '@nestjs/terminus';
+
 @ApiTags('Health')
 @Controller('health')
 export class HealthController {
-    constructor(private readonly eventEmitter: EventEmitter2) {}
+    constructor(
+        private readonly eventEmitter: EventEmitter2,
+        private health: HealthCheckService,
+        private db: TypeOrmHealthIndicator,
+    ) {}
 
     @Public()
     @Get()
+    @HealthCheck()
     @ApiOperation({ summary: 'Health check endpoint' })
     check() {
-        return {
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-            uptime: process.uptime(),
-        };
+        return this.health.check([
+            () => this.db.pingCheck('database', { timeout: 3000 }),
+        ]);
     }
 
     @Public()
