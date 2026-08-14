@@ -219,7 +219,8 @@ export class TaskCommandService {
 
         if (
             task.status !== TaskStatus.SUBMITTED &&
-            task.status !== TaskStatus.UNDER_REVIEW
+            task.status !== TaskStatus.UNDER_REVIEW &&
+            task.status !== TaskStatus.REJECTED
         ) {
             throw new BadRequestException('Task is not ready for approval');
         }
