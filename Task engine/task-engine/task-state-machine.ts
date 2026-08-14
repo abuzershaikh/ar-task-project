@@ -19,7 +19,7 @@ export class TaskStateMachine {
         [TaskStatus.IN_PROGRESS, [TaskStatus.SUBMITTED, TaskStatus.ACTIVE, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
         [TaskStatus.SUBMITTED, [TaskStatus.UNDER_REVIEW, TaskStatus.ACTIVE, TaskStatus.EXPIRED]],
         [TaskStatus.UNDER_REVIEW, [TaskStatus.APPROVED, TaskStatus.REJECTED]],
-        [TaskStatus.REJECTED, [TaskStatus.ACTIVE, TaskStatus.ASSIGNED, TaskStatus.FAILED]],
+        [TaskStatus.REJECTED, [TaskStatus.ACTIVE, TaskStatus.ASSIGNED, TaskStatus.FAILED, TaskStatus.APPROVED]], // APPROVED added for Admin Override
         [TaskStatus.APPROVED, []],
         [TaskStatus.CANCELLED, []],
         [TaskStatus.EXPIRED, []],
