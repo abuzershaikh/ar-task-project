@@ -28,7 +28,6 @@ import { FileController } from './controllers/common/file.controller';
 import { WebhookController } from './controllers/webhooks/webhook.controller';
 import { HealthController } from './controllers/common/health.controller';
 import { AppQueueModule } from '../../shared/queue/app-queue.module';
-import { WorkerModule } from '../worker/worker.module';
 
 // Worker Controllers
 import { WorkerTaskController } from './controllers/worker/task.controller';
@@ -80,7 +79,6 @@ import { AdminSystemSettingsController } from './controllers/admin/system-settin
         AuthModule,
         ServicesModule,
         AppQueueModule,
-        WorkerModule,
 
         // Event Emitter
         EventEmitterModule.forRoot(),

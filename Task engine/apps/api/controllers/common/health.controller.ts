@@ -23,6 +23,13 @@ export class HealthController {
     @Post('test-queue')
     @ApiOperation({ summary: 'Trigger test order.activated event to test end-to-end Bull Redis Queue processing' })
     async testQueue(@Body() body: { orderId?: string; count?: number }) {
+        if (process.env.NODE_ENV === 'production' && process.env.ENABLE_TEST_ENDPOINTS !== 'true') {
+            return {
+                success: false,
+                message: 'Test endpoint disabled in production mode. Set ENABLE_TEST_ENDPOINTS=true to enable.',
+            };
+        }
+
         const testOrderId = body.orderId || `TEST_ORDER_${Date.now()}`;
         const count = body.count || 3;
 
@@ -38,7 +45,7 @@ export class HealthController {
 
         return {
             success: true,
-            message: `Event 'order.activated' emitted for Order ${testOrderId}. Check PM2 logs and MySQL tasks table.`,
+            message: `Event 'order.activated' emitted for Order ${testOrderId}. Enqueued to Redis Bull Queue.`,
             orderId: testOrderId,
             count,
         };

@@ -68,8 +68,15 @@ async function deploy() {
     const envContent = `
 PORT=3000
 NODE_ENV=production
+ENABLE_TEST_ENDPOINTS=true
 DATABASE_URL=mysql://taskapp:taskapp_password@localhost:3306/task_platform
+DB_HOST=localhost
+DB_PORT=3306
+DB_USERNAME=taskapp
+DB_PASSWORD=taskapp_password
+DB_DATABASE=task_platform
 JWT_SECRET=super_secret_jwt_key_1234567890
+JWT_REFRESH_SECRET=super_secret_refresh_key_0987654321
 REDIS_HOST=localhost
 REDIS_PORT=6379
 `;
@@ -79,13 +86,8 @@ REDIS_PORT=6379
     await execCommand('cd /var/www/task-engine && npm install');
     await execCommand('cd /var/www/task-engine && npm run build');
 
-    console.log('Starting PM2...');
-    const pm2Status = await ssh.execCommand('pm2 id task-engine');
-    if (pm2Status.stdout.trim() === '[]') {
-       await execCommand('cd /var/www/task-engine && pm2 start dist/main.js --name task-engine -i 2');
-    } else {
-       await execCommand('cd /var/www/task-engine && pm2 restart task-engine');
-    }
+    console.log('Starting PM2 Services (API Producer + Worker Consumer)...');
+    await execCommand('cd /var/www/task-engine && pm2 start ecosystem.config.json || pm2 restart all');
     await execCommand('pm2 save');
     
     console.log('DEPLOYMENT SUCCESSFUL!');

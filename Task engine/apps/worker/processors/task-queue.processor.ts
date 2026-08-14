@@ -4,6 +4,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { TaskEngineService } from '../../../task-engine/task-engine.service';
 import { TaskGenerationJobRepository } from '../../../shared/database/repositories/task-generation-job.repository';
 import { TaskGenerationJobStatus } from '../../../shared/database/entities/task-generation-job.entity';
+import { DeadlineMonitorService } from '../../../shared/engines/reallocation-engine/services/deadline-monitor.service';
 
 /**
  * Task queue processor
@@ -17,6 +18,7 @@ export class TaskQueueProcessor {
     constructor(
         private readonly taskEngine: TaskEngineService,
         private readonly jobRepo: TaskGenerationJobRepository,
+        private readonly deadlineMonitor: DeadlineMonitorService,
         @InjectQueue('matching') private readonly matchingQueue: Queue,
     ) { }
 
@@ -53,15 +55,21 @@ export class TaskQueueProcessor {
             this.logger.log(`✅ Bull Worker created ${count} tasks in MySQL for Order '${orderId}'`);
 
             // Chain to matching queue to match workers for the order tasks
+            let matchingEnqueued = false;
             if (createdTasks.length > 0) {
-                await this.matchingQueue.add('batch-match', {
-                    orderId,
-                    batchSize: 50,
-                });
-                this.logger.log(`🎯 Enqueued 'batch-match' job for Order '${orderId}'`);
+                try {
+                    await this.matchingQueue.add('batch-match', {
+                        orderId,
+                        batchSize: 50,
+                    });
+                    matchingEnqueued = true;
+                    this.logger.log(`🎯 Enqueued 'batch-match' job for Order '${orderId}'`);
+                } catch (matchingError) {
+                    this.logger.error(`⚠️ Tasks created successfully, but failed to enqueue matching job for Order '${orderId}': ${matchingError.message}`, matchingError.stack);
+                }
             }
 
-            return { success: true, count, orderId };
+            return { success: true, count, orderId, matchingEnqueued };
         } catch (error) {
             this.logger.error(`Failed to create tasks for Order '${orderId}': ${error.message}`, error.stack);
             if (jobId) {
@@ -73,7 +81,15 @@ export class TaskQueueProcessor {
 
     @Process('expire-tasks')
     async handleExpireTasks(job: Job) {
-        this.logger.log('⏰ Checking for expired tasks...');
-        return { success: true };
+        this.logger.log('⏰ Executing Post-Deadline Task Expiration & Reallocation cycle...');
+        try {
+            const result = await this.deadlineMonitor.monitorDeadlines();
+            this.logger.log(`✅ Expired task cycle result: Evaluated ${result.evaluatedTasksCount}, Expired ${result.expiredTasksCount}, Reallocated ${result.reallocatedTasksCount}, Extended Campaigns ${result.extendedCampaignsCount}`);
+            return { success: true, ...result };
+        } catch (error) {
+            this.logger.error(`Failed executing expired tasks cycle: ${error.message}`, error.stack);
+            throw error;
+        }
     }
 }
+

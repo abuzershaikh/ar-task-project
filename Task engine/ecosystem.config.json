@@ -1,20 +1,44 @@
 {
-  "apps": [{
-    "name": "task-engine",
-    "script": "dist/main.js",
-    "cwd": "/var/www/task-engine",
-    "env": {
-      "PORT": "3000",
-      "NODE_ENV": "production",
-      "DB_HOST": "localhost",
-      "DB_PORT": "3306",
-      "DB_USERNAME": "taskapp",
-      "DB_PASSWORD": "taskapp_password",
-      "DB_DATABASE": "task_platform",
-      "JWT_SECRET": "super_secret_jwt_key_1234567890",
-      "JWT_REFRESH_SECRET": "super_secret_refresh_key_0987654321",
-      "REDIS_HOST": "localhost",
-      "REDIS_PORT": "6379"
+  "apps": [
+    {
+      "name": "task-engine-api",
+      "script": "dist/main.js",
+      "cwd": "/var/www/task-engine",
+      "instances": 1,
+      "autorestart": true,
+      "env": {
+        "PORT": "3000",
+        "NODE_ENV": "production",
+        "ENABLE_TEST_ENDPOINTS": "true",
+        "DB_HOST": "localhost",
+        "DB_PORT": "3306",
+        "DB_USERNAME": "taskapp",
+        "DB_PASSWORD": "taskapp_password",
+        "DB_DATABASE": "task_platform",
+        "JWT_SECRET": "super_secret_jwt_key_1234567890",
+        "JWT_REFRESH_SECRET": "super_secret_refresh_key_0987654321",
+        "REDIS_HOST": "localhost",
+        "REDIS_PORT": "6379"
+      }
+    },
+    {
+      "name": "task-engine-worker",
+      "script": "dist/worker.js",
+      "cwd": "/var/www/task-engine",
+      "instances": 1,
+      "autorestart": true,
+      "env": {
+        "NODE_ENV": "production",
+        "DB_HOST": "localhost",
+        "DB_PORT": "3306",
+        "DB_USERNAME": "taskapp",
+        "DB_PASSWORD": "taskapp_password",
+        "DB_DATABASE": "task_platform",
+        "JWT_SECRET": "super_secret_jwt_key_1234567890",
+        "JWT_REFRESH_SECRET": "super_secret_refresh_key_0987654321",
+        "REDIS_HOST": "localhost",
+        "REDIS_PORT": "6379"
+      }
     }
-  }]
+  ]
 }

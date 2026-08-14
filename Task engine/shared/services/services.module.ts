@@ -34,6 +34,8 @@ import { ReallocationEngine } from '../engines/reallocation-engine/reallocation.
 import { FirebaseAdminService } from './firebase-admin.service';
 import { UserSyncService } from './user-sync.service';
 
+import { EventEmitterModule } from '@nestjs/event-emitter';
+
 const providers = [
     AuditLogService,
     NotificationService,
@@ -61,7 +63,7 @@ const providers = [
 
 @Global()
 @Module({
-    imports: [DatabaseModule, forwardRef(() => TaskEngineModule), forwardRef(() => MatchingEngineModule), forwardRef(() => ScoringEngineModule)],
+    imports: [DatabaseModule, EventEmitterModule.forRoot(), forwardRef(() => TaskEngineModule), forwardRef(() => MatchingEngineModule), forwardRef(() => ScoringEngineModule)],
     providers,
     exports: providers,
 })
