@@ -185,48 +185,53 @@ class _HomePageState extends State<HomePage> {
                         // ── Quick Actions ──
                         const Text('Quick Actions', style: TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildQuickAction(
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          clipBehavior: Clip.none,
+                          child: Row(
+                            children: [
+                              _buildQuickAction(
                                 icon: Icons.add_circle_rounded,
-                                label: 'Create\nCampaign',
+                                label: 'Create Campaign',
                                 color: const Color(0xFF2563EB),
                                 bgColor: const Color(0xFFEFF6FF),
                                 onTap: () => Navigator.pushNamed(context, AppRouter.services),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _buildQuickAction(
+                              const SizedBox(width: 12),
+                              _buildQuickAction(
+                                icon: Icons.grid_view_rounded,
+                                label: 'Services Catalog',
+                                color: const Color(0xFF9333EA),
+                                bgColor: const Color(0xFFF3E8FF),
+                                onTap: () => Navigator.pushNamed(context, AppRouter.services),
+                              ),
+                              const SizedBox(width: 12),
+                              _buildQuickAction(
+                                icon: Icons.fact_check_rounded,
+                                label: 'Task Reviews',
+                                color: const Color(0xFFD97706),
+                                bgColor: const Color(0xFFFEF3C7),
+                                onTap: () => Navigator.pushNamed(context, AppRouter.reviews),
+                              ),
+                              const SizedBox(width: 12),
+                              _buildQuickAction(
                                 icon: Icons.trending_up_rounded,
-                                label: 'Perfor-\nmance',
+                                label: 'Performance',
                                 color: const Color(0xFF16A34A),
                                 bgColor: const Color(0xFFF0FDF4),
                                 onTap: () => Navigator.pushNamed(context, AppRouter.analytics),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _buildQuickAction(
-                                icon: Icons.groups_rounded,
-                                label: 'Worker\nStats',
-                                color: const Color(0xFFF59E0B),
-                                bgColor: const Color(0xFFFEFCE8),
-                                onTap: () {},
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _buildQuickAction(
-                                icon: Icons.payment_rounded,
-                                label: 'Pay-\nments',
+                              const SizedBox(width: 12),
+                              _buildQuickAction(
+                                icon: Icons.account_balance_wallet_rounded,
+                                label: 'Payments',
                                 color: const Color(0xFF8B5CF6),
                                 bgColor: const Color(0xFFF5F3FF),
                                 onTap: () => Navigator.pushNamed(context, AppRouter.payments),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
 
                         const SizedBox(height: 24),
@@ -400,16 +405,25 @@ class _HomePageState extends State<HomePage> {
     required Color bgColor,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+        width: 175,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: Column(
+        child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
@@ -417,15 +431,21 @@ class _HomePageState extends State<HomePage> {
                 color: bgColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: color, size: 20),
+              child: Icon(icon, color: color, size: 22),
             ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(color: Color(0xFF334155), fontSize: 10, fontWeight: FontWeight.w600, height: 1.3),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
