@@ -137,6 +137,17 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  static Future<Map<String, dynamic>> uploadFile(String filePath) async {
+    final headers = await _headers();
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/files/upload'));
+    request.headers.addAll(headers);
+    request.files.add(await http.MultipartFile.fromPath('file', filePath));
+    
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    return jsonDecode(response.body);
+  }
+
   // --- Worker Profile APIs ---
   static Future<Map<String, dynamic>> getProfile() async {
     final headers = await _headers();
