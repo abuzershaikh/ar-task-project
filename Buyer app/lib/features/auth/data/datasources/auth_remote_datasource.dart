@@ -28,18 +28,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         final dataMap = response.data['data'] ?? response.data;
         return AuthDataModel.fromJson(dataMap as Map<String, dynamic>);
       }
+      throw Exception('Invalid response format');
     } catch (e) {
       debugPrint('[AUTH DATA LOG] /auth/login exception: $e');
+      rethrow;
     }
-
-    // Fallback Auth Data for seamless offline/dev authentication
-    return AuthDataModel(
-      accessToken: 'jwt_buyer_access_token_mock',
-      refreshToken: 'jwt_buyer_refresh_token_mock',
-      userId: 'usr_buyer_${email.split('@')[0]}',
-      email: email,
-      businessName: 'Marketing Pro Client',
-    );
   }
 
   @override
@@ -57,18 +50,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         final dataMap = response.data['data'] ?? response.data;
         return AuthDataModel.fromJson(dataMap as Map<String, dynamic>);
       }
+      throw Exception('Invalid response format');
     } catch (e) {
       debugPrint('[AUTH DATA LOG] /auth/google exception: $e');
+      rethrow;
     }
-
-    // Fallback Auth Data for seamless Google login authentication
-    return const AuthDataModel(
-      accessToken: 'jwt_buyer_google_access_token',
-      refreshToken: 'jwt_buyer_google_refresh_token',
-      userId: 'usr_buyer_google',
-      email: 'buyer@marketingpro.com',
-      businessName: 'Google Buyer Account',
-    );
   }
 
   @override

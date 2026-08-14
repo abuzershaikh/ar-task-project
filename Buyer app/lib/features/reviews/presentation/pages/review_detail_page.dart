@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/network/dio_client.dart';
-import '../data/repositories/review_repository.dart';
+import '../../data/repositories/review_repository.dart';
 
 /// ReviewDetailPage - Worker Task Proof Verification & Approval Screen
 /// Is page par Buyer worker dwara submit kiya hua task proof (Screenshot / Text proof) review karke Approve ya Reject karta hai.

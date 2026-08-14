@@ -17,6 +17,9 @@ import '../../features/service_builder/domain/repositories/service_builder_repos
 import '../../features/service_builder/data/repositories/service_builder_repository_impl.dart';
 import '../../features/service_builder/presentation/bloc/service_builder_bloc.dart';
 
+import '../../features/dashboard/data/repositories/dashboard_repository.dart';
+import '../../features/dashboard/presentation/bloc/dashboard_bloc.dart';
+
 final getIt = GetIt.instance;
 
 Future<void> initializeDependencies() async {
@@ -62,6 +65,11 @@ Future<void> initializeDependencies() async {
     () => ServiceBuilderRepositoryImpl(dioClient: getIt()),
   );
 
+  // Dashboard Feature
+  getIt.registerLazySingleton<DashboardRepository>(
+    () => DashboardRepository(getIt()),
+  );
+
   // BLoC
   getIt.registerFactory(
     () => AuthBloc(
@@ -73,6 +81,12 @@ Future<void> initializeDependencies() async {
 
   getIt.registerFactory(
     () => ServiceBuilderBloc(
+      repository: getIt(),
+    ),
+  );
+
+  getIt.registerFactory(
+    () => DashboardBloc(
       repository: getIt(),
     ),
   );

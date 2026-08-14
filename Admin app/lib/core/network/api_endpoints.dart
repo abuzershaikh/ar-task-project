@@ -8,9 +8,13 @@ class ApiEndpoints {
   static const String profile = '/auth/me';
   
   // ==================== Dashboard ====================
-  static const String dashboardStats = '/admin/dashboard/stats';
-  static const String dashboardAlerts = '/admin/dashboard/alerts';
-  static const String dashboardActivity = '/admin/dashboard/activity';
+  static const String dashboard = '/admin/dashboard';
+  static const String dashboardOrders = '/admin/dashboard/orders';
+  static const String dashboardTasks = '/admin/dashboard/tasks';
+  static const String dashboardWorkers = '/admin/dashboard/workers';
+  static const String dashboardBuyers = '/admin/dashboard/buyers';
+  static const String dashboardEarnings = '/admin/dashboard/earnings';
+  static const String dashboardPayouts = '/admin/dashboard/payouts';
   
   // ==================== Workers ====================
   static const String workers = '/admin/workers';

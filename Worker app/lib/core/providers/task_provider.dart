@@ -7,19 +7,25 @@ class TaskProvider extends ChangeNotifier {
   bool _isLoading = false;
   String _selectedStage = 'submitted';
   Map<String, dynamic> _dashboardStats = {};
+  String? _error;
 
   List<dynamic> get availableTasks => _availableTasks;
   List<dynamic> get myTasks => _myTasks;
   bool get isLoading => _isLoading;
   String get selectedStage => _selectedStage;
   Map<String, dynamic> get dashboardStats => _dashboardStats;
+  String? get error => _error;
 
   Future<void> fetchAvailableTasks() async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
     try {
       _availableTasks = await ApiService.getAvailableTasks();
-    } catch (_) {}
+    } catch (e) {
+      _error = e.toString();
+      _availableTasks = [];
+    }
     _isLoading = false;
     notifyListeners();
   }
@@ -27,10 +33,14 @@ class TaskProvider extends ChangeNotifier {
   Future<void> fetchMyTasks(String stage) async {
     _selectedStage = stage;
     _isLoading = true;
+    _error = null;
     notifyListeners();
     try {
       _myTasks = await ApiService.getMyTasks(stage);
-    } catch (_) {}
+    } catch (e) {
+      _error = e.toString();
+      _myTasks = [];
+    }
     _isLoading = false;
     notifyListeners();
   }
@@ -42,7 +52,10 @@ class TaskProvider extends ChangeNotifier {
         _dashboardStats = res['dashboard'];
         notifyListeners();
       }
-    } catch (_) {}
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
   }
 
   Map<String, dynamic> _walletData = {};
@@ -57,7 +70,10 @@ class TaskProvider extends ChangeNotifier {
         _walletData = {'balance': 0.0, 'earnings': res['earnings']};
       }
       notifyListeners();
-    } catch (_) {}
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
   }
 
   Future<bool> acceptTask(String taskId) async {
@@ -67,7 +83,10 @@ class TaskProvider extends ChangeNotifier {
         fetchAvailableTasks();
         return true;
       }
-    } catch (_) {}
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
     return false;
   }
 
@@ -78,7 +97,10 @@ class TaskProvider extends ChangeNotifier {
         fetchMyTasks(_selectedStage);
         return true;
       }
-    } catch (_) {}
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
     return false;
   }
 
@@ -94,15 +116,25 @@ class TaskProvider extends ChangeNotifier {
       }
 
       final res = await ApiService.submitTaskProof(taskId, {
-        'textProof': textProof,
-        'imageUrl': finalImageUrl,
+        'data': {
+          'textProof': textProof,
+        },
+        'proofs': finalImageUrl != null ? [
+          {
+            'fileId': finalImageUrl,
+            'url': finalImageUrl,
+          }
+        ] : [],
       });
       
       if (res['success'] == true || res['status'] == 'SUBMITTED' || res['status'] == 'submitted') {
         fetchMyTasks('submitted');
         return true;
       }
-    } catch (_) {}
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
     return false;
   }
 }

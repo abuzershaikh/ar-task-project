@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/services/firestore_service.dart';
-import '../../home/screens/main_nav_screen.dart';
+import '../../navigation/screens/main_nav_screen.dart';
 
 class UserProfileFormScreen extends StatefulWidget {
   final String uid;

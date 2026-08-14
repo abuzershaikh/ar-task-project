@@ -49,6 +49,7 @@ import { BuyerBillingController } from './controllers/buyer/billing.controller';
 import { BuyerNotificationController } from './controllers/buyer/notification.controller';
 import { BuyerProfileController } from './controllers/buyer/profile.controller';
 import { BuyerPaymentController } from './controllers/buyer/payment.controller';
+import { BuyerWalletController } from './controllers/buyer/wallet.controller';
 
 // Admin Controllers
 import { AdminDashboardController } from './controllers/admin/dashboard.controller';
@@ -125,6 +126,7 @@ import { AdminSystemSettingsController } from './controllers/admin/system-settin
         BuyerNotificationController,
         BuyerProfileController,
         BuyerPaymentController,
+        BuyerWalletController,
 
         // Admin
         AdminDashboardController,

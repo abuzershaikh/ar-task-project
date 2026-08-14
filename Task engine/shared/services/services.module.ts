@@ -5,6 +5,7 @@ import { NotificationService } from './notification.service';
 import { FileStorageService } from './file-storage.service';
 import { PricingEngineService } from './pricing-engine.service';
 import { RatingEngineService } from './rating-engine.service';
+import { WalletService } from './wallet.service';
 
 // Pricing Engine Calculators & Services
 import { MarginCalculator } from '../engines/pricing-engine/margin-calculator';
@@ -59,6 +60,7 @@ const providers = [
     ReallocationEngine,
     FirebaseAdminService,
     UserSyncService,
+    WalletService,
 ];
 
 @Global()

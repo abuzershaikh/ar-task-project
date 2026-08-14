@@ -24,6 +24,8 @@ import { PaymentTransaction } from './entities/payment-transaction.entity';
 import { TaskGenerationJob } from './entities/task-generation-job.entity';
 import { CampaignWorkerParticipation } from './entities/campaign-worker-participation.entity';
 import { TaskAssignment } from './entities/task-assignment.entity';
+import { Wallet } from './entities/wallet.entity';
+import { WalletTransaction } from './entities/wallet-transaction.entity';
 
 // Repositories
 import { UserRepository } from './repositories/user.repository';
@@ -47,6 +49,8 @@ import { PaymentTransactionRepository } from './repositories/payment-transaction
 import { TaskGenerationJobRepository } from './repositories/task-generation-job.repository';
 import { CampaignWorkerParticipationRepository } from './repositories/campaign-worker-participation.repository';
 import { TaskAssignmentRepository } from './repositories/task-assignment.repository';
+import { WalletRepository } from './repositories/wallet.repository';
+import { WalletTransactionRepository } from './repositories/wallet-transaction.repository';
 
 const entities = [
     User,
@@ -70,6 +74,8 @@ const entities = [
     TaskGenerationJob,
     CampaignWorkerParticipation,
     TaskAssignment,
+    Wallet,
+    WalletTransaction,
 ];
 
 const repositories = [
@@ -94,6 +100,8 @@ const repositories = [
     TaskGenerationJobRepository,
     CampaignWorkerParticipationRepository,
     TaskAssignmentRepository,
+    WalletRepository,
+    WalletTransactionRepository,
 ];
 
 @Module({

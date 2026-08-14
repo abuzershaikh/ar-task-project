@@ -4,34 +4,71 @@ import '../widgets/kpi_card.dart';
 import '../widgets/action_banner.dart';
 import '../widgets/quick_action_button.dart';
 import '../../../service_builder/presentation/pages/services_list_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/dashboard_bloc.dart';
+import '../../../../core/di/injection.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin Command Center'),
-        backgroundColor: AppColors.primary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: CircleAvatar(
-              backgroundColor: AppColors.white.withOpacity(0.2),
-              child: const Icon(Icons.person, color: AppColors.white, size: 20),
+    return BlocProvider(
+      create: (_) => getIt<DashboardBloc>()..add(LoadDashboardEvent()),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Admin Command Center'),
+          backgroundColor: AppColors.primary,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () {},
             ),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          // TODO: Implement refresh
-        },
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: CircleAvatar(
+                backgroundColor: AppColors.white.withOpacity(0.2),
+                child: const Icon(Icons.person, color: AppColors.white, size: 20),
+              ),
+            ),
+          ],
+        ),
+        body: BlocBuilder<DashboardBloc, DashboardState>(
+          builder: (context, state) {
+            if (state is DashboardLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state is DashboardError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(state.message, style: const TextStyle(color: AppColors.error)),
+                    ElevatedButton(
+                      onPressed: () => context.read<DashboardBloc>().add(LoadDashboardEvent()),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            } else if (state is DashboardLoaded) {
+              final data = state.data;
+              final financial = state.financial;
+
+              final totalWorkers = data['users']?['totalWorkers'] ?? 0;
+              final activeWorkers = data['users']?['activeWorkers'] ?? 0;
+              final totalBuyers = data['users']?['totalBuyers'] ?? 0;
+              final activeBuyers = data['users']?['activeBuyers'] ?? 0;
+              final pendingKycCount = data['queues']?['pendingKycCount'] ?? 0;
+              final pendingReviewCount = data['queues']?['pendingReviewCount'] ?? 0;
+              final pendingPayoutsCount = data['queues']?['pendingPayoutsCount'] ?? 0;
+
+              final grossVolume = financial['grossPlatformVolume'] ?? 0.0;
+              final netMargin = financial['platformNetMargin'] ?? 0.0;
+
+              return RefreshIndicator(
+                onRefresh: () async {
+                  context.read<DashboardBloc>().add(RefreshDashboardEvent());
+                },
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -65,23 +102,34 @@ class DashboardScreen extends StatelessWidget {
               const SizedBox(height: 16),
               
               // Urgent Action Banners
-              const ActionBanner(
-                icon: Icons.verified_user,
-                text: '3 Pending KYC Requests',
-                color: AppColors.warning,
-              ),
-              const SizedBox(height: 8),
-              const ActionBanner(
-                icon: Icons.rate_review,
-                text: '14 Task Reviews Needed',
-                color: AppColors.error,
-              ),
-              const SizedBox(height: 8),
-              const ActionBanner(
-                icon: Icons.account_balance_wallet,
-                text: '5 Pending Payouts',
-                color: AppColors.info,
-              ),
+              if (pendingKycCount > 0)
+                Column(
+                  children: [
+                    ActionBanner(
+                      icon: Icons.verified_user,
+                      text: '$pendingKycCount Pending KYC Requests',
+                      color: AppColors.warning,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              if (pendingReviewCount > 0)
+                Column(
+                  children: [
+                    ActionBanner(
+                      icon: Icons.rate_review,
+                      text: '$pendingReviewCount Task Reviews Needed',
+                      color: AppColors.error,
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              if (pendingPayoutsCount > 0)
+                ActionBanner(
+                  icon: Icons.account_balance_wallet,
+                  text: '$pendingPayoutsCount Pending Payouts',
+                  color: AppColors.info,
+                ),
               
               const SizedBox(height: 24),
               
@@ -103,59 +151,58 @@ class DashboardScreen extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 childAspectRatio: 1.1,
-                children: const [
                   KpiCard(
                     title: 'Total Workers',
-                    value: '0',
-                    subtitle: '0 Active',
+                    value: totalWorkers.toString(),
+                    subtitle: '$activeWorkers Active',
                     icon: Icons.people,
                     color: AppColors.primary,
                   ),
                   KpiCard(
                     title: 'Total Buyers',
-                    value: '0',
-                    subtitle: '0 Active',
+                    value: totalBuyers.toString(),
+                    subtitle: '$activeBuyers Active',
                     icon: Icons.business,
                     color: AppColors.secondary,
                   ),
-                  KpiCard(
+                  const KpiCard(
                     title: 'Active Campaigns',
-                    value: '0',
+                    value: 'API Pending', // Will need order metrics API 
                     subtitle: 'Running Now',
                     icon: Icons.campaign,
                     color: AppColors.success,
                   ),
-                  KpiCard(
+                  const KpiCard(
                     title: 'Completed Campaigns',
-                    value: '0',
+                    value: 'API Pending',
                     subtitle: 'All Time',
                     icon: Icons.check_circle,
                     color: AppColors.info,
                   ),
                   KpiCard(
                     title: 'Pending Reviews',
-                    value: '0',
+                    value: pendingReviewCount.toString(),
                     subtitle: 'Awaiting Action',
                     icon: Icons.rate_review,
                     color: AppColors.warning,
                   ),
                   KpiCard(
                     title: 'Pending KYC',
-                    value: '0',
+                    value: pendingKycCount.toString(),
                     subtitle: 'Verification Queue',
                     icon: Icons.verified_user,
                     color: AppColors.error,
                   ),
                   KpiCard(
                     title: 'Gross Volume',
-                    value: '₹0',
+                    value: '₹${grossVolume.toStringAsFixed(0)}',
                     subtitle: 'Total Processed',
                     icon: Icons.currency_rupee,
                     color: AppColors.primary,
                   ),
                   KpiCard(
                     title: 'Platform Margin',
-                    value: '₹0',
+                    value: '₹${netMargin.toStringAsFixed(0)}',
                     subtitle: 'Net Profit',
                     icon: Icons.trending_up,
                     color: AppColors.success,
@@ -168,6 +215,9 @@ class DashboardScreen extends StatelessWidget {
 
             ],
           ),
+            }
+            return const SizedBox();
+          },
         ),
       ),
     );

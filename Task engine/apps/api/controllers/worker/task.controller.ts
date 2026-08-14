@@ -217,16 +217,20 @@ export class WorkerTaskController {
     @ApiOperation({ summary: 'Submit completed task with proof data' })
     async submitTask(
         @Param('id') taskId: string,
-        @Body() body: { data?: any; proofs?: any[] },
+        @Body() body: { data: any; proofs: { fileId: string; url: string }[] },
         @CurrentUser() user: User,
     ) {
+        if (!body.data || !body.proofs) {
+            throw new BadRequestException('Invalid submission format. Expected { data: {}, proofs: [] }');
+        }
+
         // 1. Mark task as submitted in task engine
         await this.taskEngine.submitTask({
             taskId,
             workerId: user.id,
             data: {
-                ...(body.data || body),
-                proofs: body.proofs || [],
+                ...body.data,
+                proofs: body.proofs,
             },
         });
 
@@ -236,8 +240,8 @@ export class WorkerTaskController {
             submission = await this.submissionRepo.create({
                 taskId,
                 workerId: user.id,
-                data: body.data || body || {},
-                proofs: body.proofs || [],
+                data: body.data,
+                proofs: body.proofs,
                 status: 'submitted',
                 reviewStatus: 'pending'
             });
@@ -256,7 +260,7 @@ export class WorkerTaskController {
     @ApiOperation({ summary: 'Resubmit task after addressing buyer/admin feedback' })
     async resubmitTask(
         @Param('id') taskId: string,
-        @Body() body: { data?: any; proofs?: any[]; resubmissionNotes?: string },
+        @Body() body: { data: any; proofs: { fileId: string; url: string }[]; resubmissionNotes?: string },
         @CurrentUser() user: User,
     ) {
         let submission = await this.submissionRepo.findByTaskId(taskId);
@@ -268,7 +272,7 @@ export class WorkerTaskController {
             taskId,
             workerId: user.id,
             data: {
-                ...(body.data || body),
+                ...body.data,
                 proofs: body.proofs || submission.proofs,
                 resubmissionNotes: body.resubmissionNotes,
                 isResubmission: true,
@@ -277,7 +281,7 @@ export class WorkerTaskController {
 
         // Update submission record
         await this.submissionRepo.update(submission.id, {
-            data: body.data || body || {},
+            data: body.data,
             proofs: body.proofs || submission.proofs,
             status: 'submitted',
             reviewStatus: 'pending'
