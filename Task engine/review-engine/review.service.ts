@@ -16,6 +16,16 @@ export class ReviewEngineService {
 
     async assignReviewer(submissionId: string): Promise<string> {
         const reviewerId = await this.assignmentService.assign(submissionId);
+        
+        // Auto-Approve logic for system-managed services (e.g. Watch Time)
+        if (reviewerId === 'system') {
+            await this.reviewSubmission(submissionId, {
+                action: 'approved',
+                notes: 'Auto-approved by system based on service template rules',
+                reviewedBy: 'system'
+            });
+        }
+        
         return reviewerId;
     }
 

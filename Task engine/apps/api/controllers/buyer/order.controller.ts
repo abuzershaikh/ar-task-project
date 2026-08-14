@@ -11,6 +11,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrderRepository } from '../../../../shared/database/repositories/order.repository';
 import { TaskRepository } from '../../../../shared/database/repositories/task.repository';
 import { SubmissionRepository } from '../../../../shared/database/repositories/submission.repository';
+import { ServiceCatalogRepository } from '../../../../shared/database/repositories/service-catalog.repository';
 import { TaskEngineService } from '../../../../task-engine/task-engine.service';
 import { ProgressEngineService } from '../../../../progress-engine/progress.service';
 import { PricingEngine } from '../../../../shared/engines/pricing-engine/pricing.engine';
@@ -28,6 +29,7 @@ export class BuyerOrderController {
         private readonly orderRepo: OrderRepository,
         private readonly taskRepo: TaskRepository,
         private readonly submissionRepo: SubmissionRepository,
+        private readonly serviceCatalogRepo: ServiceCatalogRepository,
         private readonly taskEngine: TaskEngineService,
         private readonly progressEngine: ProgressEngineService,
         private readonly pricingEngine: PricingEngine,
@@ -92,6 +94,17 @@ export class BuyerOrderController {
             };
         }
 
+        // Fetch Service Catalog to inherit reviewMode and potentially validate elements
+        let catalog = await this.serviceCatalogRepo.findById(serviceIdentifier);
+        if (!catalog) {
+            catalog = await this.serviceCatalogRepo.findByCode(serviceIdentifier);
+        }
+        
+        const catalogReviewMode = catalog?.reviewMode || 'buyer';
+        // Enforce catalog reviewMode if it's explicitly set to something other than 'buyer' by admin
+        // Otherwise, allow buyer to specify it, defaulting to 'buyer'
+        const finalReviewMode = catalog?.reviewMode && catalog.reviewMode !== 'buyer' ? catalog.reviewMode : (data.reviewMode || 'buyer');
+
         const title = data.title || `${snapshot.serviceCode || serviceIdentifier} Campaign (${quantity} tasks)`;
 
         // Validate timing parameter bounds (1h-72h accept, 1h-168h complete)
@@ -116,7 +129,7 @@ export class BuyerOrderController {
             totalAmount: snapshot.totalAmount,
             status: 'PAYMENT_PENDING',
             requirements: data.requirements,
-            reviewMode: data.reviewMode || 'buyer',
+            reviewMode: finalReviewMode,
             timeToAcceptHours: timeToAccept,
             timeToCompleteHours: timeToComplete,
             campaignExpiryDate: campaignExpiryDate,

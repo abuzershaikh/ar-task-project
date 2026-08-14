@@ -81,12 +81,16 @@ export class AdminServiceCatalogController {
             buyerUnitPrice?: number;
             marginType?: MarginType;
             marginValue?: number;
+            elements?: any;
+            reviewMode?: string;
         },
     ) {
         const service = await this.serviceCatalogService.createService({
             code: body.code,
             name: body.name,
             description: body.description,
+            elements: body.elements,
+            reviewMode: body.reviewMode,
         });
 
         let initialPricing = null;
@@ -110,7 +114,7 @@ export class AdminServiceCatalogController {
     @ApiOperation({ summary: 'Update service catalog metadata (name, description, active state)' })
     async updateService(
         @Param('id') id: string,
-        @Body() body: { name?: string; description?: string; isActive?: boolean },
+        @Body() body: { name?: string; description?: string; isActive?: boolean; elements?: any; reviewMode?: string; },
     ) {
         const service = await this.serviceCatalogService.updateService(id, body);
         return {

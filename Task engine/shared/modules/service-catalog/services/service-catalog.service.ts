@@ -34,6 +34,8 @@ export class ServiceCatalogService {
         code: string;
         name: string;
         description?: string;
+        elements?: any;
+        reviewMode?: string;
     }): Promise<ServiceCatalog> {
         const existing = await this.serviceCatalogRepo.findByCode(data.code);
         if (existing) {
@@ -44,6 +46,8 @@ export class ServiceCatalogService {
             code: data.code.toUpperCase(),
             name: data.name,
             description: data.description,
+            elements: data.elements,
+            reviewMode: data.reviewMode || 'buyer',
             isActive: true,
             version: 1,
         });
@@ -51,7 +55,7 @@ export class ServiceCatalogService {
 
     async updateService(
         id: string,
-        data: { name?: string; description?: string; isActive?: boolean },
+        data: { name?: string; description?: string; isActive?: boolean; elements?: any; reviewMode?: string; },
     ): Promise<ServiceCatalog> {
         await this.getServiceById(id);
         const updated = await this.serviceCatalogRepo.update(id, data);

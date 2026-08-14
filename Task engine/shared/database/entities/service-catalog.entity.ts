@@ -25,6 +25,12 @@ export class ServiceCatalog {
     @Column({ name: 'is_active', type: 'boolean', default: true })
     isActive: boolean;
 
+    @Column({ type: 'json', nullable: true })
+    elements: any; // Defines the form inputs (ITemplateElement array)
+
+    @Column({ name: 'review_mode', type: 'varchar', length: 50, default: 'buyer' })
+    reviewMode: string; // 'buyer' | 'admin' | 'automatic'
+
     @Column({ type: 'int', default: 1 })
     version: number;
 
