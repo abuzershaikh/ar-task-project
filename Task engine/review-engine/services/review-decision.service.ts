@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { SubmissionRepository } from '../../shared/database/repositories/submission.repository';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { EarningEngineService } from '../../earning-engine/earning.service';
+import { TaskEngineService } from '../../task-engine/task-engine.service';
 import { Review, ReviewDecision } from '../types';
 
 /**
@@ -13,6 +14,8 @@ export class ReviewDecisionService {
         private readonly submissionRepo: SubmissionRepository,
         private readonly taskRepo: TaskRepository,
         private readonly earningEngine: EarningEngineService,
+        @Inject(forwardRef(() => TaskEngineService))
+        private readonly taskEngine: TaskEngineService,
     ) { }
 
     async process(
@@ -35,27 +38,31 @@ export class ReviewDecisionService {
             reviewNotes: notes,
         });
 
-        // Update task status
+        // Delegate state machine transitions to TaskEngineService
         if (action === 'approved') {
-            await this.taskRepo.update(submission.taskId, {
-                status: 'completed',
-                completedAt: new Date(),
+            await this.taskEngine.approveTask({
+                taskId: submission.taskId,
+                reviewedBy,
+                notes,
             });
 
-            // Process earning
+            // Process earning (Note: if TaskEngine is eventually extended to handle earning, 
+            // this can be moved there, but for now we keep it here to satisfy rule 33)
             const earning = await this.earningEngine.calculateEarning(
                 submission.taskId,
                 submission.workerId,
             );
             await this.earningEngine.postEarning(earning);
 
-            console.log(`✅ Task approved: ${submission.taskId}`);
+            console.log(`✅ Task approved via state machine: ${submission.taskId}`);
         } else if (action === 'rejected') {
-            await this.taskRepo.update(submission.taskId, {
-                status: 'rejected',
+            await this.taskEngine.rejectTask({
+                taskId: submission.taskId,
+                reviewedBy,
+                notes,
             });
 
-            console.log(`❌ Task rejected: ${submission.taskId}`);
+            console.log(`❌ Task rejected via state machine: ${submission.taskId}`);
         }
 
         return {
