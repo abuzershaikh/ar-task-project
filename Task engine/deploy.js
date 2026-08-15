@@ -4,7 +4,10 @@ const conn = new Client();
 const config = { host: '95.179.178.6', port: 22, username: 'root', password: 'i_G72#y}(6gACDDU' };
 
 const commands = `
-node /var/www/task-engine/test_api.js
+cd "/var/www/task-engine/Task engine"
+git pull origin task-engine
+npm run build
+pm2 restart all
 `;
 
 conn.on('ready', () => {
