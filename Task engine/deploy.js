@@ -4,7 +4,7 @@ const conn = new Client();
 const config = { host: '95.179.178.6', port: 22, username: 'root', password: 'i_G72#y}(6gACDDU' };
 
 const commands = `
-cat << 'EOF' > /var/www/task-engine/update_schema.js
+cat << 'EOF' > /var/www/task-engine/check_users.js
 const mysql = require('mysql2/promise');
 require('dotenv').config({ path: '/var/www/task-engine/Task engine/.env' });
 
@@ -17,20 +17,8 @@ async function main() {
     });
 
     try {
-        console.log('Adding paypal_id to kyc_profiles table...');
-        const sql = "ALTER TABLE kyc_profiles ADD COLUMN paypal_id VARCHAR(255) NULL;";
-        try {
-            await connection.execute(sql);
-            console.log('Successfully executed:', sql);
-        } catch (err) {
-            if (err.code === 'ER_DUP_FIELDNAME') {
-                console.log('Column already exists for:', sql);
-            } else {
-                console.error('Error executing:', sql, err.message);
-            }
-        }
-        
-        console.log('Done altering schema.');
+        const [rows] = await connection.execute("SELECT id, email, role FROM users");
+        console.log("Users:", rows);
     } catch (e) {
         console.error(e);
     } finally {
@@ -39,7 +27,7 @@ async function main() {
 }
 main();
 EOF
-node /var/www/task-engine/update_schema.js
+node /var/www/task-engine/check_users.js
 `;
 
 conn.on('ready', () => {

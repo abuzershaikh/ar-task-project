@@ -46,16 +46,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return (await super.canActivate(context)) as boolean;
     }
 
-    // Fallback default user object for development if no headers at all
-    request.user = {
-      id: 'worker-default-id',
-      email: 'user@example.com',
-      fullName: 'User',
-      role: UserRole.WORKER,
-      status: 'ACTIVE',
-      kycStatus: 'APPROVED',
-    };
-
-    return true;
+    throw new UnauthorizedException('No authorization token provided');
   }
 }
