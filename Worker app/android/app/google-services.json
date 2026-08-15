@@ -59,6 +59,14 @@
           }
         },
         {
+          "client_id": "311090572825-37l22d2akkabmhhardidbumpdopqjn1c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.taskearning.earning.money.app",
+            "certificate_hash": "9e7630474118f3aa0be0a3b3883b29a06b292389"
+          }
+        },
+        {
           "client_id": "311090572825-jve8b44v1m0p7smmudr6hnhe5ib5qcuc.apps.googleusercontent.com",
           "client_type": 3
         }
