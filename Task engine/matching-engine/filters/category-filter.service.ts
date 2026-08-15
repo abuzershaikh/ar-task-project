@@ -9,18 +9,19 @@ import { MatchingContext } from '../types';
 export class CategoryFilterService {
     constructor(private readonly workerRepo: WorkerRepository) { }
 
-    async apply(workerIds: string[], context: MatchingContext): Promise<string[]> {
+    async apply(workerIds: string[], context: MatchingContext, loadedWorkers?: any[]): Promise<string[]> {
         const requiredCategory = context.requirements?.category;
 
         if (!requiredCategory) {
             return workerIds;
         }
 
-        const workers = await this.workerRepo.findByIds(workerIds);
+        const normalizedRequired = String(requiredCategory).trim().toLowerCase();
+        const workers = loadedWorkers || await this.workerRepo.findByIds(workerIds);
 
         const matchingWorkers = workers.filter(worker => {
-            const workerCategories = worker.profile?.categories || [];
-            return workerCategories.includes(requiredCategory);
+            const workerCategories: string[] = worker.profile?.categories || [];
+            return workerCategories.some(cat => String(cat).trim().toLowerCase().includes(normalizedRequired));
         });
 
         return matchingWorkers.map(w => w.id);

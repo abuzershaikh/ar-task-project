@@ -9,23 +9,20 @@ import { MatchingContext } from '../types';
 export class CapacityFilterService {
     constructor(private readonly taskRepo: TaskRepository) { }
 
-    async apply(workerIds: string[], context: MatchingContext): Promise<string[]> {
+    async apply(workerIds: string[], context: MatchingContext, activeCountsMap?: Map<string, number>): Promise<string[]> {
         const MAX_CONCURRENT_TASKS = 5; // Worker can handle max 5 tasks at once
 
-        const eligibleWorkers: string[] = [];
+        if (!workerIds || workerIds.length === 0) return [];
 
-        for (const workerId of workerIds) {
-            // Count active tasks assigned to this worker
-            const activeTasks = await this.taskRepo.findByWorker(workerId);
-            const activeCount = activeTasks.filter(
-                t => ['assigned', 'accepted', 'in_progress'].includes(t.status)
-            ).length;
-
-            if (activeCount < MAX_CONCURRENT_TASKS) {
-                eligibleWorkers.push(workerId);
-            }
+        // Use pre-calculated map if provided, otherwise fetch
+        let map = activeCountsMap;
+        if (!map) {
+            map = await this.taskRepo.getWorkerActiveTaskCounts(workerIds);
         }
 
-        return eligibleWorkers;
+        return workerIds.filter(workerId => {
+            const activeCount = map?.get(workerId) || 0;
+            return activeCount < MAX_CONCURRENT_TASKS;
+        });
     }
 }

@@ -13,8 +13,8 @@ export class ScoreCalculator {
         private readonly taskRepo: TaskRepository,
     ) { }
 
-    async calculate(workerId: string): Promise<WorkerScore> {
-        const worker = await this.workerRepo.findById(workerId);
+    async calculate(workerId: string, preloadedWorker?: any): Promise<WorkerScore> {
+        const worker = preloadedWorker || await this.workerRepo.findById(workerId);
 
         if (!worker) {
             throw new Error('Worker not found');
@@ -33,7 +33,7 @@ export class ScoreCalculator {
         const ratingScore = this.calculateRatingScore(worker);
 
         // Recent Performance Score (10%)
-        const recentScore = await this.calculateRecentPerformance(workerId);
+        const recentScore = await this.calculateRecentPerformance(workerId, worker);
 
         // Experience Score (5%)
         const experienceScore = this.calculateExperienceScore(worker);
@@ -100,10 +100,16 @@ export class ScoreCalculator {
         return (avgRating / 5) * 100;
     }
 
-    private async calculateRecentPerformance(workerId: string): Promise<number> {
-        // Last 10 tasks performance
-        // TODO: Implement detailed recent performance
-        return 80; // Placeholder
+    private async calculateRecentPerformance(workerId: string, worker?: any): Promise<number> {
+        if (worker) {
+            const completed = worker.totalTasksCompleted || 0;
+            const rejected = worker.totalTasksRejected || 0;
+            const total = completed + rejected;
+            if (total === 0) return 75; // Default baseline for new workers
+            const rate = (completed / total) * 100;
+            return Math.min(100, Math.max(0, Math.round(rate)));
+        }
+        return 75;
     }
 
     private calculateExperienceScore(worker: any): number {

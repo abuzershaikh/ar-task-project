@@ -15,11 +15,12 @@ export class ScoringEngineService {
         return score;
     }
 
-    async calculateBatchScores(workerIds: string[]): Promise<Map<string, WorkerScore>> {
+    async calculateBatchScores(workerIds: string[], preloadedWorkers?: any[]): Promise<Map<string, WorkerScore>> {
         const scores = new Map<string, WorkerScore>();
 
         for (const workerId of workerIds) {
-            const score = await this.calculateWorkerScore(workerId);
+            const worker = preloadedWorkers ? preloadedWorkers.find(w => w.id === workerId) : undefined;
+            const score = await this.calculator.calculate(workerId, worker);
             scores.set(workerId, score);
         }
 

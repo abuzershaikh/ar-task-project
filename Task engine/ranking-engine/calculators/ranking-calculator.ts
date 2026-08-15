@@ -26,8 +26,13 @@ export class RankingCalculator {
             priority: this.calculatePriority(scoreMap.get(workerId) || 0),
         }));
 
-        // Sort by score (descending)
-        ranked.sort((a, b) => b.score - a.score);
+        // Sort by score (descending) with deterministic workerId tie-breaker
+        ranked.sort((a, b) => {
+            if (b.score !== a.score) {
+                return b.score - a.score;
+            }
+            return a.workerId.localeCompare(b.workerId);
+        });
 
         // Assign ranks
         ranked.forEach((worker, index) => {

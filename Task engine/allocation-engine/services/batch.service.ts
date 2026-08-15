@@ -38,21 +38,59 @@ export class BatchService {
             const taskIds = batch.map(t => t.id);
             const matchingResults = await this.matchingEngine.matchWorkersForBatch(taskIds);
 
-            // Assign tasks only for tasks that actually received a matched worker
+            // Build explicit pairs for tasks with matched workers
+            const pairs: Array<{ taskId: string; workerId: string }> = [];
             const matchedTaskIds: string[] = [];
-            const workerIds: string[] = [];
-            taskIds.forEach(taskId => {
+
+            for (const taskId of taskIds) {
                 const match = matchingResults.get(taskId);
                 if (match && match.matchedWorkers.length > 0) {
+                    pairs.push({
+                        taskId,
+                        workerId: match.matchedWorkers[0].workerId,
+                    });
                     matchedTaskIds.push(taskId);
-                    workerIds.push(match.matchedWorkers[0].workerId);
+                } else {
+                    // Update task retry metadata for unmatched task
+                    const currentMetadata = batch.find(t => t.id === taskId)?.metadata || {};
+                    const noMatchCount = (currentMetadata.noMatchCount || 0) + 1;
+                    
+                    if (noMatchCount >= 3) {
+                        console.error(`🚨 Task ${taskId} exceeded max no-match retries (3). Marking as FAILED.`);
+                        await this.taskRepo.update(taskId, {
+                            status: 'failed' as any, // or TaskStatus.FAILED
+                            metadata: {
+                                ...currentMetadata,
+                                lastMatchAttemptAt: new Date().toISOString(),
+                                noMatchCount,
+                                failureReason: 'No eligible candidates found after 3 attempts',
+                            },
+                        });
+                    } else {
+                        await this.taskRepo.update(taskId, {
+                            metadata: {
+                                ...currentMetadata,
+                                lastMatchAttemptAt: new Date().toISOString(),
+                                noMatchCount,
+                            },
+                        });
+                        console.warn(`⚠️ Task ${taskId} has no matched candidates in batch ${batchNumber}`);
+                        // Push a dummy failed result for this unmatched task so it triggers a batch retry
+                        results.push({
+                            assignments: [],
+                            successCount: 0,
+                            failedCount: 1,
+                            timestamp: new Date(),
+                        });
+                    }
                 }
-            });
+            }
 
-            if (matchedTaskIds.length > 0) {
+            if (pairs.length > 0) {
                 const result = await this.assignmentService.assign({
                     taskIds: matchedTaskIds,
-                    workerIds,
+                    workerIds: pairs.map(p => p.workerId),
+                    pairs,
                     strategy: 'sequential',
                 });
                 results.push(result);

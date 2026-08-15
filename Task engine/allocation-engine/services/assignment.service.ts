@@ -17,35 +17,51 @@ export class AssignmentService {
     ) { }
 
     async assign(request: AllocationRequest): Promise<AllocationResult> {
-        const { taskIds, workerIds, strategy } = request;
+        const { taskIds, workerIds, pairs, strategy } = request;
+
+        const targetPairs: Array<{ taskId: string; workerId: string }> = pairs || [];
+        if (!pairs) {
+            const count = Math.min(taskIds.length, workerIds.length);
+            for (let i = 0; i < count; i++) {
+                targetPairs.push({ taskId: taskIds[i], workerId: workerIds[i] });
+            }
+        }
 
         const assignments: any[] = [];
         let successCount = 0;
         let failedCount = 0;
 
-        // Sequential assignment
-        for (let i = 0; i < taskIds.length && i < workerIds.length; i++) {
+        for (const pair of targetPairs) {
             try {
-                const task = await this.taskRepo.findById(taskIds[i]);
+                const task = await this.taskRepo.findById(pair.taskId);
 
                 if (task && !task.assignedTo) {
+                    // Check capacity at the very last moment to reduce race window
+                    const activeCounts = await this.taskRepo.getWorkerActiveTaskCounts([pair.workerId]);
+                    const currentActive = activeCounts.get(pair.workerId) || 0;
+                    if (currentActive >= 5) { // MAX_CONCURRENT_TASKS
+                        console.warn(`Worker ${pair.workerId} reached maximum capacity. Aborting assignment for task ${pair.taskId}`);
+                        failedCount++;
+                        continue;
+                    }
+
                     await this.taskEngine.assignTask({
-                        taskId: taskIds[i],
-                        workerId: workerIds[i],
+                        taskId: pair.taskId,
+                        workerId: pair.workerId,
                         actorId: 'system',
                     });
 
                     // Send Notification to Worker
                     await this.notificationEngine.sendNotification(
-                        workerIds[i],
+                        pair.workerId,
                         'A new task has been assigned to you! Check your task feed to start.',
                         'TASK_ASSIGNED',
-                        { taskId: taskIds[i] }
+                        { taskId: pair.taskId }
                     );
 
                     assignments.push({
-                        taskId: taskIds[i],
-                        workerId: workerIds[i],
+                        taskId: pair.taskId,
+                        workerId: pair.workerId,
                         assignedAt: new Date(),
                     });
 
@@ -55,7 +71,7 @@ export class AssignmentService {
                 }
             } catch (error) {
                 failedCount++;
-                console.error(`Failed to assign task ${taskIds[i]}:`, error.message || error);
+                console.error(`Failed to assign task ${pair.taskId} to worker ${pair.workerId}:`, error.message || error);
             }
         }
 

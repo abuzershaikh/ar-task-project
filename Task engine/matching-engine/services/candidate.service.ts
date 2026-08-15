@@ -25,47 +25,63 @@ export class CandidateService {
         private readonly eligibilityEngine: EligibilityEngineService,
     ) { }
 
-    async findCandidates(context: MatchingContext): Promise<CandidateWorker[]> {
+    async findCandidates(
+        context: MatchingContext,
+        preloadedWorkers?: any[],
+        preloadedActiveCountsMap?: Map<string, number>,
+        preloadedUsedWorkerIdsInCampaign?: string[],
+        preloadedTaskParticipationMap?: Map<string, boolean>
+    ): Promise<CandidateWorker[]> {
         // Step 1: Get all active workers
-        let workers = await this.workerRepo.findActiveWorkers();
+        let workers = preloadedWorkers || await this.workerRepo.findActiveWorkers();
         let workerIds = workers.map(w => w.id);
 
         console.log(`🔍 Initial pool: ${workerIds.length} workers`);
 
-        // Step 2: Apply filters
-        const filterResults: Record<string, boolean>[] = [];
-
-        // Active filter
-        workerIds = await this.activeFilter.apply(workerIds, context);
+        // Active filter (pass loaded workers)
+        // Note: If we use findActiveWorkers, they are already active, but let's keep the filter just in case
+        // Wait, the double filtering is redundant. Let's just rely on the preloaded workers being active.
+        // Actually, if we pass preloaded workers, we'll skip the active filter DB call anyway because we pass workers.
+        workerIds = await this.activeFilter.apply(workerIds, context, workers);
+        workers = workers.filter(w => workerIds.includes(w.id));
         console.log(`✅ After active filter: ${workerIds.length} workers`);
 
-        // KYC filter
-        workerIds = await this.kycFilter.apply(workerIds, context);
+        // KYC filter (pass loaded workers)
+        workerIds = await this.kycFilter.apply(workerIds, context, workers);
+        workers = workers.filter(w => workerIds.includes(w.id));
         console.log(`✅ After KYC filter: ${workerIds.length} workers`);
 
-        // Capacity filter
-        workerIds = await this.capacityFilter.apply(workerIds, context);
+        // Capacity filter (uses preloaded bulk query)
+        workerIds = await this.capacityFilter.apply(workerIds, context, preloadedActiveCountsMap);
+        workers = workers.filter(w => workerIds.includes(w.id));
         console.log(`✅ After capacity filter: ${workerIds.length} workers`);
 
         // Location filter (if applicable)
         if (context.filters.includes('location')) {
-            workerIds = await this.locationFilter.apply(workerIds, context);
+            workerIds = await this.locationFilter.apply(workerIds, context, workers);
+            workers = workers.filter(w => workerIds.includes(w.id));
             console.log(`✅ After location filter: ${workerIds.length} workers`);
         }
 
         // Category filter (if applicable)
         if (context.filters.includes('category')) {
-            workerIds = await this.categoryFilter.apply(workerIds, context);
+            workerIds = await this.categoryFilter.apply(workerIds, context, workers);
+            workers = workers.filter(w => workerIds.includes(w.id));
             console.log(`✅ After category filter: ${workerIds.length} workers`);
         }
 
-        // Duplicate filter
-        workerIds = await this.duplicateFilter.apply(workerIds, context);
+        // Duplicate filter (uses preloaded bulk query)
+        workerIds = await this.duplicateFilter.apply(
+            workerIds, 
+            context, 
+            preloadedUsedWorkerIdsInCampaign, 
+            preloadedTaskParticipationMap
+        );
         console.log(`✅ After duplicate filter: ${workerIds.length} workers`);
 
-        // Eligibility Engine check
+        // Eligibility Engine check (Fail-closed: MUST explicitly be true)
         const eligibilityMap = await this.eligibilityEngine.batchCheckEligibility(workerIds, context.taskId);
-        workerIds = workerIds.filter(id => eligibilityMap.get(id)?.isEligible !== false);
+        workerIds = workerIds.filter(id => eligibilityMap.get(id)?.isEligible === true);
         console.log(`✅ After Eligibility Engine check: ${workerIds.length} workers`);
 
         // Step 3: Build candidate objects

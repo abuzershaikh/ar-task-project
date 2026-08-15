@@ -9,14 +9,14 @@ import { MatchingContext } from '../types';
 export class LocationFilterService {
     constructor(private readonly workerRepo: WorkerRepository) { }
 
-    async apply(workerIds: string[], context: MatchingContext): Promise<string[]> {
+    async apply(workerIds: string[], context: MatchingContext, loadedWorkers?: any[]): Promise<string[]> {
         const requiredLocation = context.requirements?.location;
 
-        if (!requiredLocation) {
-            return workerIds; // No location requirement
+        if (!requiredLocation || (!requiredLocation.city && !requiredLocation.state && !requiredLocation.country)) {
+            return workerIds;
         }
 
-        const workers = await this.workerRepo.findByIds(workerIds);
+        const workers = loadedWorkers || await this.workerRepo.findByIds(workerIds);
 
         const matchingWorkers = workers.filter(worker => {
             const workerLocation = worker.profile?.location;
@@ -29,15 +29,24 @@ export class LocationFilterService {
     private matchesLocation(workerLocation: any, requiredLocation: any): boolean {
         if (!workerLocation) return false;
 
-        // Exact match
-        if (workerLocation.city === requiredLocation.city) return true;
+        if (requiredLocation.city) {
+            if (!workerLocation.city || workerLocation.city.trim().toLowerCase() !== requiredLocation.city.trim().toLowerCase()) {
+                return false;
+            }
+        }
 
-        // State match
-        if (workerLocation.state === requiredLocation.state) return true;
+        if (requiredLocation.state) {
+            if (!workerLocation.state || workerLocation.state.trim().toLowerCase() !== requiredLocation.state.trim().toLowerCase()) {
+                return false;
+            }
+        }
 
-        // Country match
-        if (workerLocation.country === requiredLocation.country) return true;
+        if (requiredLocation.country) {
+            if (!workerLocation.country || workerLocation.country.trim().toLowerCase() !== requiredLocation.country.trim().toLowerCase()) {
+                return false;
+            }
+        }
 
-        return false;
+        return true;
     }
 }

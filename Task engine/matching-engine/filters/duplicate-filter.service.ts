@@ -17,30 +17,42 @@ export class DuplicateFilterService {
         private readonly participationRepo: CampaignWorkerParticipationRepository,
     ) { }
 
-    async apply(workerIds: string[], context: MatchingContext): Promise<string[]> {
+    async apply(
+        workerIds: string[],
+        context: MatchingContext,
+        preloadedUsedWorkerIdsInCampaign?: string[],
+        preloadedTaskParticipationMap?: Map<string, boolean>
+    ): Promise<string[]> {
         const campaignId = context.task.campaignId || context.task.orderId;
         const orderId = context.task.orderId;
 
         // 1. Fetch all used worker IDs from CampaignWorkerParticipation DB table
-        let usedWorkerIdsInCampaign: string[] = [];
-        if (campaignId) {
+        let usedWorkerIdsInCampaign: string[] = preloadedUsedWorkerIdsInCampaign || [];
+        if (!preloadedUsedWorkerIdsInCampaign && campaignId) {
             usedWorkerIdsInCampaign = await this.participationRepo.findUsedWorkerIdsByCampaign(campaignId);
+        }
+
+        // 2. Fetch bulk campaign participation map from Task repository
+        let taskParticipationMap = preloadedTaskParticipationMap;
+        if (!taskParticipationMap) {
+            taskParticipationMap = await this.taskRepo.getWorkerCampaignParticipationMap(
+                workerIds,
+                campaignId,
+                orderId,
+            );
         }
 
         const eligibleWorkers: string[] = [];
 
         for (const workerId of workerIds) {
-            // Strict Exclusion Rule 1: Worker has ALREADY participated in this campaign (assigned/completed/expired/rejected)
+            // Strict Exclusion Rule 1: Worker has ALREADY participated in CampaignWorkerParticipation DB table
             if (campaignId && usedWorkerIdsInCampaign.includes(workerId)) {
                 this.logger.debug(`Worker '${workerId}' EXCLUDED from Campaign '${campaignId}' (Already participated/expired)`);
                 continue;
             }
 
-            // Strict Exclusion Rule 2: Check active task assignments in Task table
-            const existingTasks = await this.taskRepo.findByWorker(workerId);
-            const hasActiveOrCompletedInCampaign = existingTasks.some(
-                (t) => (t.campaignId === campaignId || t.orderId === orderId) && t.status !== 'cancelled',
-            );
+            // Strict Exclusion Rule 2: Check active task assignments in Task table via bulk map
+            const hasActiveOrCompletedInCampaign = taskParticipationMap.get(workerId) === true;
 
             if (!hasActiveOrCompletedInCampaign) {
                 eligibleWorkers.push(workerId);

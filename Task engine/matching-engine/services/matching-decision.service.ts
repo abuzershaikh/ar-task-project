@@ -16,26 +16,27 @@ export class MatchingDecisionService {
     async decide(
         candidates: CandidateWorker[],
         context: MatchingContext,
+        preloadedWorkers?: any[],
     ): Promise<MatchingResult> {
         if (candidates.length === 0) {
             return {
                 taskId: context.taskId,
                 matchedWorkers: [],
                 totalCandidates: 0,
-                filters: [],
+                filters: (context.filters || []).map(f => ({ filterName: f, passed: 0, failed: 0, duration: 0 })),
                 timestamp: new Date(),
             };
         }
 
         // Step 1: Calculate scores for all candidates
         const workerIds = candidates.map(c => c.workerId);
-        const scores = await this.scoringEngine.calculateBatchScores(workerIds);
+        const scores = await this.scoringEngine.calculateBatchScores(workerIds, preloadedWorkers);
 
         // Step 2: Assign scores to candidates and prepare map for ranking
         const freshScoresMap = new Map<string, number>();
         candidates.forEach(candidate => {
             const score = scores.get(candidate.workerId);
-            const totalScore = score ? score.totalScore : 0;
+            const totalScore = score && typeof score.totalScore === 'number' ? score.totalScore : 50;
             candidate.score = totalScore;
             freshScoresMap.set(candidate.workerId, totalScore);
         });
@@ -59,7 +60,7 @@ export class MatchingDecisionService {
             taskId: context.taskId,
             matchedWorkers: candidates,
             totalCandidates: candidates.length,
-            filters: [],
+            filters: (context.filters || []).map(f => ({ filterName: f, passed: 0, failed: 0, duration: 0 })),
             timestamp: new Date(),
         };
     }

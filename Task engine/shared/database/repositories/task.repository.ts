@@ -100,4 +100,53 @@ export class TaskRepository {
             ],
         });
     }
+
+    async getWorkerActiveTaskCounts(workerIds: string[]): Promise<Map<string, number>> {
+        const counts = new Map<string, number>();
+        if (!workerIds || workerIds.length === 0) return counts;
+
+        const tasks = await this.repository.find({
+            where: {
+                assignedTo: In(workerIds),
+                status: In(['assigned', 'accepted', 'in_progress', TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.IN_PROGRESS]),
+            },
+            select: ['assignedTo'],
+        });
+
+        for (const task of tasks) {
+            if (task.assignedTo) {
+                counts.set(task.assignedTo, (counts.get(task.assignedTo) || 0) + 1);
+            }
+        }
+        return counts;
+    }
+
+    async getWorkerCampaignParticipationMap(
+        workerIds: string[],
+        campaignId?: string,
+        orderId?: string,
+    ): Promise<Map<string, boolean>> {
+        const participationMap = new Map<string, boolean>();
+        if (!workerIds || workerIds.length === 0 || (!campaignId && !orderId)) return participationMap;
+
+        const whereConditions: any[] = [];
+        if (campaignId) {
+            whereConditions.push({ assignedTo: In(workerIds), campaignId });
+        }
+        if (orderId) {
+            whereConditions.push({ assignedTo: In(workerIds), orderId });
+        }
+
+        const tasks = await this.repository.find({
+            where: whereConditions,
+            select: ['assignedTo', 'status'],
+        });
+
+        for (const task of tasks) {
+            if (task.assignedTo && task.status !== 'cancelled' && task.status !== TaskStatus.CANCELLED) {
+                participationMap.set(task.assignedTo, true);
+            }
+        }
+        return participationMap;
+    }
 }

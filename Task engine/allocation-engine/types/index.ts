@@ -1,6 +1,7 @@
 export interface AllocationRequest {
     taskIds: string[];
     workerIds: string[];
+    pairs?: Array<{ taskId: string; workerId: string }>;
     strategy: 'sequential' | 'batch' | 'balanced' | 'priority';
 }
 

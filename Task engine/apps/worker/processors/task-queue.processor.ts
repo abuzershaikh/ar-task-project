@@ -71,12 +71,21 @@ export class TaskQueueProcessor {
             let matchingEnqueued = false;
             if (createdTasks.length > 0) {
                 try {
-                    await this.matchingQueue.add('batch-match', {
-                        orderId,
-                        batchSize: 50,
-                    });
+                    await this.matchingQueue.add(
+                        'batch-match',
+                        { orderId, batchSize: 50 },
+                        {
+                            attempts: 3,
+                            backoff: {
+                                type: 'exponential',
+                                delay: 2000,
+                            },
+                            removeOnComplete: 100,
+                            removeOnFail: 500,
+                        },
+                    );
                     matchingEnqueued = true;
-                    this.logger.log(`🎯 Enqueued 'batch-match' job for Order '${orderId}'`);
+                    this.logger.log(`🎯 Enqueued 'batch-match' job for Order '${orderId}' with exponential backoff retries`);
                 } catch (matchingError) {
                     this.logger.error(`⚠️ Tasks created successfully, but failed to enqueue matching job for Order '${orderId}': ${matchingError.message}`, matchingError.stack);
                 }

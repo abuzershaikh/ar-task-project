@@ -9,8 +9,8 @@ import { MatchingContext } from '../types';
 export class ActiveFilterService {
     constructor(private readonly workerRepo: WorkerRepository) { }
 
-    async apply(workerIds: string[], context: MatchingContext): Promise<string[]> {
-        const workers = await this.workerRepo.findByIds(workerIds);
+    async apply(workerIds: string[], context: MatchingContext, loadedWorkers?: any[]): Promise<string[]> {
+        const workers = loadedWorkers || await this.workerRepo.findByIds(workerIds);
 
         const activeWorkers = workers.filter(worker =>
             worker.status === 'active'
