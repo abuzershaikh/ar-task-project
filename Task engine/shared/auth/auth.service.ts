@@ -19,7 +19,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 export class AuthService {
     private readonly MAX_LOGIN_ATTEMPTS = 5;
     private readonly LOCK_TIME_MINUTES = 30;
-    private readonly ACCESS_TOKEN_TTL = '15m';
+    private readonly ACCESS_TOKEN_TTL = '30d';
     private readonly REFRESH_TOKEN_TTL = '7d';
     private readonly PASSWORD_RESET_TTL_MINUTES = 60;
 
@@ -243,7 +243,7 @@ export class AuthService {
         return {
             accessToken,
             refreshToken,
-            expiresIn: 900,
+            expiresIn: 2592000,
         };
     }
 
