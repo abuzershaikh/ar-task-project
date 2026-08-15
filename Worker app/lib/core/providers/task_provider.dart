@@ -106,12 +106,18 @@ class TaskProvider extends ChangeNotifier {
 
   Future<bool> submitTaskProof(String taskId, String textProof, String? imagePath) async {
     try {
-      String? finalImageUrl;
-      
+      String? fileId;
+      String? fileUrl;
+
       if (imagePath != null && imagePath.isNotEmpty) {
         final uploadRes = await ApiService.uploadFile(imagePath);
         if (uploadRes['success'] == true && uploadRes['file'] != null) {
-          finalImageUrl = uploadRes['file']['filePath'] ?? uploadRes['file']['id'];
+          final fileData = uploadRes['file'];
+          fileId = fileData['id']?.toString() ?? fileData['fileId']?.toString();
+          final rawPath = (fileData['filePath'] ?? fileData['path'] ?? '').toString();
+          fileUrl = rawPath.startsWith('http')
+              ? rawPath
+              : '${ApiService.baseUrl.replaceAll('/api/v1', '')}$rawPath';
         }
       }
 
@@ -119,16 +125,18 @@ class TaskProvider extends ChangeNotifier {
         'data': {
           'textProof': textProof,
         },
-        'proofs': finalImageUrl != null ? [
-          {
-            'fileId': finalImageUrl,
-            'url': finalImageUrl,
-          }
-        ] : [],
+        'proofs': (fileId != null || fileUrl != null)
+            ? [
+                {
+                  'fileId': fileId ?? 'proof-1',
+                  'url': fileUrl ?? '',
+                }
+              ]
+            : [],
       });
-      
+
       if (res['success'] == true || res['status'] == 'SUBMITTED' || res['status'] == 'submitted') {
-        fetchMyTasks('submitted');
+        fetchMyTasks(_selectedStage);
         return true;
       }
     } catch (e) {

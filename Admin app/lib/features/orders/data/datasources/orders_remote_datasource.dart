@@ -21,7 +21,10 @@ class OrdersRemoteDataSourceImpl implements OrdersRemoteDataSource {
 
   @override
   Future<List<AdminOrderModel>> getOrders() async {
-    final response = await _dioClient.get(ApiEndpoints.orders);
+    final response = await _dioClient.get(
+      ApiEndpoints.orders,
+      queryParameters: {'page': 1, 'limit': 50},
+    );
     final list = (response.data['orders'] as List?) ?? [];
     return list.map((item) => AdminOrderModel.fromJson(item as Map<String, dynamic>)).toList();
   }

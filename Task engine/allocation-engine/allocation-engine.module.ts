@@ -6,9 +6,10 @@ import { BatchService } from './services/batch.service';
 
 import { MatchingEngineModule } from '../matching-engine/matching-engine.module';
 import { TaskEngineModule } from '../task-engine/task-engine.module';
+import { NotificationEngineModule } from '../notification-engine/notification-engine.module';
 
 @Module({
-    imports: [DatabaseModule, MatchingEngineModule, TaskEngineModule],
+    imports: [DatabaseModule, MatchingEngineModule, TaskEngineModule, NotificationEngineModule],
     providers: [AllocationEngineService, AssignmentService, BatchService],
     exports: [AllocationEngineService],
 })

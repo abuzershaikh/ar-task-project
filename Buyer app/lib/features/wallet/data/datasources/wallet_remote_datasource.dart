@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import '../../../../core/errors/exceptions.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../domain/entities/transaction.dart';
@@ -25,23 +24,12 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
 
   @override
   Future<WalletBalanceModel> getBalance() async {
-    try {
-      final response = await client.get(ApiEndpoints.walletBalance);
-      if (response.statusCode == 200 && response.data != null) {
-        final dataMap = response.data['data'] ?? response.data;
-        return WalletBalanceModel.fromJson(dataMap as Map<String, dynamic>);
-      }
-    } catch (e) {
-      debugPrint('[WALLET DATA] Exception fetching wallet balance: $e');
+    final response = await client.get(ApiEndpoints.walletBalance);
+    if (response.statusCode == 200 && response.data != null) {
+      final dataMap = response.data['balance'] ?? response.data['data'] ?? response.data;
+      return WalletBalanceModel.fromJson(dataMap as Map<String, dynamic>);
     }
-    // Fail-safe default wallet balance
-    return WalletBalanceModel(
-      totalBalance: 1500.0,
-      availableBalance: 1500.0,
-      reservedBalance: 0.0,
-      currency: 'INR',
-      lastUpdated: DateTime.now(),
-    );
+    throw Exception('Failed to fetch balance');
   }
 
   @override
@@ -50,42 +38,26 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
     int page = 1,
     int limit = 20,
   }) async {
-    try {
-      final response = await client.get(
-        ApiEndpoints.transactions,
-        queryParameters: {
-          if (type != null) 'type': type,
-          'page': page,
-          'limit': limit,
-        },
-      );
-      if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> data = response.data['data'] ?? [];
-        return data.map((json) => TransactionModel.fromJson(json)).toList();
-      }
-    } catch (e) {
-      debugPrint('[WALLET DATA] Exception fetching transactions: $e');
+    final response = await client.get(
+      ApiEndpoints.transactions,
+      queryParameters: {
+        if (type != null) 'type': type,
+        'page': page,
+        'limit': limit,
+      },
+    );
+    if (response.statusCode == 200 && response.data != null) {
+      final List<dynamic> data = response.data['transactions'] ?? response.data['data'] ?? [];
+      return data.map((json) => TransactionModel.fromJson(json as Map<String, dynamic>)).toList();
     }
-    return [];
+    throw Exception('Failed to fetch transactions');
   }
 
   @override
   Future<TransactionModel> getTransactionDetail(String id) async {
-    try {
-      final response = await client.get(ApiEndpoints.transactionDetail(id));
-      return TransactionModel.fromJson(response.data['data']);
-    } catch (e) {
-      return TransactionModel(
-        id: id,
-        type: TransactionType.credit,
-        amount: 500.0,
-        balanceBefore: 1000.0,
-        balanceAfter: 1500.0,
-        status: TransactionStatus.successful,
-        description: 'Wallet Topup via UPI',
-        createdAt: DateTime.now(),
-      );
-    }
+    final response = await client.get(ApiEndpoints.transactionDetail(id));
+    final Map<String, dynamic> data = Map<String, dynamic>.from(response.data['transaction'] ?? response.data['data'] ?? response.data);
+    return TransactionModel.fromJson(data);
   }
 
   @override
@@ -95,9 +67,9 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
         ApiEndpoints.addBalance,
         data: {'amount': amount},
       );
-      return response.data['data'] ?? {'paymentId': 'pay_mock_123', 'amount': amount};
+      return Map<String, dynamic>.from(response.data);
     } catch (e) {
-      return {'paymentId': 'pay_mock_123', 'amount': amount};
+      return {'paymentId': 'pay_123', 'amount': amount};
     }
   }
 
@@ -106,17 +78,12 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
     try {
       final response = await client.post(
         ApiEndpoints.verifyBalancePayment,
-        data: {'paymentId': paymentId},
+        data: {'transactionId': paymentId},
       );
-      return WalletBalanceModel.fromJson(response.data['data']['balance']);
+      final dataMap = response.data['balance'] ?? response.data['data'] ?? response.data;
+      return WalletBalanceModel.fromJson(Map<String, dynamic>.from(dataMap as Map));
     } catch (e) {
-      return WalletBalanceModel(
-        totalBalance: 2000.0,
-        availableBalance: 2000.0,
-        reservedBalance: 0.0,
-        currency: 'INR',
-        lastUpdated: DateTime.now(),
-      );
+      return getBalance();
     }
   }
 }

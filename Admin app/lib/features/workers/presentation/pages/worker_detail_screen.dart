@@ -142,6 +142,10 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
             );
           }
           
+          if (state is WorkerDetailLoaded && state.worker.id != widget.workerId) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          
           return TabBarView(
             controller: _tabController,
             children: [

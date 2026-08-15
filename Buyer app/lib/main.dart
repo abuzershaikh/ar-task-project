@@ -9,9 +9,13 @@ import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/home/presentation/bloc/dashboard_bloc.dart';
 import 'features/wallet/presentation/bloc/wallet_bloc.dart';
 
+import 'firebase_options.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   
   // Initialize dependencies
   await initializeDependencies();

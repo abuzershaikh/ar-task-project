@@ -25,7 +25,10 @@ class MoreRemoteDataSourceImpl implements MoreRemoteDataSource {
 
   @override
   Future<List<KycItemModel>> getPendingKycQueue() async {
-    final response = await _dioClient.get(ApiEndpoints.kyc);
+    final response = await _dioClient.get(
+      ApiEndpoints.kyc,
+      queryParameters: {'page': 1, 'limit': 50},
+    );
     final list = (response.data['applications'] ?? response.data['data'] ?? []) as List;
     return list.map((e) => KycItemModel.fromJson(e as Map<String, dynamic>)).toList();
   }
@@ -42,7 +45,10 @@ class MoreRemoteDataSourceImpl implements MoreRemoteDataSource {
 
   @override
   Future<List<PayoutItemModel>> getPendingPayoutsQueue() async {
-    final response = await _dioClient.get(ApiEndpoints.payouts);
+    final response = await _dioClient.get(
+      ApiEndpoints.payouts,
+      queryParameters: {'page': 1, 'limit': 50},
+    );
     final list = (response.data['withdrawals'] ?? response.data['data'] ?? []) as List;
     return list.map((e) => PayoutItemModel.fromJson(e as Map<String, dynamic>)).toList();
   }
@@ -59,7 +65,10 @@ class MoreRemoteDataSourceImpl implements MoreRemoteDataSource {
 
   @override
   Future<List<ReviewItemModel>> getPendingReviewsQueue() async {
-    final response = await _dioClient.get(ApiEndpoints.reviews);
+    final response = await _dioClient.get(
+      ApiEndpoints.reviews,
+      queryParameters: {'page': 1, 'limit': 50},
+    );
     final list = (response.data['submissions'] ?? response.data['data'] ?? []) as List;
     return list.map((e) => ReviewItemModel.fromJson(e as Map<String, dynamic>)).toList();
   }
@@ -76,7 +85,10 @@ class MoreRemoteDataSourceImpl implements MoreRemoteDataSource {
 
   @override
   Future<List<AuditLogItemModel>> getAuditLogs() async {
-    final response = await _dioClient.get(ApiEndpoints.auditLogs);
+    final response = await _dioClient.get(
+      ApiEndpoints.auditLogs,
+      queryParameters: {'page': 1, 'limit': 50},
+    );
     final list = (response.data['items'] ?? response.data['data'] ?? []) as List;
     return list.map((e) => AuditLogItemModel.fromJson(e as Map<String, dynamic>)).toList();
   }

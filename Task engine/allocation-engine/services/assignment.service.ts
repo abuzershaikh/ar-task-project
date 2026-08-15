@@ -1,6 +1,7 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { TaskEngineService } from '../../task-engine/task-engine.service';
+import { NotificationEngineService } from '../../notification-engine/notification.service';
 import { AllocationRequest, AllocationResult } from '../types';
 
 /**
@@ -10,6 +11,7 @@ import { AllocationRequest, AllocationResult } from '../types';
 export class AssignmentService {
     constructor(
         private readonly taskRepo: TaskRepository,
+        private readonly notificationEngine: NotificationEngineService,
         @Inject(forwardRef(() => TaskEngineService))
         private readonly taskEngine: TaskEngineService,
     ) { }
@@ -32,6 +34,14 @@ export class AssignmentService {
                         workerId: workerIds[i],
                         actorId: 'system',
                     });
+
+                    // Send Notification to Worker
+                    await this.notificationEngine.sendNotification(
+                        workerIds[i],
+                        'A new task has been assigned to you! Check your task feed to start.',
+                        'TASK_ASSIGNED',
+                        { taskId: taskIds[i] }
+                    );
 
                     assignments.push({
                         taskId: taskIds[i],

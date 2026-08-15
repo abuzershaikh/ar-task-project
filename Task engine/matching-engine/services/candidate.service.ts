@@ -6,6 +6,7 @@ import { LocationFilterService } from '../filters/location-filter.service';
 import { CategoryFilterService } from '../filters/category-filter.service';
 import { CapacityFilterService } from '../filters/capacity-filter.service';
 import { DuplicateFilterService } from '../filters/duplicate-filter.service';
+import { EligibilityEngineService } from '../../eligibility-engine/eligibility.service';
 import { MatchingContext, CandidateWorker } from '../types';
 
 /**
@@ -21,6 +22,7 @@ export class CandidateService {
         private readonly categoryFilter: CategoryFilterService,
         private readonly capacityFilter: CapacityFilterService,
         private readonly duplicateFilter: DuplicateFilterService,
+        private readonly eligibilityEngine: EligibilityEngineService,
     ) { }
 
     async findCandidates(context: MatchingContext): Promise<CandidateWorker[]> {
@@ -60,6 +62,11 @@ export class CandidateService {
         // Duplicate filter
         workerIds = await this.duplicateFilter.apply(workerIds, context);
         console.log(`✅ After duplicate filter: ${workerIds.length} workers`);
+
+        // Eligibility Engine check
+        const eligibilityMap = await this.eligibilityEngine.batchCheckEligibility(workerIds, context.taskId);
+        workerIds = workerIds.filter(id => eligibilityMap.get(id)?.isEligible !== false);
+        console.log(`✅ After Eligibility Engine check: ${workerIds.length} workers`);
 
         // Step 3: Build candidate objects
         const candidates: CandidateWorker[] = workerIds.map(workerId => ({

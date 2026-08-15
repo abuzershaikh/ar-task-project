@@ -147,6 +147,10 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
             );
           }
 
+          if (state is BuyerDetailLoaded && state.buyer.id != widget.buyerId) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
           return TabBarView(
             controller: _tabController,
             children: [

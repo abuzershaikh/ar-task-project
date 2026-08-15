@@ -1,36 +1,57 @@
-import 'package:dio/dio.dart';
-import '../../../../core/network/api_endpoints.dart';
-import '../../../../core/network/dio_client.dart';
+import 'package:dartz/dartz.dart';
+import '../../../../core/errors/failures.dart';
+import '../datasources/review_remote_datasource.dart';
+import '../models/review_submission_model.dart';
 
-class ReviewRepository {
-  final DioClient _dioClient;
+abstract class ReviewRepository {
+  Future<Either<Failure, List<ReviewSubmissionModel>>> getPendingReviews();
+  Future<Either<Failure, ReviewSubmissionModel>> getReviewDetail(String submissionId);
+  Future<Either<Failure, bool>> approveTaskProof(String submissionId, {String? notes});
+  Future<Either<Failure, bool>> rejectTaskProof(String submissionId, String reasonCode, String note);
+}
 
-  ReviewRepository(this._dioClient);
+class ReviewRepositoryImpl implements ReviewRepository {
+  final ReviewRemoteDataSource remoteDataSource;
 
-  Future<bool> approveTaskProof(String submissionId, {String? notes}) async {
+  ReviewRepositoryImpl(this.remoteDataSource);
+
+  @override
+  Future<Either<Failure, List<ReviewSubmissionModel>>> getPendingReviews() async {
     try {
-      final response = await _dioClient.post(
-        ApiEndpoints.approveSubmission(submissionId),
-        data: notes != null ? {'notes': notes} : {},
-      );
-      return response.statusCode == 200 || response.statusCode == 201;
+      final reviews = await remoteDataSource.getPendingReviews();
+      return Right(reviews);
     } catch (e) {
-      return false;
+      return Left(ServerFailure(e.toString()));
     }
   }
 
-  Future<bool> rejectTaskProof(String submissionId, String reasonCode, String note) async {
+  @override
+  Future<Either<Failure, ReviewSubmissionModel>> getReviewDetail(String submissionId) async {
     try {
-      final response = await _dioClient.post(
-        ApiEndpoints.rejectSubmission(submissionId),
-        data: {
-          'reasonCode': reasonCode,
-          'note': note,
-        },
-      );
-      return response.statusCode == 200 || response.statusCode == 201;
+      final detail = await remoteDataSource.getReviewDetail(submissionId);
+      return Right(detail);
     } catch (e) {
-      return false;
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> approveTaskProof(String submissionId, {String? notes}) async {
+    try {
+      final success = await remoteDataSource.approveSubmission(submissionId, notes: notes);
+      return Right(success);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> rejectTaskProof(String submissionId, String reasonCode, String note) async {
+    try {
+      final success = await remoteDataSource.rejectSubmission(submissionId, reasonCode, note);
+      return Right(success);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
     }
   }
 }

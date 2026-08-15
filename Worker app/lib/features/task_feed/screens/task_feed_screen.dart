@@ -16,61 +16,6 @@ class TaskFeedScreen extends StatefulWidget {
 class _TaskFeedScreenState extends State<TaskFeedScreen> {
   String _selectedPlatform = 'All Tasks';
 
-  final List<Map<String, dynamic>> _mockTasks = [
-    {
-      'id': 'T-101',
-      'title': 'Review on Google',
-      'taskType': 'GOOGLE_REVIEW',
-      'platform': 'google',
-      'badge': 'Featured',
-      'rewardPerTask': 10,
-      'description':
-          'Give a 5★ review for our partner business on Google and share your honest feedback.',
-      'estimatedTime': '2-3 min',
-      'tagType': '5★ Review',
-      'timeToCompleteHours': 24,
-    },
-    {
-      'id': 'T-102',
-      'title': 'Comment on YouTube',
-      'taskType': 'YOUTUBE_COMMENT',
-      'platform': 'youtube',
-      'badge': 'Trending',
-      'rewardPerTask': 8,
-      'description':
-          'Watch short video and post a genuine comment. Keep it positive and real.',
-      'estimatedTime': '2 min',
-      'tagType': 'Comment',
-      'timeToCompleteHours': 24,
-    },
-    {
-      'id': 'T-103',
-      'title': 'Like & Comment on Instagram',
-      'taskType': 'INSTAGRAM_LIKE',
-      'platform': 'instagram',
-      'badge': 'Hot',
-      'rewardPerTask': 6,
-      'description':
-          'Like the post and drop a nice comment to support the creator.',
-      'estimatedTime': '1-2 min',
-      'tagType': 'Like + Comment',
-      'timeToCompleteHours': 12,
-    },
-    {
-      'id': 'T-104',
-      'title': 'Review on Facebook Page',
-      'taskType': 'FACEBOOK_REVIEW',
-      'platform': 'facebook',
-      'badge': 'Featured',
-      'rewardPerTask': 8,
-      'description':
-          'Give 5★ rating and write a short review on our partner page.',
-      'estimatedTime': '2-3 min',
-      'tagType': '5★ Review',
-      'timeToCompleteHours': 48,
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -83,15 +28,12 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
 
-    // Merge live tasks from API or fallback mock tasks
-    final tasksToDisplay = taskProvider.availableTasks.isNotEmpty
-        ? taskProvider.availableTasks
-        : _mockTasks;
+    final tasksToDisplay = taskProvider.availableTasks;
 
     final filteredTasks = _selectedPlatform == 'All Tasks'
         ? tasksToDisplay
         : tasksToDisplay.where((t) {
-            final p = (t['platform'] ?? t['taskType'] ?? '').toString().toLowerCase();
+            final p = (t['platform'] ?? t['taskType'] ?? t['serviceCode'] ?? '').toString().toLowerCase();
             return p.contains(_selectedPlatform.toLowerCase());
           }).toList();
 
@@ -132,11 +74,11 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                       ),
                     ),
                     InkWell(
-                      onTap: () {},
+                      onTap: () => taskProvider.fetchAvailableTasks(),
                       child: const Row(
                         children: [
                           Text(
-                            'See All',
+                            'Refresh',
                             style: TextStyle(
                               color: Color(0xFF00875A),
                               fontWeight: FontWeight.bold,
@@ -144,7 +86,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                             ),
                           ),
                           SizedBox(width: 4),
-                          Icon(Icons.arrow_forward_rounded,
+                          Icon(Icons.refresh_rounded,
                               size: 14, color: Color(0xFF00875A)),
                         ],
                       ),
@@ -159,6 +101,34 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                     padding: EdgeInsets.all(32.0),
                     child: Center(
                       child: CircularProgressIndicator(color: Color(0xFF00875A)),
+                    ),
+                  )
+                else if (filteredTasks.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32.0),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          const Icon(Icons.task_rounded, size: 48, color: Colors.black26),
+                          const SizedBox(height: 12),
+                          Text(
+                            taskProvider.error != null
+                                ? 'Failed to fetch tasks from server'
+                                : 'No available tasks right now',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Color(0xFF334155),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            taskProvider.error ?? 'Pull down to refresh and check for new tasks',
+                            style: const TextStyle(fontSize: 12, color: Colors.black45),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ),
                   )
                 else

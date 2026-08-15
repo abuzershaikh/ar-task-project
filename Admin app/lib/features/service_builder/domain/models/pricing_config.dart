@@ -76,6 +76,7 @@ class PricingConfig {
   final int minQuantity;
   final int maxQuantity;
   final double adminMarginPercent;
+  final String marginType;
   final double workerReward;
   final List<PriceChipModel> chips;
 
@@ -86,6 +87,7 @@ class PricingConfig {
     this.minQuantity = 1,
     this.maxQuantity = 10000,
     required this.adminMarginPercent,
+    this.marginType = 'PERCENTAGE',
     required this.workerReward,
     this.chips = const [],
   });
@@ -120,6 +122,7 @@ class PricingConfig {
       minQuantity: minQuantity,
       maxQuantity: maxQuantity,
       adminMarginPercent: adminMarginPercent,
+      marginType: marginType,
       workerReward: calculatedReward < 0 ? 0 : calculatedReward,
       chips: chips,
     );
@@ -132,6 +135,7 @@ class PricingConfig {
     int? minQuantity,
     int? maxQuantity,
     double? adminMarginPercent,
+    String? marginType,
     double? workerReward,
     List<PriceChipModel>? chips,
   }) {
@@ -142,6 +146,7 @@ class PricingConfig {
       minQuantity: minQuantity ?? this.minQuantity,
       maxQuantity: maxQuantity ?? this.maxQuantity,
       adminMarginPercent: adminMarginPercent ?? this.adminMarginPercent,
+      marginType: marginType ?? this.marginType,
       workerReward: workerReward ?? this.workerReward,
       chips: chips ?? this.chips,
     );
@@ -170,6 +175,7 @@ class PricingConfig {
       'minQuantity': minQuantity,
       'maxQuantity': maxQuantity,
       'adminMarginPercent': adminMarginPercent,
+      'marginType': marginType,
       'workerReward': workerReward,
       'chips': chips.map((c) => c.toJson()).toList(),
     };
@@ -197,6 +203,7 @@ class PricingConfig {
       minQuantity: (json['minQuantity'] as num?)?.toInt() ?? 1,
       maxQuantity: (json['maxQuantity'] as num?)?.toInt() ?? 10000,
       adminMarginPercent: (json['adminMarginPercent'] as num?)?.toDouble() ?? 20.0,
+      marginType: json['marginType']?.toString() ?? 'PERCENTAGE',
       workerReward: (json['workerReward'] as num?)?.toDouble() ?? 0.0,
       chips: parsedChips,
     );

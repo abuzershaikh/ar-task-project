@@ -10,13 +10,13 @@ class AppConstants {
   // ── API ───────────────────────────────────────────────────────────────
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://api.taskpost.com/api/v1',
+    defaultValue: 'http://95.179.178.6:3000/api/v1',
   );
 
   // ── Task Stages (backend-aligned) ────────────────────────────────────
   static const String stageAccepted = 'assigned';
   static const String stageSubmitted = 'submitted';
-  static const String stageUnderReview = 'under-review';
+  static const String stageUnderReview = 'under_review';
   static const String stageApproved = 'approved';
   static const String stageRejected = 'rejected';
 

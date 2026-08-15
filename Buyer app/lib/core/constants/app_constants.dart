@@ -2,7 +2,7 @@ class AppConstants {
   // API Configuration
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://api.taskpost.com/api/v1',
+    defaultValue: 'http://95.179.178.6:3000/api/v1',
   );
   static const String apiVersion = 'v1';
   static const int connectTimeout = 30000;

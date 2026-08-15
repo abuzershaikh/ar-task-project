@@ -44,4 +44,12 @@ export class WorkerRepository {
     async updateStats(id: string, stats: any): Promise<void> {
         await this.repository.update(id, stats);
     }
+
+    async incrementTasksCompleted(id: string): Promise<void> {
+        await this.repository.increment({ id }, 'totalTasksCompleted', 1);
+    }
+
+    async incrementTasksRejected(id: string): Promise<void> {
+        await this.repository.increment({ id }, 'totalTasksRejected', 1);
+    }
 }

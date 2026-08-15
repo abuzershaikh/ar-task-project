@@ -21,7 +21,10 @@ class WorkersRemoteDataSourceImpl implements WorkersRemoteDataSource {
 
   @override
   Future<List<WorkerModel>> getWorkers() async {
-    final response = await _dioClient.get(ApiEndpoints.workers);
+    final response = await _dioClient.get(
+      ApiEndpoints.workers,
+      queryParameters: {'page': 1, 'limit': 50},
+    );
     final list = (response.data['workers'] as List?) ?? [];
     return list.map((item) => WorkerModel.fromJson(item as Map<String, dynamic>)).toList();
   }

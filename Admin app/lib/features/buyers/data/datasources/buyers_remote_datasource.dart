@@ -21,7 +21,10 @@ class BuyersRemoteDataSourceImpl implements BuyersRemoteDataSource {
 
   @override
   Future<List<BuyerModel>> getBuyers() async {
-    final response = await _dioClient.get(ApiEndpoints.buyers);
+    final response = await _dioClient.get(
+      ApiEndpoints.buyers,
+      queryParameters: {'page': 1, 'limit': 50},
+    );
     final list = (response.data['buyers'] as List?) ?? [];
     return list.map((item) => BuyerModel.fromJson(item as Map<String, dynamic>)).toList();
   }

@@ -1,5 +1,4 @@
-import 'package:dio/dio.dart';
-import '../../../../core/constants/app_constants.dart';
+import '../../../../core/network/dio_client.dart';
 import '../../domain/models/service_model.dart';
 import '../../domain/models/pricing_config.dart';
 import '../../domain/models/element_category.dart';
@@ -12,25 +11,31 @@ import '../../domain/repositories/service_repository.dart';
 /// ServiceRepositoryImpl (Enterprise Clean Architecture Data Layer)
 /// Real backend API integration via Dio client + offline fallback templates.
 class ServiceRepositoryImpl implements ServiceRepository {
-  final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: AppConstants.baseUrl,
-      connectTimeout: const Duration(milliseconds: AppConstants.connectTimeout),
-      receiveTimeout: const Duration(milliseconds: AppConstants.receiveTimeout),
-    ),
-  );
+  final DioClient dioClient;
+
+  ServiceRepositoryImpl({required this.dioClient});
 
   @override
   Future<List<ServiceModel>> getPublishedServices() async {
     try {
-      // Backend API request to fetch published service templates
-      final response = await _dio.get('/buyer/service-templates');
+      // Backend API request to fetch published services
+      final response = await dioClient.get('/buyer/services');
       if (response.statusCode == 200 && response.data != null) {
-        final List list = response.data['data'] ?? response.data;
+        final List list = response.data['services'] ?? response.data['data'] ?? response.data;
         return list.map((json) => ServiceModel.fromJson(json as Map<String, dynamic>)).toList();
       }
     } catch (_) {
-      // Offline fallback mock data
+      try {
+        // Fallback to /admin/services if /buyer/services is not present
+        final response = await dioClient.get('/admin/services');
+        if (response.statusCode == 200 && response.data != null) {
+          final List list = response.data['services'] ?? response.data['data'] ?? [];
+          return list.map((json) {
+            final Map<String, dynamic> item = Map<String, dynamic>.from(json['service'] ?? json);
+            return ServiceModel.fromJson(item);
+          }).toList();
+        }
+      } catch (_) {}
     }
 
     return _getFallbackServices();
@@ -39,9 +44,10 @@ class ServiceRepositoryImpl implements ServiceRepository {
   @override
   Future<ServiceModel?> getServiceById(String serviceId) async {
     try {
-      final response = await _dio.get('/buyer/service-templates/$serviceId');
+      final response = await dioClient.get('/buyer/services/$serviceId');
       if (response.statusCode == 200 && response.data != null) {
-        return ServiceModel.fromJson(response.data['data'] ?? response.data);
+        final Map<String, dynamic> data = Map<String, dynamic>.from(response.data['service'] ?? response.data['data'] ?? response.data);
+        return ServiceModel.fromJson(data);
       }
     } catch (_) {}
 
@@ -53,17 +59,16 @@ class ServiceRepositoryImpl implements ServiceRepository {
     }
   }
 
-  /// Submit Campaign Payload to Backend API (/api/v1/buyer/orders or /api/v1/campaigns)
+  /// Submit Campaign Payload to Backend API (/api/v1/buyer/orders)
   Future<bool> submitCampaignOrder(Map<String, dynamic> payloadData) async {
     try {
-      final response = await _dio.post(
+      final response = await dioClient.post(
         '/buyer/orders',
         data: payloadData,
       );
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (_) {
-      // Simulation success if offline / local dev
-      return true;
+      return false;
     }
   }
 
@@ -130,7 +135,6 @@ class ServiceRepositoryImpl implements ServiceRepository {
         ],
         updatedAt: DateTime.now(),
       ),
-
       ServiceModel(
         id: 'srv_insta_followers',
         code: 'INSTAGRAM_FOLLOW',
@@ -170,7 +174,6 @@ class ServiceRepositoryImpl implements ServiceRepository {
         ],
         updatedAt: DateTime.now(),
       ),
-
       ServiceModel(
         id: 'srv_web_visits',
         code: 'WEBSITE_VISITS',

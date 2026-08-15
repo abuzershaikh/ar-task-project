@@ -3,6 +3,7 @@ import { EarningRepository } from '../../shared/database/repositories/earning.re
 import { WithdrawalRepository } from '../../shared/database/repositories/withdrawal.repository';
 import { WorkerRepository } from '../../shared/database/repositories/worker.repository';
 import { PayoutConfigService } from './payout-config.service';
+import { NotificationEngineService } from '../../notification-engine/notification.service';
 import { WithdrawalStatus } from '../../shared/database/entities/withdrawal.entity';
 import { PayoutRequest } from '../types';
 
@@ -16,6 +17,7 @@ export class WithdrawalService {
         private readonly withdrawalRepo: WithdrawalRepository,
         private readonly workerRepo: WorkerRepository,
         private readonly configService: PayoutConfigService,
+        private readonly notificationEngine: NotificationEngineService,
     ) { }
 
     async create(request: PayoutRequest): Promise<string> {
@@ -65,6 +67,13 @@ export class WithdrawalService {
             idempotencyKey,
             metadata,
         });
+
+        await this.notificationEngine.sendNotification(
+            workerId,
+            `Withdrawal request for ₹${amount.toFixed(2)} submitted successfully. Status: Pending processing.`,
+            'PAYOUT_REQUESTED',
+            { withdrawalId: withdrawal.id, amount }
+        );
 
         console.log(`💰 Withdrawal initiated: ${withdrawal.id} - ₹${amount} (Min Limit: ₹${minLimit})`);
         return withdrawal.id;

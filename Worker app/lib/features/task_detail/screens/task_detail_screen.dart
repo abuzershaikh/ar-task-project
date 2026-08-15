@@ -7,12 +7,9 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers/task_provider.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../shared/widgets/status_badge.dart';
 import '../models/worker_task_model.dart';
 
-/// TaskDetailScreen (Worker Task Execution & Media Engine)
-/// Is screen par Worker ko dynamic task details, instructions, media (YouTube/Audio),
-/// live execution countdown timer, aur screenshot proof attachment system dikhta hai.
+/// TaskDetailScreen (Server-Status-Driven Dynamic Task Execution Engine)
 class TaskDetailScreen extends StatefulWidget {
   final dynamic task;
   const TaskDetailScreen({super.key, required this.task});
@@ -37,17 +34,23 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   @override
   void initState() {
     super.initState();
-    final status = (widget.task['status'] ?? 'AVAILABLE').toString().toUpperCase();
+    final status = _getTaskStatus();
     if (status == 'ACCEPTED' || status == 'ASSIGNED' || status == 'IN_PROGRESS') {
       _isTaskAccepted = true;
       _startTimer();
     }
   }
 
-  /// Timer start function - Worker task start karte hi 60 seconds ka timer chalega
+  String _getTaskStatus() {
+    final s = (widget.task['status'] ?? widget.task['stage'] ?? 'AVAILABLE').toString().toUpperCase();
+    return s;
+  }
+
   void _startTimer() {
     _countdownTimer?.cancel();
-    setState(() => _secondsRemaining = widget.task['executionTimeSeconds'] ?? 60);
+    final execTime = widget.task['executionTimeSeconds'] ??
+        ((widget.task['timeToCompleteHours'] ?? 1) * 3600);
+    setState(() => _secondsRemaining = (execTime is int && execTime > 0) ? execTime : 60);
 
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_secondsRemaining > 0) {
@@ -60,14 +63,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   void _acceptTask() async {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-    final taskId = widget.task['id'] ?? widget.task['_id'] ?? 'T-101';
+    final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
 
     setState(() => _isTaskAccepted = true);
     _startTimer();
 
     try {
-      await taskProvider.acceptTask(taskId);
-      await taskProvider.startTask(taskId);
+      if (taskId.isNotEmpty) {
+        await taskProvider.acceptTask(taskId);
+        await taskProvider.startTask(taskId);
+      }
     } catch (_) {}
 
     if (mounted) {
@@ -80,7 +85,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     }
   }
 
-  /// Image Attachment Picker - Worker gallery se screenshot proof pick kar sakta hai
   Future<void> _pickProofScreenshot() async {
     try {
       final XFile? image = await _imagePicker.pickImage(
@@ -102,7 +106,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     }
   }
 
-  /// Submit Task Proof function - Screenshot aur text proof validation submit karta hai
   void _submitProof() async {
     final textProof = _proofTextController.text.trim();
 
@@ -118,16 +121,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
     setState(() => _isSubmitting = true);
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-    final taskId = widget.task['id'] ?? widget.task['_id'] ?? 'T-101';
-
-    await Future.delayed(const Duration(milliseconds: 800));
+    final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
 
     try {
-      await taskProvider.submitTaskProof(
-        taskId,
-        textProof.isNotEmpty ? textProof : 'Screenshot attached',
-        _selectedProofImage?.path,
-      );
+      if (taskId.isNotEmpty) {
+        await taskProvider.submitTaskProof(
+          taskId,
+          textProof.isNotEmpty ? textProof : 'Screenshot attached',
+          _selectedProofImage?.path,
+        );
+      }
     } catch (_) {}
 
     setState(() => _isSubmitting = false);
@@ -142,8 +145,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     }
   }
 
-  /// Open Link helper - YouTube ya target website link opening
   Future<void> _launchURL(String urlString) async {
+    if (urlString.isEmpty) return;
     final Uri uri = Uri.parse(urlString.startsWith('http') ? urlString : 'https://$urlString');
     try {
       if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
@@ -167,11 +170,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.task['title'] ?? widget.task['taskType'] ?? 'YouTube Channel Subscribe';
-    final reward = (widget.task['rewardPerTask'] ?? widget.task['reward'] ?? 159.20).toDouble();
-    final description = widget.task['description'] ??
-        '1. Click on Open Channel button.\n2. Subscribe to the YouTube channel.\n3. Take a screenshot showing Subscribed status.\n4. Upload screenshot proof below.';
-    final targetUrl = widget.task['channelUrl'] ?? widget.task['targetUrl'] ?? 'https://youtube.com';
+    final title = (widget.task['title'] ?? widget.task['name'] ?? widget.task['taskType'] ?? widget.task['serviceCode'] ?? 'Task Details').toString();
+    final reward = (widget.task['workerReward'] ?? widget.task['rewardPerTask'] ?? widget.task['reward'] ?? 0.0).toDouble();
+    final description = (widget.task['description'] ?? widget.task['instructions'] ?? 'Follow the instructions provided below to complete the task and submit proof.').toString();
+    final targetUrl = (widget.task['targetUrl'] ?? widget.task['channelUrl'] ?? widget.task['url'] ?? '').toString();
+    final rawElements = widget.task['elements'];
+    final List<dynamic> elements = (rawElements is List) ? rawElements : [];
+    final status = _getTaskStatus();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -184,6 +189,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // ── Status Banner (If completed / submitted / under review) ────────
+          if (status != 'AVAILABLE' && status != 'ASSIGNED' && status != 'IN_PROGRESS' && status != 'ACCEPTED') ...[
+            _buildStatusHeaderCard(status),
+            const SizedBox(height: 16),
+          ],
+
           // ── Worker Reward & Timer Header Banner ─────────────────
           Container(
             padding: const EdgeInsets.all(18),
@@ -238,70 +249,82 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ),
           const SizedBox(height: 20),
 
-          // ── YouTube Video / Media Action Player Card ────────────
-          Card(
-            elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.play_circle_fill_rounded, color: Colors.red, size: 24),
+          // ── Dynamic Server Elements Section ─────────────────────
+          if (elements.isNotEmpty) ...[
+            Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Task Execution Steps', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A))),
+                    const SizedBox(height: 12),
+                    ...elements.map((elem) => _buildServerElementWidget(elem)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // ── Target URL Action Card (if available) ───────────────
+          if (targetUrl.isNotEmpty) ...[
+            Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                          child: const Icon(Icons.link_rounded, color: Colors.red, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text('Target Link Action', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(width: 12),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Column(
                         children: [
-                          Text('YouTube Task Target', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          Text('Watch & Subscribe Channel', style: TextStyle(fontSize: 11, color: Colors.black54)),
+                          const Icon(Icons.open_in_browser_rounded, color: Colors.blueAccent, size: 42),
+                          const SizedBox(height: 8),
+                          Text(targetUrl, style: const TextStyle(color: Colors.white70, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4F46E5),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                            label: const Text('Open Target Link', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                            onPressed: () => _launchURL(targetUrl),
+                          ),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // YouTube Embedded Video Action Box
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A),
-                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.video_library_rounded, color: Colors.redAccent, size: 48),
-                        const SizedBox(height: 8),
-                        const Text('Target YouTube Video / Channel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                        const SizedBox(height: 4),
-                        Text(targetUrl, style: const TextStyle(color: Colors.white54, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                          label: const Text('Open Channel on YouTube', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                          onPressed: () => _launchURL(targetUrl),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
+          ],
 
-          // ── Audio Player Preview Card ───────────────────────────
+          // ── Instructions Card ──────────────────────────────────
           Card(
             elevation: 1,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -310,65 +333,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: Colors.purple.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.graphic_eq_rounded, color: Colors.purple, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text('Audio Instructions Player', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.purple.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.purple.withOpacity(0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(_isPlayingAudio ? Icons.pause_circle_filled : Icons.play_circle_fill, color: Colors.purple, size: 36),
-                          onPressed: () {
-                            setState(() => _isPlayingAudio = !_isPlayingAudio);
-                          },
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(_isPlayingAudio ? 'Playing Audio Guidelines...' : 'Listen Audio Guidelines (00:45)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                              LinearProgressIndicator(
-                                value: _isPlayingAudio ? 0.6 : 0.0,
-                                backgroundColor: Colors.purple.withOpacity(0.1),
-                                color: Colors.purple,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ── Instructions List ────────────────────────────────────
-          Card(
-            elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Task Instructions for Worker', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  const Text('Task Instructions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   const SizedBox(height: 8),
                   Text(description, style: const TextStyle(fontSize: 13, height: 1.5, color: Colors.black87)),
                   const SizedBox(height: 12),
@@ -377,7 +342,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     label: const Text('Copy Instructions'),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: description));
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Instructions copied to clipboard!')));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Instructions copied!')));
                     },
                   ),
                 ],
@@ -399,7 +364,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     const Text('Submit Proof Attachment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.indigo)),
                     const SizedBox(height: 12),
 
-                    // Image Picker Screenshot Attachment Card
                     GestureDetector(
                       onTap: _pickProofScreenshot,
                       child: Container(
@@ -408,7 +372,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.indigo.withOpacity(0.3), style: BorderStyle.solid),
+                          border: Border.all(color: Colors.indigo.withOpacity(0.3)),
                         ),
                         child: _selectedProofImage != null
                             ? ClipRRect(
@@ -428,12 +392,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Text Proof Input
                     TextField(
                       controller: _proofTextController,
                       maxLines: 3,
                       decoration: InputDecoration(
-                        labelText: 'Text Proof (Channel Name / Comment text / Notes)',
+                        labelText: 'Text Proof (Username / Notes)',
                         labelStyle: const TextStyle(fontSize: 12),
                         alignLabelWithHint: true,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -441,7 +404,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    // Submit Proof Button
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -454,7 +416,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                         icon: _isSubmitting
                             ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                             : const Icon(Icons.check_circle_rounded),
-                        label: Text(_isSubmitting ? 'Submitting...' : 'Submit Task Proof for Payout', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        label: Text(_isSubmitting ? 'Submitting...' : 'Submit Task Proof', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         onPressed: _isSubmitting ? null : _submitProof,
                       ),
                     ),
@@ -462,7 +424,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 ),
               ),
             ),
-          ] else ...[
+          ] else if (status == 'AVAILABLE') ...[
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -478,6 +440,86 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusHeaderCard(String status) {
+    Color cardColor;
+    IconData icon;
+    String text;
+
+    switch (status) {
+      case 'SUBMITTED':
+      case 'UNDER_REVIEW':
+        cardColor = Colors.amber.shade800;
+        icon = Icons.hourglass_top_rounded;
+        text = 'Task Submitted — Currently Under Review';
+        break;
+      case 'APPROVED':
+      case 'COMPLETED':
+        cardColor = Colors.green.shade700;
+        icon = Icons.check_circle_rounded;
+        text = 'Task Approved — Reward Credited!';
+        break;
+      case 'REJECTED':
+        cardColor = Colors.red.shade700;
+        icon = Icons.cancel_rounded;
+        text = 'Task Proof Rejected';
+        break;
+      default:
+        cardColor = Colors.indigo;
+        icon = Icons.info_rounded;
+        text = 'Status: $status';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServerElementWidget(dynamic element) {
+    if (element is! Map) return const SizedBox.shrink();
+
+    final label = (element['label'] ?? '').toString();
+    final type = (element['type'] ?? 'text').toString();
+    final content = (element['contentValue'] ?? element['defaultValue'] ?? '').toString();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.arrow_right_rounded, color: Color(0xFF4F46E5), size: 20),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (label.isNotEmpty)
+                  Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B))),
+                if (content.isNotEmpty)
+                  Text(content, style: const TextStyle(fontSize: 12, color: Colors.black70)),
+              ],
+            ),
+          ),
         ],
       ),
     );

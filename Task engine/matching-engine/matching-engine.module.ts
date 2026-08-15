@@ -15,9 +15,10 @@ import { DuplicateFilterService } from './filters/duplicate-filter.service';
 
 import { ScoringEngineModule } from '../scoring-engine/scoring-engine.module';
 import { RankingEngineModule } from '../ranking-engine/ranking-engine.module';
+import { EligibilityEngineModule } from '../eligibility-engine/eligibility-engine.module';
 
 @Module({
-    imports: [DatabaseModule, ScoringEngineModule, RankingEngineModule],
+    imports: [DatabaseModule, ScoringEngineModule, RankingEngineModule, EligibilityEngineModule],
     providers: [
         MatchingEngineService,
         CandidateService,
