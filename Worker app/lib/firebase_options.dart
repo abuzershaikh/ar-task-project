@@ -30,37 +30,37 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyA-EXAMPLE_KEY_FOR_BUILD',
-    appId: '1:1234567890:web:abcdef123456',
-    messagingSenderId: '1234567890',
-    projectId: 'taskpost-app',
-    authDomain: 'taskpost-app.firebaseapp.com',
-    storageBucket: 'taskpost-app.appspot.com',
+    apiKey: 'AIzaSyBcYzLuzmqkP14OvY2vot0SYuOCZbEB3o4',
+    appId: '1:311090572825:web:f628860f1a118dba684488',
+    messagingSenderId: '311090572825',
+    projectId: 'taskz-87679',
+    authDomain: 'taskz-87679.firebaseapp.com',
+    storageBucket: 'taskz-87679.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyA-EXAMPLE_KEY_FOR_BUILD',
-    appId: '1:1234567890:android:abcdef123456',
-    messagingSenderId: '1234567890',
-    projectId: 'taskpost-app',
-    storageBucket: 'taskpost-app.appspot.com',
+    apiKey: 'AIzaSyBcYzLuzmqkP14OvY2vot0SYuOCZbEB3o4',
+    appId: '1:311090572825:android:f628860f1a118dba684488',
+    messagingSenderId: '311090572825',
+    projectId: 'taskz-87679',
+    storageBucket: 'taskz-87679.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyA-EXAMPLE_KEY_FOR_BUILD',
-    appId: '1:1234567890:ios:abcdef123456',
-    messagingSenderId: '1234567890',
-    projectId: 'taskpost-app',
-    storageBucket: 'taskpost-app.appspot.com',
-    iosBundleId: 'com.taskpost.worker',
+    apiKey: 'AIzaSyBcYzLuzmqkP14OvY2vot0SYuOCZbEB3o4',
+    appId: '1:311090572825:ios:f628860f1a118dba684488',
+    messagingSenderId: '311090572825',
+    projectId: 'taskz-87679',
+    storageBucket: 'taskz-87679.firebasestorage.app',
+    iosBundleId: 'com.taskearning.earning.money.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyA-EXAMPLE_KEY_FOR_BUILD',
-    appId: '1:1234567890:ios:abcdef123456',
-    messagingSenderId: '1234567890',
-    projectId: 'taskpost-app',
-    storageBucket: 'taskpost-app.appspot.com',
-    iosBundleId: 'com.taskpost.worker',
+    apiKey: 'AIzaSyBcYzLuzmqkP14OvY2vot0SYuOCZbEB3o4',
+    appId: '1:311090572825:ios:f628860f1a118dba684488',
+    messagingSenderId: '311090572825',
+    projectId: 'taskz-87679',
+    storageBucket: 'taskz-87679.firebasestorage.app',
+    iosBundleId: 'com.taskearning.earning.money.app',
   );
 }

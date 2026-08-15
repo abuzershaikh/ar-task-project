@@ -32,37 +32,37 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyA-EXAMPLE_KEY_FOR_BUILD',
-    appId: '1:1234567890:web:abcdef123456',
-    messagingSenderId: '1234567890',
-    projectId: 'taskpost-app',
-    authDomain: 'taskpost-app.firebaseapp.com',
-    storageBucket: 'taskpost-app.appspot.com',
+    apiKey: 'AIzaSyBcYzLuzmqkP14OvY2vot0SYuOCZbEB3o4',
+    appId: '1:311090572825:web:745149609214b2d8684488',
+    messagingSenderId: '311090572825',
+    projectId: 'taskz-87679',
+    authDomain: 'taskz-87679.firebaseapp.com',
+    storageBucket: 'taskz-87679.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyA-EXAMPLE_KEY_FOR_BUILD',
-    appId: '1:1234567890:android:abcdef123456',
-    messagingSenderId: '1234567890',
-    projectId: 'taskpost-app',
-    storageBucket: 'taskpost-app.appspot.com',
+    apiKey: 'AIzaSyBcYzLuzmqkP14OvY2vot0SYuOCZbEB3o4',
+    appId: '1:311090572825:android:745149609214b2d8684488',
+    messagingSenderId: '311090572825',
+    projectId: 'taskz-87679',
+    storageBucket: 'taskz-87679.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyA-EXAMPLE_KEY_FOR_BUILD',
-    appId: '1:1234567890:ios:abcdef123456',
-    messagingSenderId: '1234567890',
-    projectId: 'taskpost-app',
-    storageBucket: 'taskpost-app.appspot.com',
-    iosBundleId: 'com.taskpost.buyer',
+    apiKey: 'AIzaSyBcYzLuzmqkP14OvY2vot0SYuOCZbEB3o4',
+    appId: '1:311090572825:ios:745149609214b2d8684488',
+    messagingSenderId: '311090572825',
+    projectId: 'taskz-87679',
+    storageBucket: 'taskz-87679.firebasestorage.app',
+    iosBundleId: 'com.buy.taskpost.marketing_pro',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyA-EXAMPLE_KEY_FOR_BUILD',
-    appId: '1:1234567890:ios:abcdef123456',
-    messagingSenderId: '1234567890',
-    projectId: 'taskpost-app',
-    storageBucket: 'taskpost-app.appspot.com',
-    iosBundleId: 'com.taskpost.buyer',
+    apiKey: 'AIzaSyBcYzLuzmqkP14OvY2vot0SYuOCZbEB3o4',
+    appId: '1:311090572825:ios:745149609214b2d8684488',
+    messagingSenderId: '311090572825',
+    projectId: 'taskz-87679',
+    storageBucket: 'taskz-87679.firebasestorage.app',
+    iosBundleId: 'com.buy.taskpost.marketing_pro',
   );
 }

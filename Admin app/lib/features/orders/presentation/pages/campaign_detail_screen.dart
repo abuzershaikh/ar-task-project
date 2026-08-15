@@ -93,8 +93,8 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                         _buildInfoRow('Buyer ID', order?.buyerId ?? 'N/A'),
                         _buildInfoRow('Service Type', order?.serviceType ?? 'N/A'),
                         _buildInfoRow('Reward/Task', '₹${order?.rewardPerTask ?? 0.0}'),
-                        _buildInfoRow('Total Tasks', '${order?.totalTasksRequired ?? 0}'),
-                        _buildInfoRow('Completed Tasks', '${order?.tasksCompleted ?? 0}'),
+                        _buildInfoRow('Total Tasks', '${order?.totalTasks ?? 0}'),
+                        _buildInfoRow('Completed Tasks', '${order?.completedTasks ?? 0}'),
                       ],
                     ),
                   ),
@@ -113,9 +113,9 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            Expanded(child: _buildStatCard('Total Required', '${order?.totalTasksRequired ?? 0}', AppColors.primary)),
-                            const SizedBox(width: 8),
-                            Expanded(child: _buildStatCard('Completed', '${order?.tasksCompleted ?? 0}', AppColors.success)),
+                            Expanded(child: _buildStatCard('Total Required', '${order?.totalTasks ?? 0}', AppColors.primary)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _buildStatCard('Completed', '${order?.completedTasks ?? 0}', AppColors.success)),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -123,7 +123,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                           children: [
                             Expanded(child: _buildStatCard('Pending Tasks', '${tasks.length}', AppColors.warning)),
                             const SizedBox(width: 8),
-                            Expanded(child: _buildStatCard('Total Spent', '₹${order?.totalAmount ?? 0.0}', AppColors.info)),
+                            Expanded(child: _buildStatCard('Total Spent', '₹${order?.totalBudget ?? 0.0}', AppColors.info)),
                           ],
                         ),
                       ],
@@ -307,10 +307,6 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
       case 'pause': return 'This will pause task allocation. Workers can still complete assigned tasks.';
       case 'resume': return 'This will resume task allocation to eligible workers.';
       case 'cancel': return 'This will cancel the campaign and refund unused budget to the buyer.';
-      default: return '';
-    }
-  }
-}
       default: return '';
     }
   }

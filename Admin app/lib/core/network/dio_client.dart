@@ -198,13 +198,22 @@ class DioClient {
 
       case DioExceptionType.badResponse:
         final statusCode = error.response?.statusCode;
-        final message = error.response?.data?['message'] ??
-            'Server error occurred';
+        String? message;
+        
+        final responseData = error.response?.data;
+        if (responseData is Map) {
+          if (responseData['error'] is Map) {
+            message = responseData['error']['message'];
+          } else if (responseData['message'] != null) {
+            message = responseData['message'];
+          }
+        }
+        message ??= 'Server error occurred';
 
         if (statusCode == 401) {
-          return AuthException('Unauthorized. Please login again.', statusCode: statusCode);
+          return AuthException(message, statusCode: statusCode);
         } else if (statusCode == 403) {
-          return AuthException('Access forbidden.', statusCode: statusCode);
+          return AuthException(message, statusCode: statusCode);
         } else if (statusCode == 404) {
           return ServerException('Resource not found.', statusCode: statusCode);
         } else if (statusCode == 422) {

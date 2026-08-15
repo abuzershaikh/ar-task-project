@@ -240,8 +240,7 @@ class _PayoutsQueueScreenState extends State<PayoutsQueueScreen> {
       ),
     );
   }
-}
-  }
+
 
   void _bulkApprove() {
     showDialog(

@@ -3,7 +3,14 @@ const { Client } = require('ssh2');
 const conn = new Client();
 const config = { host: '95.179.178.6', port: 22, username: 'root', password: 'i_G72#y}(6gACDDU' };
 
-const commands = `mysql -u taskapp -ptaskapp_password task_platform -e "SELECT id, email, role FROM users WHERE email='snapbizux@gmail.com';"`;
+const commands = `
+cd /var/www/task-engine
+git fetch origin
+git reset --hard origin/task-engine
+cd "Task engine"
+npm run build
+pm2 restart all
+`;
 
 conn.on('ready', () => {
   conn.exec(commands, (err, stream) => {
