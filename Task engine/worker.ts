@@ -7,6 +7,7 @@ import { WorkerModule } from './apps/worker/worker.module';
  */
 async function bootstrap() {
     const app = await NestFactory.create(WorkerModule);
+    app.enableShutdownHooks();
     await app.init();
     console.log('🔧 Dedicated Background Worker Process Started');
     console.log('📥 Listening to Bull Redis Queues...');

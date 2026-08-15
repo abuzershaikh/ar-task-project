@@ -40,7 +40,7 @@ export class AllocationQueueProcessor {
 
         // TODO: Implement rebalancing logic
         // Redistribute tasks from overloaded workers to underloaded workers
-
-        return { success: true };
+        const { NotImplementedException } = require('@nestjs/common');
+        throw new NotImplementedException('Rebalancing tasks is not implemented yet');
     }
 }

@@ -56,8 +56,7 @@ export class ReviewDecisionService {
                 notes,
             });
 
-            // Update Worker progress stats
-            await this.workerRepo.incrementTasksCompleted(submission.workerId);
+            // Worker progress stats are updated in EarningPostingService to prevent double-counting.
 
             // Process earning
             const earning = await this.earningEngine.calculateEarning(

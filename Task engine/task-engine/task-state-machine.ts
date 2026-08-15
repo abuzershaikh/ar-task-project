@@ -19,7 +19,7 @@ export class TaskStateMachine {
         [TaskStatus.IN_PROGRESS, [TaskStatus.SUBMITTED, TaskStatus.ACTIVE, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
         [TaskStatus.SUBMITTED, [TaskStatus.UNDER_REVIEW, TaskStatus.IN_PROGRESS, TaskStatus.ACTIVE, TaskStatus.EXPIRED]],
         [TaskStatus.UNDER_REVIEW, [TaskStatus.APPROVED, TaskStatus.REJECTED, TaskStatus.IN_PROGRESS]],
-        [TaskStatus.REJECTED, [TaskStatus.ACTIVE, TaskStatus.ASSIGNED, TaskStatus.FAILED, TaskStatus.APPROVED]], // APPROVED added for Admin Override
+        [TaskStatus.REJECTED, [TaskStatus.SUBMITTED, TaskStatus.IN_PROGRESS, TaskStatus.ACTIVE, TaskStatus.ASSIGNED, TaskStatus.FAILED, TaskStatus.APPROVED]], // SUBMITTED & IN_PROGRESS added for worker resubmission & Admin Override
         [TaskStatus.APPROVED, []],
         [TaskStatus.CANCELLED, []],
         [TaskStatus.EXPIRED, []],

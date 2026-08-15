@@ -86,7 +86,10 @@ export class TaskQueueProcessor {
         } catch (error) {
             this.logger.error(`Failed to create tasks for Order '${orderId}': ${error.message}`, error.stack);
             if (jobId) {
-                await this.jobRepo.updateProgress(jobId, 0, TaskGenerationJobStatus.FAILED, error.message);
+                // Do NOT reset generatedTasksCount to 0! Query existing tasks or keep actual generated count to prevent duplicate creation on Bull retry.
+                const jobRecord = await this.jobRepo.findByOrderId(orderId);
+                const actualGenerated = jobRecord ? jobRecord.generatedTasksCount : 0;
+                await this.jobRepo.updateProgress(jobId, actualGenerated, TaskGenerationJobStatus.FAILED, error.message);
             }
             throw error;
         }

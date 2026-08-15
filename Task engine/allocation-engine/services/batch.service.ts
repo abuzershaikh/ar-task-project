@@ -38,22 +38,25 @@ export class BatchService {
             const taskIds = batch.map(t => t.id);
             const matchingResults = await this.matchingEngine.matchWorkersForBatch(taskIds);
 
-            // Assign tasks
+            // Assign tasks only for tasks that actually received a matched worker
+            const matchedTaskIds: string[] = [];
             const workerIds: string[] = [];
             taskIds.forEach(taskId => {
                 const match = matchingResults.get(taskId);
                 if (match && match.matchedWorkers.length > 0) {
+                    matchedTaskIds.push(taskId);
                     workerIds.push(match.matchedWorkers[0].workerId);
                 }
             });
 
-            const result = await this.assignmentService.assign({
-                taskIds,
-                workerIds,
-                strategy: 'sequential',
-            });
-
-            results.push(result);
+            if (matchedTaskIds.length > 0) {
+                const result = await this.assignmentService.assign({
+                    taskIds: matchedTaskIds,
+                    workerIds,
+                    strategy: 'sequential',
+                });
+                results.push(result);
+            }
         }
 
         return results;

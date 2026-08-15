@@ -57,7 +57,7 @@ export class EarningQueueProcessor {
         console.log('💸 Processing bulk payout...');
 
         // TODO: Process multiple payouts in batch
-
-        return { success: true };
+        const { NotImplementedException } = require('@nestjs/common');
+        throw new NotImplementedException('Bulk payout is not implemented yet');
     }
 }

@@ -31,6 +31,15 @@ export class WebhookController {
         const eventId = body.event_id || body.id || null;
         const amount = Number(body.payload?.payment?.entity?.amount || body.amount || 0) / 100 || 0;
 
+        // Security check: Validate signature header if secret is configured in environment
+        if (provider === 'RAZORPAY' && process.env.RAZORPAY_WEBHOOK_SECRET) {
+            const crypto = require('crypto');
+            const expectedSig = crypto.createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET).update(JSON.stringify(body)).digest('hex');
+            if (razorpaySignature && razorpaySignature !== expectedSig) {
+                return { received: false, status: 'rejected_invalid_signature' };
+            }
+        }
+
         if (!orderId) {
             return { received: true, status: 'ignored_no_order_id' };
         }

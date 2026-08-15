@@ -5,6 +5,9 @@ import { TaskRepository } from '../../shared/database/repositories/task.reposito
 import { OrderRepository } from '../../shared/database/repositories/order.repository';
 import { Earning } from '../types/earning';
 
+import { WalletRepository } from '../../shared/database/repositories/wallet.repository';
+import { WalletTransactionRepository } from '../../shared/database/repositories/wallet-transaction.repository';
+
 /**
  * Earning ko ledger me post karta hai
  */
@@ -15,6 +18,8 @@ export class EarningPostingService {
         private readonly workerRepo: WorkerRepository,
         private readonly taskRepo: TaskRepository,
         private readonly orderRepo: OrderRepository,
+        private readonly walletRepo: WalletRepository,
+        private readonly walletTxRepo: WalletTransactionRepository,
     ) { }
 
     async post(earning: Earning): Promise<void> {
@@ -48,19 +53,36 @@ export class EarningPostingService {
                 totalTasksCompleted: newCompletedCount,
                 successRate: newSuccessRate,
             });
+            
+            // Credit to wallet
+            let wallet = await this.walletRepo.findByUserId(worker.id);
+            if (!wallet) {
+                wallet = await this.walletRepo.create(worker.id);
+            }
+            await this.walletRepo.updateBalance(wallet.id, earning.amount, true);
+            await this.walletTxRepo.create({
+                walletId: wallet.id,
+                type: 'CREDIT',
+                amount: earning.amount,
+                description: `Earning for task ${earning.taskId}`,
+                status: 'COMPLETED',
+                referenceId: created.id,
+            });
         }
 
         // Update order completed tasks count
         const task = await this.taskRepo.findById(earning.taskId);
         if (task && task.orderId) {
+            // Atomic increment
+            await this.orderRepo.incrementCompletedTasks(task.orderId);
             const order = await this.orderRepo.findById(task.orderId);
             if (order) {
-                const newCompleted = Number(order.tasksCompleted || 0) + 1;
-                const isFinished = newCompleted >= Number(order.totalTasksRequired);
-                await this.orderRepo.update(order.id, {
-                    tasksCompleted: newCompleted,
-                    status: isFinished ? 'completed' : order.status,
-                });
+                const isFinished = Number(order.tasksCompleted || 0) >= Number(order.totalTasksRequired);
+                if (isFinished && order.status !== 'COMPLETED') {
+                    await this.orderRepo.update(order.id, {
+                        status: 'COMPLETED',
+                    });
+                }
             }
         }
 

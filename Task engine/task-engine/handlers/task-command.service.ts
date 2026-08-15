@@ -218,13 +218,19 @@ export class TaskCommandService {
             return task;
         }
 
-        if (
-            task.status !== TaskStatus.SUBMITTED &&
-            task.status !== TaskStatus.UNDER_REVIEW &&
-            task.status !== TaskStatus.REJECTED
-        ) {
-            throw new BadRequestException('Task is not ready for approval');
-        }
+        this.stateMachine.validateTransition({
+            taskId: task.id,
+            orderId: task.orderId,
+            campaignId: task.campaignId,
+            taskType: task.taskType,
+            currentStatus: task.status,
+            targetStatus: TaskStatus.APPROVED,
+            timestamp: new Date(),
+            actor: {
+                id: command.reviewedBy || 'system',
+                type: 'system',
+            },
+        });
 
         const campaignId = task.campaignId || task.orderId;
         if (task.assignedTo) {
@@ -297,6 +303,20 @@ export class TaskCommandService {
             throw new BadRequestException('Task is not ready for rejection');
         }
 
+        this.stateMachine.validateTransition({
+            taskId: task.id,
+            orderId: task.orderId,
+            campaignId: task.campaignId,
+            taskType: task.taskType,
+            currentStatus: task.status,
+            targetStatus: TaskStatus.REJECTED,
+            timestamp: new Date(),
+            actor: {
+                id: command.reviewedBy || 'system',
+                type: 'system',
+            },
+        });
+
         const campaignId = task.campaignId || task.orderId;
         if (task.assignedTo) {
             // Worker is rejected, but participation record remains so worker is excluded from this campaign!
@@ -324,6 +344,20 @@ export class TaskCommandService {
         if (task.status === TaskStatus.CANCELLED || task.status === TaskStatus.APPROVED) {
             return task;
         }
+
+        this.stateMachine.validateTransition({
+            taskId: task.id,
+            orderId: task.orderId,
+            campaignId: task.campaignId,
+            taskType: task.taskType,
+            currentStatus: task.status,
+            targetStatus: TaskStatus.CANCELLED,
+            timestamp: new Date(),
+            actor: {
+                id: command.actorId || 'system',
+                type: 'system',
+            },
+        });
 
         return this.taskRepository.update(task.id, {
             status: TaskStatus.CANCELLED,
