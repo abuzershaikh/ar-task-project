@@ -17,11 +17,20 @@ export class ScoringEngineService {
 
     async calculateBatchScores(workerIds: string[], preloadedWorkers?: any[]): Promise<Map<string, WorkerScore>> {
         const scores = new Map<string, WorkerScore>();
+        const chunkSize = 50;
 
-        for (const workerId of workerIds) {
-            const worker = preloadedWorkers ? preloadedWorkers.find(w => w.id === workerId) : undefined;
-            const score = await this.calculator.calculate(workerId, worker);
-            scores.set(workerId, score);
+        for (let i = 0; i < workerIds.length; i += chunkSize) {
+            const chunk = workerIds.slice(i, i + chunkSize);
+            const chunkPromises = chunk.map(async (workerId) => {
+                const worker = preloadedWorkers ? preloadedWorkers.find(w => w.id === workerId) : undefined;
+                try {
+                    const score = await this.calculator.calculate(workerId, worker);
+                    scores.set(workerId, score);
+                } catch (e) {
+                    console.error(`Failed to calculate score for worker ${workerId}`, e);
+                }
+            });
+            await Promise.all(chunkPromises);
         }
 
         return scores;

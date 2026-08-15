@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { WorkerRepository } from '../../shared/database/repositories/worker.repository';
 import { ActiveFilterService } from '../filters/active-filter.service';
-import { KycFilterService } from '../filters/kyc-filter.service';
 import { LocationFilterService } from '../filters/location-filter.service';
 import { CategoryFilterService } from '../filters/category-filter.service';
 import { CapacityFilterService } from '../filters/capacity-filter.service';
@@ -17,7 +16,6 @@ export class CandidateService {
     constructor(
         private readonly workerRepo: WorkerRepository,
         private readonly activeFilter: ActiveFilterService,
-        private readonly kycFilter: KycFilterService,
         private readonly locationFilter: LocationFilterService,
         private readonly categoryFilter: CategoryFilterService,
         private readonly capacityFilter: CapacityFilterService,

@@ -19,22 +19,29 @@ export class WorkerScoreRepository {
     }
 
     async findByWorkerIds(workerIds: string[]): Promise<WorkerScore[]> {
-        return this.repository
-            .createQueryBuilder('score')
-            .where('score.workerId IN (:...workerIds)', { workerIds })
-            .getMany();
+        if (!workerIds || workerIds.length === 0) return [];
+        
+        const chunkSize = 1000;
+        const results: WorkerScore[] = [];
+        
+        for (let i = 0; i < workerIds.length; i += chunkSize) {
+            const chunk = workerIds.slice(i, i + chunkSize);
+            const chunkResults = await this.repository
+                .createQueryBuilder('score')
+                .where('score.workerId IN (:...chunk)', { chunk })
+                .getMany();
+            results.push(...chunkResults);
+        }
+        
+        return results;
     }
 
     async upsert(workerId: string, scoreData: Partial<WorkerScore>): Promise<WorkerScore> {
-        const existing = await this.findByWorkerId(workerId);
-
-        if (existing) {
-            await this.repository.update(existing.id, scoreData);
-            return this.findByWorkerId(workerId);
-        }
-
-        const score = this.repository.create({ workerId, ...scoreData });
-        return this.repository.save(score);
+        await this.repository.upsert(
+            { workerId, ...scoreData },
+            { conflictPaths: ['workerId'], skipUpdateIfNoValuesChanged: true }
+        );
+        return this.findByWorkerId(workerId) as Promise<WorkerScore>;
     }
 
     async getTopScorers(limit: number = 10): Promise<WorkerScore[]> {

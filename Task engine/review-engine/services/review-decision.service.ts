@@ -1,4 +1,5 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SubmissionRepository } from '../../shared/database/repositories/submission.repository';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { WorkerRepository } from '../../shared/database/repositories/worker.repository';
@@ -20,6 +21,7 @@ export class ReviewDecisionService {
         private readonly earningEngine: EarningEngineService,
         private readonly fraudEngine: FraudEngineService,
         private readonly notificationEngine: NotificationEngineService,
+        private readonly eventEmitter: EventEmitter2,
         @Inject(forwardRef(() => TaskEngineService))
         private readonly taskEngine: TaskEngineService,
     ) { }
@@ -56,14 +58,22 @@ export class ReviewDecisionService {
                 notes,
             });
 
-            // Worker progress stats are updated in EarningPostingService to prevent double-counting.
-
-            // Process earning
-            const earning = await this.earningEngine.calculateEarning(
-                submission.taskId,
-                submission.workerId,
-            );
-            await this.earningEngine.postEarning(earning);
+            // Process earning safely (Split-Brain Prevention)
+            try {
+                const earning = await this.earningEngine.calculateEarning(
+                    submission.taskId,
+                    submission.workerId,
+                );
+                await this.earningEngine.postEarning(earning);
+            } catch (error) {
+                console.error(`Failed to post earning for task ${submission.taskId}. Halting review process to prevent split-brain.`, error);
+                // Mark submission as failed_payment
+                await this.submissionRepo.update(submissionId, {
+                    reviewStatus: 'failed_payment',
+                    reviewNotes: 'Payment Failed: ' + (error.message || 'Unknown error'),
+                });
+                throw new Error(`Payment processing failed: ${error.message}`);
+            }
 
             // Notify Worker
             await this.notificationEngine.sendNotification(
@@ -72,6 +82,9 @@ export class ReviewDecisionService {
                 'TASK_APPROVED',
                 { taskId: submission.taskId, submissionId },
             );
+
+            // Trigger Realtime Score Recalculation
+            this.eventEmitter.emit('worker.score.recalculate', submission.workerId);
 
             console.log(`✅ Task approved via state machine: ${submission.taskId}`);
         } else if (action === 'rejected') {
@@ -92,6 +105,9 @@ export class ReviewDecisionService {
                 { taskId: submission.taskId, submissionId, notes },
             );
 
+            // Trigger Realtime Score Recalculation
+            this.eventEmitter.emit('worker.score.recalculate', submission.workerId);
+
             console.log(`❌ Task rejected via state machine: ${submission.taskId}`);
         } else if (action === 'changes_requested') {
             await this.taskEngine.requestChangesTask({
@@ -111,7 +127,7 @@ export class ReviewDecisionService {
             console.log(`🔄 Task changes requested via state machine: ${submission.taskId}`);
         }
 
-        // Update submission ONLY IF task engine succeeds
+        // Update submission ONLY IF task engine and earning engine succeed
         await this.submissionRepo.update(submissionId, {
             reviewStatus: action,
             reviewedBy,

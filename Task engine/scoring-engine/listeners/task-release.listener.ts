@@ -1,12 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { WorkerRepository } from '../../shared/database/repositories/worker.repository';
+import { ScoringEngineService } from '../scoring.service';
 
 @Injectable()
 export class TaskReleaseListener {
     private readonly logger = new Logger(TaskReleaseListener.name);
 
-    constructor(private readonly workerRepo: WorkerRepository) {}
+    constructor(
+        private readonly workerRepo: WorkerRepository,
+        private readonly scoringEngine: ScoringEngineService
+    ) {}
 
     @OnEvent('worker.task_released')
     async handleTaskReleasedEvent(payload: { taskId: string; workerId: string; reason: string; timestamp: string }) {
@@ -26,4 +30,16 @@ export class TaskReleaseListener {
             this.logger.error(`Error processing task release penalty for worker ${payload.workerId}`, error.stack);
         }
     }
+
+    @OnEvent('worker.score.recalculate')
+    async handleWorkerScoreRecalculate(workerId: string) {
+        this.logger.log(`Received worker.score.recalculate event for worker ${workerId}`);
+        try {
+            await this.scoringEngine.calculateWorkerScore(workerId);
+            this.logger.log(`Successfully recalculated score for worker ${workerId}`);
+        } catch (error) {
+            this.logger.error(`Failed to recalculate score for worker ${workerId}`, error.stack);
+        }
+    }
+
 }

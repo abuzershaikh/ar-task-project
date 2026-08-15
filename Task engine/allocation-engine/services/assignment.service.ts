@@ -1,4 +1,4 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Inject, forwardRef, BadRequestException } from '@nestjs/common';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { TaskEngineService } from '../../task-engine/task-engine.service';
 import { NotificationEngineService } from '../../notification-engine/notification.service';
@@ -21,7 +21,10 @@ export class AssignmentService {
 
         const targetPairs: Array<{ taskId: string; workerId: string }> = pairs || [];
         if (!pairs) {
-            const count = Math.min(taskIds.length, workerIds.length);
+            if (taskIds.length !== workerIds.length) {
+                throw new BadRequestException('Task and Worker array length mismatch. Explicit pairs are required.');
+            }
+            const count = taskIds.length;
             for (let i = 0; i < count; i++) {
                 targetPairs.push({ taskId: taskIds[i], workerId: workerIds[i] });
             }

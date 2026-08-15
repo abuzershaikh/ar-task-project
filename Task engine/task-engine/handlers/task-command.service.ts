@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import { Task } from '../../shared/database/entities/task.entity';
+import { CampaignWorkerParticipation, ParticipationStatus } from '../../shared/database/entities/campaign-worker-participation.entity';
+import { TaskAssignment, TaskAssignmentStatus } from '../../shared/database/entities/task-assignment.entity';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { CampaignWorkerParticipationRepository } from '../../shared/database/repositories/campaign-worker-participation.repository';
 import { TaskAssignmentRepository } from '../../shared/database/repositories/task-assignment.repository';
-import { ParticipationStatus } from '../../shared/database/entities/campaign-worker-participation.entity';
-import { TaskAssignmentStatus } from '../../shared/database/entities/task-assignment.entity';
 import { TaskValidationService } from '../task-validation.service';
 import { TaskStateMachine } from '../state-machine/task-state-machine';
 import { TaskStatus } from '../types/task-status.enum';
@@ -22,6 +24,7 @@ export class TaskCommandService {
     private readonly logger = new Logger(TaskCommandService.name);
 
     constructor(
+        private readonly dataSource: DataSource,
         private readonly taskRepository: TaskRepository,
         private readonly participationRepo: CampaignWorkerParticipationRepository,
         private readonly assignmentRepo: TaskAssignmentRepository,
@@ -43,337 +46,288 @@ export class TaskCommandService {
     }
 
     async assignTask(command: AssignTaskCommand) {
-        const task = await this.ensureTask(command.taskId);
-        const campaignId = task.campaignId || task.orderId;
+        return this.dataSource.transaction(async (manager) => {
+            const task = await this.ensureTaskTransactional(manager, command.taskId);
+            const campaignId = task.campaignId || task.orderId;
 
-        // Protection Pillar: Check if worker has ALREADY participated in this Campaign
-        const existingParticipation = await this.participationRepo.findByCampaignAndWorker(campaignId, command.workerId);
-        if (existingParticipation) {
-            this.logger.warn(
-                `Worker '${command.workerId}' has ALREADY participated in Campaign '${campaignId}' (Status: ${existingParticipation.status}). Cannot reassign same campaign task.`,
-            );
-            throw new BadRequestException(`Worker has already participated in Campaign '${campaignId}'`);
-        }
+            const existingParticipation = await manager.findOne(CampaignWorkerParticipation, { where: { campaignId, workerId: command.workerId } });
+            if (existingParticipation) {
+                this.logger.warn(`Worker '${command.workerId}' has ALREADY participated in Campaign '${campaignId}' (Status: ${existingParticipation.status}). Cannot reassign same campaign task.`);
+                throw new BadRequestException(`Worker has already participated in Campaign '${campaignId}'`);
+            }
 
-        if (task.assignedTo && task.assignedTo !== command.workerId) {
-            throw new BadRequestException('Task is already assigned to another worker');
-        }
+            if (task.assignedTo && task.assignedTo !== command.workerId) {
+                throw new BadRequestException('Task is already assigned to another worker');
+            }
 
-        if (!task.assignedTo) {
-            this.validationService.ensureTaskAssignable(task);
+            if (!task.assignedTo) {
+                this.validationService.ensureTaskAssignable(task);
+                this.stateMachine.validateTransition({
+                    taskId: task.id,
+                    orderId: task.orderId,
+                    campaignId: task.campaignId,
+                    taskType: task.taskType,
+                    currentStatus: task.status,
+                    targetStatus: TaskStatus.ASSIGNED,
+                    timestamp: new Date(),
+                    actor: { id: command.actorId || command.workerId, type: 'system' },
+                });
+
+                try {
+                    const participation = manager.create(CampaignWorkerParticipation, { campaignId, workerId: command.workerId, status: ParticipationStatus.ASSIGNED });
+                    await manager.save(participation);
+                } catch (err) {
+                    this.logger.warn(`DB UNIQUE CONFLICT: Worker '${command.workerId}' was assigned concurrently by another process in Campaign '${campaignId}'.`);
+                    throw new BadRequestException(`Worker '${command.workerId}' participation conflict in Campaign '${campaignId}'`);
+                }
+
+                const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
+                const assignment = manager.create(TaskAssignment, {
+                    taskId: task.id,
+                    campaignId,
+                    workerId: command.workerId,
+                    attemptNumber: attempts.length + 1,
+                    status: TaskAssignmentStatus.ASSIGNED,
+                    assignedAt: new Date(),
+                });
+                await manager.save(assignment);
+
+                task.assignedTo = command.workerId;
+                task.assignedAt = new Date();
+                task.status = TaskStatus.ASSIGNED;
+                task.metadata = { ...(task.metadata || {}), ...(command.metadata || {}) };
+                return manager.save(task);
+            }
+            return task;
+        });
+    }
+
+    async acceptTask(command: AcceptTaskCommand) {
+        return this.dataSource.transaction(async (manager) => {
+            const task = await this.ensureTaskTransactional(manager, command.taskId);
+            this.validationService.ensureWorkerOwnership(task, command.workerId);
+
+            if (task.status === TaskStatus.ACCEPTED && task.assignedTo === command.workerId) {
+                return task;
+            }
+
+            if (task.status === TaskStatus.ACTIVE && !task.assignedTo) {
+                throw new BadRequestException('Task must be assigned before accepting');
+            }
+
             this.stateMachine.validateTransition({
                 taskId: task.id,
                 orderId: task.orderId,
                 campaignId: task.campaignId,
                 taskType: task.taskType,
                 currentStatus: task.status,
-                targetStatus: TaskStatus.ASSIGNED,
+                targetStatus: TaskStatus.ACCEPTED,
                 timestamp: new Date(),
-                actor: {
-                    id: command.actorId || command.workerId,
-                    type: 'system',
-                },
+                actor: { id: command.workerId, type: 'worker' },
             });
 
-            // 1. Record Campaign Worker Participation (UNIQUE DB Constraint Guard against race conditions)
-            try {
-                await this.participationRepo.recordParticipation(campaignId, command.workerId, ParticipationStatus.ASSIGNED);
-            } catch (err) {
-                this.logger.warn(
-                    `DB UNIQUE CONFLICT: Worker '${command.workerId}' was assigned concurrently by another process in Campaign '${campaignId}'. Discarding candidate worker.`,
-                );
-                throw new BadRequestException(`Worker '${command.workerId}' participation conflict in Campaign '${campaignId}'`);
+            const activeAssignment = await this.findActiveAssignmentTransactional(manager, task.id);
+            if (activeAssignment) {
+                activeAssignment.acceptedAt = new Date();
+                await manager.save(activeAssignment);
             }
 
-            // 2. Record Task Assignment History
-            await this.assignmentRepo.createAssignment({
-                taskId: task.id,
-                campaignId,
-                workerId: command.workerId,
-            });
-
-            return this.taskRepository.update(task.id, {
-                assignedTo: command.workerId,
-                assignedAt: new Date(),
-                status: TaskStatus.ASSIGNED,
-                metadata: {
-                    ...(task.metadata || {}),
-                    ...(command.metadata || {}),
-                },
-            });
-        }
-
-        return task;
-    }
-
-    async acceptTask(command: AcceptTaskCommand) {
-        const task = await this.ensureTask(command.taskId);
-        this.validationService.ensureWorkerOwnership(task, command.workerId);
-
-        if (task.status === TaskStatus.ACCEPTED && task.assignedTo === command.workerId) {
-            return task;
-        }
-
-        if (task.status === TaskStatus.ACTIVE && !task.assignedTo) {
-            await this.assignTask({
-                taskId: task.id,
-                workerId: command.workerId,
-            });
-        }
-
-        const assignedTask = await this.ensureTask(command.taskId);
-        this.validationService.ensureWorkerOwnership(assignedTask, command.workerId);
-
-        this.stateMachine.validateTransition({
-            taskId: assignedTask.id,
-            orderId: assignedTask.orderId,
-            campaignId: assignedTask.campaignId,
-            taskType: assignedTask.taskType,
-            currentStatus: assignedTask.status,
-            targetStatus: TaskStatus.ACCEPTED,
-            timestamp: new Date(),
-            actor: {
-                id: command.workerId,
-                type: 'worker',
-            },
-        });
-
-        const activeAssignment = await this.assignmentRepo.findActiveAssignment(command.taskId);
-        if (activeAssignment) {
-            await this.assignmentRepo.updateStatus(activeAssignment.id, activeAssignment.status, { acceptedAt: new Date() });
-        }
-
-        return this.taskRepository.update(assignedTask.id, {
-            status: TaskStatus.ACCEPTED,
-            acceptedAt: new Date(),
-            assignedTo: command.workerId,
+            task.status = TaskStatus.ACCEPTED;
+            task.acceptedAt = new Date();
+            task.assignedTo = command.workerId;
+            return manager.save(task);
         });
     }
 
     async startTask(command: StartTaskCommand) {
-        const task = await this.ensureTask(command.taskId);
-        this.validationService.ensureWorkerOwnership(task, command.workerId);
+        return this.dataSource.transaction(async (manager) => {
+            const task = await this.ensureTaskTransactional(manager, command.taskId);
+            this.validationService.ensureWorkerOwnership(task, command.workerId);
 
-        if (task.status === TaskStatus.IN_PROGRESS) {
-            return task;
-        }
+            if (task.status === TaskStatus.IN_PROGRESS) return task;
 
-        this.stateMachine.validateTransition({
-            taskId: task.id,
-            orderId: task.orderId,
-            campaignId: task.campaignId,
-            taskType: task.taskType,
-            currentStatus: task.status,
-            targetStatus: TaskStatus.IN_PROGRESS,
-            timestamp: new Date(),
-            actor: {
-                id: command.workerId,
-                type: 'worker',
-            },
-        });
+            this.stateMachine.validateTransition({
+                taskId: task.id,
+                orderId: task.orderId,
+                campaignId: task.campaignId,
+                taskType: task.taskType,
+                currentStatus: task.status,
+                targetStatus: TaskStatus.IN_PROGRESS,
+                timestamp: new Date(),
+                actor: { id: command.workerId, type: 'worker' },
+            });
 
-        return this.taskRepository.update(task.id, {
-            status: TaskStatus.IN_PROGRESS,
-            startedAt: new Date(),
-            assignedTo: command.workerId,
+            task.status = TaskStatus.IN_PROGRESS;
+            task.startedAt = new Date();
+            task.assignedTo = command.workerId;
+            return manager.save(task);
         });
     }
 
     async submitTask(command: SubmitTaskCommand) {
-        const task = await this.ensureTask(command.taskId);
-        this.validationService.ensureWorkerOwnership(task, command.workerId);
+        return this.dataSource.transaction(async (manager) => {
+            const task = await this.ensureTaskTransactional(manager, command.taskId);
+            this.validationService.ensureWorkerOwnership(task, command.workerId);
 
-        if (task.status === TaskStatus.SUBMITTED) {
-            return task;
-        }
+            if (task.status === TaskStatus.SUBMITTED) return task;
 
-        this.stateMachine.validateTransition({
-            taskId: task.id,
-            orderId: task.orderId,
-            campaignId: task.campaignId,
-            taskType: task.taskType,
-            currentStatus: task.status,
-            targetStatus: TaskStatus.SUBMITTED,
-            timestamp: new Date(),
-            actor: {
-                id: command.workerId,
-                type: 'worker',
-            },
-        });
+            this.stateMachine.validateTransition({
+                taskId: task.id,
+                orderId: task.orderId,
+                campaignId: task.campaignId,
+                taskType: task.taskType,
+                currentStatus: task.status,
+                targetStatus: TaskStatus.SUBMITTED,
+                timestamp: new Date(),
+                actor: { id: command.workerId, type: 'worker' },
+            });
 
-        return this.taskRepository.update(task.id, {
-            status: TaskStatus.SUBMITTED,
-            submittedAt: new Date(),
-            metadata: {
-                ...(task.metadata || {}),
-                ...(command.metadata || {}),
-                submissionData: command.data,
-            },
+            task.status = TaskStatus.SUBMITTED;
+            task.submittedAt = new Date();
+            task.metadata = { ...(task.metadata || {}), ...(command.metadata || {}), submissionData: command.data };
+            return manager.save(task);
         });
     }
 
     async approveTask(command: ApproveTaskCommand) {
-        const task = await this.ensureTask(command.taskId);
-        if (task.status === TaskStatus.APPROVED) {
-            return task;
-        }
+        return this.dataSource.transaction(async (manager) => {
+            const task = await this.ensureTaskTransactional(manager, command.taskId);
+            if (task.status === TaskStatus.APPROVED) return task;
 
-        this.stateMachine.validateTransition({
-            taskId: task.id,
-            orderId: task.orderId,
-            campaignId: task.campaignId,
-            taskType: task.taskType,
-            currentStatus: task.status,
-            targetStatus: TaskStatus.APPROVED,
-            timestamp: new Date(),
-            actor: {
-                id: command.reviewedBy || 'system',
-                type: 'system',
-            },
-        });
-
-        const campaignId = task.campaignId || task.orderId;
-        if (task.assignedTo) {
-            await this.participationRepo.updateStatus(campaignId, task.assignedTo, ParticipationStatus.COMPLETED);
-        }
-
-        const activeAssignment = await this.assignmentRepo.findActiveAssignment(task.id);
-        if (activeAssignment) {
-            await this.assignmentRepo.updateStatus(activeAssignment.id, TaskAssignmentStatus.COMPLETED, {
-                completedAt: new Date(),
+            this.stateMachine.validateTransition({
+                taskId: task.id,
+                orderId: task.orderId,
+                campaignId: task.campaignId,
+                taskType: task.taskType,
+                currentStatus: task.status,
+                targetStatus: TaskStatus.APPROVED,
+                timestamp: new Date(),
+                actor: { id: command.reviewedBy || 'system', type: 'system' },
             });
-        }
 
-        return this.taskRepository.update(task.id, {
-            status: TaskStatus.APPROVED,
-            completedAt: new Date(),
-            metadata: {
-                ...(task.metadata || {}),
-                reviewedBy: command.reviewedBy,
-                reviewNotes: command.notes,
-            },
+            const campaignId = task.campaignId || task.orderId;
+            if (task.assignedTo) {
+                await manager.update(CampaignWorkerParticipation, { campaignId, workerId: task.assignedTo }, { status: ParticipationStatus.COMPLETED });
+            }
+
+            const activeAssignment = await this.findActiveAssignmentTransactional(manager, task.id);
+            if (activeAssignment) {
+                activeAssignment.status = TaskAssignmentStatus.COMPLETED;
+                activeAssignment.completedAt = new Date();
+                await manager.save(activeAssignment);
+            }
+
+            task.status = TaskStatus.APPROVED;
+            task.completedAt = new Date();
+            task.metadata = { ...(task.metadata || {}), reviewedBy: command.reviewedBy, reviewNotes: command.notes };
+            return manager.save(task);
         });
     }
 
     async requestChangesTask(command: RequestChangesCommand) {
-        const task = await this.ensureTask(command.taskId);
+        return this.dataSource.transaction(async (manager) => {
+            const task = await this.ensureTaskTransactional(manager, command.taskId);
 
-        if (
-            task.status !== TaskStatus.SUBMITTED &&
-            task.status !== TaskStatus.UNDER_REVIEW
-        ) {
-            throw new BadRequestException('Task is not ready for requesting changes');
-        }
+            if (task.status !== TaskStatus.SUBMITTED && task.status !== TaskStatus.UNDER_REVIEW) {
+                throw new BadRequestException('Task is not ready for requesting changes');
+            }
 
-        this.stateMachine.validateTransition({
-            taskId: task.id,
-            orderId: task.orderId,
-            campaignId: task.campaignId,
-            taskType: task.taskType,
-            currentStatus: task.status,
-            targetStatus: TaskStatus.IN_PROGRESS,
-            timestamp: new Date(),
-            actor: {
-                id: command.reviewedBy || 'system',
-                type: 'system',
-            },
-        });
+            this.stateMachine.validateTransition({
+                taskId: task.id,
+                orderId: task.orderId,
+                campaignId: task.campaignId,
+                taskType: task.taskType,
+                currentStatus: task.status,
+                targetStatus: TaskStatus.IN_PROGRESS,
+                timestamp: new Date(),
+                actor: { id: command.reviewedBy || 'system', type: 'system' },
+            });
 
-        return this.taskRepository.update(task.id, {
-            status: TaskStatus.IN_PROGRESS,
-            metadata: {
-                ...(task.metadata || {}),
-                reviewedBy: command.reviewedBy,
-                reviewNotes: command.notes,
-                changesRequestedAt: new Date()
-            },
+            task.status = TaskStatus.IN_PROGRESS;
+            task.metadata = { ...(task.metadata || {}), reviewedBy: command.reviewedBy, reviewNotes: command.notes, changesRequestedAt: new Date() };
+            return manager.save(task);
         });
     }
 
     async rejectTask(command: RejectTaskCommand) {
-        const task = await this.ensureTask(command.taskId);
-        if (task.status === TaskStatus.REJECTED) {
-            return task;
-        }
+        return this.dataSource.transaction(async (manager) => {
+            const task = await this.ensureTaskTransactional(manager, command.taskId);
+            if (task.status === TaskStatus.REJECTED) return task;
 
-        if (
-            task.status !== TaskStatus.SUBMITTED &&
-            task.status !== TaskStatus.UNDER_REVIEW
-        ) {
-            throw new BadRequestException('Task is not ready for rejection');
-        }
+            if (task.status !== TaskStatus.SUBMITTED && task.status !== TaskStatus.UNDER_REVIEW) {
+                throw new BadRequestException('Task is not ready for rejection');
+            }
 
-        this.stateMachine.validateTransition({
-            taskId: task.id,
-            orderId: task.orderId,
-            campaignId: task.campaignId,
-            taskType: task.taskType,
-            currentStatus: task.status,
-            targetStatus: TaskStatus.REJECTED,
-            timestamp: new Date(),
-            actor: {
-                id: command.reviewedBy || 'system',
-                type: 'system',
-            },
-        });
+            this.stateMachine.validateTransition({
+                taskId: task.id,
+                orderId: task.orderId,
+                campaignId: task.campaignId,
+                taskType: task.taskType,
+                currentStatus: task.status,
+                targetStatus: TaskStatus.REJECTED,
+                timestamp: new Date(),
+                actor: { id: command.reviewedBy || 'system', type: 'system' },
+            });
 
-        const campaignId = task.campaignId || task.orderId;
-        if (task.assignedTo) {
-            // Worker is rejected, but participation record remains so worker is excluded from this campaign!
-            await this.participationRepo.updateStatus(campaignId, task.assignedTo, ParticipationStatus.REJECTED);
-        }
+            const campaignId = task.campaignId || task.orderId;
+            if (task.assignedTo) {
+                await manager.update(CampaignWorkerParticipation, { campaignId, workerId: task.assignedTo }, { status: ParticipationStatus.REJECTED });
+            }
 
-        const activeAssignment = await this.assignmentRepo.findActiveAssignment(task.id);
-        if (activeAssignment) {
-            await this.assignmentRepo.updateStatus(activeAssignment.id, TaskAssignmentStatus.REJECTED);
-        }
+            const activeAssignment = await this.findActiveAssignmentTransactional(manager, task.id);
+            if (activeAssignment) {
+                activeAssignment.status = TaskAssignmentStatus.REJECTED;
+                await manager.save(activeAssignment);
+            }
 
-        return this.taskRepository.update(task.id, {
-            status: TaskStatus.REJECTED,
-            metadata: {
-                ...(task.metadata || {}),
-                reviewedBy: command.reviewedBy,
-                reviewNotes: command.notes,
-            },
+            task.status = TaskStatus.REJECTED;
+            task.metadata = { ...(task.metadata || {}), reviewedBy: command.reviewedBy, reviewNotes: command.notes };
+            return manager.save(task);
         });
     }
 
     async cancelTask(command: CancelTaskCommand) {
-        const task = await this.ensureTask(command.taskId);
+        return this.dataSource.transaction(async (manager) => {
+            const task = await this.ensureTaskTransactional(manager, command.taskId);
+            if (task.status === TaskStatus.CANCELLED || task.status === TaskStatus.APPROVED) return task;
 
-        if (task.status === TaskStatus.CANCELLED || task.status === TaskStatus.APPROVED) {
-            return task;
-        }
+            this.stateMachine.validateTransition({
+                taskId: task.id,
+                orderId: task.orderId,
+                campaignId: task.campaignId,
+                taskType: task.taskType,
+                currentStatus: task.status,
+                targetStatus: TaskStatus.CANCELLED,
+                timestamp: new Date(),
+                actor: { id: command.actorId || 'system', type: 'system' },
+            });
 
-        this.stateMachine.validateTransition({
-            taskId: task.id,
-            orderId: task.orderId,
-            campaignId: task.campaignId,
-            taskType: task.taskType,
-            currentStatus: task.status,
-            targetStatus: TaskStatus.CANCELLED,
-            timestamp: new Date(),
-            actor: {
-                id: command.actorId || 'system',
-                type: 'system',
-            },
-        });
-
-        return this.taskRepository.update(task.id, {
-            status: TaskStatus.CANCELLED,
-            metadata: {
-                ...(task.metadata || {}),
-                cancellationReason: command.reason,
-                cancelledBy: command.actorId,
-            },
+            task.status = TaskStatus.CANCELLED;
+            task.metadata = { ...(task.metadata || {}), cancellationReason: command.reason, cancelledBy: command.actorId };
+            return manager.save(task);
         });
     }
 
-    private async ensureTask(taskId: string) {
-        const task = await this.taskRepository.findById(taskId);
+    private async ensureTaskTransactional(manager: any, taskId: string) {
+        const task = await manager.findOne(Task, {
+            where: { id: taskId },
+            lock: { mode: 'pessimistic_write' }
+        });
         if (!task) {
             throw new NotFoundException('Task not found');
         }
         return task;
+    }
+
+    private async findActiveAssignmentTransactional(manager: any, taskId: string) {
+        return manager.findOne(TaskAssignment, {
+            where: [
+                { taskId, status: TaskAssignmentStatus.ASSIGNED },
+                { taskId, status: TaskAssignmentStatus.ACCEPTED },
+                { taskId, status: TaskAssignmentStatus.STARTED },
+                { taskId, status: TaskAssignmentStatus.SUBMITTED },
+            ],
+            order: { attemptNumber: 'DESC' },
+        });
     }
 }

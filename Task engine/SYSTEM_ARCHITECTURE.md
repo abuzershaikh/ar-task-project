@@ -36,9 +36,8 @@ graph TD
 
 ### 1. Matching & Allocation Engine (The Brain)
 **Purpose**: Automatically matches pending tasks to the best eligible workers.
-- **Pure Score-Driven Model**: We do *not* filter by location or arbitrary tags. The only hard filters are:
-  1. **Active Filter**: Is the worker active?
-  2. **KYC Filter**: Is the worker's KYC approved?
+- **Pure Score-Driven Model**: We do *not* filter by location or arbitrary tags. The only hard filter is:
+  - **Active Filter**: Is the worker active?
 - **Ranking**: Eligible workers are strictly sorted by their **Performance Score** (calculated by the Scoring Engine). Higher-rated workers get first dibs on tasks.
 - **Allocation Retry Safety**: If a task fails to assign due to an internal error, the `BatchService` increments a `noMatchCount`. After 3 failed attempts, the task is marked as `FAILED` to prevent infinite CPU loops.
 

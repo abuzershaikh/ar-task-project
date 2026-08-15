@@ -4,9 +4,11 @@ import {
     Column,
     CreateDateColumn,
     UpdateDateColumn,
+    Index,
 } from 'typeorm';
 
 @Entity('worker_scores')
+@Index(['workerId'], { unique: true })
 export class WorkerScore {
     @PrimaryGeneratedColumn('uuid')
     id: string;

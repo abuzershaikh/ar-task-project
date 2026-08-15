@@ -3,9 +3,11 @@ import {
     PrimaryGeneratedColumn,
     Column,
     CreateDateColumn,
+    Index,
 } from 'typeorm';
 
 @Entity('earnings')
+@Index(['taskId', 'status'], { unique: true })
 export class Earning {
     @PrimaryGeneratedColumn('uuid')
     id: string;

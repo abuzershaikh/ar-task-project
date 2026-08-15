@@ -7,7 +7,6 @@ import { MatchingDecisionService } from './services/matching-decision.service';
 
 // Filters
 import { ActiveFilterService } from './filters/active-filter.service';
-import { KycFilterService } from './filters/kyc-filter.service';
 import { LocationFilterService } from './filters/location-filter.service';
 import { CategoryFilterService } from './filters/category-filter.service';
 import { CapacityFilterService } from './filters/capacity-filter.service';
@@ -25,7 +24,6 @@ import { EligibilityEngineModule } from '../eligibility-engine/eligibility-engin
         MatchingContextService,
         MatchingDecisionService,
         ActiveFilterService,
-        KycFilterService,
         LocationFilterService,
         CategoryFilterService,
         CapacityFilterService,

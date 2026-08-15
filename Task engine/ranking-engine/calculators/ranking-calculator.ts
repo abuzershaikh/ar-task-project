@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { WorkerScoreRepository } from '../../shared/database/repositories/worker-score.repository';
 import { RankedWorker } from '../types/ranked-worker';
 
@@ -7,7 +8,12 @@ import { RankedWorker } from '../types/ranked-worker';
  */
 @Injectable()
 export class RankingCalculator {
-    constructor(private readonly scoreRepo: WorkerScoreRepository) { }
+    private readonly logger = new Logger(RankingCalculator.name);
+
+    constructor(
+        private readonly scoreRepo: WorkerScoreRepository,
+        private readonly eventEmitter: EventEmitter2
+    ) { }
 
     async rank(workerIds: string[], taskId: string | null, precalculatedScores?: Map<string, number>): Promise<RankedWorker[]> {
         let scoreMap: Map<string, number>;
@@ -16,6 +22,15 @@ export class RankingCalculator {
         } else {
             const scores = await this.scoreRepo.findByWorkerIds(workerIds);
             scoreMap = new Map(scores.map(s => [s.workerId, s.totalScore]));
+            
+            // Detect missing scores and trigger recalculation
+            const missingWorkerIds = workerIds.filter(id => !scoreMap.has(id));
+            if (missingWorkerIds.length > 0) {
+                this.logger.warn(`Missing scores for ${missingWorkerIds.length} workers. Triggering recalculation.`);
+                missingWorkerIds.forEach(id => {
+                    this.eventEmitter.emit('worker.score.recalculate', { workerId: id });
+                });
+            }
         }
 
         // Build ranked list
