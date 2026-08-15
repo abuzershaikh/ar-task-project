@@ -6,6 +6,7 @@ import {
     BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { KycStatus } from '../../../../shared/database/entities/kyc.entity';
 import { EarningRepository } from '../../../../shared/database/repositories/earning.repository';
 import { WithdrawalRepository } from '../../../../shared/database/repositories/withdrawal.repository';
 import { WorkerRepository } from '../../../../shared/database/repositories/worker.repository';
@@ -66,6 +67,7 @@ export class WorkerEarningController {
 
         return {
             success: true,
+            worker,
             wallet: {
                 totalEarned,
                 totalDeducted,
@@ -108,6 +110,10 @@ export class WorkerEarningController {
 
         const walletRes = await this.getWallet(user);
         const minLimit = walletRes.wallet.minWithdrawalLimit;
+
+        if (walletRes.worker?.kycStatus !== KycStatus.VERIFIED) {
+            throw new BadRequestException('Please complete and verify your KYC bank details before withdrawing funds');
+        }
 
         if (body.amount < minLimit) {
             throw new BadRequestException(

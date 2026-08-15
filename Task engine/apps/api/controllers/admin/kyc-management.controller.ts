@@ -27,6 +27,28 @@ export class AdminKycManagementController {
         private readonly notificationService: NotificationService,
     ) { }
 
+
+    @Get(':kycId')
+    @ApiOperation({ summary: 'View specific worker KYC/Bank details' })
+    async getKycDetails(@Param('kycId') kycId: string) {
+        const kyc = await this.kycRepo.findById(kycId);
+        if (!kyc) {
+            throw new NotFoundException('KYC application not found');
+        }
+        
+        const worker = await this.workerRepo.findById(kyc.workerId);
+        
+        return {
+            success: true,
+            kyc,
+            worker: {
+                id: worker?.id,
+                userId: worker?.userId,
+                status: worker?.status
+            }
+        };
+    }
+
     @Get('pending')
     @ApiOperation({ summary: 'List pending KYC verification applications' })
     async getPendingKyc() {

@@ -44,10 +44,7 @@ export class CandidateService {
         workers = workers.filter(w => workerIds.includes(w.id));
         console.log(`✅ After active filter: ${workerIds.length} workers`);
 
-        // KYC filter (pass loaded workers)
-        workerIds = await this.kycFilter.apply(workerIds, context, workers);
-        workers = workers.filter(w => workerIds.includes(w.id));
-        console.log(`✅ After KYC filter: ${workerIds.length} workers`);
+
 
         // Capacity filter (uses preloaded bulk query)
         workerIds = await this.capacityFilter.apply(workerIds, context, preloadedActiveCountsMap);

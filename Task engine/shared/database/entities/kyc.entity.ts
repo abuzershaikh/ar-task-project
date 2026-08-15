@@ -16,13 +16,6 @@ export enum KycStatus {
     EXPIRED = 'EXPIRED',
 }
 
-export enum DocumentType {
-    AADHAAR = 'AADHAAR',
-    PAN = 'PAN',
-    PASSPORT = 'PASSPORT',
-    DRIVING_LICENSE = 'DRIVING_LICENSE',
-    VOTER_ID = 'VOTER_ID',
-}
 
 @Entity('kyc_profiles')
 @Index(['workerId'], { unique: true })
@@ -60,14 +53,20 @@ export class KycProfile {
     @Column({ nullable: true })
     country: string;
 
-    @Column({ name: 'document_type', type: 'enum', enum: DocumentType, nullable: true })
-    documentType: DocumentType;
+    @Column({ name: 'bank_name', nullable: true })
+    bankName: string;
 
-    @Column({ name: 'document_number', nullable: true })
-    documentNumber: string;
+    @Column({ name: 'account_number', nullable: true })
+    accountNumber: string;
 
-    @Column({ type: 'json', nullable: true })
-    documents: any;
+    @Column({ name: 'ifsc_code', nullable: true })
+    ifscCode: string;
+
+    @Column({ name: 'upi_id', nullable: true })
+    upiId: string;
+
+    @Column({ name: 'paypal_id', nullable: true })
+    paypalId: string;
 
     @Column({ name: 'submitted_at', type: 'timestamp', nullable: true })
     submittedAt: Date;

@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, BadRequestException } from '@nestjs/common
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { KycRepository } from '../../../../shared/database/repositories/kyc.repository';
 import { WorkerRepository } from '../../../../shared/database/repositories/worker.repository';
-import { KycStatus, DocumentType } from '../../../../shared/database/entities/kyc.entity';
+import { KycStatus } from '../../../../shared/database/entities/kyc.entity';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
@@ -56,9 +56,11 @@ export class WorkerKycController {
             state?: string;
             pincode?: string;
             country?: string;
-            documentType?: DocumentType;
-            documentNumber?: string;
-            documents?: any;
+            bankName?: string;
+            accountNumber?: string;
+            ifscCode?: string;
+            upiId?: string;
+            paypalId?: string;
         },
     ) {
         const worker = await this.getWorker(user.id);
@@ -78,9 +80,11 @@ export class WorkerKycController {
             state: body.state,
             pincode: body.pincode,
             country: body.country,
-            documentType: body.documentType,
-            documentNumber: body.documentNumber,
-            documents: body.documents || [],
+            bankName: body.bankName,
+            accountNumber: body.accountNumber,
+            ifscCode: body.ifscCode,
+            upiId: body.upiId,
+            paypalId: body.paypalId,
             status: KycStatus.SUBMITTED,
             submittedAt: new Date(),
         };
