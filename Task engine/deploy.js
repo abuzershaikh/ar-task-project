@@ -4,7 +4,11 @@ const conn = new Client();
 const config = { host: '95.179.178.6', port: 22, username: 'root', password: 'i_G72#y}(6gACDDU' };
 
 const commands = `
-sed -i 's/NODE_ENV=production/NODE_ENV=development/' "/var/www/task-engine/Task engine/.env"
+cd "/var/www/task-engine"
+git fetch origin
+git reset --hard origin/task-engine
+cd "Task engine"
+npm run build
 pm2 restart all
 `;
 
