@@ -4,30 +4,7 @@ const conn = new Client();
 const config = { host: '95.179.178.6', port: 22, username: 'root', password: 'i_G72#y}(6gACDDU' };
 
 const commands = `
-cat << 'EOF' > /var/www/task-engine/check_users.js
-const mysql = require('mysql2/promise');
-require('dotenv').config({ path: '/var/www/task-engine/Task engine/.env' });
-
-async function main() {
-    const connection = await mysql.createConnection({
-        host: process.env.DB_HOST || 'localhost',
-        user: process.env.DB_USERNAME || 'taskapp',
-        password: process.env.DB_PASSWORD || 'taskapp_password',
-        database: process.env.DB_DATABASE || 'task_platform'
-    });
-
-    try {
-        const [rows] = await connection.execute("SELECT id, email, role FROM users");
-        console.log("Users:", rows);
-    } catch (e) {
-        console.error(e);
-    } finally {
-        await connection.end();
-    }
-}
-main();
-EOF
-node /var/www/task-engine/check_users.js
+node /var/www/task-engine/test_api.js
 `;
 
 conn.on('ready', () => {

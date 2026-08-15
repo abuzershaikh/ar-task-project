@@ -8,6 +8,7 @@ This directory serves as a centralized knowledge base for all critical bugs enco
 | :--- | :--- | :--- | :--- |
 | [001](./001-typeorm-duplicate-index.md) | TypeORM Duplicate Key Name on Sync | Database / TypeORM | Aug 2026 |
 | [002](./002-webpack-entity-resolution.md) | Webpack Entity Glob Pattern Resolution Failure | Database / Webpack | Aug 2026 |
+| [003](./003-backend-auth-and-schema-bugs.md) | 500 Schema Errors & 403 Auth Missing Token Issue | Database / Auth | Aug 2026 |
 
 ## How to add a new bug
 1. Create a new markdown file named `XXX-bug-name.md`.
