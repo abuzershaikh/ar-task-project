@@ -29,6 +29,25 @@ export async function seedAdminAndServices(dataSource: DataSource) {
     console.log('✅ SuperAdmin created: admin@taskpost.com / Admin@123456');
   }
 
+  // 1.5. Seed Second Super Admin User
+  const adminEmail2 = 'snapbizux@gmail.com';
+  let admin2 = await userRepo.findOne({ where: { email: adminEmail2 } });
+
+  if (!admin2) {
+    const hashedPassword2 = await bcrypt.hash('80978097', 10);
+    admin2 = userRepo.create({
+      email: adminEmail2,
+      fullName: 'Snapbiz Admin',
+      password: hashedPassword2,
+      role: UserRole.SUPER_ADMIN,
+      status: UserStatus.ACTIVE,
+      emailVerified: true,
+      phoneVerified: true,
+    });
+    await userRepo.save(admin2);
+    console.log('✅ SuperAdmin created: snapbizux@gmail.com / 80978097');
+  }
+
   // 2. Seed Default Service Catalog & Pricing
   const defaultServices = [
     {
