@@ -82,16 +82,10 @@ export class BuyerOrderController {
         let snapshot: any = null;
         try {
             snapshot = await this.pricingEngine.createOrderPriceSnapshot(serviceIdentifier, quantity);
-        } catch {
-            // Fallback for mock/test runs before catalog seeding
-            snapshot = {
-                serviceCode: serviceIdentifier,
-                buyerUnitPrice: 10,
-                workerRewardSnapshot: 6,
-                marginAmount: 4,
-                pricingVersion: 1,
-                totalAmount: 10 * quantity,
-            };
+        } catch (error) {
+            throw new BadRequestException(
+                `Cannot create order: Pricing is not available for service '${serviceIdentifier}'. Please ensure the service has active pricing configured. Detail: ${error.message}`
+            );
         }
 
         // Fetch Service Catalog to inherit reviewMode and potentially validate elements
@@ -106,6 +100,26 @@ export class BuyerOrderController {
         const finalReviewMode = catalog?.reviewMode && catalog.reviewMode !== 'buyer' ? catalog.reviewMode : (data.reviewMode || 'buyer');
 
         const title = data.title || `${snapshot.serviceCode || serviceIdentifier} Campaign (${quantity} tasks)`;
+
+        // Validate data.requirements against catalog.elements
+        if (catalog && catalog.elements && Array.isArray(catalog.elements)) {
+            const missingRequiredFields: string[] = [];
+            const reqs = data.requirements || {};
+
+            for (const element of catalog.elements) {
+                if (element.required) {
+                    if (reqs[element.id] === undefined || reqs[element.id] === null || reqs[element.id] === '') {
+                        missingRequiredFields.push(element.id);
+                    }
+                }
+            }
+
+            if (missingRequiredFields.length > 0) {
+                throw new BadRequestException(
+                    `Missing required fields in requirements payload: ${missingRequiredFields.join(', ')}`
+                );
+            }
+        }
 
         // Validate timing parameter bounds (1h-72h accept, 1h-168h complete)
         TimingPolicy.validateTiming(data.timeToAcceptHours, data.timeToCompleteHours);

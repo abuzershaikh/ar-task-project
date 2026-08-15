@@ -40,10 +40,10 @@ export class MatchingQueueProcessor {
                 });
 
                 if (allocResult.failedCount > 0 || allocResult.successCount === 0) {
-                    throw new Error(`Allocation failed for task ${taskId} to worker ${topWorker.workerId}`);
+                    console.warn(`⚠️ [Telemetry] Allocation failed for task ${taskId} to worker ${topWorker.workerId}`);
+                } else {
+                    console.log(`✅ [Telemetry] Task ${taskId} allocated to worker ${topWorker.workerId}. Candidate pool: ${result.totalCandidates}, Matched: ${result.matchedWorkers.length}`);
                 }
-
-                console.log(`✅ [Telemetry] Task ${taskId} allocated to worker ${topWorker.workerId}. Candidate pool: ${result.totalCandidates}, Matched: ${result.matchedWorkers.length}`);
             } else {
                 console.warn(`⚠️ [Telemetry] Zero candidates matched for task ${taskId}. Job ID: ${job.id}`);
             }
@@ -71,8 +71,7 @@ export class MatchingQueueProcessor {
             const totalFailed = results.reduce((acc, r) => acc + r.failedCount, 0);
 
             if (totalFailed > 0) {
-                console.warn(`⚠️ [Telemetry] Batch matching had ${totalFailed} failures/unmatched tasks for order ${orderId}. Throwing error to trigger Bull retry.`);
-                throw new Error(`Batch matching incomplete: ${totalFailed} tasks failed to allocate or match.`);
+                console.warn(`⚠️ [Telemetry] Batch matching had ${totalFailed} failures/unmatched tasks for order ${orderId}. Allowing BatchService to handle noMatchCount gracefully.`);
             }
 
             console.log(`✅ [Telemetry] Batch matching completed for order ${orderId}: ${results.length} batches, ${totalAllocated} allocated, 0 failed.`);

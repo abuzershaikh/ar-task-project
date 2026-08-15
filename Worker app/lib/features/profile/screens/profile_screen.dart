@@ -5,6 +5,7 @@ import '../../auth/screens/login_screen.dart';
 import 'edit_profile_screen.dart';
 import 'day_streak_screen.dart';
 import 'quality_score_screen.dart';
+import 'kyc_bank_details_screen.dart';
 import '../../../core/providers/profile_provider.dart';
 
 /// Main Profile Overview Screen:
@@ -38,10 +39,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = authProvider.user;
     final profile = profileProvider.profileData;
 
-    final name = profile['name'] ?? profile['fullName'] ?? user?['name'] ?? 'Worker Name';
-    final email = profile['email'] ?? user?['email'] ?? 'worker@example.com';
-    final mobile = profile['mobile'] ?? profile['phoneNumber'] ?? 'Not Set';
-    final age = profile['age']?.toString() ?? 'Not Set';
+    final name = (profile['profile'] is Map ? profile['profile']['name'] : null) ?? profile['fullName'] ?? user?['name'] ?? 'Worker Name';
+    final email = (profile['profile'] is Map ? profile['profile']['email'] : null) ?? profile['email'] ?? user?['email'] ?? 'worker@example.com';
+    final mobile = (profile['profile'] is Map ? profile['profile']['mobile'] : null) ?? profile['phone'] ?? 'Not Set';
+    final age = (profile['profile'] is Map ? profile['profile']['age'] : null)?.toString() ?? 'Not Set';
+    final kycStatus = profile['kycStatus'] ?? 'DRAFT';
+
+    final double rating = (profile['averageRating'] != null) ? double.parse(profile['averageRating'].toString()) : 4.8;
+    final double qualityScore = (profile['score'] != null && profile['score']['totalScore'] != null)
+        ? double.parse(profile['score']['totalScore'].toString())
+        : 94.2;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -56,7 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 20),
 
               // ── 2. Avatar Profile Header Card ────────────────────────────
-              _buildProfileHeaderCard(context, name, email, mobile, age),
+              _buildProfileHeaderCard(context, name, email, mobile, age, kycStatus),
               const SizedBox(height: 24),
 
               // ── 3. Profile Navigation Cards Section ───────────────────────
@@ -117,15 +124,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildNavigationCard(
                 context: context,
                 title: 'Quality Score & Rating',
-                subtitle: '98.5% quality score • 4.9★ rating & badges',
+                subtitle: '${qualityScore.toStringAsFixed(1)}% quality score • ${rating.toStringAsFixed(1)}★ rating & badges',
                 icon: Icons.star_rounded,
                 iconBgColor: const Color(0xFFFEF3C7),
                 iconColor: const Color(0xFFD97706),
-                badgeText: '4.9 ⭐',
+                badgeText: '${rating.toStringAsFixed(1)} ⭐',
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => const QualityScoreScreen(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // Card 4: Payout & Bank Details
+              _buildNavigationCard(
+                context: context,
+                title: 'Payout & Bank Details',
+                subtitle: 'Add bank, UPI or PayPal for withdrawals',
+                icon: Icons.account_balance_rounded,
+                iconBgColor: const Color(0xFFE0F2FE),
+                iconColor: const Color(0xFF0284C7),
+                badgeText: kycStatus == 'VERIFIED' ? 'Verified' : 'Update',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const KycBankDetailsScreen(),
                     ),
                   );
                 },
@@ -219,6 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String email,
     String mobile,
     String age,
+    String kycStatus,
   ) {
     return Container(
       width: double.infinity,
@@ -319,29 +346,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 12),
 
           // KYC Verified Pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE6F4EA),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFA7F3D0)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.verified_rounded, size: 14, color: Color(0xFF00875A)),
-                SizedBox(width: 5),
-                Text(
-                  'KYC Verified Worker',
-                  style: TextStyle(
-                    color: Color(0xFF00875A),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
+          if (kycStatus == 'VERIFIED')
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE6F4EA),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.verified_rounded, size: 14, color: Color(0xFF00875A)),
+                  SizedBox(width: 5),
+                  Text(
+                    'KYC Verified Worker',
+                    style: TextStyle(
+                      color: Color(0xFF00875A),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            )
+          else if (kycStatus == 'SUBMITTED')
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.pending_actions_rounded, size: 14, color: Color(0xFFD97706)),
+                  SizedBox(width: 5),
+                  Text(
+                    'KYC Pending Approval',
+                    style: TextStyle(
+                      color: Color(0xFFD97706),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline_rounded, size: 14, color: Color(0xFFDC2626)),
+                  SizedBox(width: 5),
+                  Text(
+                    'KYC Unverified',
+                    style: TextStyle(
+                      color: Color(0xFFDC2626),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

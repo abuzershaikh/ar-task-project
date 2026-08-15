@@ -2,6 +2,7 @@ import { Processor, Process, InjectQueue } from '@nestjs/bull';
 import { Job, Queue } from 'bull';
 import { Injectable, Logger } from '@nestjs/common';
 import { TaskEngineService } from '../../../task-engine/task-engine.service';
+import { RewardEngineService } from '../../../reward-engine/reward.service';
 import { TaskGenerationJobRepository } from '../../../shared/database/repositories/task-generation-job.repository';
 import { TaskGenerationJobStatus } from '../../../shared/database/entities/task-generation-job.entity';
 import { DeadlineMonitorService } from '../../../shared/engines/reallocation-engine/services/deadline-monitor.service';
@@ -17,6 +18,7 @@ export class TaskQueueProcessor {
 
     constructor(
         private readonly taskEngine: TaskEngineService,
+        private readonly rewardEngine: RewardEngineService,
         private readonly jobRepo: TaskGenerationJobRepository,
         private readonly deadlineMonitor: DeadlineMonitorService,
         @InjectQueue('matching') private readonly matchingQueue: Queue,
@@ -58,6 +60,13 @@ export class TaskQueueProcessor {
                     rewardAmount: rewardAmount || 5,
                 });
                 createdTasks.push(task);
+
+                // Lock reward snapshot at task creation time to prevent pricing drift
+                try {
+                    await this.rewardEngine.createSnapshot(task.id);
+                } catch (snapshotErr) {
+                    this.logger.warn(`Failed to create reward snapshot for task '${task.id}': ${snapshotErr.message}. Falling back to task.rewardAmount at earning time.`);
+                }
             }
 
             // Update TaskGenerationJob status in DB to COMPLETED

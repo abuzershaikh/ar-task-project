@@ -187,7 +187,7 @@ class _CampaignsViewState extends State<_CampaignsView> with SingleTickerProvide
                   Expanded(
                     child: Text(
                       campaign.name,
-                      style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -212,13 +212,13 @@ class _CampaignsViewState extends State<_CampaignsView> with SingleTickerProvide
               const SizedBox(height: 8),
               Text(
                 'Service: ${campaign.serviceName}',
-                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
               ),
               const SizedBox(height: 12),
               LinearProgressIndicator(
                 value: campaign.totalTasks > 0 ? (campaign.completedTasks / campaign.totalTasks) : 0,
-                backgroundColor: AppColors.gray200,
-                color: AppColors.primary,
+                backgroundColor: const Color(0xFFE2E8F0),
+                color: const Color(0xFF2563EB),
                 minHeight: 6,
                 borderRadius: BorderRadius.circular(3),
               ),
@@ -228,13 +228,14 @@ class _CampaignsViewState extends State<_CampaignsView> with SingleTickerProvide
                 children: [
                   Text(
                     '${campaign.completedTasks} / ${campaign.totalTasks} completed',
-                    style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
                   ),
                   Text(
                     '₹${campaign.totalAmount.toStringAsFixed(2)}',
-                    style: AppTextStyles.subtitle.copyWith(
+                    style: const TextStyle(
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                      color: Color(0xFF2563EB),
                     ),
                   ),
                 ],
@@ -243,6 +244,7 @@ class _CampaignsViewState extends State<_CampaignsView> with SingleTickerProvide
           ),
         ),
       ),
+
     );
   }
 

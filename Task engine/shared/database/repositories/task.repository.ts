@@ -10,7 +10,7 @@ export class TaskRepository {
         [TaskStatus.DRAFT]: [TaskStatus.DRAFT],
         [TaskStatus.ACTIVE]: [TaskStatus.ACTIVE],
         pending: [TaskStatus.DRAFT, TaskStatus.ACTIVE],
-        [TaskStatus.ASSIGNED]: [TaskStatus.ASSIGNED],
+        [TaskStatus.ASSIGNED]: [TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.IN_PROGRESS],
         [TaskStatus.ACCEPTED]: [TaskStatus.ACCEPTED],
         [TaskStatus.IN_PROGRESS]: [TaskStatus.IN_PROGRESS],
         [TaskStatus.SUBMITTED]: [TaskStatus.SUBMITTED],

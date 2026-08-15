@@ -68,20 +68,24 @@ class ServiceModel {
         ? rawElements.map((e) => TemplateElement.fromJson(e as Map<String, dynamic>)).toList()
         : <TemplateElement>[];
 
+    final double buyerUnitPrice = (json['buyerUnitPrice'] as num?)?.toDouble() ??
+        ((json['pricing']?['buyerUnitPrice'] ?? json['pricing']?['buyerPrice'] as num?)?.toDouble() ?? 50.0);
+
     return ServiceModel(
-      id: json['id'] as String? ?? '',
-      code: json['code'] as String? ?? '',
-      name: json['name'] as String? ?? '',
-      description: json['description'] as String? ?? '',
+      id: (json['id'] ?? '').toString(),
+      code: (json['code'] ?? '').toString(),
+      name: (json['name'] ?? json['title'] ?? '').toString(),
+      description: (json['description'] ?? '').toString(),
       isActive: json['isActive'] as bool? ?? true,
       currentVersion: (json['currentVersion'] as num?)?.toInt() ?? 1,
       pricing: json['pricing'] != null
           ? PricingConfig.fromJson(json['pricing'] as Map<String, dynamic>)
-          : PricingConfig.calculate(buyerPrice: 50, adminMarginPercent: 20),
+          : PricingConfig.calculate(buyerPrice: buyerUnitPrice, adminMarginPercent: 20),
       elements: parsedElements,
       updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
+          ? DateTime.tryParse(json['updatedAt'] as String) ?? DateTime.now()
           : DateTime.now(),
     );
   }
 }
+

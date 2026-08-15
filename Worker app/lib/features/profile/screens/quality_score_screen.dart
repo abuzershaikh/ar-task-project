@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/providers/profile_provider.dart';
 
 /// Dedicated Worker Quality Score & Rating Screen (Connected to ApiService)
 class QualityScoreScreen extends StatefulWidget {
@@ -39,10 +41,14 @@ class _QualityScoreScreenState extends State<QualityScoreScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final rating = (_scoreData['rating'] ?? 4.9).toDouble();
-    final accuracyRate = (_scoreData['accuracyRate'] ?? 98.5).toDouble();
-    final onTimeRate = (_scoreData['onTimeRate'] ?? 99.2).toDouble();
-    final totalApproved = (_scoreData['totalApproved'] ?? 42).toInt();
+    final profileProvider = Provider.of<ProfileProvider>(context);
+    final scoreObj = _scoreData['score'] ?? {};
+    final breakdownObj = scoreObj['breakdown'] ?? {};
+
+    final rating = (breakdownObj['rating'] ?? 4.9).toDouble();
+    final accuracyRate = (breakdownObj['quality'] ?? 98.5).toDouble();
+    final onTimeRate = (breakdownObj['reliability'] ?? 99.2).toDouble();
+    final totalApproved = (profileProvider.profileData['totalTasksCompleted'] ?? 42).toInt();
     final rejectionRate = (100.0 - accuracyRate).clamp(0.0, 100.0);
 
     return Scaffold(

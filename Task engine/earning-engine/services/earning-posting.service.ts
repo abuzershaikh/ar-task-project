@@ -64,14 +64,15 @@ export class EarningPostingService {
                 
                 await manager.save(worker);
                 
-                // Credit to wallet
+                // Credit to wallet — Use worker.userId (references User entity), NOT worker.id
+                const walletUserId = worker.userId || worker.id;
                 let wallet = await manager.findOne(Wallet, { 
-                    where: { userId: worker.id }, 
+                    where: { userId: walletUserId }, 
                     lock: { mode: 'pessimistic_write' } 
                 });
                 
                 if (!wallet) {
-                    wallet = manager.create(Wallet, { userId: worker.id, availableBalance: 0, reservedBalance: 0 });
+                    wallet = manager.create(Wallet, { userId: walletUserId, availableBalance: 0, reservedBalance: 0 });
                 }
                 
                 wallet.availableBalance = Number(wallet.availableBalance || 0) + Number(earningData.amount);

@@ -130,90 +130,109 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
 
     setState(() => _isSubmitting = true);
 
-    // 1. Collect dynamic text field entries keyed by element.key
-    final Map<String, dynamic> payloadData = {};
-    for (var entry in _formControllers.entries) {
-      payloadData[entry.key] = entry.value.text.trim();
-    }
+    try {
+      // 1. Collect dynamic text field entries keyed by element.key/element.id
+      final Map<String, dynamic> requirementsMap = {};
+      for (var entry in _formControllers.entries) {
+        requirementsMap[entry.key] = entry.value.text.trim();
+      }
 
-    // 2. Add pricing & chip metadata to payload
-    final p = _selectedService!.pricing;
-    payloadData['pricing_model'] = p.modelType.name;
-    if (_selectedChip != null) {
-      payloadData['package_chip_id'] = _selectedChip!.id;
-      payloadData['package_label'] = _selectedChip!.label;
-    }
-    payloadData['target_quantity'] = _selectedQuantity;
-    payloadData['total_campaign_cost'] = _calculateTotalCost();
+      // 2. Build NestJS BuyerOrderController payload
+      final Map<String, dynamic> payloadData = {
+        'serviceId': _selectedService!.id,
+        'serviceCode': _selectedService!.code,
+        'title': '${_selectedService!.name} Campaign ($_selectedQuantity tasks)',
+        'description': requirementsMap['buyer_instructions'] ?? _selectedService!.description,
+        'quantity': _selectedQuantity,
+        'totalTasksRequired': _selectedQuantity,
+        'requirements': requirementsMap,
+        'reviewMode': 'buyer',
+        'timeToAcceptHours': 24,
+        'timeToCompleteHours': 48,
+      };
 
-    // 3. Backend API call via ServiceRepositoryImpl
-    await _serviceRepository.submitCampaignOrder(payloadData);
+      // 3. Backend API call via ServiceRepositoryImpl
+      final success = await _serviceRepository.submitCampaignOrder(payloadData);
+      if (!success) {
+        throw Exception('Failed to launch campaign order');
+      }
 
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
 
-    // Success dialog showing launched campaign summary
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
-                borderRadius: BorderRadius.circular(12),
+      // Success dialog showing launched campaign summary
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.verified_rounded, color: Colors.white, size: 22),
               ),
-              child: const Icon(Icons.verified_rounded, color: Colors.white, size: 22),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text('Campaign Launched!', style: TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.w700)),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(_selectedService!.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF334155))),
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(8),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('Campaign Launched!', style: TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.w700)),
               ),
-              child: Text('₹${_calculateTotalCost().toStringAsFixed(0)} paid', style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 14)),
-            ),
-            const SizedBox(height: 12),
-            const Text('Your campaign is now live and workers will start completing tasks shortly.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4)),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                elevation: 0,
-              ),
-              child: const Text('Back to Services', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-              onPressed: () {
-                Navigator.pop(ctx);
-                setState(() => _selectedService = null);
-              },
-            ),
+            ],
           ),
-        ],
-      ),
-    );
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_selectedService!.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF334155))),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('₹${_calculateTotalCost().toStringAsFixed(0)} paid', style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 14)),
+              ),
+              const SizedBox(height: 12),
+              const Text('Your campaign is now live and workers will start completing tasks shortly.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4)),
+            ],
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+                child: const Text('Back to Services', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  setState(() => _selectedService = null);
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to launch campaign: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {

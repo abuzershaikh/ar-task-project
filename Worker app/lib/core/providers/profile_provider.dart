@@ -15,7 +15,9 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final data = await ApiService.getProfile();
-      if (data['success'] == true && data['data'] != null) {
+      if (data['success'] == true && data['worker'] != null) {
+        _profileData = data['worker'];
+      } else if (data['success'] == true && data['data'] != null) {
         _profileData = data['data'];
       } else {
         _profileData = data;

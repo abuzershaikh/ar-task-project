@@ -23,6 +23,7 @@ import { ProgressEngineModule } from '../../progress-engine/progress-engine.modu
 import { PayoutEngineModule } from '../../payout-engine/payout-engine.module';
 import { FraudEngineModule } from '../../fraud-engine/fraud-engine.module';
 import { NotificationEngineModule } from '../../notification-engine/notification-engine.module';
+import { ExecutionEngineModule } from '../../execution-engine/execution.module';
 
 import { AuthController } from './controllers/auth/auth.controller';
 import { FileController } from './controllers/common/file.controller';
@@ -50,6 +51,7 @@ import { BuyerNotificationController } from './controllers/buyer/notification.co
 import { BuyerProfileController } from './controllers/buyer/profile.controller';
 import { BuyerPaymentController } from './controllers/buyer/payment.controller';
 import { BuyerWalletController } from './controllers/buyer/wallet.controller';
+import { BuyerServiceCatalogController } from './controllers/buyer/service-catalog.controller';
 
 // Admin Controllers
 import { AdminDashboardController } from './controllers/admin/dashboard.controller';
@@ -100,6 +102,7 @@ import { AdminSystemSettingsController } from './controllers/admin/system-settin
         PayoutEngineModule,
         FraudEngineModule,
         NotificationEngineModule,
+        ExecutionEngineModule,
     ],
     controllers: [
         HealthController,
@@ -127,6 +130,7 @@ import { AdminSystemSettingsController } from './controllers/admin/system-settin
         BuyerProfileController,
         BuyerPaymentController,
         BuyerWalletController,
+        BuyerServiceCatalogController,
 
         // Admin
         AdminDashboardController,

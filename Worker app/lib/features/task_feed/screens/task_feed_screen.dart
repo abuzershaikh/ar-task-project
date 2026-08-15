@@ -20,7 +20,9 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<TaskProvider>(context, listen: false).fetchAvailableTasks();
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+      taskProvider.fetchAvailableTasks();
+      taskProvider.fetchWalletData();
     });
   }
 
@@ -29,6 +31,9 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
     final taskProvider = Provider.of<TaskProvider>(context);
 
     final tasksToDisplay = taskProvider.availableTasks;
+    final wallet = taskProvider.walletData;
+    final double walletBalance = 
+        (wallet['balance'] ?? wallet['availableBalance'] ?? 0.0).toDouble();
 
     final filteredTasks = _selectedPlatform == 'All Tasks'
         ? tasksToDisplay
@@ -42,7 +47,10 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           color: const Color(0xFF00875A),
-          onRefresh: () => taskProvider.fetchAvailableTasks(),
+          onRefresh: () async {
+            await taskProvider.fetchAvailableTasks();
+            await taskProvider.fetchWalletData();
+          },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -50,7 +58,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── 1. Top Header Bar ────────────────────────────────────────
-                _buildHeaderBar(),
+                _buildHeaderBar(walletBalance),
                 const SizedBox(height: 14),
 
                 // ── 3. Promo Banner / Carousel ──────────────────────────────
@@ -74,7 +82,10 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                       ),
                     ),
                     InkWell(
-                      onTap: () => taskProvider.fetchAvailableTasks(),
+                      onTap: () {
+                        taskProvider.fetchAvailableTasks();
+                        taskProvider.fetchWalletData();
+                      },
                       child: const Row(
                         children: [
                           Text(
@@ -160,7 +171,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
   }
 
   // ── Header Bar ─────────────────────────────────────────────────────────────
-  Widget _buildHeaderBar() {
+  Widget _buildHeaderBar(double walletBalance) {
     return Row(
       children: [
         // Left Column: Task Feed Title
@@ -250,9 +261,9 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Text(
-                    '₹1,250',
-                    style: TextStyle(
+                  Text(
+                    '₹${walletBalance.toStringAsFixed(0)}',
+                    style: const TextStyle(
                       color: Color(0xFF0F172A),
                       fontWeight: FontWeight.bold,
                       fontSize: 13,

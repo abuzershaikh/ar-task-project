@@ -44,16 +44,27 @@ export class BuyerPaymentController {
     @Get('payments/:id')
     @ApiOperation({ summary: 'Get payment transaction details' })
     async getPaymentById(@Param('id') paymentId: string, @CurrentUser() user: User) {
+        // Find the order associated with this payment ID format (PAY-XXXXXXXX)
+        const orders = await this.orderRepo.findByBuyer(user.id);
+        const matchedOrder = orders.find(
+            (o) => `PAY-${o.id.slice(0, 8).toUpperCase()}` === paymentId || o.id === paymentId,
+        );
+
+        if (!matchedOrder) {
+            throw new NotFoundException('Payment not found');
+        }
+
         return {
             success: true,
             payment: {
                 paymentId,
-                amount: 5000.0,
+                orderId: matchedOrder.id,
+                orderTitle: matchedOrder.title,
+                amount: matchedOrder.totalAmount || Number(matchedOrder.totalTasksRequired) * Number(matchedOrder.rewardPerTask),
                 currency: 'INR',
-                status: 'CAPTURED',
-                provider: 'RAZORPAY',
+                status: matchedOrder.status === 'PAYMENT_PENDING' ? 'PENDING' : 'CAPTURED',
                 buyerId: user.id,
-                createdAt: new Date(),
+                createdAt: matchedOrder.createdAt,
             },
         };
     }

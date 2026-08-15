@@ -138,43 +138,76 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
   @override
   Future<ServiceModel> saveServiceDraft(ServiceModel service) async {
     if (dioClient != null) {
-      try {
-        final elementsJson = service.elements.map((e) => e.toJson()).toList();
+      final elementsJson = service.elements.map((e) => e.toJson()).toList();
 
-        final payload = {
-          'code': service.code.isNotEmpty ? service.code : 'SRV_${DateTime.now().millisecondsSinceEpoch}',
+      final payload = {
+        'code': service.code.isNotEmpty ? service.code : 'SRV_${DateTime.now().millisecondsSinceEpoch}',
+        'name': service.name,
+        'description': service.description,
+        'buyerUnitPrice': service.pricing.buyerPrice,
+        'marginType': service.pricing.marginType,
+        'marginValue': service.pricing.adminMarginPercent,
+        'elements': elementsJson,
+        'reviewMode': service.reviewMode,
+        'isActive': service.isActive,
+      };
+
+      // Determine if this is an existing server service (has UUID format) or a new local draft
+      final bool isExistingServerService = service.id.isNotEmpty &&
+          !service.id.startsWith('srv_') &&
+          !service.id.startsWith('mock_');
+
+      if (isExistingServerService) {
+        // UPDATE existing service on server
+        await dioClient!.patch('/admin/services/${service.id}', data: {
           'name': service.name,
           'description': service.description,
+          'isActive': service.isActive,
+          'elements': elementsJson,
+          'reviewMode': service.reviewMode,
+        });
+        await dioClient!.post('/admin/services/${service.id}/pricing', data: {
           'buyerUnitPrice': service.pricing.buyerPrice,
           'marginType': service.pricing.marginType,
           'marginValue': service.pricing.adminMarginPercent,
-          'elements': elementsJson,
-          'reviewMode': service.reviewMode,
-          'isActive': service.isActive,
-        };
+        });
 
-        if (service.id.isNotEmpty && !service.id.startsWith('mock_')) {
-          await dioClient!.patch('/admin/services/${service.id}', data: {
-            'name': service.name,
-            'description': service.description,
-            'isActive': service.isActive,
-            'elements': elementsJson,
-            'reviewMode': service.reviewMode,
-          });
-          await dioClient!.post('/admin/services/${service.id}/pricing', data: {
-            'buyerUnitPrice': service.pricing.buyerPrice,
-            'marginType': service.pricing.marginType,
-            'marginValue': service.pricing.adminMarginPercent,
-          });
+        // Update local cache
+        final index = _mockServices.indexWhere((s) => s.id == service.id);
+        if (index >= 0) {
+          _mockServices[index] = service;
         } else {
-          final response = await dioClient!.post('/admin/services', data: payload);
-          debugPrint('[ADMIN REPO] Remote saveServiceDraft response: ${response.data}');
+          _mockServices.add(service);
         }
-      } catch (e) {
-        debugPrint('[ADMIN REPO] Remote saveServiceDraft exception: $e');
+        return service;
+      } else {
+        // CREATE new service on server and extract the real server UUID
+        final response = await dioClient!.post('/admin/services', data: payload);
+        debugPrint('[ADMIN REPO] Remote saveServiceDraft response: ${response.data}');
+
+        // Extract the real server-generated ID from response
+        String serverId = service.id;
+        if (response.data != null && response.data['service'] != null) {
+          final serverService = response.data['service'];
+          if (serverService['id'] != null) {
+            serverId = serverService['id'].toString();
+          }
+        }
+
+        final savedService = service.copyWith(id: serverId);
+
+        // Update local cache with server ID
+        final index = _mockServices.indexWhere((s) => s.id == service.id);
+        if (index >= 0) {
+          _mockServices[index] = savedService;
+        } else {
+          _mockServices.add(savedService);
+        }
+        return savedService;
       }
     }
 
+    // Offline-only fallback (no dioClient)
     final index = _mockServices.indexWhere((s) => s.id == service.id);
     if (index >= 0) {
       _mockServices[index] = service;
@@ -186,6 +219,23 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
 
   @override
   Future<ServiceModel> publishServiceVersion(String serviceId) async {
+    if (dioClient != null) {
+      // Fetch latest from server to ensure we have the correct state
+      try {
+        final service = await getServiceById(serviceId);
+        final published = service.copyWith(
+          currentVersion: service.currentVersion + 1,
+          updatedAt: DateTime.now(),
+        );
+        // Save the updated version back to server
+        return await saveServiceDraft(published);
+      } catch (e) {
+        debugPrint('[ADMIN REPO] publishServiceVersion server error: $e');
+        rethrow;
+      }
+    }
+
+    // Offline-only fallback
     final index = _mockServices.indexWhere((s) => s.id == serviceId);
     if (index >= 0) {
       final existing = _mockServices[index];
@@ -194,7 +244,6 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
         updatedAt: DateTime.now(),
       );
       _mockServices[index] = published;
-      await saveServiceDraft(published);
       return published;
     }
     throw Exception('Service not found for publishing');
@@ -205,3 +254,4 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
     _mockServices.removeWhere((s) => s.id == serviceId);
   }
 }
+

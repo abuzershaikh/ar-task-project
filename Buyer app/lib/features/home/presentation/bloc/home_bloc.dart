@@ -30,25 +30,26 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           emit(HomeLoaded(
             activeCampaigns: data.activeCampaigns,
             completedCampaigns: data.completedCampaigns,
-            totalTasks: data.totalTasks,
+            totalTasks: data.pendingTasks + data.inProgressTasks + data.completedTasks,
             completedTasks: data.completedTasks,
-            completionPercentage: data.completionPercentage,
-            totalSpent: data.totalSpent,
-            thisMonthSpent: data.thisMonthSpent,
-            monthlyGrowth: data.monthlyGrowth,
-            pendingReviews: data.pendingReviews,
+            completionPercentage: data.overallCompletion,
+            totalSpent: data.totalSpend,
+            thisMonthSpent: data.totalSpend,
+            monthlyGrowth: 0.0,
+            pendingReviews: data.pendingTasks,
             recentCampaigns: data.recentCampaigns.map((c) => CampaignSummary(
               id: c.id,
               name: c.name,
-              completed: c.completed,
-              total: c.total,
-              percentage: c.percentage,
-              amount: c.amount,
+              completed: c.completedTasks,
+              total: c.totalTasks,
+              percentage: c.totalTasks > 0 ? (c.completedTasks / c.totalTasks * 100) : 0.0,
+              amount: 0.0,
               status: c.status,
-              remainingTime: c.remainingTime,
+              remainingTime: c.expiresIn ?? '',
             )).toList(),
           ));
         }
+
       );
     } catch (e) {
       emit(const HomeError('An unexpected error occurred'));

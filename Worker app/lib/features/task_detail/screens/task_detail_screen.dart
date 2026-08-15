@@ -516,7 +516,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 if (label.isNotEmpty)
                   Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B))),
                 if (content.isNotEmpty)
-                  Text(content, style: const TextStyle(fontSize: 12, color: Colors.black70)),
+                  Text(content, style: const TextStyle(fontSize: 12, color: Colors.black87)),
               ],
             ),
           ),

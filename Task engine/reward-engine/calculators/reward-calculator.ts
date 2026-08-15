@@ -26,10 +26,13 @@ export class RewardCalculator {
             throw new Error('Order not found');
         }
 
-        // Base reward from order
-        let baseReward = order.rewardPerTask;
+        // Base reward from order — CRITICAL: MySQL DECIMAL returns strings, must convert to Number
+        const baseReward = Number(order.rewardPerTask || 0);
         let bonus = 0;
-        let totalReward = baseReward;
+
+        if (isNaN(baseReward) || baseReward <= 0) {
+            throw new Error(`Invalid rewardPerTask value '${order.rewardPerTask}' for order '${order.id}'`);
+        }
 
         // Apply bonuses based on task requirements
         if (task.requirements?.difficulty === 'hard') {
@@ -40,7 +43,7 @@ export class RewardCalculator {
             bonus += baseReward * 0.15; // 15% bonus for urgent tasks
         }
 
-        totalReward = baseReward + bonus;
+        const totalReward = baseReward + bonus;
 
         return {
             taskId,

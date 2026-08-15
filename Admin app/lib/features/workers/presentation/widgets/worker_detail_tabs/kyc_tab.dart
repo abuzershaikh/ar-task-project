@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
-import '../../../../../core/widgets/image_viewer_dialog.dart';
 
 class KycTab extends StatelessWidget {
   final String workerId;
@@ -75,78 +74,18 @@ class KycTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   _buildInfoRow('Full Name', 'KYC Verified User'),
-                  _buildInfoRow('Date of Birth', 'N/A'),
-                  _buildInfoRow('Document Type', 'Identity Document'),
-                  _buildInfoRow('Document Number', 'Verified (Masked)'),
-                  _buildInfoRow('Verified By', 'Admin Override'),
-                  _buildInfoRow('Verified Date', 'Verified'),
+                  _buildInfoRow('Bank Name', 'State Bank of India'),
+                  _buildInfoRow('Account No.', 'XXXX-XXXX-1234'),
+                  _buildInfoRow('IFSC Code', 'SBIN0001234'),
+                  _buildInfoRow('UPI ID', 'worker@upi'),
+                  _buildInfoRow('PayPal', 'Not Provided'),
                 ],
               ),
             ),
           ),
           
-          const SizedBox(height: 16),
-          
-          // Document Viewer Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Documents',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.gray900,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            ImageViewerDialog.show(
-                              context,
-                              imageUrl: 'https://via.placeholder.com/600x400.png?text=KYC+Document+Front',
-                              title: 'KYC Document Front',
-                            );
-                          },
-                          icon: const Icon(Icons.image, size: 18),
-                          label: const Text('View Front'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            ImageViewerDialog.show(
-                              context,
-                              imageUrl: 'https://via.placeholder.com/600x400.png?text=KYC+Document+Back',
-                              title: 'KYC Document Back',
-                            );
-                          },
-                          icon: const Icon(Icons.image, size: 18),
-                          label: const Text('View Back'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          
+          // Bank Details View section if needed
+          // The Document Viewer section has been removed as we only collect bank details now.
           const SizedBox(height: 16),
           
           // Actions

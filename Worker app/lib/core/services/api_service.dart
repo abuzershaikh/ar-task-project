@@ -153,7 +153,17 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  // --- Worker Profile APIs ---
+  // --- Worker Profile & KYC APIs ---
+  static Future<Map<String, dynamic>> submitKycBankDetails(Map<String, dynamic> data) async {
+    final headers = await _headers();
+    final response = await http.post(
+      Uri.parse('$baseUrl/worker/kyc'),
+      headers: headers,
+      body: jsonEncode(data),
+    );
+    return jsonDecode(response.body);
+  }
+
   static Future<Map<String, dynamic>> getProfile() async {
     final headers = await _headers();
     final response = await http.get(
@@ -168,10 +178,13 @@ class ApiService {
 
   static Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
     final headers = await _headers();
-    final response = await http.put(
+    final nestedData = {
+      'profile': data,
+    };
+    final response = await http.patch(
       Uri.parse('$baseUrl/worker/profile'),
       headers: headers,
-      body: jsonEncode(data),
+      body: jsonEncode(nestedData),
     );
     return jsonDecode(response.body);
   }

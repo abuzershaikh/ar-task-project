@@ -97,7 +97,16 @@ class _KycQueueScreenState extends State<KycQueueScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        Text('Document: ${kyc.documentType}', style: const TextStyle(fontSize: 13, color: AppColors.gray700)),
+                        if (kyc.bankName != null && kyc.bankName!.isNotEmpty)
+                          Text('Bank: ${kyc.bankName}', style: const TextStyle(fontSize: 13, color: AppColors.gray700)),
+                        if (kyc.accountNumber != null && kyc.accountNumber!.isNotEmpty)
+                          Text('Account: ${kyc.accountNumber}', style: const TextStyle(fontSize: 13, color: AppColors.gray700)),
+                        if (kyc.ifscCode != null && kyc.ifscCode!.isNotEmpty)
+                          Text('IFSC: ${kyc.ifscCode}', style: const TextStyle(fontSize: 13, color: AppColors.gray700)),
+                        if (kyc.upiId != null && kyc.upiId!.isNotEmpty)
+                          Text('UPI: ${kyc.upiId}', style: const TextStyle(fontSize: 13, color: AppColors.gray700)),
+                        if (kyc.paypalId != null && kyc.paypalId!.isNotEmpty)
+                          Text('PayPal: ${kyc.paypalId}', style: const TextStyle(fontSize: 13, color: AppColors.gray700)),
                         const SizedBox(height: 16),
                         Row(
                           children: [

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/providers/profile_provider.dart';
 import '../../../core/services/api_service.dart';
+import '../../profile/screens/kyc_bank_details_screen.dart';
 
 /// Separate Withdrawal Screen:
 /// - Allows user to enter payout amount, select quick chips, verify UPI ID, and request instant payout.
@@ -26,6 +29,24 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid payout amount')),
+      );
+      return;
+    }
+
+    final kycStatus = context.read<ProfileProvider>().profileData['kycStatus'] ?? 'DRAFT';
+    if (kycStatus != 'VERIFIED') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please add and verify your bank details before withdrawing funds.'),
+          backgroundColor: const Color(0xFFDC2626),
+          action: SnackBarAction(
+            label: 'Add Details',
+            textColor: Colors.white,
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const KycBankDetailsScreen()));
+            },
+          ),
+        ),
       );
       return;
     }

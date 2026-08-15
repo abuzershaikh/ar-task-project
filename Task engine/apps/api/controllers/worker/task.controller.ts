@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { TaskEngineService } from '../../../../task-engine/task-engine.service';
 import { ProgressEngineService } from '../../../../progress-engine/progress.service';
 import { SubmissionRepository } from '../../../../shared/database/repositories/submission.repository';
+import { ExecutionEngineService } from '../../../../execution-engine/execution.service';
 import { ReviewEngineService } from '../../../../review-engine/review.service';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
@@ -28,6 +29,7 @@ export class WorkerTaskController {
         private readonly progressEngine: ProgressEngineService,
         private readonly submissionRepo: SubmissionRepository,
         private readonly reviewEngine: ReviewEngineService,
+        private readonly executionEngine: ExecutionEngineService,
     ) { }
 
     @Get()
@@ -206,7 +208,7 @@ export class WorkerTaskController {
     @Post(':id/start')
     @ApiOperation({ summary: 'Start work on accepted task' })
     async startTask(@Param('id') taskId: string, @CurrentUser() user: User) {
-        await this.taskEngine.startTask({ taskId, workerId: user.id });
+        await this.executionEngine.startTaskExecution(taskId, user.id);
         return {
             success: true,
             message: 'Task started',
@@ -224,31 +226,7 @@ export class WorkerTaskController {
             throw new BadRequestException('Invalid submission format. Expected { data: {}, proofs: [] }');
         }
 
-        // 1. Mark task as submitted in task engine
-        await this.taskEngine.submitTask({
-            taskId,
-            workerId: user.id,
-            data: {
-                ...body.data,
-                proofs: body.proofs,
-            },
-        });
-
-        // 2. Create the missing TaskSubmission record
-        let submission = await this.submissionRepo.findByTaskId(taskId);
-        if (!submission) {
-            submission = await this.submissionRepo.create({
-                taskId,
-                workerId: user.id,
-                data: body.data,
-                proofs: body.proofs,
-                status: 'submitted',
-                reviewStatus: 'pending'
-            });
-        }
-
-        // 3. Delegate to Review Engine to assign the reviewer (Buyer, Admin, or System)
-        await this.reviewEngine.assignReviewer(submission.id);
+        await this.executionEngine.submitTaskExecution(taskId, user.id, body);
 
         return {
             success: true,
@@ -263,32 +241,7 @@ export class WorkerTaskController {
         @Body() body: { data: any; proofs: { fileId: string; url: string }[]; resubmissionNotes?: string },
         @CurrentUser() user: User,
     ) {
-        let submission = await this.submissionRepo.findByTaskId(taskId);
-        if (!submission || submission.workerId !== user.id) {
-            throw new NotFoundException('Previous submission not found');
-        }
-
-        await this.taskEngine.submitTask({
-            taskId,
-            workerId: user.id,
-            data: {
-                ...body.data,
-                proofs: body.proofs || submission.proofs,
-                resubmissionNotes: body.resubmissionNotes,
-                isResubmission: true,
-            },
-        });
-
-        // Update submission record
-        await this.submissionRepo.update(submission.id, {
-            data: body.data,
-            proofs: body.proofs || submission.proofs,
-            status: 'submitted',
-            reviewStatus: 'pending'
-        });
-
-        // Re-assign for review
-        await this.reviewEngine.assignReviewer(submission.id);
+        await this.executionEngine.resubmitTaskExecution(taskId, user.id, body);
 
         return {
             success: true,

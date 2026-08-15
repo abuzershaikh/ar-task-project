@@ -24,37 +24,43 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
   @override
   void initState() {
     super.initState();
-    _reviewRepo = ReviewRepository(getIt<DioClient>());
+    _reviewRepo = getIt<ReviewRepository>();
   }
 
   /// Worker task proof approval handler function
   void _approveTaskProof() async {
     setState(() => _isProcessing = true);
-    final success = await _reviewRepo.approveTaskProof(widget.submissionId);
+    final result = await _reviewRepo.approveTaskProof(widget.submissionId);
     if (!mounted) return;
 
-    if (success) {
-      setState(() {
-        _isProcessing = false;
-        _status = 'APPROVED';
-      });
+    result.fold(
+      (failure) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to approve proof: ${failure.message}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      },
+      (success) {
+        if (success) {
+          setState(() {
+            _isProcessing = false;
+            _status = 'APPROVED';
+          });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Task proof approved! Worker reward released.'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-    } else {
-      setState(() => _isProcessing = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to approve task proof.'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Task proof approved! Worker reward released.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      },
+    );
   }
+
 
   /// Worker task proof rejection handler function (opens reason dialog)
   void _rejectTaskProof() {
@@ -95,40 +101,46 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
             onPressed: () async {
               Navigator.pop(ctx);
               setState(() => _isProcessing = true);
-              final success = await _reviewRepo.rejectTaskProof(
+              final result = await _reviewRepo.rejectTaskProof(
                 widget.submissionId, 
                 'INVALID_PROOF', 
                 reasonController.text.isNotEmpty ? reasonController.text : 'Submission rejected by buyer',
               );
               if (!mounted) return;
 
-              if (success) {
-                setState(() {
-                  _isProcessing = false;
-                  _status = 'REJECTED';
-                });
+              result.fold(
+                (failure) {
+                  setState(() => _isProcessing = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to reject proof: ${failure.message}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                },
+                (success) {
+                  if (success) {
+                    setState(() {
+                      _isProcessing = false;
+                      _status = 'REJECTED';
+                    });
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Task proof rejected with feedback.'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              } else {
-                setState(() => _isProcessing = false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Failed to reject task proof.'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Task proof rejected with feedback.'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                },
+              );
             },
           ),
         ],
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {

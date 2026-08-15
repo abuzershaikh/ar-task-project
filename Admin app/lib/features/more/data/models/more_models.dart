@@ -2,7 +2,11 @@ class KycItemModel {
   final String id;
   final String workerId;
   final String workerName;
-  final String documentType;
+  final String? bankName;
+  final String? accountNumber;
+  final String? ifscCode;
+  final String? upiId;
+  final String? paypalId;
   final String status;
   final DateTime? submittedAt;
 
@@ -10,7 +14,11 @@ class KycItemModel {
     required this.id,
     required this.workerId,
     required this.workerName,
-    required this.documentType,
+    this.bankName,
+    this.accountNumber,
+    this.ifscCode,
+    this.upiId,
+    this.paypalId,
     required this.status,
     this.submittedAt,
   });
@@ -20,7 +28,11 @@ class KycItemModel {
       id: json['id']?.toString() ?? '',
       workerId: json['workerId']?.toString() ?? '',
       workerName: json['workerName'] ?? json['name'] ?? 'Worker',
-      documentType: json['documentType'] ?? 'Aadhaar / National ID',
+      bankName: json['bankName'],
+      accountNumber: json['accountNumber'],
+      ifscCode: json['ifscCode'],
+      upiId: json['upiId'],
+      paypalId: json['paypalId'],
       status: json['status']?.toString().toUpperCase() ?? 'PENDING',
       submittedAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
     );
