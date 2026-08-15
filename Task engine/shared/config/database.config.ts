@@ -10,7 +10,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     database: process.env.DB_DATABASE || 'task_platform',
     autoLoadEntities: true,
     migrations: [__dirname + '/../database/migrations/**/*{.ts,.js}'],
-    synchronize: true, // Temporary to fix missing tables
+    synchronize: process.env.NODE_ENV === 'development',
     logging: false,
     charset: 'utf8mb4',
     timezone: '+00:00',
