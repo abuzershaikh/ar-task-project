@@ -13,6 +13,29 @@ import '../../features/auth/domain/usecases/logout_usecase.dart';
 import '../../features/auth/domain/usecases/get_current_user_usecase.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 
+import '../../features/service_builder/domain/repositories/service_builder_repository.dart';
+import '../../features/service_builder/data/repositories/service_builder_repository_impl.dart';
+import '../../features/service_builder/presentation/bloc/service_builder_bloc.dart';
+
+import '../../features/dashboard/data/repositories/dashboard_repository.dart';
+import '../../features/dashboard/presentation/bloc/dashboard_bloc.dart';
+
+import '../../features/workers/data/datasources/workers_remote_datasource.dart';
+import '../../features/workers/domain/repositories/workers_repository.dart';
+import '../../features/workers/presentation/bloc/workers_bloc.dart';
+
+import '../../features/buyers/data/datasources/buyers_remote_datasource.dart';
+import '../../features/buyers/domain/repositories/buyers_repository.dart';
+import '../../features/buyers/presentation/bloc/buyers_bloc.dart';
+
+import '../../features/orders/data/datasources/orders_remote_datasource.dart';
+import '../../features/orders/domain/repositories/orders_repository.dart';
+import '../../features/orders/presentation/bloc/orders_bloc.dart';
+
+import '../../features/more/data/datasources/more_remote_datasource.dart';
+import '../../features/more/domain/repositories/more_repository.dart';
+import '../../features/more/presentation/bloc/more_bloc.dart';
+
 final getIt = GetIt.instance;
 
 Future<void> initializeDependencies() async {
@@ -34,12 +57,9 @@ Future<void> initializeDependencies() async {
   getIt.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl());
   
   // Auth Feature
-  // Data sources
   getIt.registerLazySingleton<AuthRemoteDataSource>(
     () => AuthRemoteDataSourceImpl(getIt()),
   );
-  
-  // Repositories
   getIt.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(
       remoteDataSource: getIt(),
@@ -47,18 +67,94 @@ Future<void> initializeDependencies() async {
       localStorage: getIt(),
     ),
   );
-  
-  // Use cases
   getIt.registerLazySingleton(() => LoginUseCase(getIt()));
   getIt.registerLazySingleton(() => LogoutUseCase(getIt()));
   getIt.registerLazySingleton(() => GetCurrentUserUseCase(getIt()));
   
+  // Service Builder Feature
+  getIt.registerLazySingleton<ServiceBuilderRepository>(
+    () => ServiceBuilderRepositoryImpl(dioClient: getIt()),
+  );
+
+  // Dashboard Feature
+  getIt.registerLazySingleton<DashboardRepository>(
+    () => DashboardRepository(getIt()),
+  );
+
+  // Workers Feature
+  getIt.registerLazySingleton<WorkersRemoteDataSource>(
+    () => WorkersRemoteDataSourceImpl(getIt()),
+  );
+  getIt.registerLazySingleton<WorkersRepository>(
+    () => WorkersRepositoryImpl(remoteDataSource: getIt()),
+  );
+
+  // Buyers Feature
+  getIt.registerLazySingleton<BuyersRemoteDataSource>(
+    () => BuyersRemoteDataSourceImpl(getIt()),
+  );
+  getIt.registerLazySingleton<BuyersRepository>(
+    () => BuyersRepositoryImpl(remoteDataSource: getIt()),
+  );
+
+  // Orders Feature
+  getIt.registerLazySingleton<OrdersRemoteDataSource>(
+    () => OrdersRemoteDataSourceImpl(getIt()),
+  );
+  getIt.registerLazySingleton<OrdersRepository>(
+    () => OrdersRepositoryImpl(remoteDataSource: getIt()),
+  );
+
+  // More Feature
+  getIt.registerLazySingleton<MoreRemoteDataSource>(
+    () => MoreRemoteDataSourceImpl(getIt()),
+  );
+  getIt.registerLazySingleton<MoreRepository>(
+    () => MoreRepositoryImpl(remoteDataSource: getIt()),
+  );
+
   // BLoC
   getIt.registerFactory(
     () => AuthBloc(
       loginUseCase: getIt(),
       logoutUseCase: getIt(),
       getCurrentUserUseCase: getIt(),
+    ),
+  );
+
+  getIt.registerFactory(
+    () => ServiceBuilderBloc(
+      repository: getIt(),
+    ),
+  );
+
+  getIt.registerFactory(
+    () => DashboardBloc(
+      repository: getIt(),
+    ),
+  );
+
+  getIt.registerFactory(
+    () => WorkersBloc(
+      repository: getIt(),
+    ),
+  );
+
+  getIt.registerFactory(
+    () => BuyersBloc(
+      repository: getIt(),
+    ),
+  );
+
+  getIt.registerFactory(
+    () => OrdersBloc(
+      repository: getIt(),
+    ),
+  );
+
+  getIt.registerFactory(
+    () => MoreBloc(
+      repository: getIt(),
     ),
   );
 }

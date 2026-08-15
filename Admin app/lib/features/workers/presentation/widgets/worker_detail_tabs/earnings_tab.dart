@@ -99,7 +99,7 @@ class EarningsTab extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   subtitle: Text(
-                    isEarning ? 'Task #T-${10000 + index}' : 'To UPI: xxx@ybl',
+                    isEarning ? 'Task #${10000 + index}' : 'To Registered Payout Account',
                     style: const TextStyle(fontSize: 12),
                   ),
                   trailing: Column(

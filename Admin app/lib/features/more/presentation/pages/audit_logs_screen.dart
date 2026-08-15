@@ -96,7 +96,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
-                // TODO: Refresh logs
+                context.read<MoreBloc>().add(LoadAuditLogsEvent());
               },
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),

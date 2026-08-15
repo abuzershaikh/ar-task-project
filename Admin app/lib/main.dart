@@ -7,6 +7,12 @@ import 'core/utils/logger.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/pages/login_screen.dart';
 import 'features/main/presentation/pages/main_navigation_screen.dart';
+import 'features/service_builder/presentation/bloc/service_builder_bloc.dart';
+import 'features/dashboard/presentation/bloc/dashboard_bloc.dart';
+import 'features/workers/presentation/bloc/workers_bloc.dart';
+import 'features/buyers/presentation/bloc/buyers_bloc.dart';
+import 'features/orders/presentation/bloc/orders_bloc.dart';
+import 'features/more/presentation/bloc/more_bloc.dart';
 
 void main() async {
   // Ensure Flutter binding is initialized
@@ -45,13 +51,30 @@ class AdminApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => getIt<AuthBloc>()..add(const AuthCheckStatusRequested()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => getIt<AuthBloc>()..add(const AuthCheckStatusRequested())),
+        BlocProvider(create: (_) => getIt<ServiceBuilderBloc>()),
+        BlocProvider(create: (_) => getIt<DashboardBloc>()),
+        BlocProvider(create: (_) => getIt<WorkersBloc>()),
+        BlocProvider(create: (_) => getIt<BuyersBloc>()),
+        BlocProvider(create: (_) => getIt<OrdersBloc>()),
+        BlocProvider(create: (_) => getIt<MoreBloc>()),
+      ],
       child: MaterialApp(
         title: 'EarnPost Admin',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const MainNavigationScreen(),
+        home: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is AuthAuthenticated) {
+              return const MainNavigationScreen();
+            } else if (state is AuthUnauthenticated || state is AuthError) {
+              return const LoginScreen();
+            }
+            return const SplashScreen();
+          },
+        ),
       ),
     );
   }

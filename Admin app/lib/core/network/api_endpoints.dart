@@ -2,15 +2,19 @@
 /// Aligned with API_CONTRACT_ADMIN_V1.md
 class ApiEndpoints {
   // ==================== Auth ====================
-  static const String login = '/admin/auth/login';
-  static const String logout = '/admin/auth/logout';
-  static const String refreshToken = '/admin/auth/refresh';
-  static const String profile = '/admin/auth/profile';
+  static const String login = '/auth/login';
+  static const String logout = '/auth/logout';
+  static const String refreshToken = '/auth/refresh';
+  static const String profile = '/auth/me';
   
   // ==================== Dashboard ====================
-  static const String dashboardStats = '/admin/dashboard/stats';
-  static const String dashboardAlerts = '/admin/dashboard/alerts';
-  static const String dashboardActivity = '/admin/dashboard/activity';
+  static const String dashboard = '/admin/dashboard';
+  static const String dashboardOrders = '/admin/dashboard/orders';
+  static const String dashboardTasks = '/admin/dashboard/tasks';
+  static const String dashboardWorkers = '/admin/dashboard/workers';
+  static const String dashboardBuyers = '/admin/dashboard/buyers';
+  static const String dashboardEarnings = '/admin/dashboard/earnings';
+  static const String dashboardPayouts = '/admin/dashboard/payouts';
   
   // ==================== Workers ====================
   static const String workers = '/admin/workers';
@@ -58,20 +62,20 @@ class ApiEndpoints {
   static String matchingDecisions(String taskId) => '/admin/matching/decisions/$taskId';
   
   // ==================== Reviews ====================
-  static const String reviews = '/admin/reviews';
+  static const String reviews = '/admin/reviews/pending';
   static String reviewById(String id) => '/admin/reviews/$id';
   static String reviewApprove(String id) => '/admin/reviews/$id/approve';
   static String reviewReject(String id) => '/admin/reviews/$id/reject';
   static String reviewRequestChanges(String id) => '/admin/reviews/$id/request-changes';
   
   // ==================== KYC ====================
-  static const String kyc = '/admin/kyc';
+  static const String kyc = '/admin/kyc/pending';
   static String kycById(String id) => '/admin/kyc/$id';
   static String kycVerify(String id) => '/admin/kyc/$id/verify';
   static String kycReject(String id) => '/admin/kyc/$id/reject';
   
   // ==================== Payouts ====================
-  static const String payouts = '/admin/payouts';
+  static const String payouts = '/admin/payouts/pending';
   static String payoutById(String id) => '/admin/payouts/$id';
   static String payoutProcess(String id) => '/admin/payouts/$id/process';
   static String payoutReject(String id) => '/admin/payouts/$id/reject';

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../bloc/workers_bloc.dart';
 import '../widgets/worker_detail_tabs/overview_tab.dart';
 import '../widgets/worker_detail_tabs/tasks_tab.dart';
 import '../widgets/worker_detail_tabs/kyc_tab.dart';
@@ -24,11 +26,13 @@ class WorkerDetailScreen extends StatefulWidget {
 class _WorkerDetailScreenState extends State<WorkerDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  String _selectedStatus = 'ACTIVE';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 8, vsync: this);
+    context.read<WorkersBloc>().add(LoadWorkerDetailEvent(widget.workerId));
   }
 
   @override
@@ -95,9 +99,14 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
+          tabAlignment: TabAlignment.start,
           indicatorColor: AppColors.white,
+          indicatorWeight: 3,
           labelColor: AppColors.white,
           unselectedLabelColor: AppColors.white.withOpacity(0.7),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 20.0),
           tabs: const [
             Tab(text: 'Overview'),
             Tab(text: 'Tasks'),
@@ -110,18 +119,47 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          OverviewTab(workerId: widget.workerId),
-          TasksTab(workerId: widget.workerId),
-          KycTab(workerId: widget.workerId),
-          EarningsTab(workerId: widget.workerId),
-          RatingsTab(workerId: widget.workerId),
-          QualityScoreTab(workerId: widget.workerId),
-          RiskTab(workerId: widget.workerId),
-          ActivityTab(workerId: widget.workerId),
-        ],
+      body: BlocBuilder<WorkersBloc, WorkersState>(
+        builder: (context, state) {
+          if (state is WorkersLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (state is WorkersError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(state.message, style: const TextStyle(color: AppColors.error)),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<WorkersBloc>().add(LoadWorkerDetailEvent(widget.workerId));
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+          
+          if (state is WorkerDetailLoaded && state.worker.id != widget.workerId) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              OverviewTab(workerId: widget.workerId),
+              TasksTab(workerId: widget.workerId),
+              KycTab(workerId: widget.workerId),
+              EarningsTab(workerId: widget.workerId),
+              RatingsTab(workerId: widget.workerId),
+              QualityScoreTab(workerId: widget.workerId),
+              RiskTab(workerId: widget.workerId),
+              ActivityTab(workerId: widget.workerId),
+            ],
+          );
+        },
       ),
     );
   }
@@ -143,15 +181,15 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
   void _showConfirmDialog(String title, String message) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(title),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(message),
             const SizedBox(height: 16),
-            TextField(
-              decoration: const InputDecoration(
+            const TextField(
+              decoration: InputDecoration(
                 labelText: 'Reason (Required)',
                 hintText: 'Enter reason for this action',
               ),
@@ -161,13 +199,16 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implement action
+              final newStatus = title.toLowerCase().contains('ban') ? 'BANNED' : 'SUSPENDED';
+              context.read<WorkersBloc>().add(
+                UpdateWorkerStatusEvent(workerId: widget.workerId, status: newStatus),
+              );
+              Navigator.pop(dialogContext);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
@@ -182,38 +223,54 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
   void _showStatusChangeDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Change Worker Status'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('Active'),
-              leading: Radio(value: 'ACTIVE', groupValue: 'ACTIVE', onChanged: (v) {}),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Change Worker Status'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('Active'),
+                value: 'ACTIVE',
+                groupValue: _selectedStatus,
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => _selectedStatus = val);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Inactive'),
+                value: 'INACTIVE',
+                groupValue: _selectedStatus,
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => _selectedStatus = val);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Suspended'),
+                value: 'SUSPENDED',
+                groupValue: _selectedStatus,
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => _selectedStatus = val);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
             ),
-            ListTile(
-              title: const Text('Inactive'),
-              leading: Radio(value: 'INACTIVE', groupValue: 'ACTIVE', onChanged: (v) {}),
-            ),
-            ListTile(
-              title: const Text('Suspended'),
-              leading: Radio(value: 'SUSPENDED', groupValue: 'ACTIVE', onChanged: (v) {}),
+            ElevatedButton(
+              onPressed: () {
+                context.read<WorkersBloc>().add(
+                  UpdateWorkerStatusEvent(workerId: widget.workerId, status: _selectedStatus),
+                );
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Update'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Implement status change
-            },
-            child: const Text('Update'),
-          ),
-        ],
       ),
     );
   }

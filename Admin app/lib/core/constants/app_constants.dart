@@ -1,6 +1,6 @@
 class AppConstants {
   // API
-  static const String baseUrl = 'http://localhost:3000';
+  static const String baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://95.179.178.6:3000');
   static const String apiPrefix = '/api/v1';
   
   // Storage Keys

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 
+import '../../../service_builder/presentation/pages/services_list_screen.dart';
+
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
 
@@ -80,7 +82,12 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.shopping_basket_outlined,
             title: 'Services & Pricing',
             subtitle: 'Manage service catalog & margins',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ServicesListScreen()),
+              );
+            },
           ),
           _MenuItem(
             icon: Icons.settings_outlined,

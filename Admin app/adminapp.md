@@ -117,7 +117,7 @@ graph TD
   ```
 - **Filter Pills**: `[ All ]` `[ Active ]` `[ Inactive ]` `[ KYC Pending ]` `[ KYC Rejected ]` `[ Suspended ]` `[ Banned ]` `[ High Risk ]`.
 - **Search Bar**: Search by Worker ID (`W-1024`), Name, Phone, or Email.
-- **Sorting Dropdown**: Highest Score, Highest Rating, Most Tasks Completed, Lowest Completion Rate, Highest Earnings, Recent Activity.
+- **Sorting Dropdown**: Highest Score, Highest Rating, Most Tas-+ks Completed, Lowest Completion Rate, Highest Earnings, Recent Activity.
 
 #### Screen 3.2: `WorkerDetailScreen` (8 Sub-Tabs Workflow)
 Header: Worker Name, Worker ID, Status Tag, Quick Action Buttons (`[ Suspend ]`, `[ Ban ]`, `[ Change Status ]`).

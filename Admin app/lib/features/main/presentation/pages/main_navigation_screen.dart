@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../dashboard/presentation/pages/dashboard_screen.dart';
 import '../../../orders/presentation/pages/campaigns_list_screen.dart';
+import '../../../service_builder/presentation/pages/services_list_screen.dart';
 import '../../../workers/presentation/pages/worker_directory_screen.dart';
 import '../../../buyers/presentation/pages/buyer_directory_screen.dart';
 import '../../../more/presentation/pages/control_center_screen.dart';
@@ -19,6 +20,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = const [
     DashboardScreen(),
     CampaignsListScreen(),
+    ServicesListScreen(),
     WorkerDirectoryScreen(),
     BuyerDirectoryScreen(),
     ControlCenterScreen(),
@@ -31,42 +33,73 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        backgroundColor: AppColors.white,
-        indicatorColor: AppColors.primary.withOpacity(0.1),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard, color: AppColors.primary),
-            label: 'Dashboard',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Expanded(child: _buildNavItem(Icons.dashboard_outlined, Icons.dashboard, 'Dashboard', 0)),
+              Expanded(child: _buildNavItem(Icons.campaign_outlined, Icons.campaign, 'Campaigns', 1)),
+              Expanded(child: _buildNavItem(Icons.dashboard_customize_outlined, Icons.dashboard_customize, 'Services', 2)),
+              Expanded(child: _buildNavItem(Icons.people_outline, Icons.people, 'Workers', 3)),
+              Expanded(child: _buildNavItem(Icons.business_outlined, Icons.business, 'Buyers', 4)),
+              Expanded(child: _buildNavItem(Icons.more_horiz_outlined, Icons.more_horiz, 'More', 5)),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.campaign_outlined),
-            selectedIcon: Icon(Icons.campaign, color: AppColors.primary),
-            label: 'Campaigns',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people, color: AppColors.primary),
-            label: 'Workers',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.business_outlined),
-            selectedIcon: Icon(Icons.business, color: AppColors.primary),
-            label: 'Buyers',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.more_horiz_outlined),
-            selectedIcon: Icon(Icons.more_horiz, color: AppColors.primary),
-            label: 'More',
-          ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, IconData selectedIcon, String label, int index) {
+    final isSelected = _currentIndex == index;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _currentIndex = index;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                isSelected ? selectedIcon : icon,
+                color: isSelected ? AppColors.primary : AppColors.gray500,
+                size: 22,
+              ),
+            ),
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? AppColors.primary : AppColors.gray500,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

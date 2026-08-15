@@ -1,17 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../bloc/orders_bloc.dart';
 import '../widgets/task_review_inspector_modal.dart';
 
-class CampaignDetailScreen extends StatelessWidget {
+class CampaignDetailScreen extends StatefulWidget {
   final String orderId;
 
   const CampaignDetailScreen({super.key, required this.orderId});
 
   @override
+  State<CampaignDetailScreen> createState() => _CampaignDetailScreenState();
+}
+
+class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
+  final TextEditingController _reasonController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<OrdersBloc>().add(LoadOrderDetailEvent(widget.orderId));
+  }
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(orderId),
+        title: Text(widget.orderId),
         backgroundColor: AppColors.primary,
         actions: [
           PopupMenuButton<String>(
@@ -20,141 +41,167 @@ class CampaignDetailScreen extends StatelessWidget {
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'pause', child: Text('Pause Campaign')),
               const PopupMenuItem(value: 'resume', child: Text('Resume Campaign')),
-              const PopupMenuItem(value: 'extend', child: Text('Extend Expiry')),
               const PopupMenuItem(value: 'cancel', child: Text('Cancel & Refund')),
-              const PopupMenuItem(value: 'reallocate', child: Text('Force Reallocate')),
             ],
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Overview Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Campaign Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    const Text('YouTube Like Campaign - Tech Channel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 8),
-                    const Text('Description: Like and engage with tech videos', style: TextStyle(color: AppColors.gray600)),
-                    const SizedBox(height: 16),
-                    _buildInfoRow('Buyer', 'ABC Digital Pvt Ltd'),
-                    _buildInfoRow('Task Type', 'YOUTUBE_LIKE'),
-                    _buildInfoRow('Review Mode', 'AUTO'),
-                    _buildInfoRow('Created', '5 days ago'),
-                    _buildInfoRow('Expires', 'In 2 days'),
-                  ],
-                ),
+      body: BlocBuilder<OrdersBloc, OrdersState>(
+        builder: (context, state) {
+          if (state is OrdersLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (state is OrdersError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(state.message, style: const TextStyle(color: AppColors.error)),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<OrdersBloc>().add(LoadOrderDetailEvent(widget.orderId));
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Task Generation Matrix
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Task Generation Matrix', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    Row(
+            );
+          }
+
+          final order = state is OrderDetailLoaded ? state.order : null;
+          final tasks = state is OrderDetailLoaded ? state.tasks : [];
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Overview Card
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: _buildStatCard('Total Required', '1000', AppColors.primary)),
-                        const SizedBox(width: 8),
-                        Expanded(child: _buildStatCard('Generated', '1000', AppColors.info)),
+                        const Text('Campaign Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 16),
+                        Text(order?.serviceType ?? 'Task Campaign', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        Text('Status: ${order?.status ?? "ACTIVE"}', style: const TextStyle(color: AppColors.gray600)),
+                        const SizedBox(height: 16),
+                        _buildInfoRow('Buyer ID', order?.buyerId ?? 'N/A'),
+                        _buildInfoRow('Service Type', order?.serviceType ?? 'N/A'),
+                        _buildInfoRow('Reward/Task', '₹${order?.rewardPerTask ?? 0.0}'),
+                        _buildInfoRow('Total Tasks', '${order?.totalTasksRequired ?? 0}'),
+                        _buildInfoRow('Completed Tasks', '${order?.tasksCompleted ?? 0}'),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(child: _buildStatCard('Available', '150', AppColors.warning)),
-                        const SizedBox(width: 8),
-                        Expanded(child: _buildStatCard('Assigned', '400', AppColors.secondary)),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(child: _buildStatCard('Completed', '450', AppColors.success)),
-                        const SizedBox(width: 8),
-                        Expanded(child: _buildStatCard('Expired', '0', AppColors.error)),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Submissions List
-            const Text('Task Submissions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 10,
-              itemBuilder: (context, index) {
-                final statuses = ['APPROVED', 'PENDING', 'REJECTED', 'APPROVED', 'PENDING'];
-                final status = statuses[index % statuses.length];
                 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
-                      child: Text('W${index + 1}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    ),
-                    title: Text('Task #T-${10000 + index}'),
-                    subtitle: Text('Worker W-${1000 + index} • ${index + 1}h ago'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+                const SizedBox(height: 16),
+                
+                // Task Generation Matrix
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _getStatusColor(status).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            status,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: _getStatusColor(status),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                        const Text('Task Generation Matrix', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(child: _buildStatCard('Total Required', '${order?.totalTasksRequired ?? 0}', AppColors.primary)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _buildStatCard('Completed', '${order?.tasksCompleted ?? 0}', AppColors.success)),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_forward_ios, size: 14),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(child: _buildStatCard('Pending Tasks', '${tasks.length}', AppColors.warning)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _buildStatCard('Total Spent', '₹${order?.totalAmount ?? 0.0}', AppColors.info)),
+                          ],
+                        ),
                       ],
                     ),
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (context) => TaskReviewInspectorModal(
-                          taskId: 'T-${10000 + index}',
-                          workerId: 'W-${1000 + index}',
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Submissions List
+                const Text('Task Submissions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                
+                if (tasks.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: Text('No task submissions found for this campaign.')),
+                  )
+                else
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: tasks.length,
+                    itemBuilder: (context, index) {
+                      final item = tasks[index];
+                      final taskId = item['id']?.toString() ?? 'T-${1000 + index}';
+                      final workerId = item['workerId']?.toString() ?? 'W-${100 + index}';
+                      final status = (item['status']?.toString() ?? 'PENDING').toUpperCase();
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: AppColors.primary.withOpacity(0.1),
+                            child: Text('W${index + 1}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                          title: Text('Task #$taskId'),
+                          subtitle: Text('Worker: $workerId'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(status).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  status,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: _getStatusColor(status),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward_ios, size: 14),
+                            ],
+                          ),
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              builder: (context) => TaskReviewInspectorModal(
+                                taskId: taskId,
+                                workerId: workerId,
+                              ),
+                            );
+                          },
                         ),
                       );
                     },
                   ),
-                );
-              },
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -193,10 +240,13 @@ class CampaignDetailScreen extends StatelessWidget {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'APPROVED':
+      case 'COMPLETED':
         return AppColors.success;
       case 'PENDING':
+      case 'IN_PROGRESS':
         return AppColors.warning;
       case 'REJECTED':
+      case 'CANCELLED':
         return AppColors.error;
       default:
         return AppColors.gray500;
@@ -206,7 +256,7 @@ class CampaignDetailScreen extends StatelessWidget {
   void _handleAction(BuildContext context, String action) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(_getActionTitle(action)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -214,6 +264,7 @@ class CampaignDetailScreen extends StatelessWidget {
             Text(_getActionMessage(action)),
             const SizedBox(height: 16),
             TextField(
+              controller: _reasonController,
               decoration: const InputDecoration(
                 labelText: 'Reason (Required)',
                 hintText: 'Enter reason for this action',
@@ -223,8 +274,20 @@ class CampaignDetailScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Confirm')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              if (action == 'pause') {
+                context.read<OrdersBloc>().add(PauseOrderEvent(widget.orderId));
+              } else if (action == 'resume') {
+                context.read<OrdersBloc>().add(ResumeOrderEvent(widget.orderId));
+              } else if (action == 'cancel') {
+                context.read<OrdersBloc>().add(CancelOrderEvent(orderId: widget.orderId, reason: _reasonController.text.trim()));
+              }
+              Navigator.pop(dialogContext);
+            },
+            child: const Text('Confirm'),
+          ),
         ],
       ),
     );
@@ -234,9 +297,7 @@ class CampaignDetailScreen extends StatelessWidget {
     switch (action) {
       case 'pause': return 'Pause Campaign';
       case 'resume': return 'Resume Campaign';
-      case 'extend': return 'Extend Expiry';
       case 'cancel': return 'Cancel & Refund';
-      case 'reallocate': return 'Force Reallocate';
       default: return '';
     }
   }
@@ -245,9 +306,11 @@ class CampaignDetailScreen extends StatelessWidget {
     switch (action) {
       case 'pause': return 'This will pause task allocation. Workers can still complete assigned tasks.';
       case 'resume': return 'This will resume task allocation to eligible workers.';
-      case 'extend': return 'Enter new expiry date for this campaign.';
       case 'cancel': return 'This will cancel the campaign and refund unused budget to the buyer.';
-      case 'reallocate': return 'This will force reallocate all pending tasks to new workers.';
+      default: return '';
+    }
+  }
+}
       default: return '';
     }
   }

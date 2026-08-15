@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/injection.dart';
 import '../bloc/auth_bloc.dart';
-import '../../../dashboard/presentation/pages/dashboard_screen.dart';
+import '../../../main/presentation/pages/main_navigation_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -49,10 +49,11 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             );
           } else if (state is AuthAuthenticated) {
-            Navigator.of(context).pushReplacement(
+            Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(
-                builder: (_) => const DashboardScreen(),
+                builder: (_) => const MainNavigationScreen(),
               ),
+              (route) => false,
             );
           }
         },
