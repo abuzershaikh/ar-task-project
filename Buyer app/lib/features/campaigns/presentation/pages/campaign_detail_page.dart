@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/di/injection.dart';
 import '../bloc/campaign_detail_bloc.dart';
 import '../bloc/campaign_detail_event.dart';
 import '../bloc/campaign_detail_state.dart';
@@ -9,7 +10,7 @@ import '../widgets/campaign_detail_tabs/reviews_tab.dart';
 import '../widgets/campaign_detail_tabs/activity_tab.dart';
 import '../widgets/campaign_detail_tabs/analytics_tab.dart';
 
-class CampaignDetailPage extends StatefulWidget {
+class CampaignDetailPage extends StatelessWidget {
   final String campaignId;
 
   const CampaignDetailPage({
@@ -18,10 +19,24 @@ class CampaignDetailPage extends StatefulWidget {
   });
 
   @override
-  State<CampaignDetailPage> createState() => _CampaignDetailPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => getIt<CampaignDetailBloc>()..add(GetCampaignDetailEvent(campaignId)),
+      child: _CampaignDetailView(campaignId: campaignId),
+    );
+  }
 }
 
-class _CampaignDetailPageState extends State<CampaignDetailPage>
+class _CampaignDetailView extends StatefulWidget {
+  final String campaignId;
+
+  const _CampaignDetailView({required this.campaignId});
+
+  @override
+  State<_CampaignDetailView> createState() => _CampaignDetailViewState();
+}
+
+class _CampaignDetailViewState extends State<_CampaignDetailView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -29,11 +44,6 @@ class _CampaignDetailPageState extends State<CampaignDetailPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
-    
-    // Load campaign detail
-    context.read<CampaignDetailBloc>().add(
-          GetCampaignDetailEvent(widget.campaignId),
-        );
   }
 
   @override
@@ -234,10 +244,8 @@ class _CampaignDetailPageState extends State<CampaignDetailPage>
         );
         break;
       case 'invoice':
-        // Navigate to invoice
         break;
       case 'report':
-        // Navigate to report issue
         break;
     }
   }

@@ -20,61 +20,57 @@ class QuickActionsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 3,
-        childAspectRatio: 1,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      clipBehavior: Clip.none,
+      child: Row(
         children: [
           _QuickActionButton(
-            icon: Icons.add_circle_outline,
-            label: 'Create',
-            color: Colors.blue,
+            icon: Icons.add_circle_rounded,
+            label: 'Create Campaign',
+            color: const Color(0xFF2563EB),
+            bgColor: const Color(0xFFEFF6FF),
             onTap: onCreateCampaign,
           ),
+          const SizedBox(width: 12),
           _QuickActionButton(
-            icon: Icons.shopping_bag_outlined,
-            label: 'Services',
-            color: Colors.purple,
+            icon: Icons.grid_view_rounded,
+            label: 'Services Catalog',
+            color: const Color(0xFF9333EA),
+            bgColor: const Color(0xFFF3E8FF),
             onTap: onServices,
           ),
+          const SizedBox(width: 12),
           _QuickActionButton(
-            icon: Icons.check_circle_outline,
-            label: 'Reviews',
-            color: Colors.green,
+            icon: Icons.fact_check_rounded,
+            label: 'Task Reviews',
+            color: const Color(0xFFD97706),
+            bgColor: const Color(0xFFFEF3C7),
             onTap: onReviews,
           ),
+          const SizedBox(width: 12),
           _QuickActionButton(
-            icon: Icons.payment,
-            label: 'Payments',
-            color: Colors.orange,
-            onTap: onPayments,
-          ),
-          _QuickActionButton(
-            icon: Icons.bar_chart,
-            label: 'Analytics',
-            color: Colors.teal,
+            icon: Icons.trending_up_rounded,
+            label: 'Performance',
+            color: const Color(0xFF16A34A),
+            bgColor: const Color(0xFFF0FDF4),
             onTap: onAnalytics,
           ),
+          const SizedBox(width: 12),
           _QuickActionButton(
-            icon: Icons.receipt_long,
+            icon: Icons.account_balance_wallet_rounded,
+            label: 'Payments',
+            color: const Color(0xFF8B5CF6),
+            bgColor: const Color(0xFFF5F3FF),
+            onTap: onPayments,
+          ),
+          const SizedBox(width: 12),
+          _QuickActionButton(
+            icon: Icons.receipt_long_rounded,
             label: 'Invoices',
-            color: Colors.indigo,
+            color: const Color(0xFF4F46E5),
+            bgColor: const Color(0xFFEEF2FF),
             onTap: onInvoices,
           ),
         ],
@@ -87,12 +83,14 @@ class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final Color bgColor;
   final VoidCallback onTap;
 
   const _QuickActionButton({
     required this.icon,
     required this.label,
     required this.color,
+    required this.bgColor,
     required this.onTap,
   });
 
@@ -100,23 +98,44 @@ class _QuickActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
+        width: 175,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
           children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

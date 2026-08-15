@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,8 +9,13 @@ import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/home/presentation/bloc/dashboard_bloc.dart';
 import 'features/wallet/presentation/bloc/wallet_bloc.dart';
 
+import 'firebase_options.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   
   // Initialize dependencies
   await initializeDependencies();
@@ -43,7 +49,7 @@ class MarketingProApp extends StatelessWidget {
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.light,
         onGenerateRoute: AppRouter.generateRoute,
-        initialRoute: AppRouter.mainNavigation,
+        initialRoute: AppRouter.splash,
       ),
     );
   }

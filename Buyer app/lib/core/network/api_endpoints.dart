@@ -90,40 +90,17 @@ class ApiEndpoints {
   static String servicePricing(String id) => '$buyer/services/$id/pricing';
   
   // ============ REVIEWS (SUBMISSIONS) ============
-  /// Get pending submissions for review
-  /// Query params: ?status=pending|approved|rejected&page=1&limit=20
-  static const String submissions = '$buyer/submissions';
+  static const String submissions = '$buyer/reviews/pending';
+  static String submissionDetail(String id) => '$buyer/reviews/$id';
+  static String approveSubmission(String id) => '$buyer/reviews/$id/approve';
+  static String rejectSubmission(String id) => '$buyer/reviews/$id/reject';
+  static String requestChanges(String id) => '$buyer/reviews/$id/request-changes';
   
-  /// Get submission detail with proof
-  static String submissionDetail(String id) => '$buyer/submissions/$id';
-  
-  /// Approve submission
-  static String approveSubmission(String id) => '$buyer/submissions/$id/approve';
-  
-  /// Reject submission
-  static String rejectSubmission(String id) => '$buyer/submissions/$id/reject';
-  
-  /// Request changes to submission
-  static String requestChanges(String id) => '$buyer/submissions/$id/request-changes';
-  
-  /// Rate worker after approval
-  static String rateWorker(String submissionId) => '$buyer/submissions/$submissionId/rate';
+  // ============ RATINGS ============
+  static String rateWorker(String taskId) => '$buyer/tasks/$taskId/rating';
   
   // ============ ANALYTICS ============
-  /// Get overall analytics
-  static const String analytics = '$buyer/analytics';
-  
-  /// Get analytics overview
   static const String analyticsOverview = '$buyer/analytics/overview';
-  
-  /// Get completion trends
-  static const String completionTrends = '$buyer/analytics/trends/completion';
-  
-  /// Get performance metrics
-  static const String performanceMetrics = '$buyer/analytics/performance';
-  
-  /// Get spending analysis
-  static const String spendingAnalysis = '$buyer/analytics/spending';
   
   // ============ PAYMENTS ============
   /// Initiate payment for campaign
@@ -140,48 +117,15 @@ class ApiEndpoints {
   static String paymentDetail(String id) => '$buyer/payments/$id';
   
   // ============ INVOICES ============
-  /// Get invoice list
-  /// Query params: ?page=1&limit=20
   static const String invoices = '$buyer/invoices';
   
-  /// Get invoice detail
-  static String invoiceDetail(String id) => '$buyer/invoices/$id';
-  
-  /// Download invoice PDF
-  static String downloadInvoice(String id) => '$buyer/invoices/$id/download';
-  
   // ============ NOTIFICATIONS ============
-  /// Get notifications
-  /// Query params: ?type=all|campaign|review|payment|system&page=1&limit=20
   static const String notifications = '$buyer/notifications';
-  
-  /// Mark notification as read
   static String markNotificationRead(String id) => '$buyer/notifications/$id/read';
   
-  /// Mark all notifications as read
-  static const String markAllNotificationsRead = '$buyer/notifications/mark-all-read';
-  
-  /// Get unread notification count
-  static const String unreadCount = '$buyer/notifications/unread-count';
-  
   // ============ PROFILE ============
-  /// Get buyer profile
   static const String profile = '$buyer/profile';
-  
-  /// Update profile
   static const String updateProfile = '$buyer/profile';
-  
-  /// Get business profile
-  static const String businessProfile = '$buyer/business-profile';
-  
-  /// Update business profile
-  static const String updateBusinessProfile = '$buyer/business-profile';
-  
-  /// Upload profile image
-  static const String uploadProfileImage = '$buyer/profile/upload-image';
-  
-  /// Change password
-  static const String changePassword = '$buyer/profile/change-password';
   
   // ============ SUPPORT ============
   /// Get help articles

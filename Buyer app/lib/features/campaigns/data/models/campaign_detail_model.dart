@@ -1,6 +1,5 @@
 import '../../domain/entities/campaign_detail.dart';
 
-// @JsonSerializable() - Commented for build
 class CampaignDetailModel extends CampaignDetail {
   const CampaignDetailModel({
     required super.id,
@@ -35,35 +34,45 @@ class CampaignDetailModel extends CampaignDetail {
   });
 
   factory CampaignDetailModel.fromJson(Map<String, dynamic> json) {
+    final total = (json['totalTasks'] ?? json['totalTasksRequired'] as num?)?.toInt() ?? 0;
+    final completed = (json['completedTasks'] ?? json['tasksCompleted'] as num?)?.toInt() ?? 0;
+    final inProgress = (json['inProgressTasks'] as num?)?.toInt() ?? 0;
+    final pending = (json['pendingTasks'] as num?)?.toInt() ?? (total - completed > 0 ? total - completed : 0);
+    final rejected = (json['rejectedTasks'] as num?)?.toInt() ?? 0;
+    final underReview = (json['underReviewTasks'] as num?)?.toInt() ?? 0;
+    final compPct = total > 0 ? (completed / total * 100.0) : ((json['completionPercentage'] as num?)?.toDouble() ?? 0.0);
+
     return CampaignDetailModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      serviceId: json['serviceId'] as String,
-      serviceName: json['serviceName'] as String,
-      status: json['status'] as String,
-      totalTasks: json['totalTasks'] as int,
-      completedTasks: json['completedTasks'] as int,
-      inProgressTasks: json['inProgressTasks'] as int,
-      pendingTasks: json['pendingTasks'] as int,
-      rejectedTasks: json['rejectedTasks'] as int,
-      underReviewTasks: json['underReviewTasks'] as int,
-      completionPercentage: (json['completionPercentage'] as num).toDouble(),
-      totalAmount: (json['totalAmount'] as num).toDouble(),
-      spentAmount: (json['spentAmount'] as num).toDouble(),
-      paymentStatus: json['paymentStatus'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      originalDeadline: json['originalDeadline'] != null ? DateTime.parse(json['originalDeadline'] as String) : null,
-      currentDeadline: json['currentDeadline'] != null ? DateTime.parse(json['currentDeadline'] as String) : null,
-      remainingTime: json['remainingTime'] as String?,
-      instructions: json['instructions'] as String,
-      proofRequirements: (json['proofRequirements'] as List<dynamic>).cast<String>(),
-      acceptWithinHours: json['acceptWithinHours'] as int,
-      completeWithinHours: json['completeWithinHours'] as int,
-      reviewMode: json['reviewMode'] as String,
-      approvalRate: (json['approvalRate'] as num).toDouble(),
-      rejectionRate: (json['rejectionRate'] as num).toDouble(),
-      averageReviewTimeMinutes: json['averageReviewTimeMinutes'] as int,
-      pendingReviews: json['pendingReviews'] as int,
+      id: (json['id'] ?? '').toString(),
+      name: (json['name'] ?? json['title'] ?? 'Campaign').toString(),
+      serviceId: (json['serviceId'] ?? json['taskType'] ?? json['serviceCode'] ?? '').toString(),
+      serviceName: (json['serviceName'] ?? json['taskType'] ?? json['serviceCode'] ?? 'Service').toString(),
+      status: (json['status'] ?? 'active').toString().toLowerCase(),
+      totalTasks: total,
+      completedTasks: completed,
+      inProgressTasks: inProgress,
+      pendingTasks: pending,
+      rejectedTasks: rejected,
+      underReviewTasks: underReview,
+      completionPercentage: compPct,
+      totalAmount: ((json['totalAmount'] as num?) ?? 0.0).toDouble(),
+      spentAmount: ((json['spentAmount'] as num?) ?? (completed * ((json['buyerUnitPrice'] as num?) ?? 0.0))).toDouble(),
+      paymentStatus: (json['paymentStatus'] ?? 'reserved').toString(),
+      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now() : DateTime.now(),
+      originalDeadline: json['originalDeadline'] != null ? DateTime.tryParse(json['originalDeadline'].toString()) : null,
+      currentDeadline: json['currentDeadline'] != null ? DateTime.tryParse(json['currentDeadline'].toString()) : null,
+      remainingTime: json['remainingTime']?.toString(),
+      instructions: (json['instructions'] ?? json['description'] ?? '').toString(),
+      proofRequirements: json['proofRequirements'] != null && json['proofRequirements'] is List
+          ? (json['proofRequirements'] as List).map((e) => e.toString()).toList()
+          : <String>[],
+      acceptWithinHours: (json['acceptWithinHours'] ?? json['timeToAcceptHours'] as num?)?.toInt() ?? 24,
+      completeWithinHours: (json['completeWithinHours'] ?? json['timeToCompleteHours'] as num?)?.toInt() ?? 48,
+      reviewMode: (json['reviewMode'] ?? 'manual').toString(),
+      approvalRate: ((json['approvalRate'] as num?) ?? 100.0).toDouble(),
+      rejectionRate: ((json['rejectionRate'] as num?) ?? 0.0).toDouble(),
+      averageReviewTimeMinutes: (json['averageReviewTimeMinutes'] as num?)?.toInt() ?? 30,
+      pendingReviews: (json['pendingReviews'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -103,7 +112,6 @@ class CampaignDetailModel extends CampaignDetail {
   CampaignDetail toEntity() => this;
 }
 
-// @JsonSerializable() - Commented for build
 class DeadlineExtensionModel extends DeadlineExtension {
   const DeadlineExtensionModel({
     required super.originalDeadline,
@@ -116,11 +124,11 @@ class DeadlineExtensionModel extends DeadlineExtension {
 
   factory DeadlineExtensionModel.fromJson(Map<String, dynamic> json) {
     return DeadlineExtensionModel(
-      originalDeadline: DateTime.parse(json['originalDeadline'] as String),
-      newDeadline: DateTime.parse(json['newDeadline'] as String),
-      extensionHours: json['extensionHours'] as int,
-      reason: json['reason'] as String,
-      extendedAt: DateTime.parse(json['extendedAt'] as String),
+      originalDeadline: DateTime.tryParse(json['originalDeadline'].toString()) ?? DateTime.now(),
+      newDeadline: DateTime.tryParse(json['newDeadline'].toString()) ?? DateTime.now(),
+      extensionHours: (json['extensionHours'] as num?)?.toInt() ?? 0,
+      reason: (json['reason'] ?? '').toString(),
+      extendedAt: DateTime.tryParse(json['extendedAt'].toString()) ?? DateTime.now(),
       isAutomatic: json['isAutomatic'] as bool? ?? true,
     );
   }

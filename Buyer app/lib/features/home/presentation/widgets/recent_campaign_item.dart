@@ -14,7 +14,9 @@ class RecentCampaignItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = campaign.completedTasks / campaign.totalTasks;
+    final progress = campaign.totalTasks > 0
+        ? campaign.completedTasks / campaign.totalTasks
+        : 0.0;
     final progressPercent = (progress * 100).toInt();
 
     return GestureDetector(
@@ -161,14 +163,18 @@ class RecentCampaignItem extends StatelessWidget {
                   
                   Row(
                     children: [
-                      _buildStatusChip(
-                        '${campaign.pendingTasks} Pending',
-                        AppColors.warning,
+                      Flexible(
+                        child: _buildStatusChip(
+                          '${campaign.pendingTasks} Pending',
+                          AppColors.warning,
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      _buildStatusChip(
-                        '${campaign.inProgressTasks} In Progress',
-                        AppColors.info,
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: _buildStatusChip(
+                          '${campaign.inProgressTasks} In Progress',
+                          AppColors.info,
+                        ),
                       ),
                     ],
                   ),

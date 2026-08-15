@@ -15,18 +15,33 @@ class DashboardDataModel extends DashboardData {
   });
 
   factory DashboardDataModel.fromJson(Map<String, dynamic> json) {
+    final spend = ((json['totalSpent'] ?? json['totalSpend'] as num?) ?? 0).toDouble();
+    final totalCmp = (json['totalOrdersCount'] ?? json['totalCampaigns'] as num?)?.toInt() ?? 0;
+    final activeCmp = (json['activeOrdersCount'] ?? json['activeCampaigns'] as num?)?.toInt() ?? 0;
+    final compCmp = (json['completedOrdersCount'] ?? json['completedCampaigns'] as num?)?.toInt() ?? 0;
+    final compTasks = (json['totalTasksCompleted'] ?? json['completedTasks'] as num?)?.toInt() ?? 0;
+    final pendTasks = (json['pendingTasks'] as num?)?.toInt() ?? 0;
+    final inProgTasks = (json['inProgressTasks'] as num?)?.toInt() ?? 0;
+
+    final double completionPct = (totalCmp > 0)
+        ? (compCmp / totalCmp * 100.0)
+        : (((json['overallCompletion'] as num?) ?? 0.0).toDouble());
+
+    final rawRecent = json['recentCampaigns'] as List<dynamic>?;
+    final List<CampaignSummaryModel> recent = rawRecent != null
+        ? rawRecent.map((e) => CampaignSummaryModel.fromJson(e as Map<String, dynamic>)).toList()
+        : [];
+
     return DashboardDataModel(
-      totalSpend: (json['totalSpend'] ?? 0).toDouble(),
-      totalCampaigns: json['totalCampaigns'] ?? 0,
-      activeCampaigns: json['activeCampaigns'] ?? 0,
-      completedCampaigns: json['completedCampaigns'] ?? 0,
-      pendingTasks: json['pendingTasks'] ?? 0,
-      inProgressTasks: json['inProgressTasks'] ?? 0,
-      completedTasks: json['completedTasks'] ?? 0,
-      overallCompletion: (json['overallCompletion'] ?? 0).toDouble(),
-      recentCampaigns: (json['recentCampaigns'] as List<dynamic>?)
-          ?.map((e) => CampaignSummaryModel.fromJson(e))
-          .toList() ?? [],
+      totalSpend: spend,
+      totalCampaigns: totalCmp,
+      activeCampaigns: activeCmp,
+      completedCampaigns: compCmp,
+      pendingTasks: pendTasks,
+      inProgressTasks: inProgTasks,
+      completedTasks: compTasks,
+      overallCompletion: completionPct,
+      recentCampaigns: recent,
     );
   }
 

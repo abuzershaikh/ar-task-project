@@ -2,7 +2,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'home_event.dart';
 import 'home_state.dart';
 
+import '../../domain/repositories/dashboard_repository.dart';
+import '../../../../core/di/injection.dart';
+
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
+  final DashboardRepository repository = getIt<DashboardRepository>();
+
   HomeBloc() : super(const HomeInitial()) {
     on<LoadHomeDashboardEvent>(_onLoadHomeDashboard);
     on<RefreshHomeDashboardEvent>(_onRefreshHomeDashboard);
@@ -14,21 +19,40 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   ) async {
     emit(const HomeLoading());
 
-    // TODO: Replace with actual API calls
-    await Future.delayed(const Duration(seconds: 1));
-
-    emit(HomeLoaded(
-      activeCampaigns: 12,
-      completedCampaigns: 38,
-      totalTasks: 5000,
-      completedTasks: 4280,
-      completionPercentage: 85.6,
-      totalSpent: 124500,
-      thisMonthSpent: 28500,
-      monthlyGrowth: 12.0,
-      pendingReviews: 23,
-      recentCampaigns: _getMockCampaigns(),
-    ));
+    try {
+      final result = await repository.getDashboardData();
+      
+      result.fold(
+        (failure) {
+          emit(const HomeError('Failed to load dashboard data'));
+        },
+        (data) {
+          emit(HomeLoaded(
+            activeCampaigns: data.activeCampaigns,
+            completedCampaigns: data.completedCampaigns,
+            totalTasks: data.totalTasks,
+            completedTasks: data.completedTasks,
+            completionPercentage: data.completionPercentage,
+            totalSpent: data.totalSpent,
+            thisMonthSpent: data.thisMonthSpent,
+            monthlyGrowth: data.monthlyGrowth,
+            pendingReviews: data.pendingReviews,
+            recentCampaigns: data.recentCampaigns.map((c) => CampaignSummary(
+              id: c.id,
+              name: c.name,
+              completed: c.completed,
+              total: c.total,
+              percentage: c.percentage,
+              amount: c.amount,
+              status: c.status,
+              remainingTime: c.remainingTime,
+            )).toList(),
+          ));
+        }
+      );
+    } catch (e) {
+      emit(const HomeError('An unexpected error occurred'));
+    }
   }
 
   Future<void> _onRefreshHomeDashboard(
@@ -38,38 +62,5 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     add(const LoadHomeDashboardEvent());
   }
 
-  List<CampaignSummary> _getMockCampaigns() {
-    return [
-      const CampaignSummary(
-        id: 'CAMP-001',
-        name: 'Product Testing',
-        completed: 320,
-        total: 500,
-        percentage: 64.0,
-        amount: 12500,
-        status: 'active',
-        remainingTime: '1d 8h',
-      ),
-      const CampaignSummary(
-        id: 'CAMP-002',
-        name: 'Review Campaign',
-        completed: 180,
-        total: 200,
-        percentage: 90.0,
-        amount: 5000,
-        status: 'active',
-        remainingTime: '4h 30m',
-      ),
-      const CampaignSummary(
-        id: 'CAMP-003',
-        name: 'Survey Collection',
-        completed: 450,
-        total: 1000,
-        percentage: 45.0,
-        amount: 15000,
-        status: 'active',
-        remainingTime: '2d 12h',
-      ),
-    ];
-  }
+  // Mock removed
 }

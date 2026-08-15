@@ -1,6 +1,5 @@
 import '../../domain/entities/wallet_balance.dart';
 
-// @JsonSerializable() - Commented for build
 class WalletBalanceModel extends WalletBalance {
   const WalletBalanceModel({
     required super.totalBalance,
@@ -11,12 +10,26 @@ class WalletBalanceModel extends WalletBalance {
   });
 
   factory WalletBalanceModel.fromJson(Map<String, dynamic> json) {
+    final avail = ((json['availableBalance'] ?? json['available'] ?? json['balance'] as num?) ?? 0.0).toDouble();
+    final reserved = ((json['reservedBalance'] ?? json['reserved'] as num?) ?? 0.0).toDouble();
+    final total = ((json['totalBalance'] ?? json['total'] as num?) ?? (avail + reserved)).toDouble();
+
     return WalletBalanceModel(
-      totalBalance: (json['totalBalance'] as num?)?.toDouble() ?? 0.0,
-      availableBalance: (json['availableBalance'] as num?)?.toDouble() ?? 0.0,
-      reservedBalance: (json['reservedBalance'] as num?)?.toDouble() ?? 0.0,
-      currency: json['currency'] as String? ?? 'INR',
-      lastUpdated: DateTime.parse(json['lastUpdated'] as String),
+      totalBalance: total,
+      availableBalance: avail,
+      reservedBalance: reserved,
+      currency: (json['currency'] ?? 'INR').toString(),
+      lastUpdated: json['lastUpdated'] != null ? DateTime.tryParse(json['lastUpdated'].toString()) ?? DateTime.now() : DateTime.now(),
+    );
+  }
+
+  factory WalletBalanceModel.empty() {
+    return WalletBalanceModel(
+      totalBalance: 0.0,
+      availableBalance: 0.0,
+      reservedBalance: 0.0,
+      currency: 'INR',
+      lastUpdated: DateTime.now(),
     );
   }
 
