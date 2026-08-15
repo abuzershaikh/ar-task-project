@@ -1,14 +1,17 @@
-import { Injectable, ExecutionContext, CanActivate } from '@nestjs/common';
+import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { AuthGuard } from '@nestjs/passport';
 import { UserSyncService } from '../../services/user-sync.service';
 import { UserRole } from '../../database/entities/user.entity';
 
 @Injectable()
-export class JwtAuthGuard implements CanActivate {
+export class JwtAuthGuard extends AuthGuard('jwt') {
   constructor(
     private reflector: Reflector,
     private userSyncService: UserSyncService,
-  ) {}
+  ) {
+    super();
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
@@ -24,25 +27,31 @@ export class JwtAuthGuard implements CanActivate {
     const headers = request.headers || {};
     const query = request.query || {};
 
-    const userEmail = headers['x-user-email'] || query.email || 'user@example.com';
-    const userId = headers['x-user-id'] || query.userId || 'worker-default-id';
-    const rawRole = headers['x-user-role'] || query.role || 'WORKER';
-    const role = rawRole === 'BUYER' ? UserRole.BUYER : UserRole.WORKER;
+    const userEmail = headers['x-user-email'] || query.email;
+    const userId = headers['x-user-id'] || query.userId;
 
-    try {
-      if (userEmail !== 'user@example.com' || userId !== 'worker-default-id') {
+    if (userEmail || userId) {
+      const rawRole = headers['x-user-role'] || query.role || 'WORKER';
+      const role = rawRole === 'BUYER' ? UserRole.BUYER : UserRole.WORKER;
+      try {
         const mysqlUser = await this.userSyncService.ensureUserInMySQL(userEmail || userId, role);
         request.user = mysqlUser;
         return true;
+      } catch (e) {
+        throw new UnauthorizedException('Failed to sync user');
       }
-    } catch (_) {}
+    }
 
-    // Fallback default user object
+    if (headers['authorization']) {
+      return (await super.canActivate(context)) as boolean;
+    }
+
+    // Fallback default user object for development if no headers at all
     request.user = {
-      id: userId,
-      email: userEmail,
-      fullName: typeof userEmail === 'string' ? userEmail.split('@')[0] : 'User',
-      role,
+      id: 'worker-default-id',
+      email: 'user@example.com',
+      fullName: 'User',
+      role: UserRole.WORKER,
       status: 'ACTIVE',
       kycStatus: 'APPROVED',
     };
