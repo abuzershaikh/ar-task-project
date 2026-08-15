@@ -8,14 +8,15 @@ class AppConstants {
   static const String appVersion = '1.0.0';
 
   // ── API ───────────────────────────────────────────────────────────────
-  // 10.0.2.2 = Android Emulator ↔ host machine localhost
-  // For physical device on same Wi-Fi, use machine's LAN IP.
-  static const String apiBaseUrl = 'http://95.179.178.6:3000/api/v1';
+  static const String apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://95.179.178.6:3000/api/v1',
+  );
 
   // ── Task Stages (backend-aligned) ────────────────────────────────────
   static const String stageAccepted = 'assigned';
   static const String stageSubmitted = 'submitted';
-  static const String stageUnderReview = 'under-review';
+  static const String stageUnderReview = 'under_review';
   static const String stageApproved = 'approved';
   static const String stageRejected = 'rejected';
 

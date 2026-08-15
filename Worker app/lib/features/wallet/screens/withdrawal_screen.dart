@@ -119,7 +119,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                      color: const Color(0xFF2563EB).withOpacity(0.25),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -164,7 +164,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
+                      color: Colors.black.withOpacity(0.02),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),

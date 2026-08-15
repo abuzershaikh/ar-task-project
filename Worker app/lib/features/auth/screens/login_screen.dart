@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import '../../../core/providers/auth_provider.dart';
-import '../../../core/services/api_service.dart';
+import '../../../core/services/firestore_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../navigation/screens/main_nav_screen.dart';
+import 'user_profile_form.dart';
 
 /// Clean Google-only Login Screen for Worker App.
 class LoginScreen extends StatefulWidget {
@@ -16,6 +19,88 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    try {
+      debugPrint('[GOOGLE SIGN IN] Starting Worker Google Sign-In process...');
+      final googleSignIn = GoogleSignIn(
+        scopes: const ['email'],
+        serverClientId: '311090572825-jve8b44v1m0p7smmudr6hnhe5ib5qcuc.apps.googleusercontent.com',
+      );
+      try {
+        await googleSignIn.signOut();
+      } catch (_) {}
+
+      final account = await googleSignIn.signIn();
+      debugPrint('[GOOGLE SIGN IN] Account result: $account');
+
+      if (account != null) {
+        final auth = await account.authentication;
+
+        // Ensure Firebase is initialized
+        try {
+          if (Firebase.apps.isEmpty) {
+            await Firebase.initializeApp();
+          }
+        } catch (e) {
+          debugPrint('Firebase core init in login error: $e');
+        }
+
+        // Authenticate with Firebase Auth
+        final AuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: auth.accessToken,
+          idToken: auth.idToken,
+        );
+        final UserCredential userCredential =
+            await FirebaseAuth.instance.signInWithCredential(credential);
+        final User? firebaseUser = userCredential.user;
+
+        if (firebaseUser != null) {
+          // Sync worker profile to Firestore only (No VPS token transmission)
+          final userData = await FirestoreService.syncUserProfile(
+            uid: firebaseUser.uid,
+            email: firebaseUser.email ?? account.email,
+            displayName: firebaseUser.displayName ?? account.displayName,
+            role: 'WORKER',
+          );
+
+          await authProvider.setFirebaseUser(firebaseUser, userData);
+
+          final String phone = userData['phone'] ?? '';
+          if (mounted) {
+            if (phone.isEmpty) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) => UserProfileFormScreen(
+                    uid: firebaseUser.uid,
+                    initialName: userData['name'] ?? account.displayName ?? '',
+                    email: firebaseUser.email ?? account.email,
+                  ),
+                ),
+              );
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const MainNavScreen()),
+              );
+            }
+          }
+        }
+      }
+    } catch (e, stack) {
+      debugPrint('[GOOGLE SIGN IN ERROR] Exception: $e\n$stack');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google Sign-In failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,154 +114,160 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // App Icon / Logo Badge
-                  Container(
-                    width: 90,
-                    height: 90,
-                    decoration: BoxDecoration(
-                      gradient: AppTheme.primaryGradient,
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.4),
-                          blurRadius: 24,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.stars_rounded, size: 52, color: Colors.white),
-                  ),
-                  const SizedBox(height: 28),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+            child: Column(
+              children: [
+                const Spacer(),
 
-                  Text(
-                    'Task Reward',
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 36, fontWeight: FontWeight.bold),
+                // App Icon / Logo Badge
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryColor.withOpacity(0.4),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Complete Tasks • Earn Real Money',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.accentColor, fontSize: 16),
+                  child: const Icon(Icons.stars_rounded, size: 48, color: Colors.white),
+                ),
+                const SizedBox(height: 24),
+
+                Text(
+                  'Task Reward',
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Complete Tasks • Earn Real Money',
+                  style: TextStyle(
+                    color: AppTheme.accentColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(height: 48),
+                  textAlign: TextAlign.center,
+                ),
 
-                  // Google Login Card
-                  Card(
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            'Welcome Worker',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Sign in with your Google account to get started and earn rewards.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white60, fontSize: 13),
-                          ),
-                          const SizedBox(height: 28),
+                const Spacer(),
 
-                          SizedBox(
-                            height: 54,
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: Colors.black87,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                elevation: 2,
-                              ),
-                              icon: const Icon(Icons.g_mobiledata_rounded, size: 32, color: Color(0xFF4285F4)),
-                              label: _isLoading
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF4285F4)),
-                                    )
-                                  : const Text(
-                                      'Continue with Google',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                              onPressed: _isLoading
-                                  ? null
-                                  : () async {
-                                      setState(() => _isLoading = true);
-                                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                                      try {
-                                        debugPrint('[GOOGLE SIGN IN] Starting Google Sign-In process...');
-                                        final googleSignIn = GoogleSignIn(
-                                          scopes: const ['email'],
-                                          serverClientId: '311090572825-jve8b44v1m0p7smmudr6hnhe5ib5qcuc.apps.googleusercontent.com',
-                                        );
-                                        final account = await googleSignIn.signIn();
-                                        debugPrint('[GOOGLE SIGN IN] Account result: $account');
-                                        if (account != null) {
-                                          final auth = await account.authentication;
-                                          final String? googleIdToken = auth.idToken ?? auth.accessToken;
-                                          debugPrint(
-                                            '[GOOGLE SIGN IN] Google token obtained: ${googleIdToken != null ? "YES (${googleIdToken.substring(0, 10)}...)" : "NULL"}',
-                                          );
-                                          if (googleIdToken != null) {
-                                            final response = await ApiService.googleLogin(googleIdToken);
-                                            final token = response['data']?['accessToken'] ?? response['accessToken'] ?? response['token'];
-                                            if (token != null) {
-                                              await ApiService.saveToken(token);
-                                              await authProvider.fetchProfile();
-                                              if (mounted) {
-                                                Navigator.of(context).pushReplacement(
-                                                  MaterialPageRoute(builder: (_) => const MainNavScreen()),
-                                                );
-                                              }
-                                            }
-                                          } else if (googleIdToken == null && mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Google Sign-In failed: Google token is null')),
-                                            );
-                                          }
-                                        } else {
-                                          debugPrint('[GOOGLE SIGN IN] User canceled sign-in dialog.');
-                                        }
-                                      } catch (e, stack) {
-                                        debugPrint('[GOOGLE SIGN IN ERROR] Exception: $e\n$stack');
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Google Sign-In failed: $e')),
-                                          );
-                                        }
-                                      } finally {
-                                        if (mounted) {
-                                          setState(() => _isLoading = false);
-                                        }
-                                      }
-                                    },
-                            ),
-                          ),
-                        ],
+                // Feature Highlights
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildFeatureRow(Icons.task_alt_rounded, 'Access Daily Paid Micro-Tasks', const Color(0xFF10B981)),
+                      const SizedBox(height: 12),
+                      _buildFeatureRow(Icons.account_balance_wallet_rounded, 'Instant Wallet & UPI Payouts', const Color(0xFFF59E0B)),
+                      const SizedBox(height: 12),
+                      _buildFeatureRow(Icons.verified_user_rounded, 'Verified Worker Trust Score', const Color(0xFF6366F1)),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Single Google Sign In Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _handleGoogleSignIn,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black87,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Color(0xFF4285F4),
+                            ),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.g_mobiledata_rounded,
+                                color: Color(0xFF4285F4),
+                                size: 32,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Sign in with Google',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
-                ],
-              ),
+                ),
+
+                const SizedBox(height: 20),
+
+                const Text(
+                  'By continuing, you agree to our Terms of Service & Privacy Policy',
+                  style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 10.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 12),
+              ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFeatureRow(IconData icon, String text, Color iconColor) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: iconColor),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          text,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }

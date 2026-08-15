@@ -38,7 +38,7 @@ class PlatformLogo extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -62,7 +62,7 @@ class PlatformLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.28),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFF0000).withValues(alpha: 0.3),
+            color: const Color(0xFFFF0000).withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -96,7 +96,7 @@ class PlatformLogo extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFE1306C).withValues(alpha: 0.35),
+            color: const Color(0xFFE1306C).withOpacity(0.35),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -134,7 +134,7 @@ class PlatformLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.28),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1877F2).withValues(alpha: 0.35),
+            color: const Color(0xFF1877F2).withOpacity(0.35),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -164,7 +164,7 @@ class PlatformLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),

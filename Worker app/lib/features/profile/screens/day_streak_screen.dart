@@ -56,7 +56,7 @@ class DayStreakScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                      color: const Color(0xFFF59E0B).withOpacity(0.3),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -140,7 +140,7 @@ class DayStreakScreen extends StatelessWidget {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.02),
+                          color: Colors.black.withOpacity(0.02),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),

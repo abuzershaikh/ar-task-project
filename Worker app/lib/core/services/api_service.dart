@@ -1,15 +1,17 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../constants/app_constants.dart';
 
 class ApiService {
-  // Base URL: 10.0.2.2 for Android Emulator, local IP for physical Android device
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://95.179.178.6:3000/api/v1',
-  );
+  static String get baseUrl => AppConstants.apiBaseUrl;
 
   static Future<String?> getToken() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      return await currentUser.getIdToken();
+    }
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token');
   }
@@ -25,11 +27,21 @@ class ApiService {
   }
 
   static Future<Map<String, String>> _headers() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
     final token = await getToken();
-    return {
+    final headers = <String, String>{
       'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
     };
+    if (currentUser?.email != null) {
+      headers['x-user-email'] = currentUser!.email!;
+    }
+    if (currentUser?.uid != null) {
+      headers['x-user-id'] = currentUser!.uid;
+    }
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
   }
 
   // --- Auth APIs ---
@@ -39,7 +51,10 @@ class ApiService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
-    return jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Login failed: ${response.statusCode} - ${response.body}');
   }
 
   static Future<Map<String, dynamic>> googleLogin(String idToken) async {
@@ -48,7 +63,10 @@ class ApiService {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'idToken': idToken, 'role': 'WORKER'}),
     );
-    return jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Google Login failed: ${response.statusCode} - ${response.body}');
   }
 
   static Future<Map<String, dynamic>> register(String email, String password, String name) async {
@@ -62,7 +80,10 @@ class ApiService {
         'role': 'WORKER',
       }),
     );
-    return jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Register failed: ${response.statusCode} - ${response.body}');
   }
 
   // --- Worker Task APIs ---
@@ -76,12 +97,11 @@ class ApiService {
       final data = jsonDecode(response.body);
       return data is List ? data : (data['tasks'] ?? []);
     }
-    return [];
+    throw Exception('Failed to load available tasks (${response.statusCode})');
   }
 
   static Future<List<dynamic>> getMyTasks(String stage) async {
     final headers = await _headers();
-    // Normalize stage string to match NestJS endpoints
     final normalizedStage = stage.replaceAll('_', '-');
     final response = await http.get(
       Uri.parse('$baseUrl/worker/tasks/$normalizedStage'),
@@ -91,7 +111,7 @@ class ApiService {
       final data = jsonDecode(response.body);
       return data is List ? data : (data['tasks'] ?? []);
     }
-    return [];
+    throw Exception('Failed to load tasks for stage "$stage" (${response.statusCode})');
   }
 
   static Future<Map<String, dynamic>> acceptTask(String taskId) async {
@@ -119,6 +139,17 @@ class ApiService {
       headers: headers,
       body: jsonEncode(proofData),
     );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> uploadFile(String filePath) async {
+    final headers = await _headers();
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/files/upload'));
+    request.headers.addAll(headers);
+    request.files.add(await http.MultipartFile.fromPath('file', filePath));
+    
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
     return jsonDecode(response.body);
   }
 
@@ -195,6 +226,20 @@ class ApiService {
     return {};
   }
 
+  static Future<Map<String, dynamic>> pingPresence() async {
+    try {
+      final headers = await _headers();
+      final response = await http.get(
+        Uri.parse('$baseUrl/worker/availability/ping'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
+    return {};
+  }
+
   static Future<Map<String, dynamic>> requestPayout(double amount, String paymentMethodId) async {
     final headers = await _headers();
     final response = await http.post(
@@ -206,5 +251,17 @@ class ApiService {
       }),
     );
     return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> getScore() async {
+    final headers = await _headers();
+    final response = await http.get(
+      Uri.parse('$baseUrl/worker/score'),
+      headers: headers,
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Failed to load score (${response.statusCode})');
   }
 }

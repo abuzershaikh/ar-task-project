@@ -10,11 +10,13 @@ import 'features/navigation/screens/main_nav_screen.dart';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'firebase_options.dart';
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // If you're going to use other Firebase services in the background, such as Firestore,
-  // make sure you call `initializeApp` before using other Firebase services.
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   print("Handling a background message: ${message.messageId}");
 }
 
@@ -23,8 +25,20 @@ const bool kBypassAuth = false;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+  } catch (e) {
+    debugPrint('Firebase core init error: $e');
+  }
+  try {
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    debugPrint('Firebase messaging init error: $e');
+  }
   runApp(const TaskRewardApp());
 }
 

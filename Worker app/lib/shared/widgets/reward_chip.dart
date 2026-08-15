@@ -22,7 +22,7 @@ class RewardChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.accentColor.withValues(alpha: 0.25),
+            color: AppTheme.accentColor.withOpacity(0.25),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

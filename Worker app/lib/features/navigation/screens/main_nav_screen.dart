@@ -4,6 +4,8 @@ import '../../my_tasks/my_tasks_screen.dart';
 import '../../wallet/screens/wallet_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 
+import '../../../core/services/api_service.dart';
+
 /// Main Navigation Shell with 5 bottom tabs:
 /// Task Feed | My Tasks | Rewards (Center Gift) | Wallet | Profile
 class MainNavScreen extends StatefulWidget {
@@ -15,6 +17,18 @@ class MainNavScreen extends StatefulWidget {
 
 class _MainNavScreenState extends State<MainNavScreen> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pingPresence();
+  }
+
+  Future<void> _pingPresence() async {
+    try {
+      await ApiService.pingPresence();
+    } catch (_) {}
+  }
 
   final List<Widget> _screens = const [
     TaskFeedScreen(),
@@ -103,7 +117,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF00875A).withValues(alpha: 0.4),
+                    color: const Color(0xFF00875A).withOpacity(0.4),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
