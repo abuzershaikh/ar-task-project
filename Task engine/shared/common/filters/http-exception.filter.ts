@@ -27,7 +27,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const message =
             exception instanceof HttpException
                 ? exception.getResponse()
-                : 'Internal server error';
+                : exception instanceof Error ? exception.message + '\n' + exception.stack : 'Internal server error';
 
         const normalizedMessage = this.getErrorMessage(message);
 
