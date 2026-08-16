@@ -4,9 +4,14 @@ import '../../data/models/buyer_model.dart';
 
 abstract class BuyersEvent {}
 class LoadBuyersEvent extends BuyersEvent {}
+class RefreshBuyersEvent extends BuyersEvent {}
 class LoadBuyerDetailEvent extends BuyersEvent {
   final String buyerId;
   LoadBuyerDetailEvent(this.buyerId);
+}
+class RefreshBuyerDetailEvent extends BuyersEvent {
+  final String buyerId;
+  RefreshBuyerDetailEvent(this.buyerId);
 }
 class UpdateBuyerStatusEvent extends BuyersEvent {
   final String buyerId;
@@ -27,7 +32,10 @@ class BuyersLoaded extends BuyersState {
   final List<BuyerModel> buyers;
   BuyersLoaded(this.buyers);
 }
-class BuyerDetailLoaded extends BuyersState {
+class BuyerDetailLoading extends BuyersLoaded {
+  BuyerDetailLoading(List<BuyerModel> buyers) : super(buyers);
+}
+class BuyerDetailLoaded extends BuyersLoaded {
   final BuyerModel buyer;
   final List<dynamic> orders;
   final List<dynamic> tasks;
@@ -36,13 +44,14 @@ class BuyerDetailLoaded extends BuyersState {
   final Map<String, dynamic> analytics;
 
   BuyerDetailLoaded({
+    required List<BuyerModel> buyers,
     required this.buyer,
     required this.orders,
     required this.tasks,
     required this.payments,
     required this.activity,
     required this.analytics,
-  });
+  }) : super(buyers);
 }
 class BuyersError extends BuyersState {
   final String message;
@@ -51,26 +60,52 @@ class BuyersError extends BuyersState {
 
 class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
   final BuyersRepository repository;
+  List<BuyerModel> _cachedBuyers = [];
 
   BuyersBloc({required this.repository}) : super(BuyersInitial()) {
     on<LoadBuyersEvent>(_onLoadBuyers);
+    on<RefreshBuyersEvent>(_onRefreshBuyers);
     on<LoadBuyerDetailEvent>(_onLoadBuyerDetail);
+    on<RefreshBuyerDetailEvent>(_onRefreshBuyerDetail);
     on<UpdateBuyerStatusEvent>(_onUpdateStatus);
     on<AdjustBuyerBalanceEvent>(_onAdjustBalance);
   }
 
   Future<void> _onLoadBuyers(LoadBuyersEvent event, Emitter<BuyersState> emit) async {
-    emit(BuyersLoading());
+    if (_cachedBuyers.isEmpty) {
+      emit(BuyersLoading());
+    } else {
+      emit(BuyersLoaded(_cachedBuyers));
+    }
     try {
       final buyers = await repository.getBuyers();
-      emit(BuyersLoaded(buyers));
+      _cachedBuyers = buyers;
+      emit(BuyersLoaded(_cachedBuyers));
     } catch (e) {
-      emit(BuyersError(e.toString()));
+      if (_cachedBuyers.isNotEmpty) {
+        emit(BuyersLoaded(_cachedBuyers));
+      } else {
+        emit(BuyersError(e.toString()));
+      }
+    }
+  }
+
+  Future<void> _onRefreshBuyers(RefreshBuyersEvent event, Emitter<BuyersState> emit) async {
+    try {
+      final buyers = await repository.getBuyers(forceRefresh: true);
+      _cachedBuyers = buyers;
+      emit(BuyersLoaded(_cachedBuyers));
+    } catch (e) {
+      if (_cachedBuyers.isNotEmpty) {
+        emit(BuyersLoaded(_cachedBuyers));
+      } else {
+        emit(BuyersError(e.toString()));
+      }
     }
   }
 
   Future<void> _onLoadBuyerDetail(LoadBuyerDetailEvent event, Emitter<BuyersState> emit) async {
-    emit(BuyersLoading());
+    emit(BuyerDetailLoading(_cachedBuyers));
     try {
       final buyer = await repository.getBuyerDetail(event.buyerId);
       final orders = await repository.getBuyerOrders(event.buyerId).catchError((_) => <dynamic>[]);
@@ -80,6 +115,7 @@ class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
       final analytics = await repository.getBuyerAnalytics(event.buyerId).catchError((_) => <String, dynamic>{});
 
       emit(BuyerDetailLoaded(
+        buyers: _cachedBuyers,
         buyer: buyer,
         orders: orders,
         tasks: tasks,
@@ -88,7 +124,38 @@ class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
         analytics: analytics,
       ));
     } catch (e) {
-      emit(BuyersError(e.toString()));
+      if (_cachedBuyers.isNotEmpty) {
+        emit(BuyersLoaded(_cachedBuyers));
+      } else {
+        emit(BuyersError(e.toString()));
+      }
+    }
+  }
+
+  Future<void> _onRefreshBuyerDetail(RefreshBuyerDetailEvent event, Emitter<BuyersState> emit) async {
+    try {
+      final buyer = await repository.getBuyerDetail(event.buyerId, forceRefresh: true);
+      final orders = await repository.getBuyerOrders(event.buyerId).catchError((_) => <dynamic>[]);
+      final tasks = await repository.getBuyerTasks(event.buyerId).catchError((_) => <dynamic>[]);
+      final payments = await repository.getBuyerPayments(event.buyerId).catchError((_) => <dynamic>[]);
+      final activity = await repository.getBuyerActivity(event.buyerId).catchError((_) => <dynamic>[]);
+      final analytics = await repository.getBuyerAnalytics(event.buyerId).catchError((_) => <String, dynamic>{});
+
+      emit(BuyerDetailLoaded(
+        buyers: _cachedBuyers,
+        buyer: buyer,
+        orders: orders,
+        tasks: tasks,
+        payments: payments,
+        activity: activity,
+        analytics: analytics,
+      ));
+    } catch (e) {
+      if (_cachedBuyers.isNotEmpty) {
+        emit(BuyersLoaded(_cachedBuyers));
+      } else {
+        emit(BuyersError(e.toString()));
+      }
     }
   }
 
@@ -97,7 +164,11 @@ class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
       await repository.updateBuyerStatus(event.buyerId, event.status);
       add(LoadBuyerDetailEvent(event.buyerId));
     } catch (e) {
-      emit(BuyersError(e.toString()));
+      if (_cachedBuyers.isNotEmpty) {
+        emit(BuyersLoaded(_cachedBuyers));
+      } else {
+        emit(BuyersError(e.toString()));
+      }
     }
   }
 
@@ -106,7 +177,11 @@ class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
       await repository.adjustBuyerBalance(event.buyerId, event.amount, event.reason);
       add(LoadBuyerDetailEvent(event.buyerId));
     } catch (e) {
-      emit(BuyersError(e.toString()));
+      if (_cachedBuyers.isNotEmpty) {
+        emit(BuyersLoaded(_cachedBuyers));
+      } else {
+        emit(BuyersError(e.toString()));
+      }
     }
   }
 }

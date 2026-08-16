@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../data/models/buyer_model.dart';
 
 class BuyerRiskTab extends StatelessWidget {
-  final String buyerId;
+  final BuyerModel buyer;
 
-  const BuyerRiskTab({super.key, required this.buyerId});
+  const BuyerRiskTab({
+    super.key,
+    required this.buyer,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isHighRisk = buyer.status == 'SUSPENDED' || buyer.status == 'BANNED' || buyer.status == 'BLOCKED';
+    final riskLevel = isHighRisk ? 'HIGH' : 'LOW';
+    final color = isHighRisk ? AppColors.error : AppColors.success;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -17,11 +25,11 @@ class BuyerRiskTab extends StatelessWidget {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  const Icon(Icons.shield, color: AppColors.success, size: 48),
+                  Icon(Icons.shield, color: color, size: 48),
                   const SizedBox(height: 16),
-                  const Text('Risk Level: LOW', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.success)),
+                  Text('Risk Level: $riskLevel', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
                   const SizedBox(height: 8),
-                  const Text('Risk Score: 12 / 100', style: TextStyle(color: AppColors.gray600)),
+                  Text('Status: ${buyer.status}', style: const TextStyle(color: AppColors.gray600)),
                 ],
               ),
             ),
@@ -32,9 +40,9 @@ class BuyerRiskTab extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _buildStatRow('Payment Issues', '0', AppColors.success),
-                  _buildStatRow('Cancelled Orders', '2', AppColors.warning),
-                  _buildStatRow('Refund Rate', '1.2%', AppColors.info),
+                  _buildStatRow('Total Orders', '${buyer.totalOrders}', AppColors.primary),
+                  _buildStatRow('Active Campaigns', '${buyer.activeCampaigns}', AppColors.success),
+                  _buildStatRow('Total Spend', '₹${buyer.totalSpend.toStringAsFixed(2)}', AppColors.info),
                 ],
               ),
             ),

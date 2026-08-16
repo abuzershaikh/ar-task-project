@@ -29,16 +29,20 @@ class OrdersLoaded extends OrdersState {
   final List<AdminOrderModel> orders;
   OrdersLoaded(this.orders);
 }
-class OrderDetailLoaded extends OrdersState {
+class OrderDetailLoading extends OrdersLoaded {
+  OrderDetailLoading(List<AdminOrderModel> orders) : super(orders);
+}
+class OrderDetailLoaded extends OrdersLoaded {
   final AdminOrderModel order;
   final List<dynamic> tasks;
   final List<dynamic> submissions;
 
   OrderDetailLoaded({
+    required List<AdminOrderModel> orders,
     required this.order,
     required this.tasks,
     required this.submissions,
-  });
+  }) : super(orders);
 }
 class OrdersError extends OrdersState {
   final String message;
@@ -47,6 +51,7 @@ class OrdersError extends OrdersState {
 
 class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
   final OrdersRepository repository;
+  List<AdminOrderModel> _cachedOrders = [];
 
   OrdersBloc({required this.repository}) : super(OrdersInitial()) {
     on<LoadOrdersEvent>(_onLoadOrders);
@@ -57,29 +62,43 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
   }
 
   Future<void> _onLoadOrders(LoadOrdersEvent event, Emitter<OrdersState> emit) async {
-    emit(OrdersLoading());
+    if (_cachedOrders.isEmpty) {
+      emit(OrdersLoading());
+    } else {
+      emit(OrdersLoaded(_cachedOrders));
+    }
     try {
       final orders = await repository.getOrders();
-      emit(OrdersLoaded(orders));
+      _cachedOrders = orders;
+      emit(OrdersLoaded(_cachedOrders));
     } catch (e) {
-      emit(OrdersError(e.toString()));
+      if (_cachedOrders.isNotEmpty) {
+        emit(OrdersLoaded(_cachedOrders));
+      } else {
+        emit(OrdersError(e.toString()));
+      }
     }
   }
 
   Future<void> _onLoadOrderDetail(LoadOrderDetailEvent event, Emitter<OrdersState> emit) async {
-    emit(OrdersLoading());
+    emit(OrderDetailLoading(_cachedOrders));
     try {
       final order = await repository.getOrderDetail(event.orderId);
       final tasks = await repository.getOrderTasks(event.orderId).catchError((_) => <dynamic>[]);
       final submissions = await repository.getOrderSubmissions(event.orderId).catchError((_) => <dynamic>[]);
 
       emit(OrderDetailLoaded(
+        orders: _cachedOrders,
         order: order,
         tasks: tasks,
         submissions: submissions,
       ));
     } catch (e) {
-      emit(OrdersError(e.toString()));
+      if (_cachedOrders.isNotEmpty) {
+        emit(OrdersLoaded(_cachedOrders));
+      } else {
+        emit(OrdersError(e.toString()));
+      }
     }
   }
 
@@ -88,7 +107,11 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
       await repository.pauseOrder(event.orderId);
       add(LoadOrderDetailEvent(event.orderId));
     } catch (e) {
-      emit(OrdersError(e.toString()));
+      if (_cachedOrders.isNotEmpty) {
+        emit(OrdersLoaded(_cachedOrders));
+      } else {
+        emit(OrdersError(e.toString()));
+      }
     }
   }
 
@@ -97,7 +120,11 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
       await repository.resumeOrder(event.orderId);
       add(LoadOrderDetailEvent(event.orderId));
     } catch (e) {
-      emit(OrdersError(e.toString()));
+      if (_cachedOrders.isNotEmpty) {
+        emit(OrdersLoaded(_cachedOrders));
+      } else {
+        emit(OrdersError(e.toString()));
+      }
     }
   }
 
@@ -106,7 +133,11 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
       await repository.cancelOrder(event.orderId, event.reason);
       add(LoadOrderDetailEvent(event.orderId));
     } catch (e) {
-      emit(OrdersError(e.toString()));
+      if (_cachedOrders.isNotEmpty) {
+        emit(OrdersLoaded(_cachedOrders));
+      } else {
+        emit(OrdersError(e.toString()));
+      }
     }
   }
 }

@@ -164,12 +164,11 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen> with Single
             child: const Text('Save Details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
             onPressed: () {
               if (nameCtrl.text.trim().isNotEmpty) {
-                final updated = service.copyWith(
-                  name: nameCtrl.text.trim(),
-                  description: descCtrl.text.trim(),
-                );
                 context.read<ServiceBuilderBloc>().add(
-                      UpdateElementPropertiesEvent(updated.elements.first),
+                      UpdateServiceInfoEvent(
+                        name: nameCtrl.text.trim(),
+                        description: descCtrl.text.trim(),
+                      ),
                     );
                 Navigator.pop(ctx);
               }

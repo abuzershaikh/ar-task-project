@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 import '../../../service_builder/presentation/pages/services_list_screen.dart';
 
@@ -76,7 +78,7 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.psychology_outlined,
             title: 'Matching Brain',
             subtitle: 'Configure scoring & matching engine',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           _MenuItem(
             icon: Icons.shopping_basket_outlined,
@@ -93,7 +95,7 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.settings_outlined,
             title: 'System Settings',
             subtitle: 'Platform configuration & limits',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           const SizedBox(height: 16),
 
@@ -103,19 +105,19 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.rate_review_outlined,
             title: 'Reviews',
             subtitle: 'Pending submissions & approvals',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           _MenuItem(
             icon: Icons.verified_user_outlined,
             title: 'KYC Management',
             subtitle: 'Worker verification requests',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           _MenuItem(
             icon: Icons.account_balance_wallet_outlined,
             title: 'Payouts',
             subtitle: 'Worker withdrawal requests',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           const SizedBox(height: 16),
 
@@ -125,13 +127,13 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.account_balance_outlined,
             title: 'Finance & Ledger',
             subtitle: 'Platform financial overview',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           _MenuItem(
             icon: Icons.receipt_long_outlined,
             title: 'Buyer Payments',
             subtitle: 'Payment history & reconciliation',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           const SizedBox(height: 16),
 
@@ -141,13 +143,13 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.analytics_outlined,
             title: 'Analytics',
             subtitle: 'Platform metrics & insights',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           _MenuItem(
             icon: Icons.warning_amber_outlined,
             title: 'Risk & Fraud',
             subtitle: 'Suspicious activity monitoring',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           const SizedBox(height: 16),
 
@@ -157,13 +159,13 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.api_outlined,
             title: 'API Management',
             subtitle: 'API clients, keys & usage',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           _MenuItem(
             icon: Icons.webhook_outlined,
             title: 'Webhooks',
             subtitle: 'Event delivery & monitoring',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           const SizedBox(height: 16),
 
@@ -173,19 +175,19 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.history_outlined,
             title: 'Audit Logs',
             subtitle: 'System activity tracking',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           _MenuItem(
             icon: Icons.notifications_outlined,
             title: 'Notifications',
             subtitle: 'Platform alerts & messages',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           _MenuItem(
             icon: Icons.admin_panel_settings_outlined,
             title: 'Admin Roles',
             subtitle: 'Manage admin permissions',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           const SizedBox(height: 16),
 
@@ -195,13 +197,15 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.person_outline,
             title: 'My Profile',
             subtitle: 'Update your information',
-            onTap: () {},
+            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
           ),
           _MenuItem(
             icon: Icons.logout,
             title: 'Logout',
             subtitle: 'Sign out from admin panel',
-            onTap: () {},
+            onTap: () {
+              context.read<AuthBloc>().add(AuthLogoutRequested());
+            },
             isDestructive: true,
           ),
           const SizedBox(height: 24),

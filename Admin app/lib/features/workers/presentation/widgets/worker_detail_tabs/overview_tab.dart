@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../data/models/worker_model.dart';
 
 class OverviewTab extends StatelessWidget {
-  final String workerId;
+  final WorkerModel worker;
+  final List<dynamic> tasks;
+  final List<dynamic> earnings;
 
-  const OverviewTab({super.key, required this.workerId});
+  const OverviewTab({
+    super.key,
+    required this.worker,
+    this.tasks = const [],
+    this.earnings = const [],
+  });
 
   @override
   Widget build(BuildContext context) {
+    final joinedDate = worker.createdAt != null
+        ? '${worker.createdAt!.day}/${worker.createdAt!.month}/${worker.createdAt!.year}'
+        : 'N/A';
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -17,9 +29,12 @@ class OverviewTab extends StatelessWidget {
           _buildCard(
             'Account Information',
             [
-              _buildInfoRow('Status', 'ACTIVE', AppColors.success),
-              _buildInfoRow('Joined Date', '15 Jan 2024', AppColors.gray700),
-              _buildInfoRow('Last Active', '2 hours ago', AppColors.gray700),
+              _buildInfoRow('Name', worker.name, AppColors.gray900),
+              _buildInfoRow('Email', worker.email, AppColors.gray900),
+              _buildInfoRow('Phone', worker.phone.isNotEmpty ? worker.phone : 'N/A', AppColors.gray700),
+              _buildInfoRow('Status', worker.status, worker.status == 'ACTIVE' ? AppColors.success : AppColors.error),
+              _buildInfoRow('KYC Status', worker.kycStatus, worker.kycStatus == 'VERIFIED' ? AppColors.success : AppColors.warning),
+              _buildInfoRow('Joined Date', joinedDate, AppColors.gray700),
             ],
           ),
           
@@ -29,12 +44,9 @@ class OverviewTab extends StatelessWidget {
           _buildCard(
             'Performance Metrics',
             [
-              _buildMetricRow('Rating', '⭐ 4.8', AppColors.warning),
-              _buildMetricRow('Quality Score', '92.5', AppColors.primary),
-              _buildMetricRow('Completion Rate', '96%', AppColors.success),
-              _buildMetricRow('Acceptance Rate', '94%', AppColors.success),
-              _buildMetricRow('Timeout Rate', '2%', AppColors.error),
-              _buildMetricRow('Rejection Rate', '3%', AppColors.error),
+              _buildMetricRow('Rating', '⭐ ${worker.rating.toStringAsFixed(1)}', AppColors.warning),
+              _buildMetricRow('Tier', worker.tier, AppColors.primary),
+              _buildMetricRow('Total Earnings', '₹${worker.totalEarnings.toStringAsFixed(2)}', AppColors.success),
             ],
           ),
           
@@ -44,42 +56,8 @@ class OverviewTab extends StatelessWidget {
           _buildCard(
             'Task Summary',
             [
-              _buildTaskStat('Total Tasks', '1,245', Icons.task, AppColors.primary),
-              _buildTaskStat('Completed', '1,180', Icons.check_circle, AppColors.success),
-              _buildTaskStat('In Progress', '12', Icons.pending, AppColors.warning),
-              _buildTaskStat('Rejected', '20', Icons.cancel, AppColors.error),
-              _buildTaskStat('Timed Out', '33', Icons.timer_off, AppColors.error),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Quick Actions
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.pause_circle, size: 18),
-                  label: const Text('Suspend'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.warning,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.block, size: 18),
-                  label: const Text('Ban'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.error,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
+              _buildTaskStat('Completed Tasks', '${worker.completedTasks}', Icons.task, AppColors.primary),
+              _buildTaskStat('Recorded Tasks', '${tasks.length}', Icons.check_circle, AppColors.success),
             ],
           ),
         ],
@@ -123,12 +101,15 @@ class OverviewTab extends StatelessWidget {
               color: AppColors.gray600,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: valueColor,
+          Flexible(
+            child: Text(
+              value,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: valueColor,
+              ),
             ),
           ),
         ],

@@ -3,6 +3,10 @@ import '../../domain/repositories/service_builder_repository.dart';
 import '../../domain/models/service_model.dart';
 import '../../domain/models/pricing_config.dart';
 import '../../domain/models/template_element.dart';
+import '../../domain/models/element_category.dart';
+import '../../domain/models/element_type.dart';
+import '../../domain/models/visibility_context.dart';
+import '../../domain/models/editability_mode.dart';
 
 import 'service_builder_event.dart';
 import 'service_builder_state.dart';
@@ -14,6 +18,7 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
     on<LoadServicesEvent>(_onLoadServices);
     on<SelectServiceForEditEvent>(_onSelectServiceForEdit);
     on<CreateNewServiceDraftEvent>(_onCreateNewServiceDraft);
+    on<UpdateServiceInfoEvent>(_onUpdateServiceInfo);
     on<UpdatePricingEvent>(_onUpdatePricing);
     on<AddPriceChipEvent>(_onAddPriceChip);
     on<RemovePriceChipEvent>(_onRemovePriceChip);
@@ -57,6 +62,87 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
     Emitter<ServiceBuilderState> emit,
   ) {
     final cleanCode = event.code.toUpperCase().replaceAll(' ', '_');
+    final defaultElements = <TemplateElement>[
+      TemplateElement(
+        id: 'el_header',
+        key: 'header_title',
+        label: 'Campaign Header / Title',
+        category: ElementCategory.content,
+        type: ElementType.heading,
+        visibility: VisibilityContext.both,
+        editability: EditabilityMode.buyerInput,
+        isRequired: true,
+        orderIndex: 0,
+        properties: {'placeholder': 'Enter Campaign Title'},
+      ),
+      TemplateElement(
+        id: 'el_target_url',
+        key: 'target_url',
+        label: 'Target Action Link (Website/Channel/App)',
+        category: ElementCategory.interactive,
+        type: ElementType.actionButton,
+        visibility: VisibilityContext.both,
+        editability: EditabilityMode.buyerInput,
+        isRequired: true,
+        orderIndex: 1,
+        properties: {
+          'buttonText': 'Open Link & Complete Task',
+          'placeholder': 'https://youtube.com/watch?v=... or https://t.me/...',
+        },
+      ),
+      TemplateElement(
+        id: 'el_yt_video',
+        key: 'yt_video_preview',
+        label: 'YouTube Tutorial / Video Preview',
+        category: ElementCategory.media,
+        type: ElementType.youtube,
+        visibility: VisibilityContext.both,
+        editability: EditabilityMode.buyerInput,
+        isRequired: false,
+        orderIndex: 2,
+        properties: {'placeholder': 'Paste YouTube video URL for live preview'},
+      ),
+      TemplateElement(
+        id: 'el_voice_rec',
+        key: 'voice_instruction',
+        label: 'Voice Instruction / Audio Guide',
+        category: ElementCategory.media,
+        type: ElementType.audio,
+        visibility: VisibilityContext.both,
+        editability: EditabilityMode.buyerInput,
+        isRequired: false,
+        orderIndex: 3,
+        properties: {'placeholder': 'Record or upload audio instructions for workers'},
+      ),
+      TemplateElement(
+        id: 'el_instructions',
+        key: 'gig_worker_instructions',
+        label: 'Step-by-Step Instructions to Gig Worker',
+        category: ElementCategory.content,
+        type: ElementType.paragraph,
+        visibility: VisibilityContext.both,
+        editability: EditabilityMode.buyerInput,
+        isRequired: true,
+        orderIndex: 4,
+        properties: {'placeholder': 'Describe exactly what steps the worker must take.'},
+      ),
+      TemplateElement(
+        id: 'el_proof_submit',
+        key: 'system_proof_requirements',
+        label: 'Proof Requirements & Submission',
+        category: ElementCategory.system,
+        type: ElementType.systemProof,
+        visibility: VisibilityContext.both,
+        editability: EditabilityMode.adminFixed,
+        isRequired: true,
+        orderIndex: 5,
+        properties: {
+          'requireScreenshot': true,
+          'requireTextProof': false,
+        },
+      ),
+    ];
+
     final newService = ServiceModel(
       id: 'srv_${DateTime.now().millisecondsSinceEpoch}',
       code: cleanCode,
@@ -74,10 +160,25 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
           PriceChipModel(id: 'chip_3', label: '1000 Count (Pro Pack)', quantity: 1000, price: 1699.0),
         ],
       ),
-      elements: [],
+      elements: defaultElements,
       updatedAt: DateTime.now(),
     );
     emit(ServiceEditingState(serviceDraft: newService));
+  }
+
+  void _onUpdateServiceInfo(
+    UpdateServiceInfoEvent event,
+    Emitter<ServiceBuilderState> emit,
+  ) {
+    if (state is ServiceEditingState) {
+      final currentState = state as ServiceEditingState;
+      final updatedDraft = currentState.serviceDraft.copyWith(
+        name: event.name,
+        description: event.description,
+        updatedAt: DateTime.now(),
+      );
+      emit(currentState.copyWith(serviceDraft: updatedDraft));
+    }
   }
 
   void _onUpdatePricing(

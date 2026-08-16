@@ -15,21 +15,34 @@ class DashboardDataModel extends DashboardData {
   });
 
   factory DashboardDataModel.fromJson(Map<String, dynamic> json) {
-    final spend = ((json['totalSpent'] ?? json['totalSpend'] as num?) ?? 0).toDouble();
-    final totalCmp = (json['totalOrdersCount'] ?? json['totalCampaigns'] as num?)?.toInt() ?? 0;
-    final activeCmp = (json['activeOrdersCount'] ?? json['activeCampaigns'] as num?)?.toInt() ?? 0;
-    final compCmp = (json['completedOrdersCount'] ?? json['completedCampaigns'] as num?)?.toInt() ?? 0;
-    final compTasks = (json['totalTasksCompleted'] ?? json['completedTasks'] as num?)?.toInt() ?? 0;
-    final pendTasks = (json['pendingTasks'] as num?)?.toInt() ?? 0;
-    final inProgTasks = (json['inProgressTasks'] as num?)?.toInt() ?? 0;
+    double parseD(dynamic v, double def) {
+      if (v == null) return def;
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v) ?? def;
+      return def;
+    }
+    int parseI(dynamic v, int def) {
+      if (v == null) return def;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? def;
+      return def;
+    }
+
+    final spend = parseD(json['totalSpent'] ?? json['totalSpend'], 0.0);
+    final totalCmp = parseI(json['totalOrdersCount'] ?? json['totalCampaigns'], 0);
+    final activeCmp = parseI(json['activeOrdersCount'] ?? json['activeCampaigns'], 0);
+    final compCmp = parseI(json['completedOrdersCount'] ?? json['completedCampaigns'], 0);
+    final compTasks = parseI(json['totalTasksCompleted'] ?? json['completedTasks'], 0);
+    final pendTasks = parseI(json['pendingTasks'], 0);
+    final inProgTasks = parseI(json['inProgressTasks'], 0);
 
     final double completionPct = (totalCmp > 0)
         ? (compCmp / totalCmp * 100.0)
-        : (((json['overallCompletion'] as num?) ?? 0.0).toDouble());
+        : parseD(json['overallCompletion'], 0.0);
 
     final rawRecent = json['recentCampaigns'] as List<dynamic>?;
     final List<CampaignSummaryModel> recent = rawRecent != null
-        ? rawRecent.map((e) => CampaignSummaryModel.fromJson(e as Map<String, dynamic>)).toList()
+        ? rawRecent.map((e) => CampaignSummaryModel.fromJson(Map<String, dynamic>.from(e as Map))).toList()
         : [];
 
     return DashboardDataModel(

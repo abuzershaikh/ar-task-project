@@ -142,23 +142,27 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
             );
           }
           
-          if (state is WorkerDetailLoaded && state.worker.id != widget.workerId) {
-            return const Center(child: CircularProgressIndicator());
+          if (state is WorkerDetailLoaded) {
+            final detailState = state as WorkerDetailLoaded;
+            if (detailState.worker.id != widget.workerId) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return TabBarView(
+              controller: _tabController,
+              children: [
+                OverviewTab(worker: detailState.worker, tasks: detailState.tasks, earnings: detailState.earnings),
+                TasksTab(tasks: detailState.tasks),
+                KycTab(worker: detailState.worker),
+                EarningsTab(worker: detailState.worker, earnings: detailState.earnings),
+                RatingsTab(worker: detailState.worker, ratings: detailState.ratings),
+                QualityScoreTab(worker: detailState.worker, scoreHistory: detailState.scoreHistory),
+                RiskTab(worker: detailState.worker, risk: detailState.risk),
+                ActivityTab(activity: detailState.activity),
+              ],
+            );
           }
           
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              OverviewTab(workerId: widget.workerId),
-              TasksTab(workerId: widget.workerId),
-              KycTab(workerId: widget.workerId),
-              EarningsTab(workerId: widget.workerId),
-              RatingsTab(workerId: widget.workerId),
-              QualityScoreTab(workerId: widget.workerId),
-              RiskTab(workerId: widget.workerId),
-              ActivityTab(workerId: widget.workerId),
-            ],
-          );
+          return const Center(child: CircularProgressIndicator());
         },
       ),
     );

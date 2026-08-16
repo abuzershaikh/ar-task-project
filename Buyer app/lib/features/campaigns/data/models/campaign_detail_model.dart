@@ -34,13 +34,28 @@ class CampaignDetailModel extends CampaignDetail {
   });
 
   factory CampaignDetailModel.fromJson(Map<String, dynamic> json) {
-    final total = (json['totalTasks'] ?? json['totalTasksRequired'] as num?)?.toInt() ?? 0;
-    final completed = (json['completedTasks'] ?? json['tasksCompleted'] as num?)?.toInt() ?? 0;
-    final inProgress = (json['inProgressTasks'] as num?)?.toInt() ?? 0;
-    final pending = (json['pendingTasks'] as num?)?.toInt() ?? (total - completed > 0 ? total - completed : 0);
-    final rejected = (json['rejectedTasks'] as num?)?.toInt() ?? 0;
-    final underReview = (json['underReviewTasks'] as num?)?.toInt() ?? 0;
-    final compPct = total > 0 ? (completed / total * 100.0) : ((json['completionPercentage'] as num?)?.toDouble() ?? 0.0);
+    double parseD(dynamic v, double def) {
+      if (v == null) return def;
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v) ?? def;
+      return def;
+    }
+    int parseI(dynamic v, int def) {
+      if (v == null) return def;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? def;
+      return def;
+    }
+
+    final total = parseI(json['totalTasks'] ?? json['totalTasksRequired'], 0);
+    final completed = parseI(json['completedTasks'] ?? json['tasksCompleted'], 0);
+    final inProgress = parseI(json['inProgressTasks'], 0);
+    final pending = parseI(json['pendingTasks'], total - completed > 0 ? total - completed : 0);
+    final rejected = parseI(json['rejectedTasks'], 0);
+    final underReview = parseI(json['underReviewTasks'], 0);
+    final compPct = total > 0 ? (completed / total * 100.0) : parseD(json['completionPercentage'], 0.0);
+
+    final unitPrice = parseD(json['buyerUnitPrice'], 0.0);
 
     return CampaignDetailModel(
       id: (json['id'] ?? '').toString(),
@@ -55,8 +70,8 @@ class CampaignDetailModel extends CampaignDetail {
       rejectedTasks: rejected,
       underReviewTasks: underReview,
       completionPercentage: compPct,
-      totalAmount: ((json['totalAmount'] as num?) ?? 0.0).toDouble(),
-      spentAmount: ((json['spentAmount'] as num?) ?? (completed * ((json['buyerUnitPrice'] as num?) ?? 0.0))).toDouble(),
+      totalAmount: parseD(json['totalAmount'], 0.0),
+      spentAmount: parseD(json['spentAmount'], completed * unitPrice),
       paymentStatus: (json['paymentStatus'] ?? 'reserved').toString(),
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now() : DateTime.now(),
       originalDeadline: json['originalDeadline'] != null ? DateTime.tryParse(json['originalDeadline'].toString()) : null,
@@ -66,13 +81,13 @@ class CampaignDetailModel extends CampaignDetail {
       proofRequirements: json['proofRequirements'] != null && json['proofRequirements'] is List
           ? (json['proofRequirements'] as List).map((e) => e.toString()).toList()
           : <String>[],
-      acceptWithinHours: (json['acceptWithinHours'] ?? json['timeToAcceptHours'] as num?)?.toInt() ?? 24,
-      completeWithinHours: (json['completeWithinHours'] ?? json['timeToCompleteHours'] as num?)?.toInt() ?? 48,
+      acceptWithinHours: parseI(json['acceptWithinHours'] ?? json['timeToAcceptHours'], 24),
+      completeWithinHours: parseI(json['completeWithinHours'] ?? json['timeToCompleteHours'], 48),
       reviewMode: (json['reviewMode'] ?? 'manual').toString(),
-      approvalRate: ((json['approvalRate'] as num?) ?? 100.0).toDouble(),
-      rejectionRate: ((json['rejectionRate'] as num?) ?? 0.0).toDouble(),
-      averageReviewTimeMinutes: (json['averageReviewTimeMinutes'] as num?)?.toInt() ?? 30,
-      pendingReviews: (json['pendingReviews'] as num?)?.toInt() ?? 0,
+      approvalRate: parseD(json['approvalRate'], 100.0),
+      rejectionRate: parseD(json['rejectionRate'], 0.0),
+      averageReviewTimeMinutes: parseI(json['averageReviewTimeMinutes'], 30),
+      pendingReviews: parseI(json['pendingReviews'], 0),
     );
   }
 
@@ -123,10 +138,17 @@ class DeadlineExtensionModel extends DeadlineExtension {
   });
 
   factory DeadlineExtensionModel.fromJson(Map<String, dynamic> json) {
+    int parseI(dynamic v) {
+      if (v == null) return 0;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? 0;
+      return 0;
+    }
+
     return DeadlineExtensionModel(
       originalDeadline: DateTime.tryParse(json['originalDeadline'].toString()) ?? DateTime.now(),
       newDeadline: DateTime.tryParse(json['newDeadline'].toString()) ?? DateTime.now(),
-      extensionHours: (json['extensionHours'] as num?)?.toInt() ?? 0,
+      extensionHours: parseI(json['extensionHours']),
       reason: (json['reason'] ?? '').toString(),
       extendedAt: DateTime.tryParse(json['extendedAt'].toString()) ?? DateTime.now(),
       isAutomatic: json['isAutomatic'] as bool? ?? true,

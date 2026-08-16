@@ -30,6 +30,21 @@ export class ServiceCatalog {
     @Column({ name: 'review_mode', type: 'varchar', length: 50, default: 'buyer' })
     reviewMode: string; // 'buyer' | 'admin' | 'automatic'
 
+    @Column({ name: 'min_accept_hours', type: 'int', default: 1 })
+    minAcceptHours: number;
+
+    @Column({ name: 'max_accept_hours', type: 'int', default: 72 })
+    maxAcceptHours: number;
+
+    @Column({ name: 'min_complete_hours', type: 'int', default: 1 })
+    minCompleteHours: number;
+
+    @Column({ name: 'max_complete_hours', type: 'int', default: 168 })
+    maxCompleteHours: number;
+
+    @Column({ name: 'watchtime_seconds', type: 'int', default: 0 })
+    watchtimeSeconds: number;
+
     @Column({ type: 'int', default: 1 })
     version: number;
 

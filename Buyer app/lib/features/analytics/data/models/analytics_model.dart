@@ -18,13 +18,26 @@ class AnalyticsModel {
   });
 
   factory AnalyticsModel.fromJson(Map<String, dynamic> json) {
+    double parseD(dynamic v) {
+      if (v == null) return 0.0;
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v) ?? 0.0;
+      return 0.0;
+    }
+    int parseI(dynamic v) {
+      if (v == null) return 0;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? 0;
+      return 0;
+    }
+
     return AnalyticsModel(
-      totalSpent: ((json['totalSpent'] ?? json['spent'] as num?) ?? 0.0).toDouble(),
-      totalCampaigns: ((json['totalCampaigns'] ?? json['totalOrders'] as num?) ?? 0).toInt(),
-      activeCampaigns: ((json['activeCampaigns'] as num?) ?? 0).toInt(),
-      completedCampaigns: ((json['completedCampaigns'] as num?) ?? 0).toInt(),
-      totalTasks: ((json['totalTasks'] as num?) ?? 0).toInt(),
-      conversionRate: ((json['conversionRate'] as num?) ?? 0.0).toDouble(),
+      totalSpent: parseD(json['totalSpent'] ?? json['spent']),
+      totalCampaigns: parseI(json['totalCampaigns'] ?? json['totalOrders']),
+      activeCampaigns: parseI(json['activeCampaigns']),
+      completedCampaigns: parseI(json['completedCampaigns']),
+      totalTasks: parseI(json['totalTasks']),
+      conversionRate: parseD(json['conversionRate']),
       monthlyBreakdown: (json['monthlyBreakdown'] as List<dynamic>?)
               ?.map((e) => Map<String, dynamic>.from(e as Map))
               .toList() ??

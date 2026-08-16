@@ -43,11 +43,24 @@ class PriceChipModel {
   }
 
   factory PriceChipModel.fromJson(Map<String, dynamic> json) {
+    double parseD(dynamic v) {
+      if (v == null) return 0.0;
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v) ?? 0.0;
+      return 0.0;
+    }
+    int parseI(dynamic v) {
+      if (v == null) return 1;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? 1;
+      return 1;
+    }
+
     return PriceChipModel(
-      id: json['id'] as String? ?? '',
-      label: json['label'] as String? ?? '',
-      quantity: json['quantity'] as int? ?? 1,
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      id: json['id']?.toString() ?? '',
+      label: json['label']?.toString() ?? '',
+      quantity: parseI(json['quantity']),
+      price: parseD(json['price']),
       isPopular: json['isPopular'] as bool? ?? false,
     );
   }
@@ -114,8 +127,21 @@ class PricingConfig {
   }
 
   factory PricingConfig.fromJson(Map<String, dynamic> json) {
+    double parseD(dynamic v, double def) {
+      if (v == null) return def;
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v) ?? def;
+      return def;
+    }
+    int parseI(dynamic v, int def) {
+      if (v == null) return def;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? def;
+      return def;
+    }
+
     PricingModelType parsedModel = PricingModelType.fixed;
-    final mStr = json['modelType'] as String?;
+    final mStr = json['modelType']?.toString();
     if (mStr != null) {
       parsedModel = PricingModelType.values.firstWhere(
         (e) => e.name == mStr,
@@ -130,12 +156,12 @@ class PricingConfig {
 
     return PricingConfig(
       modelType: parsedModel,
-      buyerPrice: (json['buyerPrice'] ?? json['unitPriceBuyer'] as num?)?.toDouble() ?? 0.0,
-      unitPrice: (json['unitPrice'] ?? json['unitPriceBuyer'] as num?)?.toDouble() ?? 1.0,
-      minQuantity: (json['minQuantity'] as num?)?.toInt() ?? 1,
-      maxQuantity: (json['maxQuantity'] as num?)?.toInt() ?? 10000,
-      adminMarginPercent: (json['adminMarginPercent'] as num?)?.toDouble() ?? 20.0,
-      workerReward: (json['workerReward'] ?? json['workerRewardPerUnit'] as num?)?.toDouble() ?? 0.0,
+      buyerPrice: parseD(json['buyerPrice'] ?? json['unitPriceBuyer'] ?? json['price'], 0.0),
+      unitPrice: parseD(json['unitPrice'] ?? json['unitPriceBuyer'], 1.0),
+      minQuantity: parseI(json['minQuantity'], 1),
+      maxQuantity: parseI(json['maxQuantity'], 10000),
+      adminMarginPercent: parseD(json['adminMarginPercent'] ?? json['marginValue'], 20.0),
+      workerReward: parseD(json['workerReward'] ?? json['workerRewardPerUnit'], 0.0),
       chips: parsedChips,
     );
   }

@@ -99,7 +99,7 @@ class _OrdersList extends StatelessWidget {
           pending: 8 + (index * 2),
           totalAmount: 2500,
           status: orderStatus,
-          onTap: () {},
+          onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
         );
       },
     );

@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/buyers_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 
-class BuyersScreen extends StatelessWidget {
+class BuyersScreen extends StatefulWidget {
   const BuyersScreen({super.key});
+
+  @override
+  State<BuyersScreen> createState() => _BuyersScreenState();
+}
+
+class _BuyersScreenState extends State<BuyersScreen> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<BuyersBloc>().add(LoadBuyersEvent());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,19 +29,58 @@ class BuyersScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 15,
-        itemBuilder: (context, index) {
-          return _BuyerCard(
-            buyerId: 'B-${1001 + index}',
-            companyName: 'Company ${index + 1}',
-            balance: 24500 + (index * 5000),
-            activeOrders: 12 - index,
-            totalOrders: 84 + (index * 10),
-            apiEnabled: index % 2 == 0,
-            onTap: () {},
-          );
+      body: BlocBuilder<BuyersBloc, BuyersState>(
+        builder: (context, state) {
+          if (state is BuyersLoading) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (state is BuyersError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Error: ${state.message}'),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<BuyersBloc>().add(LoadBuyersEvent());
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          } else if (state is BuyersLoaded) {
+            final buyers = state.buyers;
+            if (buyers.isEmpty) {
+              return const Center(child: Text('No buyers found.'));
+            }
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<BuyersBloc>().add(RefreshBuyersEvent());
+                await Future.delayed(const Duration(milliseconds: 500));
+              },
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: buyers.length,
+                itemBuilder: (context, index) {
+                  final buyer = buyers[index];
+                  return _BuyerCard(
+                    buyerId: buyer.id,
+                    companyName: buyer.name,
+                    balance: buyer.totalSpend.toInt(), // using totalSpend as proxy for now
+                    activeOrders: buyer.activeCampaigns,
+                    totalOrders: buyer.totalOrders,
+                    apiEnabled: false, // Update if API enabled is added to model
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Feature coming soon')),
+                      );
+                    },
+                  );
+                },
+              ),
+            );
+          }
+          return const Center(child: Text('No data'));
         },
       ),
     );

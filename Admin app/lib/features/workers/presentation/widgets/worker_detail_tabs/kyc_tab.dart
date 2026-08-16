@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../data/models/worker_model.dart';
 
 class KycTab extends StatelessWidget {
-  final String workerId;
+  final WorkerModel worker;
 
-  const KycTab({super.key, required this.workerId});
+  const KycTab({
+    super.key,
+    required this.worker,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isVerified = worker.kycStatus == 'VERIFIED';
+    final statusColor = isVerified ? AppColors.success : AppColors.warning;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -21,30 +28,34 @@ class KycTab extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.1),
+                      color: statusColor.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.verified, color: AppColors.success, size: 32),
+                    child: Icon(
+                      isVerified ? Icons.verified : Icons.error_outline,
+                      color: statusColor,
+                      size: 32,
+                    ),
                   ),
                   const SizedBox(width: 16),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'KYC Status',
+                        const Text(
+                          'KYC Verification Status',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.gray500,
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
-                          'VERIFIED ✓',
+                          worker.kycStatus,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.success,
+                            color: statusColor,
                           ),
                         ),
                       ],
@@ -65,7 +76,7 @@ class KycTab extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'KYC Information',
+                    'Worker Profile Info',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -73,48 +84,14 @@ class KycTab extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildInfoRow('Full Name', 'KYC Verified User'),
-                  _buildInfoRow('Bank Name', 'State Bank of India'),
-                  _buildInfoRow('Account No.', 'XXXX-XXXX-1234'),
-                  _buildInfoRow('IFSC Code', 'SBIN0001234'),
-                  _buildInfoRow('UPI ID', 'worker@upi'),
-                  _buildInfoRow('PayPal', 'Not Provided'),
+                  _buildInfoRow('Full Name', worker.name),
+                  _buildInfoRow('Email Address', worker.email),
+                  _buildInfoRow('Phone', worker.phone.isNotEmpty ? worker.phone : 'Not Provided'),
+                  _buildInfoRow('Account ID', worker.id),
+                  _buildInfoRow('User ID', worker.userId),
                 ],
               ),
             ),
-          ),
-          
-          // Bank Details View section if needed
-          // The Document Viewer section has been removed as we only collect bank details now.
-          const SizedBox(height: 16),
-          
-          // Actions
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.cancel, size: 18),
-                  label: const Text('Reject KYC'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: const BorderSide(color: AppColors.error),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('Re-KYC'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
           ),
         ],
       ),

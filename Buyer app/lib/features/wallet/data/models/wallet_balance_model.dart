@@ -10,9 +10,16 @@ class WalletBalanceModel extends WalletBalance {
   });
 
   factory WalletBalanceModel.fromJson(Map<String, dynamic> json) {
-    final avail = ((json['availableBalance'] ?? json['available'] ?? json['balance'] as num?) ?? 0.0).toDouble();
-    final reserved = ((json['reservedBalance'] ?? json['reserved'] as num?) ?? 0.0).toDouble();
-    final total = ((json['totalBalance'] ?? json['total'] as num?) ?? (avail + reserved)).toDouble();
+    double parseD(dynamic v, double def) {
+      if (v == null) return def;
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v) ?? def;
+      return def;
+    }
+
+    final avail = parseD(json['availableBalance'] ?? json['available'] ?? json['balance'], 0.0);
+    final reserved = parseD(json['reservedBalance'] ?? json['reserved'], 0.0);
+    final total = parseD(json['totalBalance'] ?? json['total'], avail + reserved);
 
     return WalletBalanceModel(
       totalBalance: total,

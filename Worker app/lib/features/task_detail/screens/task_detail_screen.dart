@@ -495,12 +495,148 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     );
   }
 
+  String? _extractYouTubeId(String url) {
+    if (url.isEmpty) return null;
+    final regExp = RegExp(
+      r'^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})',
+      caseSensitive: false,
+    );
+    final match = regExp.firstMatch(url.trim());
+    return match?.group(1);
+  }
+
   Widget _buildServerElementWidget(dynamic element) {
     if (element is! Map) return const SizedBox.shrink();
 
     final label = (element['label'] ?? '').toString();
-    final type = (element['type'] ?? 'text').toString();
-    final content = (element['contentValue'] ?? element['defaultValue'] ?? '').toString();
+    final type = (element['type'] ?? 'text').toString().toLowerCase();
+    final content = (element['contentValue'] ?? element['defaultValue'] ?? element['value'] ?? '').toString();
+    final props = (element['properties'] is Map) ? element['properties'] as Map : {};
+
+    if (type.contains('youtube')) {
+      final ytId = _extractYouTubeId(content.isNotEmpty ? content : props['url']?.toString() ?? '');
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.play_circle_fill_rounded, color: Colors.red, size: 18),
+                const SizedBox(width: 8),
+                Text(label.isNotEmpty ? label : 'YouTube Video Tutorial', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B))),
+              ],
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () {
+                if (content.isNotEmpty) _launchURL(content);
+              },
+              child: Container(
+                width: double.infinity,
+                height: 160,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(12),
+                  image: ytId != null
+                      ? DecorationImage(
+                          image: NetworkImage('https://img.youtube.com/vi/$ytId/hqdefault.jpg'),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 4))],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(color: Colors.black.withOpacity(0.3)),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 32),
+                    ),
+                    Positioned(
+                      bottom: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(6)),
+                        child: const Text('Tap to Watch Video Tutorial', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (type.contains('audio')) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12.0),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFBFDBFE)),
+          ),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  setState(() => _isPlayingAudio = !_isPlayingAudio);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(_isPlayingAudio ? 'Playing Buyer Voice Instruction...' : 'Audio Paused'),
+                      backgroundColor: const Color(0xFF0284C7),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(color: Color(0xFF0284C7), shape: BoxShape.circle),
+                  child: Icon(_isPlayingAudio ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 22),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label.isNotEmpty ? label : 'Buyer Voice Guidance', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0369A1))),
+                    const SizedBox(height: 2),
+                    Text(_isPlayingAudio ? 'Playing audio instructions...' : 'Tap play button to listen to voice guide', style: const TextStyle(fontSize: 11, color: Color(0xFF0284C7))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (type.contains('actionbutton')) {
+      final buttonText = props['buttonText']?.toString() ?? 'Open Link & Complete Task';
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12.0),
+        child: SizedBox(
+          width: double.infinity,
+          height: 46,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF16A34A),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 1,
+            ),
+            icon: const Icon(Icons.open_in_new_rounded, size: 18),
+            label: Text(buttonText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            onPressed: () {
+              if (content.isNotEmpty) _launchURL(content);
+            },
+          ),
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),

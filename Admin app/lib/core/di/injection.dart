@@ -5,6 +5,7 @@ import '../network/dio_client.dart';
 import '../storage/secure_storage_service.dart';
 import '../storage/local_storage_service.dart';
 import '../network/network_info.dart';
+import '../database/app_database.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -20,11 +21,15 @@ import '../../features/service_builder/presentation/bloc/service_builder_bloc.da
 import '../../features/dashboard/data/repositories/dashboard_repository.dart';
 import '../../features/dashboard/presentation/bloc/dashboard_bloc.dart';
 
+import '../../features/dashboard/presentation/bloc/dashboard_bloc.dart';
+
 import '../../features/workers/data/datasources/workers_remote_datasource.dart';
+import '../../features/workers/data/datasources/workers_local_datasource.dart';
 import '../../features/workers/domain/repositories/workers_repository.dart';
 import '../../features/workers/presentation/bloc/workers_bloc.dart';
 
 import '../../features/buyers/data/datasources/buyers_remote_datasource.dart';
+import '../../features/buyers/data/datasources/buyers_local_datasource.dart';
 import '../../features/buyers/domain/repositories/buyers_repository.dart';
 import '../../features/buyers/presentation/bloc/buyers_bloc.dart';
 
@@ -55,6 +60,7 @@ Future<void> initializeDependencies() async {
   getIt.registerLazySingleton(() => LocalStorageService(getIt()));
   getIt.registerLazySingleton(() => DioClient(getIt()));
   getIt.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl());
+  getIt.registerLazySingleton(() => AppDatabase.instance);
   
   // Auth Feature
   getIt.registerLazySingleton<AuthRemoteDataSource>(
@@ -85,16 +91,28 @@ Future<void> initializeDependencies() async {
   getIt.registerLazySingleton<WorkersRemoteDataSource>(
     () => WorkersRemoteDataSourceImpl(getIt()),
   );
+  getIt.registerLazySingleton<WorkersLocalDataSource>(
+    () => WorkersLocalDataSourceImpl(getIt()),
+  );
   getIt.registerLazySingleton<WorkersRepository>(
-    () => WorkersRepositoryImpl(remoteDataSource: getIt()),
+    () => WorkersRepositoryImpl(
+      remoteDataSource: getIt(),
+      localDataSource: getIt(),
+    ),
   );
 
   // Buyers Feature
   getIt.registerLazySingleton<BuyersRemoteDataSource>(
     () => BuyersRemoteDataSourceImpl(getIt()),
   );
+  getIt.registerLazySingleton<BuyersLocalDataSource>(
+    () => BuyersLocalDataSourceImpl(getIt()),
+  );
   getIt.registerLazySingleton<BuyersRepository>(
-    () => BuyersRepositoryImpl(remoteDataSource: getIt()),
+    () => BuyersRepositoryImpl(
+      remoteDataSource: getIt(),
+      localDataSource: getIt(),
+    ),
   );
 
   // Orders Feature

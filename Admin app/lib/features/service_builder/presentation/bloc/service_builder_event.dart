@@ -29,6 +29,15 @@ class CreateNewServiceDraftEvent extends ServiceBuilderEvent {
   List<Object?> get props => [code, name];
 }
 
+class UpdateServiceInfoEvent extends ServiceBuilderEvent {
+  final String name;
+  final String description;
+  const UpdateServiceInfoEvent({required this.name, required this.description});
+
+  @override
+  List<Object?> get props => [name, description];
+}
+
 class UpdatePricingEvent extends ServiceBuilderEvent {
   final PricingModelType? modelType;
   final double? buyerPrice;

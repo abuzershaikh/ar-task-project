@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../data/models/buyer_model.dart';
 
 class BuyerOverviewTab extends StatelessWidget {
-  final String buyerId;
+  final BuyerModel buyer;
 
-  const BuyerOverviewTab({super.key, required this.buyerId});
+  const BuyerOverviewTab({super.key, required this.buyer});
 
   @override
   Widget build(BuildContext context) {
@@ -21,11 +22,11 @@ class BuyerOverviewTab extends StatelessWidget {
                 children: [
                   const Text('Company Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
-                  _buildRow('Business Name', 'ABC Digital Pvt Ltd'),
-                  _buildRow('GSTIN', 'XXXXXXXXX1234'),
-                  _buildRow('Email', 'contact@abc.com'),
-                  _buildRow('Phone', '+91 9876543210'),
-                  _buildRow('Address', 'Mumbai, Maharashtra'),
+                  _buildRow('Business Name', buyer.name),
+                  _buildRow('Email', buyer.email),
+                  _buildRow('Phone', buyer.phone.isNotEmpty ? buyer.phone : 'Not Provided'),
+                  _buildRow('Status', buyer.status),
+                  _buildRow('Buyer ID', buyer.id),
                 ],
               ),
             ),
@@ -39,9 +40,8 @@ class BuyerOverviewTab extends StatelessWidget {
                 children: [
                   const Text('Order Summary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
-                  _buildStatRow('Total Orders', '124', AppColors.primary),
-                  _buildStatRow('Active Campaigns', '8', AppColors.success),
-                  _buildStatRow('Completed', '109', AppColors.info),
+                  _buildStatRow('Total Orders', '${buyer.totalOrders}', AppColors.primary),
+                  _buildStatRow('Active Campaigns', '${buyer.activeCampaigns}', AppColors.success),
                 ],
               ),
             ),
@@ -55,8 +55,7 @@ class BuyerOverviewTab extends StatelessWidget {
                 children: [
                   const Text('Financial Summary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
-                  _buildStatRow('Total Spend', '₹2,40,000', AppColors.primary),
-                  _buildStatRow('Pending Reviews', '23', AppColors.warning),
+                  _buildStatRow('Total Spend', '₹${buyer.totalSpend.toStringAsFixed(2)}', AppColors.primary),
                 ],
               ),
             ),

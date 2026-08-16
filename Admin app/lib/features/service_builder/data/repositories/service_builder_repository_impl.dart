@@ -19,6 +19,21 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
   ServiceBuilderRepositoryImpl({this.dioClient});
 
   @override
+  double _toDouble(dynamic val, double defaultValue) {
+    if (val == null) return defaultValue;
+    if (val is num) return val.toDouble();
+    if (val is String) return double.tryParse(val) ?? defaultValue;
+    return defaultValue;
+  }
+
+  int _toInt(dynamic val, int defaultValue) {
+    if (val == null) return defaultValue;
+    if (val is num) return val.toInt();
+    if (val is String) return int.tryParse(val) ?? defaultValue;
+    return defaultValue;
+  }
+
+  @override
   Future<List<ServiceModel>> getServices() async {
     if (dioClient != null) {
       try {
@@ -32,10 +47,10 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
                 : (s['pricing'] != null ? Map<String, dynamic>.from(s['pricing']) : null);
 
             final double buyerPrice = pricingMap != null
-                ? ((pricingMap['buyerUnitPrice'] ?? pricingMap['buyerPrice'] as num?) ?? 50.0).toDouble()
+                ? _toDouble(pricingMap['buyerUnitPrice'] ?? pricingMap['buyerPrice'], 50.0)
                 : 50.0;
             final double marginVal = pricingMap != null
-                ? ((pricingMap['marginValue'] ?? pricingMap['adminMarginPercent'] as num?) ?? 20.0).toDouble()
+                ? _toDouble(pricingMap['marginValue'] ?? pricingMap['adminMarginPercent'], 20.0)
                 : 20.0;
             final String marginType = pricingMap?['marginType']?.toString() ?? 'PERCENTAGE';
 
@@ -55,7 +70,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
               description: (s['description'] ?? '').toString(),
               icon: 'settings_suggest_rounded',
               isActive: s['isActive'] ?? s['isPublished'] ?? true,
-              currentVersion: (s['version'] as num?)?.toInt() ?? 1,
+              currentVersion: _toInt(s['version'], 1),
               pricing: PricingConfig.calculate(
                 buyerPrice: buyerPrice,
                 adminMarginPercent: marginVal,
@@ -63,7 +78,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
               ),
               elements: parsedElements,
               reviewMode: (s['reviewMode'] ?? 'MANUAL').toString().toUpperCase(),
-              updatedAt: s['updatedAt'] != null ? DateTime.tryParse(s['updatedAt']) ?? DateTime.now() : DateTime.now(),
+              updatedAt: s['updatedAt'] != null ? DateTime.tryParse(s['updatedAt'].toString()) ?? DateTime.now() : DateTime.now(),
             );
           }).toList();
 
@@ -73,6 +88,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
         }
       } catch (e) {
         debugPrint('[ADMIN REPO] Remote services fetch exception: $e');
+        rethrow;
       }
     }
     return List.from(_mockServices);
@@ -90,10 +106,10 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
               : null;
 
           final double buyerPrice = pricingMap != null
-              ? ((pricingMap['buyerUnitPrice'] as num?) ?? 50.0).toDouble()
+              ? _toDouble(pricingMap['buyerUnitPrice'] ?? pricingMap['buyerPrice'], 50.0)
               : 50.0;
           final double marginVal = pricingMap != null
-              ? ((pricingMap['marginValue'] as num?) ?? 20.0).toDouble()
+              ? _toDouble(pricingMap['marginValue'] ?? pricingMap['adminMarginPercent'], 20.0)
               : 20.0;
           final String marginType = pricingMap?['marginType']?.toString() ?? 'PERCENTAGE';
 
@@ -113,7 +129,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
             description: (s['description'] ?? '').toString(),
             icon: 'settings_suggest_rounded',
             isActive: s['isActive'] ?? s['isPublished'] ?? true,
-            currentVersion: (s['version'] as num?)?.toInt() ?? 1,
+            currentVersion: _toInt(s['version'], 1),
             pricing: PricingConfig.calculate(
               buyerPrice: buyerPrice,
               adminMarginPercent: marginVal,
@@ -121,14 +137,18 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
             ),
             elements: parsedElements,
             reviewMode: (s['reviewMode'] ?? 'MANUAL').toString().toUpperCase(),
-            updatedAt: s['updatedAt'] != null ? DateTime.tryParse(s['updatedAt']) ?? DateTime.now() : DateTime.now(),
+            updatedAt: s['updatedAt'] != null ? DateTime.tryParse(s['updatedAt'].toString()) ?? DateTime.now() : DateTime.now(),
           );
         }
       } catch (e) {
         debugPrint('[ADMIN REPO] Remote getServiceById exception: $e');
+        rethrow;
       }
     }
 
+    if (_mockServices.isEmpty) {
+        throw Exception('Service not found');
+    }
     return _mockServices.firstWhere(
       (s) => s.id == id,
       orElse: () => _mockServices.first,

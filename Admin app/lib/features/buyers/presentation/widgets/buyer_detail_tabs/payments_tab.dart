@@ -1,51 +1,65 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../data/models/buyer_model.dart';
 
 class BuyerPaymentsTab extends StatelessWidget {
-  final String buyerId;
+  final BuyerModel buyer;
+  final List<dynamic> payments;
 
-  const BuyerPaymentsTab({super.key, required this.buyerId});
+  const BuyerPaymentsTab({
+    super.key,
+    required this.buyer,
+    this.payments = const [],
+  });
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _buildFinanceRow('Total Paid', '₹2,40,000', AppColors.primary),
-                  _buildFinanceRow('Pending', '₹0', AppColors.warning),
-                  _buildFinanceRow('Refunded', '₹5,000', AppColors.error),
+                  _buildFinanceRow('Total Spend', '₹${buyer.totalSpend.toStringAsFixed(2)}', AppColors.primary),
+                  _buildFinanceRow('Total Orders', '${buyer.totalOrders}', AppColors.info),
+                  _buildFinanceRow('Active Campaigns', '${buyer.activeCampaigns}', AppColors.success),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Transaction History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
+          const Text('Transaction History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 10,
-            itemBuilder: (context, index) {
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: const Icon(Icons.payment, color: AppColors.success),
-                  title: Text('PAY-${1000 + index}'),
-                  subtitle: Text('${index + 1} days ago'),
-                  trailing: const Text('₹25,000', style: TextStyle(fontWeight: FontWeight.bold)),
+          payments.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: Text('No payment transactions recorded', style: TextStyle(color: AppColors.gray600)),
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: payments.length,
+                  itemBuilder: (context, index) {
+                    final item = payments[index];
+                    final amount = item['amount'] != null ? '₹${item['amount']}' : '₹0.00';
+                    final payId = (item['id'] ?? 'PAY-${index + 1}').toString();
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: const Icon(Icons.payment, color: AppColors.success),
+                        title: Text(payId),
+                        trailing: Text(amount, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ],
       ),
     );

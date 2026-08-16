@@ -16,6 +16,11 @@ class ServiceModel {
   final bool requiresProofScreenshot;
   final bool requiresProofText;
   final String reviewMode; // 'AUTOMATIC' or 'MANUAL'
+  final int minAcceptHours;
+  final int maxAcceptHours;
+  final int minCompleteHours;
+  final int maxCompleteHours;
+  final int watchtimeSeconds;
   final DateTime updatedAt;
 
   const ServiceModel({
@@ -33,6 +38,11 @@ class ServiceModel {
     this.requiresProofScreenshot = true,
     this.requiresProofText = false,
     this.reviewMode = 'MANUAL',
+    this.minAcceptHours = 1,
+    this.maxAcceptHours = 72,
+    this.minCompleteHours = 1,
+    this.maxCompleteHours = 168,
+    this.watchtimeSeconds = 0,
     required this.updatedAt,
   });
 
@@ -51,6 +61,11 @@ class ServiceModel {
     bool? requiresProofScreenshot,
     bool? requiresProofText,
     String? reviewMode,
+    int? minAcceptHours,
+    int? maxAcceptHours,
+    int? minCompleteHours,
+    int? maxCompleteHours,
+    int? watchtimeSeconds,
     DateTime? updatedAt,
   }) {
     return ServiceModel(
@@ -68,6 +83,11 @@ class ServiceModel {
       requiresProofScreenshot: requiresProofScreenshot ?? this.requiresProofScreenshot,
       requiresProofText: requiresProofText ?? this.requiresProofText,
       reviewMode: reviewMode ?? this.reviewMode,
+      minAcceptHours: minAcceptHours ?? this.minAcceptHours,
+      maxAcceptHours: maxAcceptHours ?? this.maxAcceptHours,
+      minCompleteHours: minCompleteHours ?? this.minCompleteHours,
+      maxCompleteHours: maxCompleteHours ?? this.maxCompleteHours,
+      watchtimeSeconds: watchtimeSeconds ?? this.watchtimeSeconds,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -88,30 +108,47 @@ class ServiceModel {
       'requiresProofScreenshot': requiresProofScreenshot,
       'requiresProofText': requiresProofText,
       'reviewMode': reviewMode,
+      'minAcceptHours': minAcceptHours,
+      'maxAcceptHours': maxAcceptHours,
+      'minCompleteHours': minCompleteHours,
+      'maxCompleteHours': maxCompleteHours,
+      'watchtimeSeconds': watchtimeSeconds,
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
   factory ServiceModel.fromJson(Map<String, dynamic> json) {
+    int parseI(dynamic v, int def) {
+      if (v == null) return def;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? def;
+      return def;
+    }
+
     return ServiceModel(
-      id: json['id'] ?? '',
-      code: json['code'] ?? '',
-      name: json['name'] ?? '',
-      description: json['description'] ?? '',
-      icon: json['icon'] ?? 'stars_rounded',
-      isActive: json['isActive'] ?? true,
-      currentVersion: json['currentVersion'] ?? 1,
-      pricing: PricingConfig.fromJson(Map<String, dynamic>.from(json['pricing'] ?? {})),
+      id: json['id']?.toString() ?? '',
+      code: json['code']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      icon: json['icon']?.toString() ?? 'stars_rounded',
+      isActive: json['isActive'] as bool? ?? true,
+      currentVersion: parseI(json['currentVersion'] ?? json['version'], 1),
+      pricing: PricingConfig.fromJson(Map<String, dynamic>.from(json['pricing'] ?? json['activePricing'] ?? {})),
       elements: (json['elements'] as List? ?? [])
           .map((e) => TemplateElement.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
-      minDurationSeconds: json['minDurationSeconds'] ?? 60,
-      maxDurationSeconds: json['maxDurationSeconds'] ?? 86400,
-      requiresProofScreenshot: json['requiresProofScreenshot'] ?? true,
-      requiresProofText: json['requiresProofText'] ?? false,
-      reviewMode: json['reviewMode'] ?? 'MANUAL',
+      minDurationSeconds: parseI(json['minDurationSeconds'], 60),
+      maxDurationSeconds: parseI(json['maxDurationSeconds'], 86400),
+      requiresProofScreenshot: json['requiresProofScreenshot'] as bool? ?? true,
+      requiresProofText: json['requiresProofText'] as bool? ?? false,
+      reviewMode: json['reviewMode']?.toString() ?? 'MANUAL',
+      minAcceptHours: parseI(json['minAcceptHours'], 1),
+      maxAcceptHours: parseI(json['maxAcceptHours'], 72),
+      minCompleteHours: parseI(json['minCompleteHours'], 1),
+      maxCompleteHours: parseI(json['maxCompleteHours'], 168),
+      watchtimeSeconds: parseI(json['watchtimeSeconds'], 0),
       updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
+          ? DateTime.tryParse(json['updatedAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
     );
   }

@@ -17,24 +17,31 @@ class TransactionModel extends Transaction {
   });
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
+    double parseD(dynamic v) {
+      if (v == null) return 0.0;
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v) ?? 0.0;
+      return 0.0;
+    }
+
     return TransactionModel(
-      id: json['id'] as String,
+      id: (json['id'] ?? '').toString(),
       type: TransactionType.values.firstWhere(
-        (e) => e.toString() == 'TransactionType.${json['type']}',
+        (e) => e.name == (json['type'] ?? '').toString(),
         orElse: () => TransactionType.credit,
       ),
-      amount: (json['amount'] as num).toDouble(),
-      balanceBefore: (json['balanceBefore'] as num).toDouble(),
-      balanceAfter: (json['balanceAfter'] as num).toDouble(),
+      amount: parseD(json['amount']),
+      balanceBefore: parseD(json['balanceBefore']),
+      balanceAfter: parseD(json['balanceAfter']),
       status: TransactionStatus.values.firstWhere(
-        (e) => e.toString() == 'TransactionStatus.${json['status']}',
+        (e) => e.name == (json['status'] ?? '').toString(),
         orElse: () => TransactionStatus.successful,
       ),
-      description: json['description'] as String,
-      referenceId: json['referenceId'] as String?,
-      referenceType: json['referenceType'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      metadata: json['metadata'] as Map<String, dynamic>?,
+      description: (json['description'] ?? '').toString(),
+      referenceId: json['referenceId']?.toString(),
+      referenceType: json['referenceType']?.toString(),
+      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now() : DateTime.now(),
+      metadata: json['metadata'] != null ? Map<String, dynamic>.from(json['metadata'] as Map) : null,
     );
   }
 

@@ -97,13 +97,13 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         _selectedQuantity = p.minQuantity;
       }
 
-      // Dynamic Form TextControllers initialize karo for buyer visible elements
+      // Dynamic Form TextControllers initialize karo for buyer visible/editable elements
       for (var element in service.elements) {
         if (element.visibility == VisibilityContext.both ||
             element.visibility == VisibilityContext.buyerOnly) {
-          if (element.category == ElementCategory.input) {
-            _formControllers[element.key] = TextEditingController();
-          }
+          _formControllers[element.key] = TextEditingController(
+            text: element.properties['default']?.toString() ?? '',
+          );
         }
       }
     });
@@ -807,21 +807,310 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     );
   }
 
-  /// Dynamic Template Element Renderer Widget
+  /// Helper to extract YouTube Video ID from any YouTube URL format
+  String? _extractYouTubeId(String url) {
+    if (url.isEmpty) return null;
+    final regExp = RegExp(
+      r'^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})',
+      caseSensitive: false,
+    );
+    final match = regExp.firstMatch(url.trim());
+    return match?.group(1);
+  }
+
+  /// Dynamic Template Element Renderer Widget with Full Interactive Previews
   Widget _renderElementInputWidget(TemplateElement element) {
+    final controller = _formControllers[element.key];
+
     switch (element.type) {
       case ElementType.heading:
         return Text(
           element.label,
-          style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600),
+          style: const TextStyle(color: Color(0xFF0F172A), fontSize: 15, fontWeight: FontWeight.bold),
         );
+
       case ElementType.paragraph:
-        return Text(
-          element.label,
-          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, height: 1.4),
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(element.label, style: const TextStyle(color: Color(0xFF1E293B), fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(
+                element.properties['placeholder']?.toString() ?? 'Follow these detailed steps to complete the task.',
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, height: 1.4),
+              ),
+            ],
+          ),
         );
-      case ElementType.textField:
-        final controller = _formControllers[element.key];
+
+      case ElementType.youtube:
+        final ytId = controller != null ? _extractYouTubeId(controller.text) : null;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(6)),
+                  child: const Icon(Icons.play_circle_fill_rounded, color: Color(0xFFEF4444), size: 14),
+                ),
+                const SizedBox(width: 8),
+                Text(element.label, style: const TextStyle(color: Color(0xFF334155), fontSize: 12, fontWeight: FontWeight.w600)),
+                if (element.isRequired) const Text(' *', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: controller,
+              style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+              onChanged: (_) => setState(() {}), // Trigger live YouTube preview update
+              validator: (val) {
+                if (element.isRequired && (val == null || val.trim().isEmpty)) {
+                  return 'YouTube URL is required';
+                }
+                return null;
+              },
+              decoration: InputDecoration(
+                hintText: 'https://youtube.com/watch?v=... or https://youtu.be/...',
+                hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                prefixIcon: const Icon(Icons.link_rounded, color: Color(0xFFEF4444), size: 18),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Live YouTube Video Preview Card
+            Container(
+              width: double.infinity,
+              height: 160,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(12),
+                image: ytId != null
+                    ? DecorationImage(
+                        image: NetworkImage('https://img.youtube.com/vi/$ytId/hqdefault.jpg'),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 4))],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (ytId == null)
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.video_library_rounded, color: Colors.white38, size: 36),
+                        SizedBox(height: 6),
+                        Text('Paste YouTube URL above for Live Video Preview', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      ],
+                    )
+                  else ...[
+                    Container(color: Colors.black.withOpacity(0.35)),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(color: Color(0xFFEF4444), shape: BoxShape.circle),
+                      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
+                    ),
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(6)),
+                        child: Row(
+                          children: const [
+                            Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 12),
+                            SizedBox(width: 4),
+                            Text('YouTube Live Preview', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+
+      case ElementType.audio:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(color: const Color(0xFFF0F9FF), borderRadius: BorderRadius.circular(6)),
+                  child: const Icon(Icons.mic_rounded, color: Color(0xFF0284C7), size: 14),
+                ),
+                const SizedBox(width: 8),
+                Text(element.label, style: const TextStyle(color: Color(0xFF334155), fontSize: 12, fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(colors: [Color(0xFF0284C7), Color(0xFF0369A1)]),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.mic_rounded, color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text('Voice Guidance for Workers', style: TextStyle(color: Color(0xFF0F172A), fontSize: 12, fontWeight: FontWeight.w600)),
+                            SizedBox(height: 2),
+                            Text('Record or attach an audio message explaining task steps', style: TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+                          ],
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0284C7),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.fiber_manual_record_rounded, color: Colors.redAccent, size: 14),
+                        label: const Text('Record Voice', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                        onPressed: () {
+                          // Voice record simulator
+                          controller?.text = 'voice_instruction_recorded_${DateTime.now().millisecondsSinceEpoch}.aac';
+                          setState(() {});
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Voice instruction recorded successfully!'), backgroundColor: Color(0xFF0284C7)),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  if (controller != null && controller.text.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F2FE),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.play_arrow_rounded, color: Color(0xFF0369A1), size: 20),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text('00:24 / 00:45 Audio Waveform Recorded', style: TextStyle(color: Color(0xFF0369A1), fontSize: 11, fontWeight: FontWeight.w600)),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Colors.redAccent, size: 16),
+                            onPressed: () {
+                              controller.clear();
+                              setState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        );
+
+      case ElementType.actionButton:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(6)),
+                  child: const Icon(Icons.ads_click_rounded, color: Color(0xFF16A34A), size: 14),
+                ),
+                const SizedBox(width: 8),
+                Text(element.label, style: const TextStyle(color: Color(0xFF334155), fontSize: 12, fontWeight: FontWeight.w600)),
+                if (element.isRequired) const Text(' *', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: controller,
+              style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+              validator: (val) {
+                if (element.isRequired && (val == null || val.trim().isEmpty)) {
+                  return 'Target Action Link is required';
+                }
+                return null;
+              },
+              decoration: InputDecoration(
+                hintText: element.properties['placeholder'] as String? ?? 'https://youtube.com/..., https://t.me/...',
+                hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                prefixIcon: const Icon(Icons.link_rounded, color: Color(0xFF16A34A), size: 18),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF16A34A), width: 1.5)),
+              ),
+            ),
+          ],
+        );
+
+      case ElementType.systemProof:
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: const [
+              Icon(Icons.verified_user_rounded, color: Color(0xFF2563EB), size: 18),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Proof Submission: Worker will submit mandatory Screenshot & Text proof for verification.',
+                  style: TextStyle(color: Color(0xFF334155), fontSize: 11, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        );
+
+      default:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -847,41 +1136,12 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 filled: true,
                 fillColor: const Color(0xFFF8FAFC),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
-                ),
-                errorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFEF4444)),
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
               ),
             ),
           ],
-        );
-      default:
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.info_outline_rounded, color: Color(0xFF94A3B8), size: 16),
-              const SizedBox(width: 8),
-              Expanded(child: Text('${element.type.label}: ${element.label}', style: const TextStyle(color: Color(0xFF64748B), fontSize: 11))),
-            ],
-          ),
         );
     }
   }

@@ -76,35 +76,42 @@ class TemplateElement {
   }
 
   factory TemplateElement.fromJson(Map<String, dynamic> json) {
+    int parseI(dynamic v) {
+      if (v == null) return 0;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? 0;
+      return 0;
+    }
+
     return TemplateElement(
-      id: json['id'] as String? ?? '',
-      key: json['key'] as String? ?? '',
-      label: json['label'] as String? ?? '',
+      id: json['id']?.toString() ?? '',
+      key: json['key']?.toString() ?? '',
+      label: json['label']?.toString() ?? '',
       category: ElementCategory.values.firstWhere(
-        (e) => e.name == json['category'],
+        (e) => e.name == json['category']?.toString(),
         orElse: () => ElementCategory.display,
       ),
       type: ElementType.values.firstWhere(
-        (e) => e.name == json['type'],
+        (e) => e.name == json['type']?.toString(),
         orElse: () => ElementType.paragraph,
       ),
       visibility: VisibilityContext.values.firstWhere(
-        (e) => e.name == json['visibility'],
+        (e) => e.name == json['visibility']?.toString(),
         orElse: () => VisibilityContext.both,
       ),
       editability: EditabilityMode.values.firstWhere(
-        (e) => e.name == json['editability'],
+        (e) => e.name == json['editability']?.toString(),
         orElse: () => EditabilityMode.adminFixed,
       ),
       isRequired: json['isRequired'] as bool? ?? false,
       actionType: json['actionType'] != null
           ? ActionType.values.firstWhere(
-              (e) => e.name == json['actionType'],
+              (e) => e.name == json['actionType']?.toString(),
               orElse: () => ActionType.openUrl,
             )
           : null,
-      orderIndex: json['orderIndex'] as int? ?? 0,
-      properties: json['properties'] as Map<String, dynamic>? ?? {},
+      orderIndex: parseI(json['orderIndex']),
+      properties: Map<String, dynamic>.from(json['properties'] ?? {}),
     );
   }
 }

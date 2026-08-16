@@ -35,4 +35,18 @@ class BuyerModel {
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'status': status,
+      'totalOrders': totalOrders,
+      'activeCampaigns': activeCampaigns,
+      'totalSpend': totalSpend,
+      'createdAt': createdAt?.toIso8601String(),
+    };
+  }
 }

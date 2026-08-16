@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/workers_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/enums.dart';
 
@@ -12,6 +14,12 @@ class WorkersScreen extends StatefulWidget {
 class _WorkersScreenState extends State<WorkersScreen> {
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Active', 'Pending KYC', 'Suspended', 'Banned', 'At Risk'];
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<WorkersBloc>().add(LoadWorkersEvent());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,27 +71,59 @@ class _WorkersScreenState extends State<WorkersScreen> {
           ),
           // Workers List
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 20,
-              itemBuilder: (context, index) {
-                return _WorkerCard(
-                  workerId: 'W-${10025 + index}',
-                  name: 'Worker ${index + 1}',
-                  rating: 4.8 - (index * 0.1),
-                  qualityScore: 92 - index,
-                  completionRate: 96 - index,
-                  tasksCompleted: 1284 - (index * 50),
-                  earnings: 42500 - (index * 1000),
-                  status: index % 5 == 0
-                      ? UserStatus.suspended
-                      : index % 3 == 0
-                          ? UserStatus.inactive
-                          : UserStatus.active,
-                  onTap: () {
-                    // Navigate to worker detail
-                  },
-                );
+            child: BlocBuilder<WorkersBloc, WorkersState>(
+              builder: (context, state) {
+                if (state is WorkersLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (state is WorkersError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Error: ${state.message}'),
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<WorkersBloc>().add(LoadWorkersEvent());
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else if (state is WorkersLoaded) {
+                  final workers = state.workers;
+                  if (workers.isEmpty) {
+                    return const Center(child: Text('No workers found.'));
+                  }
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      context.read<WorkersBloc>().add(RefreshWorkersEvent());
+                      // Wait briefly to show refresh animation
+                      await Future.delayed(const Duration(milliseconds: 500));
+                    },
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: workers.length,
+                      itemBuilder: (context, index) {
+                        final worker = workers[index];
+                        return _WorkerCard(
+                          workerId: worker.id,
+                          name: worker.name,
+                          rating: worker.rating,
+                          qualityScore: 90, // Map appropriately if available
+                          completionRate: 95, // Map appropriately if available
+                          tasksCompleted: worker.completedTasks,
+                          earnings: worker.totalEarnings.toInt(),
+                          status: _parseStatus(worker.status),
+                          onTap: () {
+                            // Navigate to worker detail
+                          },
+                        );
+                      },
+                    ),
+                  );
+                }
+                return const Center(child: Text('No data'));
               },
             ),
           ),
@@ -96,6 +136,16 @@ class _WorkersScreenState extends State<WorkersScreen> {
         backgroundColor: AppColors.primary,
       ),
     );
+  }
+
+  UserStatus _parseStatus(String status) {
+    switch (status.toUpperCase()) {
+      case 'INACTIVE': return UserStatus.inactive;
+      case 'SUSPENDED': return UserStatus.suspended;
+      case 'BANNED': return UserStatus.banned;
+      case 'ACTIVE':
+      default: return UserStatus.active;
+    }
   }
 }
 

@@ -147,23 +147,27 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
             );
           }
 
-          if (state is BuyerDetailLoaded && state.buyer.id != widget.buyerId) {
-            return const Center(child: CircularProgressIndicator());
+          if (state is BuyerDetailLoaded) {
+            final detailState = state as BuyerDetailLoaded;
+            if (detailState.buyer.id != widget.buyerId) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return TabBarView(
+              controller: _tabController,
+              children: [
+                BuyerOverviewTab(buyer: detailState.buyer),
+                BuyerOrdersTab(buyer: detailState.buyer, orders: detailState.orders),
+                BuyerTasksTab(tasks: detailState.tasks),
+                BuyerPaymentsTab(buyer: detailState.buyer, payments: detailState.payments),
+                BuyerReviewsTab(buyer: detailState.buyer),
+                BuyerAnalyticsTab(buyer: detailState.buyer),
+                BuyerActivityTab(activity: detailState.activity),
+                BuyerRiskTab(buyer: detailState.buyer),
+              ],
+            );
           }
 
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              BuyerOverviewTab(buyerId: widget.buyerId),
-              BuyerOrdersTab(buyerId: widget.buyerId),
-              BuyerTasksTab(buyerId: widget.buyerId),
-              BuyerPaymentsTab(buyerId: widget.buyerId),
-              BuyerReviewsTab(buyerId: widget.buyerId),
-              BuyerAnalyticsTab(buyerId: widget.buyerId),
-              BuyerActivityTab(buyerId: widget.buyerId),
-              BuyerRiskTab(buyerId: widget.buyerId),
-            ],
-          );
+          return const Center(child: CircularProgressIndicator());
         },
       ),
     );

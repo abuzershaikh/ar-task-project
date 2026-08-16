@@ -82,35 +82,42 @@ class TemplateElement {
   }
 
   factory TemplateElement.fromJson(Map<String, dynamic> json) {
+    int parseI(dynamic v) {
+      if (v == null) return 0;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? 0;
+      return 0;
+    }
+
     return TemplateElement(
-      id: json['id'] ?? '',
-      key: json['key'] ?? '',
-      label: json['label'] ?? '',
+      id: json['id']?.toString() ?? '',
+      key: json['key']?.toString() ?? '',
+      label: json['label']?.toString() ?? '',
       category: ElementCategory.values.firstWhere(
-        (e) => e.name == json['category'],
+        (e) => e.name == json['category']?.toString(),
         orElse: () => ElementCategory.content,
       ),
       type: ElementType.values.firstWhere(
-        (e) => e.name == json['type'],
+        (e) => e.name == json['type']?.toString(),
         orElse: () => ElementType.paragraph,
       ),
       visibility: VisibilityContext.values.firstWhere(
-        (e) => e.name == json['visibility'],
+        (e) => e.name == json['visibility']?.toString(),
         orElse: () => VisibilityContext.both,
       ),
       editability: EditabilityMode.values.firstWhere(
-        (e) => e.name == json['editability'],
+        (e) => e.name == json['editability']?.toString(),
         orElse: () => EditabilityMode.buyerInput,
       ),
-      isRequired: json['isRequired'] ?? true,
+      isRequired: json['isRequired'] as bool? ?? true,
       properties: Map<String, dynamic>.from(json['properties'] ?? {}),
       actionType: json['actionType'] != null
-          ? ActionType.values.firstWhere((e) => e.name == json['actionType'])
+          ? ActionType.values.firstWhere((e) => e.name == json['actionType']?.toString(), orElse: () => ActionType.openUrl)
           : null,
       condition: json['condition'] != null
           ? ConditionRule.fromJson(Map<String, dynamic>.from(json['condition']))
           : null,
-      orderIndex: json['orderIndex'] ?? 0,
+      orderIndex: parseI(json['orderIndex']),
     );
   }
 }

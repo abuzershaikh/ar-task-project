@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../service_builder/presentation/pages/services_list_screen.dart';
 import 'matching_brain_screen.dart';
 import 'payouts_queue_screen.dart';
 import 'kyc_queue_screen.dart';
 import 'task_reviews_queue_screen.dart';
 import 'audit_logs_screen.dart';
+import 'finance_ledger_screen.dart';
+import 'risk_fraud_screen.dart';
+import 'system_settings_screen.dart';
+import 'notifications_announcements_screen.dart';
+import 'admin_profile_screen.dart';
 
 class ControlCenterScreen extends StatelessWidget {
   const ControlCenterScreen({super.key});
@@ -91,14 +98,24 @@ class ControlCenterScreen extends StatelessWidget {
               Icons.currency_rupee,
               'Finance & Ledger',
               'View platform financials',
-              () {},
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const FinanceLedgerScreen()),
+                );
+              },
             ),
             _buildMenuItem(
               context,
               Icons.security,
               'Risk & Fraud Control',
               'Monitor suspicious activity',
-              () {},
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RiskFraudScreen()),
+                );
+              },
             ),
           ]),
           
@@ -122,14 +139,24 @@ class ControlCenterScreen extends StatelessWidget {
               Icons.settings_applications,
               'System Settings',
               'Configure platform settings',
-              () {},
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SystemSettingsScreen()),
+                );
+              },
             ),
             _buildMenuItem(
               context,
               Icons.notifications,
               'Notifications',
               'Send announcements',
-              () {},
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NotificationsAnnouncementsScreen()),
+                );
+              },
             ),
           ]),
           
@@ -141,14 +168,26 @@ class ControlCenterScreen extends StatelessWidget {
               Icons.person,
               'Admin Profile',
               'View and edit your profile',
-              () {},
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AdminProfileScreen()),
+                );
+              },
             ),
             _buildMenuItem(
               context,
               Icons.logout,
               'Logout',
               'Sign out of admin panel',
-              () {},
+              () {
+                context.read<AuthBloc>().add(AuthLogoutRequested());
+                // Force navigation to clear any stuck navigator state
+                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const Scaffold(body: Center(child: CircularProgressIndicator()))),
+                  (route) => false,
+                );
+              },
               isDestructive: true,
             ),
           ]),

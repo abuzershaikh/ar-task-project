@@ -47,14 +47,19 @@ class DioClient {
         },
         onError: (error, handler) async {
           AppLogger.error(
-            'API Error: ${error.requestOptions.path}',
+            'API Error: ${error.requestOptions.path} | Status: ${error.response?.statusCode}',
             error,
           );
+          print('---- API ERROR DEBUG ----');
+          print('Path: ${error.requestOptions.path}');
+          print('Status: ${error.response?.statusCode}');
+          print('Response Data: ${error.response?.data}');
+          print('-------------------------');
 
           if (error.response?.statusCode == 401) {
-            // Token expired, clear auth data
-            await _secureStorage.delete(AppConstants.tokenKey);
-            await _secureStorage.delete(AppConstants.refreshTokenKey);
+            // DO NOT delete auth data automatically for now, as requested to prevent logout
+            // await _secureStorage.delete(AppConstants.tokenKey);
+            // await _secureStorage.delete(AppConstants.refreshTokenKey);
           }
 
           return handler.next(error);

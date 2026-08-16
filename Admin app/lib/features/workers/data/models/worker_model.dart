@@ -44,4 +44,21 @@ class WorkerModel {
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'userId': userId,
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'status': status,
+      'kycStatus': kycStatus,
+      'rating': rating,
+      'completedTasks': completedTasks,
+      'totalEarnings': totalEarnings,
+      'tier': tier,
+      'createdAt': createdAt?.toIso8601String(),
+    };
+  }
 }

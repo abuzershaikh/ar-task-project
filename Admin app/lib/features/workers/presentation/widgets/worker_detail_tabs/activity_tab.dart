@@ -2,69 +2,58 @@ import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 
 class ActivityTab extends StatelessWidget {
-  final String workerId;
+  final List<dynamic> activity;
 
-  const ActivityTab({super.key, required this.workerId});
+  const ActivityTab({
+    super.key,
+    this.activity = const [],
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      itemCount: 20,
-      itemBuilder: (context, index) {
-        return _buildActivityItem(index);
-      },
-    );
-  }
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Activity Logs',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.gray900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          activity.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: Text('No activity logs recorded yet', style: TextStyle(color: AppColors.gray600)),
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: activity.length,
+                  itemBuilder: (context, index) {
+                    final item = activity[index];
+                    final type = item['type'] ?? 'ACTIVITY';
+                    final timestamp = item['timestamp']?.toString() ?? 'Recent';
 
-  Widget _buildActivityItem(int index) {
-    final activities = [
-      {'type': 'login', 'text': 'Worker logged in', 'icon': Icons.login, 'color': AppColors.info},
-      {'type': 'task_accept', 'text': 'Task accepted (T-10001)', 'icon': Icons.check_circle, 'color': AppColors.success},
-      {'type': 'proof', 'text': 'Proof submitted (T-10001)', 'icon': Icons.upload, 'color': AppColors.warning},
-      {'type': 'approved', 'text': 'Task approved (T-10001)', 'icon': Icons.verified, 'color': AppColors.success},
-      {'type': 'earning', 'text': 'Earning posted ₹15', 'icon': Icons.currency_rupee, 'color': AppColors.primary},
-    ];
-    
-    final activity = activities[index % activities.length];
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: (activity['color'] as Color).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            activity['icon'] as IconData,
-            color: activity['color'] as Color,
-            size: 20,
-          ),
-        ),
-        title: Text(
-          activity['text'] as String,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        subtitle: Text(
-          _getTimeAgo(index),
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.gray500,
-          ),
-        ),
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: const Icon(Icons.history, color: AppColors.primary),
+                        title: Text(type.toString()),
+                        subtitle: Text(timestamp),
+                      ),
+                    );
+                  },
+                ),
+        ],
       ),
     );
-  }
-
-  String _getTimeAgo(int index) {
-    if (index == 0) return 'Just now';
-    if (index < 5) return '${index * 2} minutes ago';
-    if (index < 10) return '${index} hours ago';
-    return '${index - 9} days ago';
   }
 }

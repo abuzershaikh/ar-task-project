@@ -22,22 +22,32 @@ export class BuyerServiceCatalogController {
         const catalogList = [];
 
         for (const service of services) {
+            let unitPrice = 50.0;
+            let currency = 'INR';
             try {
-                // Ensure the service has active pricing before showing to buyers
                 const activePricing = await this.servicePricingService.getActivePricing(service.id);
-                catalogList.push({
-                    id: service.id,
-                    code: service.code,
-                    name: service.name,
-                    description: service.description,
-                    elements: service.elements,
-                    buyerUnitPrice: activePricing.buyerUnitPrice,
-                    currency: activePricing.currency,
-                });
+                if (activePricing && activePricing.buyerUnitPrice) {
+                    unitPrice = Number(activePricing.buyerUnitPrice) || 50.0;
+                    currency = activePricing.currency || 'INR';
+                }
             } catch (err) {
-                // Skip services that don't have active pricing configured by Admin yet
-                continue;
+                // Fallback default pricing for newly created admin services
             }
+
+            catalogList.push({
+                id: service.id,
+                code: service.code,
+                name: service.name,
+                description: service.description,
+                elements: service.elements,
+                buyerUnitPrice: unitPrice,
+                currency: currency,
+                minAcceptHours: service.minAcceptHours || 1,
+                maxAcceptHours: service.maxAcceptHours || 72,
+                minCompleteHours: service.minCompleteHours || 1,
+                maxCompleteHours: service.maxCompleteHours || 168,
+                watchtimeSeconds: service.watchtimeSeconds || 0,
+            });
         }
 
         return {
