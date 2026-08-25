@@ -217,10 +217,39 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
           );
         }
         if (el.id == 'el_instructions' || el.key == 'gig_worker_instructions' || el.type == ElementType.paragraph) {
-          if (event.description != null && event.description!.isNotEmpty) {
+          final inst = (event.adminInstructions != null && event.adminInstructions!.isNotEmpty)
+              ? event.adminInstructions!
+              : (event.description ?? '');
+          if (inst.isNotEmpty) {
             return el.copyWith(
-              properties: {...el.properties, 'content': event.description},
+              properties: {...el.properties, 'content': inst, 'instructions': inst},
             );
+          }
+        }
+        if (el.type == ElementType.youtube || el.key.startsWith('youtube')) {
+          if (event.videoTutorialUrl != null && event.videoTutorialUrl!.isNotEmpty) {
+            return el.copyWith(
+              properties: {...el.properties, 'url': event.videoTutorialUrl, 'videoUrl': event.videoTutorialUrl},
+            );
+          }
+        }
+        if (el.type == ElementType.audio || el.key.startsWith('audio')) {
+          if (event.audioGuideUrl != null && event.audioGuideUrl!.isNotEmpty) {
+            return el.copyWith(
+              properties: {...el.properties, 'url': event.audioGuideUrl, 'audioUrl': event.audioGuideUrl},
+            );
+          }
+        }
+        if (el.type == ElementType.systemTimer || el.key.startsWith('system_task_timer')) {
+          if (event.watchtimeSeconds != null) {
+            return el.copyWith(
+              properties: {...el.properties, 'durationSeconds': event.watchtimeSeconds},
+            );
+          }
+        }
+        if (el.type == ElementType.actionButton) {
+          if (event.linkFieldLabel != null && event.linkFieldLabel!.isNotEmpty) {
+            return el.copyWith(label: event.linkFieldLabel!);
           }
         }
         return el;
@@ -567,9 +596,66 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         }
       }
 
+      String? newInstructions = currentState.serviceDraft.adminInstructions;
+      String? newDescription = currentState.serviceDraft.description;
+      if (event.updatedElement.type == ElementType.paragraph ||
+          event.updatedElement.id == 'el_instructions' ||
+          event.updatedElement.key == 'gig_worker_instructions') {
+        final content = event.updatedElement.properties['content']?.toString() ??
+            event.updatedElement.properties['instructions']?.toString() ??
+            event.updatedElement.label;
+        if (content.isNotEmpty) {
+          newInstructions = content;
+          newDescription = content;
+        }
+      }
+
+      String? newVideoUrl = currentState.serviceDraft.videoTutorialUrl;
+      if (event.updatedElement.type == ElementType.youtube ||
+          event.updatedElement.key.startsWith('youtube')) {
+        final url = event.updatedElement.properties['url']?.toString() ??
+            event.updatedElement.properties['videoUrl']?.toString();
+        if (url != null && url.isNotEmpty) {
+          newVideoUrl = url;
+        }
+      }
+
+      String? newAudioUrl = currentState.serviceDraft.audioGuideUrl;
+      if (event.updatedElement.type == ElementType.audio ||
+          event.updatedElement.key.startsWith('audio')) {
+        final url = event.updatedElement.properties['url']?.toString() ??
+            event.updatedElement.properties['audioUrl']?.toString();
+        if (url != null && url.isNotEmpty) {
+          newAudioUrl = url;
+        }
+      }
+
+      int newWatchtime = currentState.serviceDraft.watchtimeSeconds;
+      if (event.updatedElement.type == ElementType.systemTimer ||
+          event.updatedElement.key.startsWith('system_task_timer')) {
+        final sec = event.updatedElement.properties['durationSeconds'];
+        if (sec != null) {
+          newWatchtime = int.tryParse(sec.toString()) ?? newWatchtime;
+        }
+      }
+
+      String? newLinkLabel = currentState.serviceDraft.linkFieldLabel;
+      if (event.updatedElement.type == ElementType.actionButton) {
+        if (event.updatedElement.label.isNotEmpty) {
+          newLinkLabel = event.updatedElement.label;
+        }
+      }
+
       final updatedService = currentState.serviceDraft.copyWith(
         name: newName,
+        adminInstructions: newInstructions,
+        description: newDescription,
+        videoTutorialUrl: newVideoUrl,
+        audioGuideUrl: newAudioUrl,
+        watchtimeSeconds: newWatchtime,
+        linkFieldLabel: newLinkLabel,
         elements: currentElements,
+        updatedAt: DateTime.now(),
       );
       emit(currentState.copyWith(
         serviceDraft: updatedService,

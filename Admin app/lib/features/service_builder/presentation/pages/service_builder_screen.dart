@@ -1072,7 +1072,28 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen> with Single
                                        builder: (_) => ElementPropertyInspector(
                                          element: element,
                                          onSave: (updated) {
-                                           context.read<ServiceBuilderBloc>().add(UpdateElementPropertiesEvent(updated));
+                                            context.read<ServiceBuilderBloc>().add(UpdateElementPropertiesEvent(updated));
+                                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Row(
+                                                  children: [
+                                                    const Icon(Icons.check_circle_rounded, color: Colors.black, size: 20),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Text(
+                                                        '✓ "${updated.label}" Settings Saved!',
+                                                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                backgroundColor: Colors.cyanAccent,
+                                                behavior: SnackBarBehavior.floating,
+                                                duration: const Duration(seconds: 2),
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                              ),
+                                            );
                                          },
                                        ),
                                      );
@@ -1166,6 +1187,27 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen> with Single
                                                element: element,
                                                onSave: (updated) {
                                                  context.read<ServiceBuilderBloc>().add(UpdateElementPropertiesEvent(updated));
+                                                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                 ScaffoldMessenger.of(context).showSnackBar(
+                                                   SnackBar(
+                                                     content: Row(
+                                                       children: [
+                                                         const Icon(Icons.check_circle_rounded, color: Colors.black, size: 20),
+                                                         const SizedBox(width: 8),
+                                                         Expanded(
+                                                           child: Text(
+                                                             '✓ "${updated.label}" Settings Saved!',
+                                                             style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13),
+                                                           ),
+                                                         ),
+                                                       ],
+                                                     ),
+                                                     backgroundColor: Colors.cyanAccent,
+                                                     behavior: SnackBarBehavior.floating,
+                                                     duration: const Duration(seconds: 2),
+                                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                   ),
+                                                 );
                                                },
                                              ),
                                            );
