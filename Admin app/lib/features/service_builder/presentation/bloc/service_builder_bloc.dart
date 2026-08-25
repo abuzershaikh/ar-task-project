@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/repositories/service_builder_repository.dart';
 import '../../domain/models/service_model.dart';
@@ -201,10 +202,10 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
     emit(ServiceEditingState(serviceDraft: newService));
   }
 
-  void _onUpdateServiceInfo(
+  Future<void> _onUpdateServiceInfo(
     UpdateServiceInfoEvent event,
     Emitter<ServiceBuilderState> emit,
-  ) {
+  ) async {
     if (state is ServiceEditingState) {
       final currentState = state as ServiceEditingState;
 
@@ -243,13 +244,26 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         serviceDraft: updatedDraft,
         successMessage: 'Service basic info & guidance updated!',
       ));
+
+      // Auto-persist draft to server
+      try {
+        final saved = await repository.saveServiceDraft(updatedDraft);
+        if (!emit.isDone) {
+          emit((state as ServiceEditingState).copyWith(
+            serviceDraft: saved,
+            successMessage: 'Saved "${saved.name}" to server!',
+          ));
+        }
+      } catch (e) {
+        debugPrint('[ServiceBuilderBloc] Auto-save error in _onUpdateServiceInfo: $e');
+      }
     }
   }
 
-  void _onUpdateTimingRules(
+  Future<void> _onUpdateTimingRules(
     UpdateTimingRulesEvent event,
     Emitter<ServiceBuilderState> emit,
-  ) {
+  ) async {
     if (state is ServiceEditingState) {
       final currentState = state as ServiceEditingState;
       final updatedDraft = currentState.serviceDraft.copyWith(
@@ -265,13 +279,22 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         serviceDraft: updatedDraft,
         successMessage: 'Execution timing rules updated!',
       ));
+
+      try {
+        final saved = await repository.saveServiceDraft(updatedDraft);
+        if (!emit.isDone) {
+          emit((state as ServiceEditingState).copyWith(serviceDraft: saved));
+        }
+      } catch (e) {
+        debugPrint('[ServiceBuilderBloc] Auto-save error in _onUpdateTimingRules: $e');
+      }
     }
   }
 
-  void _onUpdatePricing(
+  Future<void> _onUpdatePricing(
     UpdatePricingEvent event,
     Emitter<ServiceBuilderState> emit,
-  ) {
+  ) async {
     if (state is ServiceEditingState) {
       final currentState = state as ServiceEditingState;
       final currentP = currentState.serviceDraft.pricing;
@@ -297,13 +320,24 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         errorMessage: newPricing.validationError,
         successMessage: newPricing.isValid ? 'Pricing configuration updated!' : null,
       ));
+
+      if (newPricing.isValid) {
+        try {
+          final saved = await repository.saveServiceDraft(updatedService);
+          if (!emit.isDone) {
+            emit((state as ServiceEditingState).copyWith(serviceDraft: saved));
+          }
+        } catch (e) {
+          debugPrint('[ServiceBuilderBloc] Auto-save error in _onUpdatePricing: $e');
+        }
+      }
     }
   }
 
-  void _onAddPriceChip(
+  Future<void> _onAddPriceChip(
     AddPriceChipEvent event,
     Emitter<ServiceBuilderState> emit,
-  ) {
+  ) async {
     if (state is ServiceEditingState) {
       final currentState = state as ServiceEditingState;
       final currentP = currentState.serviceDraft.pricing;
@@ -324,13 +358,22 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         serviceDraft: updatedService,
         successMessage: 'Price chip added!',
       ));
+
+      try {
+        final saved = await repository.saveServiceDraft(updatedService);
+        if (!emit.isDone) {
+          emit((state as ServiceEditingState).copyWith(serviceDraft: saved));
+        }
+      } catch (e) {
+        debugPrint('[ServiceBuilderBloc] Auto-save error in _onAddPriceChip: $e');
+      }
     }
   }
 
-  void _onRemovePriceChip(
+  Future<void> _onRemovePriceChip(
     RemovePriceChipEvent event,
     Emitter<ServiceBuilderState> emit,
-  ) {
+  ) async {
     if (state is ServiceEditingState) {
       final currentState = state as ServiceEditingState;
       final currentP = currentState.serviceDraft.pricing;
@@ -351,13 +394,22 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         serviceDraft: updatedService,
         successMessage: 'Price chip removed!',
       ));
+
+      try {
+        final saved = await repository.saveServiceDraft(updatedService);
+        if (!emit.isDone) {
+          emit((state as ServiceEditingState).copyWith(serviceDraft: saved));
+        }
+      } catch (e) {
+        debugPrint('[ServiceBuilderBloc] Auto-save error in _onRemovePriceChip: $e');
+      }
     }
   }
 
-  void _onUpdatePriceChip(
+  Future<void> _onUpdatePriceChip(
     UpdatePriceChipEvent event,
     Emitter<ServiceBuilderState> emit,
-  ) {
+  ) async {
     if (state is ServiceEditingState) {
       final currentState = state as ServiceEditingState;
       final currentP = currentState.serviceDraft.pricing;
@@ -383,13 +435,22 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         serviceDraft: updatedService,
         successMessage: 'Price chip updated!',
       ));
+
+      try {
+        final saved = await repository.saveServiceDraft(updatedService);
+        if (!emit.isDone) {
+          emit((state as ServiceEditingState).copyWith(serviceDraft: saved));
+        }
+      } catch (e) {
+        debugPrint('[ServiceBuilderBloc] Auto-save error in _onUpdatePriceChip: $e');
+      }
     }
   }
 
-  void _onAddTemplateElement(
+  Future<void> _onAddTemplateElement(
     AddTemplateElementEvent event,
     Emitter<ServiceBuilderState> emit,
-  ) {
+  ) async {
     if (state is ServiceEditingState) {
       final currentState = state as ServiceEditingState;
       final currentElements = List<TemplateElement>.from(currentState.serviceDraft.elements);
@@ -405,13 +466,22 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         selectedElement: indexedElement,
         successMessage: 'Added "${event.element.label}" component!',
       ));
+
+      try {
+        final saved = await repository.saveServiceDraft(updatedService);
+        if (!emit.isDone) {
+          emit((state as ServiceEditingState).copyWith(serviceDraft: saved));
+        }
+      } catch (e) {
+        debugPrint('[ServiceBuilderBloc] Auto-save error in _onAddTemplateElement: $e');
+      }
     }
   }
 
-  void _onRemoveTemplateElement(
+  Future<void> _onRemoveTemplateElement(
     RemoveTemplateElementEvent event,
     Emitter<ServiceBuilderState> emit,
-  ) {
+  ) async {
     if (state is ServiceEditingState) {
       final currentState = state as ServiceEditingState;
       final currentElements = List<TemplateElement>.from(currentState.serviceDraft.elements);
@@ -427,13 +497,22 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         selectedElement: null,
         successMessage: 'Component removed!',
       ));
+
+      try {
+        final saved = await repository.saveServiceDraft(updatedService);
+        if (!emit.isDone) {
+          emit((state as ServiceEditingState).copyWith(serviceDraft: saved));
+        }
+      } catch (e) {
+        debugPrint('[ServiceBuilderBloc] Auto-save error in _onRemoveTemplateElement: $e');
+      }
     }
   }
 
-  void _onReorderTemplateElements(
+  Future<void> _onReorderTemplateElements(
     ReorderTemplateElementsEvent event,
     Emitter<ServiceBuilderState> emit,
-  ) {
+  ) async {
     if (state is ServiceEditingState) {
       final currentState = state as ServiceEditingState;
       final currentElements = List<TemplateElement>.from(currentState.serviceDraft.elements);
@@ -453,13 +532,22 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         serviceDraft: updatedService,
         successMessage: 'Components reordered!',
       ));
+
+      try {
+        final saved = await repository.saveServiceDraft(updatedService);
+        if (!emit.isDone) {
+          emit((state as ServiceEditingState).copyWith(serviceDraft: saved));
+        }
+      } catch (e) {
+        debugPrint('[ServiceBuilderBloc] Auto-save error in _onReorderTemplateElements: $e');
+      }
     }
   }
 
-  void _onUpdateElementProperties(
+  Future<void> _onUpdateElementProperties(
     UpdateElementPropertiesEvent event,
     Emitter<ServiceBuilderState> emit,
-  ) {
+  ) async {
     if (state is ServiceEditingState) {
       final currentState = state as ServiceEditingState;
       final currentElements = List<TemplateElement>.from(currentState.serviceDraft.elements);
@@ -488,6 +576,19 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         selectedElement: event.updatedElement,
         successMessage: 'Saved "${event.updatedElement.label}" settings!',
       ));
+
+      // Auto-persist draft to server
+      try {
+        final saved = await repository.saveServiceDraft(updatedService);
+        if (!emit.isDone) {
+          emit((state as ServiceEditingState).copyWith(
+            serviceDraft: saved,
+            successMessage: 'Saved "${event.updatedElement.label}" to server!',
+          ));
+        }
+      } catch (e) {
+        debugPrint('[ServiceBuilderBloc] Auto-save error in _onUpdateElementProperties: $e');
+      }
     }
   }
 
