@@ -26,9 +26,10 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
     on<AddTemplateElementEvent>(_onAddTemplateElement);
     on<RemoveTemplateElementEvent>(_onRemoveTemplateElement);
     on<ReorderTemplateElementsEvent>(_onReorderTemplateElements);
-    on<UpdateElementPropertiesEvent>(_onUpdateElementProperties);
     on<SaveServiceDraftEvent>(_onSaveServiceDraft);
+    on<UpdateTimingRulesEvent>(_onUpdateTimingRules);
     on<PublishServiceVersionEvent>(_onPublishServiceVersion);
+    on<DeleteServiceEvent>(_onDeleteService);
   }
 
   Future<void> _onLoadServices(
@@ -66,25 +67,49 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
       TemplateElement(
         id: 'el_header',
         key: 'header_title',
-        label: 'Campaign Header / Title',
+        label: event.name.isNotEmpty ? event.name : 'Campaign Header / Title',
         category: ElementCategory.content,
         type: ElementType.heading,
         visibility: VisibilityContext.both,
-        editability: EditabilityMode.buyerInput,
+        editability: EditabilityMode.adminFixed,
         isRequired: true,
         orderIndex: 0,
-        properties: {'placeholder': 'Enter Campaign Title'},
+        properties: {'content': event.name},
+      ),
+      TemplateElement(
+        id: 'el_instructions',
+        key: 'gig_worker_instructions',
+        label: 'Task Details & Instructions for Workers',
+        category: ElementCategory.content,
+        type: ElementType.paragraph,
+        visibility: VisibilityContext.both,
+        editability: EditabilityMode.adminFixed,
+        isRequired: true,
+        orderIndex: 1,
+        properties: {'content': event.description ?? 'Complete the task as instructed by admin.'},
+      ),
+      TemplateElement(
+        id: 'el_count_quantity',
+        key: 'buyer_order_quantity',
+        label: 'Order Count / Quantity Required',
+        category: ElementCategory.input,
+        type: ElementType.numberField,
+        visibility: VisibilityContext.buyerOnly,
+        editability: EditabilityMode.buyerInput,
+        isRequired: true,
+        orderIndex: 2,
+        properties: {'placeholder': 'Enter required quantity (e.g. 100, 500, 1000)', 'min': 10, 'max': 100000},
       ),
       TemplateElement(
         id: 'el_target_url',
         key: 'target_url',
-        label: 'Target Action Link (Website/Channel/App)',
+        label: 'Target Action Link (Channel / Post / Video URL)',
         category: ElementCategory.interactive,
         type: ElementType.actionButton,
         visibility: VisibilityContext.both,
         editability: EditabilityMode.buyerInput,
         isRequired: true,
-        orderIndex: 1,
+        orderIndex: 3,
         properties: {
           'buttonText': 'Open Link & Complete Task',
           'placeholder': 'https://youtube.com/watch?v=... or https://t.me/...',
@@ -93,72 +118,82 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
       TemplateElement(
         id: 'el_yt_video',
         key: 'yt_video_preview',
-        label: 'YouTube Tutorial / Video Preview',
+        label: 'YouTube Video Link (Admin Tutorial)',
         category: ElementCategory.media,
         type: ElementType.youtube,
         visibility: VisibilityContext.both,
-        editability: EditabilityMode.buyerInput,
+        editability: EditabilityMode.adminFixed,
         isRequired: false,
-        orderIndex: 2,
-        properties: {'placeholder': 'Paste YouTube video URL for live preview'},
+        orderIndex: 4,
+        properties: {'url': ''},
       ),
       TemplateElement(
         id: 'el_voice_rec',
         key: 'voice_instruction',
-        label: 'Voice Instruction / Audio Guide',
+        label: 'Voice Guide / Audio Recording (Admin)',
         category: ElementCategory.media,
         type: ElementType.audio,
         visibility: VisibilityContext.both,
-        editability: EditabilityMode.buyerInput,
+        editability: EditabilityMode.adminFixed,
         isRequired: false,
-        orderIndex: 3,
-        properties: {'placeholder': 'Record or upload audio instructions for workers'},
-      ),
-      TemplateElement(
-        id: 'el_instructions',
-        key: 'gig_worker_instructions',
-        label: 'Step-by-Step Instructions to Gig Worker',
-        category: ElementCategory.content,
-        type: ElementType.paragraph,
-        visibility: VisibilityContext.both,
-        editability: EditabilityMode.buyerInput,
-        isRequired: true,
-        orderIndex: 4,
-        properties: {'placeholder': 'Describe exactly what steps the worker must take.'},
+        orderIndex: 5,
+        properties: {'url': ''},
       ),
       TemplateElement(
         id: 'el_proof_submit',
         key: 'system_proof_requirements',
-        label: 'Proof Requirements & Submission',
+        label: 'Proof Requirements & Verification',
         category: ElementCategory.system,
         type: ElementType.systemProof,
         visibility: VisibilityContext.both,
         editability: EditabilityMode.adminFixed,
         isRequired: true,
-        orderIndex: 5,
+        orderIndex: 6,
         properties: {
           'requireScreenshot': true,
           'requireTextProof': false,
         },
       ),
+      TemplateElement(
+        id: 'el_task_timer',
+        key: 'system_task_timer',
+        label: 'Required Task Duration Timer',
+        category: ElementCategory.system,
+        type: ElementType.systemTimer,
+        visibility: VisibilityContext.workerOnly,
+        editability: EditabilityMode.adminFixed,
+        isRequired: true,
+        orderIndex: 7,
+        properties: {
+          'durationSeconds': 60,
+        },
+      ),
     ];
+
+    final basePrice = event.buyerUnitPrice ?? 0.0;
+    final marginPercent = event.adminMarginPercent ?? 0.0;
 
     final newService = ServiceModel(
       id: 'srv_${DateTime.now().millisecondsSinceEpoch}',
       code: cleanCode,
       name: event.name,
-      description: 'Custom Service created by Admin',
+      description: event.description?.isNotEmpty == true
+          ? event.description!
+          : 'Service created and managed by Admin',
       isActive: true,
       currentVersion: 1,
       pricing: PricingConfig.calculate(
-        modelType: PricingModelType.tieredChips,
-        buyerPrice: 199.0,
-        adminMarginPercent: 20.0,
-        chips: const [
-          PriceChipModel(id: 'chip_1', label: '100 Count (Basic)', quantity: 100, price: 199.0),
-          PriceChipModel(id: 'chip_2', label: '500 Count (Standard)', quantity: 500, price: 899.0, isPopular: true),
-          PriceChipModel(id: 'chip_3', label: '1000 Count (Pro Pack)', quantity: 1000, price: 1699.0),
-        ],
+        modelType: PricingModelType.countBased,
+        buyerPrice: basePrice,
+        unitPrice: basePrice > 0 ? basePrice : 1.0,
+        adminMarginPercent: marginPercent,
+        chips: basePrice > 0
+            ? [
+                PriceChipModel(id: 'chip_1', label: '100 Count', quantity: 100, price: basePrice * 100),
+                PriceChipModel(id: 'chip_2', label: '500 Count', quantity: 500, price: basePrice * 500, isPopular: true),
+                PriceChipModel(id: 'chip_3', label: '1000 Count', quantity: 1000, price: basePrice * 1000),
+              ]
+            : [],
       ),
       elements: defaultElements,
       updatedAt: DateTime.now(),
@@ -172,12 +207,64 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
   ) {
     if (state is ServiceEditingState) {
       final currentState = state as ServiceEditingState;
+
+      final updatedElements = currentState.serviceDraft.elements.map((el) {
+        if (el.id == 'el_header' || el.key == 'header_title' || el.type == ElementType.heading) {
+          return el.copyWith(
+            label: event.name,
+            properties: {...el.properties, 'content': event.name},
+          );
+        }
+        if (el.id == 'el_instructions' || el.key == 'gig_worker_instructions' || el.type == ElementType.paragraph) {
+          if (event.description != null && event.description!.isNotEmpty) {
+            return el.copyWith(
+              properties: {...el.properties, 'content': event.description},
+            );
+          }
+        }
+        return el;
+      }).toList();
+
       final updatedDraft = currentState.serviceDraft.copyWith(
         name: event.name,
         description: event.description,
+        elements: updatedElements,
+        videoTutorialUrl: event.videoTutorialUrl,
+        audioGuideUrl: event.audioGuideUrl,
+        adminInstructions: event.adminInstructions,
+        linkFieldLabel: event.linkFieldLabel,
+        linkFieldPlaceholder: event.linkFieldPlaceholder,
+        textFieldLabel: event.textFieldLabel,
+        textFieldPlaceholder: event.textFieldPlaceholder,
+        watchtimeSeconds: event.watchtimeSeconds,
         updatedAt: DateTime.now(),
       );
-      emit(currentState.copyWith(serviceDraft: updatedDraft));
+      emit(currentState.copyWith(
+        serviceDraft: updatedDraft,
+        successMessage: 'Service basic info & guidance updated!',
+      ));
+    }
+  }
+
+  void _onUpdateTimingRules(
+    UpdateTimingRulesEvent event,
+    Emitter<ServiceBuilderState> emit,
+  ) {
+    if (state is ServiceEditingState) {
+      final currentState = state as ServiceEditingState;
+      final updatedDraft = currentState.serviceDraft.copyWith(
+        minCompleteHours: event.minCompleteHours ?? currentState.serviceDraft.minCompleteHours,
+        maxCompleteHours: event.maxCompleteHours ?? currentState.serviceDraft.maxCompleteHours,
+        minAcceptHours: event.minAcceptHours ?? currentState.serviceDraft.minAcceptHours,
+        maxAcceptHours: event.maxAcceptHours ?? currentState.serviceDraft.maxAcceptHours,
+        minDurationSeconds: event.minDurationSeconds ?? currentState.serviceDraft.minDurationSeconds,
+        maxDurationSeconds: event.maxDurationSeconds ?? currentState.serviceDraft.maxDurationSeconds,
+        updatedAt: DateTime.now(),
+      );
+      emit(currentState.copyWith(
+        serviceDraft: updatedDraft,
+        successMessage: 'Execution timing rules updated!',
+      ));
     }
   }
 
@@ -196,13 +283,19 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         minQuantity: event.minQuantity ?? currentP.minQuantity,
         maxQuantity: event.maxQuantity ?? currentP.maxQuantity,
         adminMarginPercent: event.adminMarginPercent ?? currentP.adminMarginPercent,
+        workerReward: event.workerReward ?? currentP.workerReward,
         chips: event.chips ?? currentP.chips,
       );
 
-      final updatedService = currentState.serviceDraft.copyWith(pricing: newPricing);
+      final updatedService = currentState.serviceDraft.copyWith(
+        pricing: newPricing,
+        workerLimit: event.workerLimit ?? currentState.serviceDraft.workerLimit,
+        workerLimitOptions: event.workerLimitOptions ?? currentState.serviceDraft.workerLimitOptions,
+      );
       emit(currentState.copyWith(
         serviceDraft: updatedService,
         errorMessage: newPricing.validationError,
+        successMessage: newPricing.isValid ? 'Pricing configuration updated!' : null,
       ));
     }
   }
@@ -227,7 +320,10 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
       );
 
       final updatedService = currentState.serviceDraft.copyWith(pricing: newPricing);
-      emit(currentState.copyWith(serviceDraft: updatedService));
+      emit(currentState.copyWith(
+        serviceDraft: updatedService,
+        successMessage: 'Price chip added!',
+      ));
     }
   }
 
@@ -251,7 +347,10 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
       );
 
       final updatedService = currentState.serviceDraft.copyWith(pricing: newPricing);
-      emit(currentState.copyWith(serviceDraft: updatedService));
+      emit(currentState.copyWith(
+        serviceDraft: updatedService,
+        successMessage: 'Price chip removed!',
+      ));
     }
   }
 
@@ -280,7 +379,10 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
       );
 
       final updatedService = currentState.serviceDraft.copyWith(pricing: newPricing);
-      emit(currentState.copyWith(serviceDraft: updatedService));
+      emit(currentState.copyWith(
+        serviceDraft: updatedService,
+        successMessage: 'Price chip updated!',
+      ));
     }
   }
 
@@ -301,6 +403,7 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
       emit(currentState.copyWith(
         serviceDraft: updatedService,
         selectedElement: indexedElement,
+        successMessage: 'Added "${event.element.label}" component!',
       ));
     }
   }
@@ -322,6 +425,7 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
       emit(currentState.copyWith(
         serviceDraft: updatedService,
         selectedElement: null,
+        successMessage: 'Component removed!',
       ));
     }
   }
@@ -345,7 +449,10 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
       }
 
       final updatedService = currentState.serviceDraft.copyWith(elements: currentElements);
-      emit(currentState.copyWith(serviceDraft: updatedService));
+      emit(currentState.copyWith(
+        serviceDraft: updatedService,
+        successMessage: 'Components reordered!',
+      ));
     }
   }
 
@@ -362,10 +469,24 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         currentElements[idx] = event.updatedElement;
       }
 
-      final updatedService = currentState.serviceDraft.copyWith(elements: currentElements);
+      // If the updated element is heading, keep serviceDraft.name in sync!
+      String newName = currentState.serviceDraft.name;
+      if (event.updatedElement.type == ElementType.heading ||
+          event.updatedElement.id == 'el_header' ||
+          event.updatedElement.key == 'header_title') {
+        if (event.updatedElement.label.isNotEmpty) {
+          newName = event.updatedElement.label;
+        }
+      }
+
+      final updatedService = currentState.serviceDraft.copyWith(
+        name: newName,
+        elements: currentElements,
+      );
       emit(currentState.copyWith(
         serviceDraft: updatedService,
         selectedElement: event.updatedElement,
+        successMessage: 'Saved "${event.updatedElement.label}" settings!',
       ));
     }
   }
@@ -409,7 +530,12 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
 
       emit(currentState.copyWith(isPublishing: true));
       try {
-        final published = await repository.publishServiceVersion(event.serviceId);
+        final draftToPublish = currentState.serviceDraft.copyWith(
+          isActive: true,
+          currentVersion: currentState.serviceDraft.currentVersion + 1,
+          updatedAt: DateTime.now(),
+        );
+        final published = await repository.saveServiceDraft(draftToPublish);
         emit(currentState.copyWith(
           serviceDraft: published,
           isPublishing: false,
@@ -423,4 +549,18 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
       }
     }
   }
+
+  Future<void> _onDeleteService(
+    DeleteServiceEvent event,
+    Emitter<ServiceBuilderState> emit,
+  ) async {
+    emit(ServiceBuilderLoading());
+    try {
+      await repository.deleteService(event.serviceId);
+      emit(const ServiceDeletedState('Service deleted successfully!'));
+    } catch (e) {
+      emit(ServiceBuilderError('Failed to delete service: $e'));
+    }
+  }
 }
+

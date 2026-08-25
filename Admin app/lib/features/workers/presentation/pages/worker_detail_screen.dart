@@ -43,22 +43,53 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final shortId = widget.workerId.length > 14
+        ? '#${widget.workerId.substring(0, 8)}...${widget.workerId.substring(widget.workerId.length - 4)}'
+        : widget.workerId;
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF0F9FF),
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Worker Details'),
-            Text(
-              widget.workerId,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+        titleSpacing: 14,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0284C7), Color(0xFF0EA5E9)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
+          ),
         ),
-        backgroundColor: AppColors.primary,
+        title: BlocBuilder<WorkersBloc, WorkersState>(
+          builder: (context, state) {
+            String name = 'Worker Intelligence Profile';
+            String email = shortId;
+            if (state is WorkerDetailLoaded &&
+                (state.worker.id == widget.workerId || state.worker.userId == widget.workerId)) {
+              name = state.worker.name.isNotEmpty ? state.worker.name : 'Worker Profile';
+              email = state.worker.email.isNotEmpty
+                  ? state.worker.email
+                  : (state.worker.phone.isNotEmpty ? state.worker.phone : shortId);
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white), overflow: TextOverflow.ellipsis),
+                Text(
+                  email,
+                  style: const TextStyle(fontSize: 11, color: Color(0xFFE0F2FE), fontWeight: FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            );
+          },
+        ),
+        backgroundColor: Colors.transparent,
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
               _handleAction(value);
             },
@@ -67,7 +98,7 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
                 value: 'suspend',
                 child: Row(
                   children: [
-                    Icon(Icons.pause_circle, color: AppColors.warning, size: 20),
+                    Icon(Icons.pause_circle, color: Color(0xFFD97706), size: 20),
                     SizedBox(width: 8),
                     Text('Suspend Worker'),
                   ],
@@ -77,7 +108,7 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
                 value: 'ban',
                 child: Row(
                   children: [
-                    Icon(Icons.block, color: AppColors.error, size: 20),
+                    Icon(Icons.block, color: Color(0xFFDC2626), size: 20),
                     SizedBox(width: 8),
                     Text('Ban Worker'),
                   ],
@@ -87,7 +118,7 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
                 value: 'change_status',
                 child: Row(
                   children: [
-                    Icon(Icons.swap_horiz, color: AppColors.primary, size: 20),
+                    Icon(Icons.swap_horiz, color: Color(0xFF0284C7), size: 20),
                     SizedBox(width: 8),
                     Text('Change Status'),
                   ],
@@ -100,13 +131,13 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          indicatorColor: AppColors.white,
+          indicatorColor: Colors.white,
           indicatorWeight: 3,
-          labelColor: AppColors.white,
-          unselectedLabelColor: AppColors.white.withOpacity(0.7),
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
-          labelPadding: const EdgeInsets.symmetric(horizontal: 20.0),
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 13),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 14.0),
           tabs: const [
             Tab(text: 'Overview'),
             Tab(text: 'Tasks'),
@@ -121,17 +152,18 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
       ),
       body: BlocBuilder<WorkersBloc, WorkersState>(
         builder: (context, state) {
-          if (state is WorkersLoading) {
-            return const Center(child: CircularProgressIndicator());
+          if (state is WorkersLoading || state is WorkerDetailLoading) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF0284C7)));
           }
           if (state is WorkersError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(state.message, style: const TextStyle(color: AppColors.error)),
+                  Text(state.message, style: const TextStyle(color: Color(0xFFDC2626))),
                   const SizedBox(height: 12),
                   ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0284C7), foregroundColor: Colors.white),
                     onPressed: () {
                       context.read<WorkersBloc>().add(LoadWorkerDetailEvent(widget.workerId));
                     },
@@ -144,8 +176,8 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
           
           if (state is WorkerDetailLoaded) {
             final detailState = state as WorkerDetailLoaded;
-            if (detailState.worker.id != widget.workerId) {
-              return const Center(child: CircularProgressIndicator());
+            if (detailState.worker.id != widget.workerId && detailState.worker.userId != widget.workerId) {
+              return const Center(child: CircularProgressIndicator(color: Color(0xFF0284C7)));
             }
             return TabBarView(
               controller: _tabController,
@@ -162,7 +194,7 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
             );
           }
           
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF0284C7)));
         },
       ),
     );

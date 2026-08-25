@@ -13,7 +13,7 @@ export interface StateTransition {
 export class TaskStateMachine {
     private static readonly transitions: Map<TaskStatus, TaskStatus[]> = new Map([
         [TaskStatus.DRAFT, [TaskStatus.ACTIVE, TaskStatus.CANCELLED]],
-        [TaskStatus.ACTIVE, [TaskStatus.ASSIGNED, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
+        [TaskStatus.ACTIVE, [TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
         [TaskStatus.ASSIGNED, [TaskStatus.ACCEPTED, TaskStatus.ACTIVE, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
         [TaskStatus.ACCEPTED, [TaskStatus.IN_PROGRESS, TaskStatus.ACTIVE, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
         [TaskStatus.IN_PROGRESS, [TaskStatus.SUBMITTED, TaskStatus.ACTIVE, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],

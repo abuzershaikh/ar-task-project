@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
 
 class FilterChipRow extends StatelessWidget {
   final List<String> filters;
@@ -16,11 +15,11 @@ class FilterChipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      color: AppColors.white,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      color: Colors.transparent,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         child: Row(
           children: filters.map((filter) {
             final isSelected = filter == selectedFilter;
@@ -34,17 +33,22 @@ class FilterChipRow extends StatelessWidget {
                     onFilterSelected(filter);
                   }
                 },
-                selectedColor: AppColors.primary.withOpacity(0.15),
-                backgroundColor: AppColors.gray100,
+                selectedColor: const Color(0xFF059669),
+                backgroundColor: Colors.white,
                 labelStyle: TextStyle(
-                  color: isSelected ? AppColors.primary : AppColors.gray700,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  fontSize: 13,
+                  color: isSelected ? Colors.white : const Color(0xFF047857),
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 12,
                 ),
-                side: BorderSide(
-                  color: isSelected ? AppColors.primary : AppColors.gray300,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: isSelected ? const Color(0xFF059669) : const Color(0xFFA7F3D0),
+                    width: 1.1,
+                  ),
                 ),
                 showCheckmark: false,
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               ),
             );
           }).toList(),
@@ -53,3 +57,4 @@ class FilterChipRow extends StatelessWidget {
     );
   }
 }
+

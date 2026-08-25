@@ -31,8 +31,8 @@ export class UserSyncService {
         await this.userRepo.update(user.id, { lastLogin: now });
         user.lastLogin = now;
 
-        // Ensure Worker record exists in MySQL if user is a WORKER
-        if (user.role === UserRole.WORKER) {
+        // Ensure Worker record exists in MySQL if user is a WORKER or accessing as WORKER
+        if (user.role === UserRole.WORKER || preferredRole === UserRole.WORKER) {
           let worker = await this.workerRepo.findByUserId(user.id);
           if (!worker) {
             await this.workerRepo.create({

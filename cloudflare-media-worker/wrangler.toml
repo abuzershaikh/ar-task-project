@@ -1,0 +1,20 @@
+name = "earnpost-media-worker"
+main = "src/index.ts"
+compatibility_date = "2024-10-01"
+
+# Cloudflare R2 Storage Bucket Binding
+# To create the R2 bucket: wrangler r2 bucket create earnpost-media
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "earnpost-media"
+preview_bucket_name = "earnpost-media-preview"
+
+# Optional Cloudflare KV fallback storage
+# [[kv_namespaces]]
+# binding = "MEDIA_STORE"
+# id = "<YOUR_KV_NAMESPACE_ID>"
+
+[vars]
+ENVIRONMENT = "production"
+MAX_UPLOAD_SIZE_MB = "25"
+PUBLIC_MEDIA_URL = "https://media.earnpost.workers.dev"

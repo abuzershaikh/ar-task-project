@@ -3,6 +3,7 @@ import {
     Get,
     Post,
     Patch,
+    Delete,
     Param,
     Body,
     Query,
@@ -83,6 +84,21 @@ export class AdminServiceCatalogController {
             marginValue?: number;
             elements?: any;
             reviewMode?: string;
+            videoTutorialUrl?: string;
+            audioGuideUrl?: string;
+            adminInstructions?: string;
+            linkFieldLabel?: string;
+            linkFieldPlaceholder?: string;
+            textFieldLabel?: string;
+            textFieldPlaceholder?: string;
+            watchtimeSeconds?: number;
+            watchTimeOptions?: any;
+            minCompleteHours?: number;
+            maxCompleteHours?: number;
+            minAcceptHours?: number;
+            maxAcceptHours?: number;
+            workerLimit?: number;
+            workerReward?: number;
         },
     ) {
         const service = await this.serviceCatalogService.createService({
@@ -91,6 +107,20 @@ export class AdminServiceCatalogController {
             description: body.description,
             elements: body.elements,
             reviewMode: body.reviewMode,
+            workerLimit: body.workerLimit,
+            videoTutorialUrl: body.videoTutorialUrl,
+            audioGuideUrl: body.audioGuideUrl,
+            adminInstructions: body.adminInstructions,
+            linkFieldLabel: body.linkFieldLabel,
+            linkFieldPlaceholder: body.linkFieldPlaceholder,
+            textFieldLabel: body.textFieldLabel,
+            textFieldPlaceholder: body.textFieldPlaceholder,
+            watchtimeSeconds: body.watchtimeSeconds,
+            watchTimeOptions: body.watchTimeOptions,
+            minCompleteHours: body.minCompleteHours,
+            maxCompleteHours: body.maxCompleteHours,
+            minAcceptHours: body.minAcceptHours,
+            maxAcceptHours: body.maxAcceptHours,
         });
 
         let initialPricing = null;
@@ -99,6 +129,7 @@ export class AdminServiceCatalogController {
                 buyerUnitPrice: body.buyerUnitPrice,
                 marginType: body.marginType || MarginType.FIXED,
                 marginValue: body.marginValue,
+                workerReward: body.workerReward,
             });
         }
 
@@ -111,10 +142,31 @@ export class AdminServiceCatalogController {
     }
 
     @Patch(':id')
-    @ApiOperation({ summary: 'Update service catalog metadata (name, description, active state)' })
+    @ApiOperation({ summary: 'Update service catalog metadata (name, description, active state, templates)' })
     async updateService(
         @Param('id') id: string,
-        @Body() body: { name?: string; description?: string; isActive?: boolean; elements?: any; reviewMode?: string; },
+        @Body()
+        body: {
+            name?: string;
+            description?: string;
+            isActive?: boolean;
+            elements?: any;
+            reviewMode?: string;
+            workerLimit?: number;
+            videoTutorialUrl?: string;
+            audioGuideUrl?: string;
+            adminInstructions?: string;
+            linkFieldLabel?: string;
+            linkFieldPlaceholder?: string;
+            textFieldLabel?: string;
+            textFieldPlaceholder?: string;
+            watchtimeSeconds?: number;
+            watchTimeOptions?: any;
+            minCompleteHours?: number;
+            maxCompleteHours?: number;
+            minAcceptHours?: number;
+            maxAcceptHours?: number;
+        },
     ) {
         const service = await this.serviceCatalogService.updateService(id, body);
         return {
@@ -133,6 +185,7 @@ export class AdminServiceCatalogController {
             buyerUnitPrice: number;
             marginType: MarginType;
             marginValue: number;
+            workerReward?: number;
             currency?: string;
         },
     ) {
@@ -167,6 +220,17 @@ export class AdminServiceCatalogController {
         return {
             success: true,
             financials,
+        };
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'Soft-delete a service (past campaigns/orders are NOT affected)' })
+    async deleteService(@Param('id') id: string) {
+        const deleted = await this.serviceCatalogService.softDeleteService(id);
+        return {
+            success: true,
+            deleted,
+            message: 'Service has been soft-deleted. Past campaigns and orders remain unaffected.',
         };
     }
 }

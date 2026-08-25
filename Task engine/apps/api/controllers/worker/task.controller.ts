@@ -198,6 +198,12 @@ export class WorkerTaskController {
     @Post(':id/accept')
     @ApiOperation({ summary: 'Accept an assigned task' })
     async acceptTask(@Param('id') taskId: string, @CurrentUser() user: User) {
+        const task = await this.taskEngine.getTaskById(taskId);
+        if (task && (!task.assignedTo || task.status === 'active')) {
+            try {
+                await this.taskEngine.assignTask({ taskId, workerId: user.id });
+            } catch (_) {}
+        }
         await this.taskEngine.acceptTask({ taskId, workerId: user.id });
         return {
             success: true,

@@ -11,13 +11,13 @@ async function inspectVps() {
       readyTimeout: 30000,
     });
 
-    console.log('\n--- PM2 PROCESS LIST ---');
-    const pm2Status = await ssh.execCommand('pm2 status');
-    console.log(pm2Status.stdout || pm2Status.stderr);
+    console.log('\n--- PM2 PROCESS DETAILS ---');
+    const pm2Desc = await ssh.execCommand('pm2 describe 0');
+    console.log(pm2Desc.stdout || pm2Desc.stderr);
 
-    console.log('\n--- LAST 30 LINES OF PM2 LOGS ---');
-    const pm2Logs = await ssh.execCommand('pm2 logs task-engine --lines 30 --raw');
-    console.log(pm2Logs.stdout || pm2Logs.stderr);
+    console.log('\n--- DIRECTORY CONTENT ---');
+    const lsRes = await ssh.execCommand('ls -la /var/www/task-engine');
+    console.log(lsRes.stdout || lsRes.stderr);
 
   } catch (err) {
     console.error('Inspection failed:', err);

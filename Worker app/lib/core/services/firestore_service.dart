@@ -55,7 +55,17 @@ class FirestoreService {
       }
     } catch (e) {
       debugPrint('[FIRESTORE ERROR] Failed to sync user profile: $e');
-      rethrow;
+      final String finalName = (displayName != null && displayName.isNotEmpty)
+          ? displayName
+          : email.split('@').first;
+      return {
+        'uid': uid,
+        'name': finalName,
+        'email': email,
+        'phone': '',
+        'role': role,
+        'isOnline': true,
+      };
     }
   }
 

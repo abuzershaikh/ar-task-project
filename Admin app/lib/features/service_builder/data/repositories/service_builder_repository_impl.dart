@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/network/dio_client.dart';
@@ -33,6 +34,15 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
     return defaultValue;
   }
 
+  List<int> _parseIntList(dynamic val, List<int> defaultValue) {
+    if (val == null) return defaultValue;
+    if (val is List) {
+      final parsed = val.map((e) => _toInt(e, 0)).where((e) => e > 0).toList();
+      return parsed.isNotEmpty ? parsed : defaultValue;
+    }
+    return defaultValue;
+  }
+
   @override
   Future<List<ServiceModel>> getServices() async {
     if (dioClient != null) {
@@ -47,20 +57,33 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
                 : (s['pricing'] != null ? Map<String, dynamic>.from(s['pricing']) : null);
 
             final double buyerPrice = pricingMap != null
-                ? _toDouble(pricingMap['buyerUnitPrice'] ?? pricingMap['buyerPrice'], 50.0)
-                : 50.0;
+                ? _toDouble(pricingMap['buyerUnitPrice'] ?? pricingMap['buyerPrice'], 0.0)
+                : 0.0;
             final double marginVal = pricingMap != null
-                ? _toDouble(pricingMap['marginValue'] ?? pricingMap['adminMarginPercent'], 20.0)
-                : 20.0;
+                ? _toDouble(pricingMap['marginValue'] ?? pricingMap['adminMarginPercent'], 0.0)
+                : 0.0;
             final String marginType = pricingMap?['marginType']?.toString() ?? 'PERCENTAGE';
 
             List<TemplateElement> parsedElements = [];
-            if (s['elements'] != null && s['elements'] is List) {
-              try {
-                parsedElements = (s['elements'] as List)
-                    .map((e) => TemplateElement.fromJson(Map<String, dynamic>.from(e as Map)))
-                    .toList();
-              } catch (_) {}
+            dynamic rawElements = s['elements'];
+            if (rawElements != null) {
+              if (rawElements is String) {
+                try {
+                  rawElements = jsonDecode(rawElements);
+                } catch (_) {}
+              }
+              if (rawElements is List) {
+                try {
+                  parsedElements = rawElements
+                      .map((e) {
+                        final map = e is String ? jsonDecode(e) : (e is Map ? e : {});
+                        return TemplateElement.fromJson(Map<String, dynamic>.from(map as Map));
+                      })
+                      .toList();
+                } catch (e) {
+                  debugPrint('[ADMIN REPO] Elements parsing error in getServices: $e');
+                }
+              }
             }
 
             return ServiceModel(
@@ -73,11 +96,28 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
               currentVersion: _toInt(s['version'], 1),
               pricing: PricingConfig.calculate(
                 buyerPrice: buyerPrice,
+                unitPrice: buyerPrice,
                 adminMarginPercent: marginVal,
                 marginType: marginType,
               ),
               elements: parsedElements,
               reviewMode: (s['reviewMode'] ?? 'MANUAL').toString().toUpperCase(),
+              minCompleteHours: _toInt(s['minCompleteHours'] ?? s['min_complete_hours'], 24),
+              maxCompleteHours: _toInt(s['maxCompleteHours'] ?? s['max_complete_hours'], 72),
+              minAcceptHours: _toInt(s['minAcceptHours'] ?? s['min_accept_hours'], 1),
+              maxAcceptHours: _toInt(s['maxAcceptHours'] ?? s['max_accept_hours'], 24),
+              minDurationSeconds: _toInt(s['minDurationSeconds'] ?? s['min_duration_seconds'], 60),
+              maxDurationSeconds: _toInt(s['maxDurationSeconds'] ?? s['max_duration_seconds'], 86400),
+              videoTutorialUrl: s['videoTutorialUrl']?.toString() ?? s['video_tutorial_url']?.toString(),
+              audioGuideUrl: s['audioGuideUrl']?.toString() ?? s['audio_guide_url']?.toString(),
+              adminInstructions: s['adminInstructions']?.toString() ?? s['admin_instructions']?.toString(),
+              linkFieldLabel: s['linkFieldLabel']?.toString() ?? s['link_field_label']?.toString() ?? 'Target Link / URL',
+              linkFieldPlaceholder: s['linkFieldPlaceholder']?.toString() ?? s['link_field_placeholder']?.toString() ?? 'https://...',
+              textFieldLabel: s['textFieldLabel']?.toString() ?? s['text_field_label']?.toString() ?? 'Custom Text / Instructions',
+              textFieldPlaceholder: s['textFieldPlaceholder']?.toString() ?? s['text_field_placeholder']?.toString() ?? 'Enter text, comments or keywords...',
+              workerLimit: _toInt(s['workerLimit'] ?? s['worker_limit'], 10),
+              workerLimitOptions: _parseIntList(s['workerLimitOptions'] ?? s['worker_limit_options'], [5, 10, 20, 25, 50]),
+              watchtimeSeconds: _toInt(s['watchtimeSeconds'] ?? s['watchtime_seconds'], 0),
               updatedAt: s['updatedAt'] != null ? DateTime.tryParse(s['updatedAt'].toString()) ?? DateTime.now() : DateTime.now(),
             );
           }).toList();
@@ -100,26 +140,39 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
       try {
         final response = await dioClient!.get('/admin/services/$id');
         if (response.statusCode == 200 && response.data != null) {
-          final s = Map<String, dynamic>.from(response.data['service'] ?? response.data);
-          final Map<String, dynamic>? pricingMap = response.data['activePricing'] != null
-              ? Map<String, dynamic>.from(response.data['activePricing'])
-              : null;
+          final dynamic raw = response.data['service'] ?? response.data['data'] ?? response.data;
+          final Map<String, dynamic> s = Map<String, dynamic>.from(raw as Map);
+          final dynamic activePricing = response.data['activePricing'] ?? s['activePricing'] ?? s['pricing'];
+          final Map<String, dynamic>? pricingMap = activePricing != null ? Map<String, dynamic>.from(activePricing as Map) : null;
 
           final double buyerPrice = pricingMap != null
-              ? _toDouble(pricingMap['buyerUnitPrice'] ?? pricingMap['buyerPrice'], 50.0)
-              : 50.0;
+              ? _toDouble(pricingMap['buyerUnitPrice'] ?? pricingMap['buyerPrice'], 0.0)
+              : 0.0;
           final double marginVal = pricingMap != null
-              ? _toDouble(pricingMap['marginValue'] ?? pricingMap['adminMarginPercent'], 20.0)
-              : 20.0;
+              ? _toDouble(pricingMap['marginValue'] ?? pricingMap['adminMarginPercent'], 0.0)
+              : 0.0;
           final String marginType = pricingMap?['marginType']?.toString() ?? 'PERCENTAGE';
 
           List<TemplateElement> parsedElements = [];
-          if (s['elements'] != null && s['elements'] is List) {
-            try {
-              parsedElements = (s['elements'] as List)
-                  .map((e) => TemplateElement.fromJson(Map<String, dynamic>.from(e as Map)))
-                  .toList();
-            } catch (_) {}
+          dynamic rawElements = s['elements'];
+          if (rawElements != null) {
+            if (rawElements is String) {
+              try {
+                rawElements = jsonDecode(rawElements);
+              } catch (_) {}
+            }
+            if (rawElements is List) {
+              try {
+                parsedElements = rawElements
+                    .map((e) {
+                      final map = e is String ? jsonDecode(e) : (e is Map ? e : {});
+                      return TemplateElement.fromJson(Map<String, dynamic>.from(map as Map));
+                    })
+                    .toList();
+              } catch (e) {
+                debugPrint('[ADMIN REPO] Elements parsing error in getServiceById: $e');
+              }
+            }
           }
 
           return ServiceModel(
@@ -132,11 +185,26 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
             currentVersion: _toInt(s['version'], 1),
             pricing: PricingConfig.calculate(
               buyerPrice: buyerPrice,
+              unitPrice: buyerPrice,
               adminMarginPercent: marginVal,
               marginType: marginType,
             ),
             elements: parsedElements,
             reviewMode: (s['reviewMode'] ?? 'MANUAL').toString().toUpperCase(),
+            minCompleteHours: _toInt(s['minCompleteHours'] ?? s['min_complete_hours'], 24),
+            maxCompleteHours: _toInt(s['maxCompleteHours'] ?? s['max_complete_hours'], 72),
+            minAcceptHours: _toInt(s['minAcceptHours'] ?? s['min_accept_hours'], 1),
+            maxAcceptHours: _toInt(s['maxAcceptHours'] ?? s['max_accept_hours'], 24),
+            minDurationSeconds: _toInt(s['minDurationSeconds'] ?? s['min_duration_seconds'], 60),
+            maxDurationSeconds: _toInt(s['maxDurationSeconds'] ?? s['max_duration_seconds'], 86400),
+            videoTutorialUrl: s['videoTutorialUrl']?.toString() ?? s['video_tutorial_url']?.toString(),
+            audioGuideUrl: s['audioGuideUrl']?.toString() ?? s['audio_guide_url']?.toString(),
+            adminInstructions: s['adminInstructions']?.toString() ?? s['admin_instructions']?.toString(),
+            linkFieldLabel: s['linkFieldLabel']?.toString() ?? s['link_field_label']?.toString() ?? 'Target Link / URL',
+            linkFieldPlaceholder: s['linkFieldPlaceholder']?.toString() ?? s['link_field_placeholder']?.toString() ?? 'https://...',
+            textFieldLabel: s['textFieldLabel']?.toString() ?? s['text_field_label']?.toString() ?? 'Custom Text / Instructions',
+            textFieldPlaceholder: s['textFieldPlaceholder']?.toString() ?? s['text_field_placeholder']?.toString() ?? 'Enter text, comments or keywords...',
+            watchtimeSeconds: _toInt(s['watchtimeSeconds'] ?? s['watchtime_seconds'], 0),
             updatedAt: s['updatedAt'] != null ? DateTime.tryParse(s['updatedAt'].toString()) ?? DateTime.now() : DateTime.now(),
           );
         }
@@ -160,16 +228,41 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
     if (dioClient != null) {
       final elementsJson = service.elements.map((e) => e.toJson()).toList();
 
+      // Dynamic unit price based on selected pricing model
+      double dynamicBuyerUnitPrice = service.pricing.buyerPrice;
+      if (service.pricing.modelType == PricingModelType.countBased) {
+        dynamicBuyerUnitPrice = service.pricing.unitPrice > 0 ? service.pricing.unitPrice : service.pricing.buyerPrice;
+      } else if (service.pricing.modelType == PricingModelType.tieredChips && service.pricing.chips.isNotEmpty) {
+        dynamicBuyerUnitPrice = service.pricing.chips.first.price;
+      }
+
       final payload = {
         'code': service.code.isNotEmpty ? service.code : 'SRV_${DateTime.now().millisecondsSinceEpoch}',
         'name': service.name,
         'description': service.description,
-        'buyerUnitPrice': service.pricing.buyerPrice,
+        'buyerUnitPrice': dynamicBuyerUnitPrice,
         'marginType': service.pricing.marginType,
         'marginValue': service.pricing.adminMarginPercent,
+        'workerReward': service.pricing.workerReward,
+        'workerLimit': service.workerLimit,
+        'workerLimitOptions': service.workerLimitOptions,
         'elements': elementsJson,
         'reviewMode': service.reviewMode,
         'isActive': service.isActive,
+        'minCompleteHours': service.minCompleteHours,
+        'maxCompleteHours': service.maxCompleteHours,
+        'minAcceptHours': service.minAcceptHours,
+        'maxAcceptHours': service.maxAcceptHours,
+        'minDurationSeconds': service.minDurationSeconds,
+        'maxDurationSeconds': service.maxDurationSeconds,
+        'videoTutorialUrl': service.videoTutorialUrl,
+        'audioGuideUrl': service.audioGuideUrl,
+        'adminInstructions': service.adminInstructions,
+        'linkFieldLabel': service.linkFieldLabel,
+        'linkFieldPlaceholder': service.linkFieldPlaceholder,
+        'textFieldLabel': service.textFieldLabel,
+        'textFieldPlaceholder': service.textFieldPlaceholder,
+        'watchtimeSeconds': service.watchtimeSeconds,
       };
 
       // Determine if this is an existing server service (has UUID format) or a new local draft
@@ -185,12 +278,31 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
           'isActive': service.isActive,
           'elements': elementsJson,
           'reviewMode': service.reviewMode,
+          'workerLimit': service.workerLimit,
+          'workerLimitOptions': service.workerLimitOptions,
+          'minCompleteHours': service.minCompleteHours,
+          'maxCompleteHours': service.maxCompleteHours,
+          'minAcceptHours': service.minAcceptHours,
+          'maxAcceptHours': service.maxAcceptHours,
+          'minDurationSeconds': service.minDurationSeconds,
+          'maxDurationSeconds': service.maxDurationSeconds,
+          'videoTutorialUrl': service.videoTutorialUrl,
+          'audioGuideUrl': service.audioGuideUrl,
+          'adminInstructions': service.adminInstructions,
+          'linkFieldLabel': service.linkFieldLabel,
+          'linkFieldPlaceholder': service.linkFieldPlaceholder,
+          'textFieldLabel': service.textFieldLabel,
+          'textFieldPlaceholder': service.textFieldPlaceholder,
+          'watchtimeSeconds': service.watchtimeSeconds,
         });
-        await dioClient!.post('/admin/services/${service.id}/pricing', data: {
-          'buyerUnitPrice': service.pricing.buyerPrice,
-          'marginType': service.pricing.marginType,
-          'marginValue': service.pricing.adminMarginPercent,
-        });
+        if (dynamicBuyerUnitPrice > 0) {
+          await dioClient!.post('/admin/services/${service.id}/pricing', data: {
+            'buyerUnitPrice': dynamicBuyerUnitPrice,
+            'marginType': service.pricing.marginType,
+            'marginValue': service.pricing.adminMarginPercent,
+            'workerReward': service.pricing.workerReward,
+          });
+        }
 
         // Update local cache
         final index = _mockServices.indexWhere((s) => s.id == service.id);
@@ -240,11 +352,22 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
   @override
   Future<ServiceModel> publishServiceVersion(String serviceId) async {
     if (dioClient != null) {
-      // Fetch latest from server to ensure we have the correct state
       try {
-        final service = await getServiceById(serviceId);
-        final published = service.copyWith(
-          currentVersion: service.currentVersion + 1,
+        ServiceModel serviceToPublish;
+        if (serviceId.isNotEmpty && !serviceId.startsWith('srv_') && !serviceId.startsWith('mock_')) {
+          serviceToPublish = await getServiceById(serviceId);
+        } else {
+          final cachedIdx = _mockServices.indexWhere((s) => s.id == serviceId);
+          if (cachedIdx >= 0) {
+            serviceToPublish = _mockServices[cachedIdx];
+          } else {
+            throw Exception('Service draft not found');
+          }
+        }
+
+        final published = serviceToPublish.copyWith(
+          isActive: true,
+          currentVersion: serviceToPublish.currentVersion + 1,
           updatedAt: DateTime.now(),
         );
         // Save the updated version back to server
@@ -260,6 +383,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
     if (index >= 0) {
       final existing = _mockServices[index];
       final published = existing.copyWith(
+        isActive: true,
         currentVersion: existing.currentVersion + 1,
         updatedAt: DateTime.now(),
       );
@@ -271,6 +395,14 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
 
   @override
   Future<void> deleteService(String serviceId) async {
+    if (dioClient != null) {
+      try {
+        await dioClient!.delete('/admin/services/$serviceId');
+      } catch (e) {
+        debugPrint('[ADMIN REPO] deleteService server error: $e');
+        rethrow;
+      }
+    }
     _mockServices.removeWhere((s) => s.id == serviceId);
   }
 }

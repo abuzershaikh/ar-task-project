@@ -6,21 +6,21 @@ import { TaskStatus } from '../../../task-engine/types/task-status.enum';
 
 @Injectable()
 export class TaskRepository {
-    private static readonly statusAliases: Record<string, TaskStatus[]> = {
-        [TaskStatus.DRAFT]: [TaskStatus.DRAFT],
-        [TaskStatus.ACTIVE]: [TaskStatus.ACTIVE],
-        pending: [TaskStatus.DRAFT, TaskStatus.ACTIVE],
-        [TaskStatus.ASSIGNED]: [TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.IN_PROGRESS],
-        [TaskStatus.ACCEPTED]: [TaskStatus.ACCEPTED],
-        [TaskStatus.IN_PROGRESS]: [TaskStatus.IN_PROGRESS],
-        [TaskStatus.SUBMITTED]: [TaskStatus.SUBMITTED],
-        [TaskStatus.UNDER_REVIEW]: [TaskStatus.UNDER_REVIEW],
-        [TaskStatus.APPROVED]: [TaskStatus.APPROVED],
-        completed: [TaskStatus.APPROVED],
-        [TaskStatus.REJECTED]: [TaskStatus.REJECTED],
-        [TaskStatus.CANCELLED]: [TaskStatus.CANCELLED],
-        [TaskStatus.EXPIRED]: [TaskStatus.EXPIRED],
-        [TaskStatus.FAILED]: [TaskStatus.FAILED],
+    private static readonly statusAliases: Record<string, string[]> = {
+        draft: ['draft'],
+        active: ['active', 'draft', 'created', 'available'],
+        pending: ['draft', 'active', 'created', 'available', 'pending'],
+        assigned: ['assigned', 'accepted', 'in_progress', 'working', 'started'],
+        accepted: ['accepted', 'assigned', 'in_progress'],
+        in_progress: ['in_progress', 'accepted', 'assigned', 'working', 'started'],
+        submitted: ['submitted', 'under_review', 'review'],
+        under_review: ['under_review', 'submitted', 'review'],
+        approved: ['approved', 'completed', 'done'],
+        completed: ['completed', 'approved', 'done'],
+        rejected: ['rejected'],
+        cancelled: ['cancelled', 'canceled'],
+        expired: ['expired'],
+        failed: ['failed'],
     };
 
     constructor(
@@ -32,13 +32,19 @@ export class TaskRepository {
         return this.repository.count(options);
     }
 
-    private resolveStatuses(status: string): TaskStatus[] {
-        const normalizedStatus = status.trim().toLowerCase();
-        return TaskRepository.statusAliases[normalizedStatus] || [normalizedStatus as TaskStatus];
+    private resolveStatuses(status: string): string[] {
+        const normalizedStatus = (status || '').trim().toLowerCase();
+        return TaskRepository.statusAliases[normalizedStatus] || [normalizedStatus];
     }
 
     matchesStatus(taskStatus: string, expectedStatus: string): boolean {
-        return this.resolveStatuses(expectedStatus).includes(taskStatus as TaskStatus);
+        if (!taskStatus || !expectedStatus) return false;
+        const normTask = taskStatus.trim().toLowerCase();
+        const normExpected = expectedStatus.trim().toLowerCase();
+        if (normTask === normExpected) return true;
+
+        const resolved = this.resolveStatuses(normExpected);
+        return resolved.includes(normTask);
     }
 
     filterByStatus(tasks: Task[], expectedStatus: string): Task[] {
@@ -50,7 +56,13 @@ export class TaskRepository {
     }
 
     async findByStatus(status: string): Promise<Task[]> {
-        return this.repository.find({ where: { status: In(this.resolveStatuses(status)) } });
+        const statuses = this.resolveStatuses(status);
+        const allVariations = Array.from(new Set([
+            ...statuses,
+            ...statuses.map(s => s.toLowerCase()),
+            ...statuses.map(s => s.toUpperCase())
+        ]));
+        return this.repository.find({ where: { status: In(allVariations) } });
     }
 
     async findByWorker(workerId: string): Promise<Task[]> {
@@ -59,13 +71,24 @@ export class TaskRepository {
 
     async findAvailableForAssignment(): Promise<Task[]> {
         return this.repository.find({
-            where: { status: TaskStatus.ACTIVE, assignedTo: null },
+            where: [
+                { status: TaskStatus.ACTIVE, assignedTo: null },
+                { status: 'active' as any, assignedTo: null },
+                { status: TaskStatus.DRAFT, assignedTo: null },
+                { status: 'draft' as any, assignedTo: null },
+            ],
         });
     }
 
     async findByWorkerAndStatus(workerId: string, status: string): Promise<Task[]> {
+        const statuses = this.resolveStatuses(status);
+        const allVariations = Array.from(new Set([
+            ...statuses,
+            ...statuses.map(s => s.toLowerCase()),
+            ...statuses.map(s => s.toUpperCase())
+        ]));
         return this.repository.find({
-            where: { assignedTo: workerId, status: In(this.resolveStatuses(status)) },
+            where: { assignedTo: workerId, status: In(allVariations) },
         });
     }
 
@@ -84,7 +107,13 @@ export class TaskRepository {
     }
 
     async countByStatus(status: string): Promise<number> {
-        return this.repository.count({ where: { status: In(this.resolveStatuses(status)) } });
+        const statuses = this.resolveStatuses(status);
+        const allVariations = Array.from(new Set([
+            ...statuses,
+            ...statuses.map(s => s.toLowerCase()),
+            ...statuses.map(s => s.toUpperCase())
+        ]));
+        return this.repository.count({ where: { status: In(allVariations) } });
     }
 
     async findByOrderId(orderId: string): Promise<Task[]> {

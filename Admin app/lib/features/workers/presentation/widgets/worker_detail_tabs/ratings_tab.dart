@@ -15,44 +15,59 @@ class RatingsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Rating Summary Card
-          Card(
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x080284C7),
+                  blurRadius: 8,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(18),
               child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.star, color: AppColors.warning, size: 32),
+                      const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 36),
                       const SizedBox(width: 8),
                       Text(
                         worker.rating.toStringAsFixed(1),
                         style: const TextStyle(
-                          fontSize: 48,
+                          fontSize: 42,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.gray900,
+                          color: Color(0xFF0F172A),
                         ),
                       ),
                       const Text(
                         ' / 5.0',
                         style: TextStyle(
-                          fontSize: 24,
-                          color: AppColors.gray500,
+                          fontSize: 20,
+                          color: Color(0xFF94A3B8),
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
-                    'Based on ${ratings.isNotEmpty ? ratings.length : (worker.completedTasks > 0 ? worker.completedTasks : 1)} ratings',
+                    'Overall Platform Quality Rating',
                     style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.gray600,
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -60,13 +75,26 @@ class RatingsTab extends StatelessWidget {
             ),
           ),
           
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           
           ratings.isEmpty
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text('No individual reviews recorded yet', style: TextStyle(color: AppColors.gray600)),
+              ? Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+                  ),
+                  child: const Column(
+                    children: [
+                      Icon(Icons.rate_review_outlined, size: 40, color: Color(0xFF94A3B8)),
+                      SizedBox(height: 8),
+                      Text(
+                        'No custom buyer reviews submitted yet',
+                        style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                      ),
+                    ],
                   ),
                 )
               : ListView.builder(
@@ -76,14 +104,19 @@ class RatingsTab extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final item = ratings[index];
                     final ratingVal = item['score'] ?? item['rating'] ?? 5.0;
-                    final comment = item['comment'] ?? item['review'] ?? 'Great work!';
+                    final comment = item['comment'] ?? item['review'] ?? 'Excellent submission!';
 
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBAE6FD), width: 1),
+                      ),
                       child: ListTile(
-                        leading: const Icon(Icons.star, color: AppColors.warning),
-                        title: Text('Rating: $ratingVal ⭐'),
-                        subtitle: Text(comment.toString()),
+                        leading: const Icon(Icons.star_rounded, color: Color(0xFFD97706), size: 24),
+                        title: Text('Rating: $ratingVal ⭐', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+                        subtitle: Text(comment.toString(), style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                       ),
                     );
                   },
@@ -93,3 +126,4 @@ class RatingsTab extends StatelessWidget {
     );
   }
 }
+

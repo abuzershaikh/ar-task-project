@@ -14,6 +14,7 @@ This directory serves as a centralized knowledge base for all critical bugs enco
 | [006](./006-real-worker-detail-dummy-data-fix.md) | Worker Detail Tabs Displaying Hardcoded Dummy Data | Frontend / Dynamic Data Binding | Aug 2026 |
 | [007](./007-service-publish-string-type-fix.md) | Service Publish Type Cast Failure (`String is not num`) | Frontend / Service Builder | Aug 2026 |
 | [008](./008-buyer-app-service-catalog-fix.md) | Buyer App Missing Services & Type Cast Error | Frontend / Buyer Services | Aug 2026 |
+| [009](./009-worker-app-403-insufficient-permissions-and-fetch-failure.md) | Worker App 403 Insufficient Permissions & Auth Failure | Backend & Frontend / Auth | Aug 2026 |
 
 ## How to add a new bug
 1. Create a new markdown file named `XXX-bug-name.md`.

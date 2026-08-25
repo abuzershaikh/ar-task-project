@@ -42,46 +42,52 @@ class _MarqueeTextState extends State<MarqueeText> {
   void _checkOverflowAndStart() async {
     if (_isDisposed || !mounted || !_scrollController.hasClients) return;
 
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    if (maxScroll > 0) {
-      if (!_shouldScroll) {
-        setState(() => _shouldScroll = true);
+    try {
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      if (maxScroll > 0) {
+        if (!_shouldScroll && mounted) {
+          setState(() => _shouldScroll = true);
+        }
+        _startMarqueeLoop();
+      } else {
+        if (_shouldScroll && mounted) {
+          setState(() => _shouldScroll = false);
+        }
       }
-      _startMarqueeLoop();
-    } else {
-      if (_shouldScroll) {
-        setState(() => _shouldScroll = false);
-      }
-    }
+    } catch (_) {}
   }
 
   void _startMarqueeLoop() async {
     while (mounted && !_isDisposed && _scrollController.hasClients) {
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      if (maxScroll <= 0) break;
+      try {
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        if (maxScroll <= 0) break;
 
-      // Pause at start
-      await Future.delayed(const Duration(seconds: 2));
-      if (!mounted || _isDisposed || !_scrollController.hasClients) break;
+        // Pause at start
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted || _isDisposed || !_scrollController.hasClients) break;
 
-      // Scroll to end slowly
-      final durationMs = (maxScroll * 40).clamp(2000, 8000).toInt();
-      await _scrollController.animateTo(
-        maxScroll,
-        duration: Duration(milliseconds: durationMs),
-        curve: Curves.linear,
-      );
+        // Scroll to end slowly
+        final durationMs = (maxScroll * 40).clamp(2000, 8000).toInt();
+        await _scrollController.animateTo(
+          maxScroll,
+          duration: Duration(milliseconds: durationMs),
+          curve: Curves.linear,
+        );
 
-      // Pause at end
-      await Future.delayed(const Duration(seconds: 1));
-      if (!mounted || _isDisposed || !_scrollController.hasClients) break;
+        // Pause at end
+        await Future.delayed(const Duration(seconds: 1));
+        if (!mounted || _isDisposed || !_scrollController.hasClients) break;
 
-      // Scroll back to start
-      await _scrollController.animateTo(
-        0,
-        duration: Duration(milliseconds: durationMs),
-        curve: Curves.linear,
-      );
+        // Scroll back to start
+        await _scrollController.animateTo(
+          0,
+          duration: Duration(milliseconds: durationMs),
+          curve: Curves.linear,
+        );
+      } catch (_) {
+        break;
+      }
     }
   }
 

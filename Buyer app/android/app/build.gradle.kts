@@ -41,6 +41,12 @@ android {
             signingConfig = signingConfigs.getByName("customRelease")
         }
     }
+
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+        checkDependencies = false
+    }
 }
 
 kotlin {

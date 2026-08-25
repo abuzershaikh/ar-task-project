@@ -27,14 +27,14 @@ class TransactionModel extends Transaction {
     return TransactionModel(
       id: (json['id'] ?? '').toString(),
       type: TransactionType.values.firstWhere(
-        (e) => e.name == (json['type'] ?? '').toString(),
+        (e) => e.name.toLowerCase() == (json['type'] ?? '').toString().toLowerCase(),
         orElse: () => TransactionType.credit,
       ),
       amount: parseD(json['amount']),
       balanceBefore: parseD(json['balanceBefore']),
       balanceAfter: parseD(json['balanceAfter']),
       status: TransactionStatus.values.firstWhere(
-        (e) => e.name == (json['status'] ?? '').toString(),
+        (e) => e.name.toLowerCase() == (json['status'] ?? '').toString().toLowerCase(),
         orElse: () => TransactionStatus.successful,
       ),
       description: (json['description'] ?? '').toString(),

@@ -14,8 +14,12 @@ export class WalletRepository {
         return this.repo.findOne({ where: { userId } });
     }
 
-    async create(userId: string): Promise<Wallet> {
-        const wallet = this.repo.create({ userId });
+    async create(userId: string, initialBalance: number = 0.00): Promise<Wallet> {
+        const wallet = this.repo.create({
+            userId,
+            availableBalance: initialBalance,
+            reservedBalance: 0,
+        });
         return this.repo.save(wallet);
     }
 
@@ -25,5 +29,13 @@ export class WalletRepository {
         } else {
             await this.repo.increment({ id: walletId }, 'reservedBalance', amount);
         }
+    }
+
+    async deductBalance(walletId: string, amount: number): Promise<void> {
+        await this.repo.decrement({ id: walletId }, 'availableBalance', amount);
+    }
+
+    async setBalance(walletId: string, availableBalance: number): Promise<void> {
+        await this.repo.update({ id: walletId }, { availableBalance });
     }
 }

@@ -112,7 +112,32 @@ export class TaskCommandService {
             }
 
             if (task.status === TaskStatus.ACTIVE && !task.assignedTo) {
-                throw new BadRequestException('Task must be assigned before accepting');
+                const campaignId = task.campaignId || task.orderId;
+                const existingParticipation = await manager.findOne(CampaignWorkerParticipation, { where: { campaignId, workerId: command.workerId } });
+                if (!existingParticipation) {
+                    try {
+                        const participation = manager.create(CampaignWorkerParticipation, { campaignId, workerId: command.workerId, status: ParticipationStatus.ASSIGNED });
+                        await manager.save(participation);
+                    } catch (_) {}
+                }
+
+                const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
+                const assignment = manager.create(TaskAssignment, {
+                    taskId: task.id,
+                    campaignId,
+                    workerId: command.workerId,
+                    attemptNumber: attempts.length + 1,
+                    status: TaskAssignmentStatus.ACCEPTED,
+                    assignedAt: new Date(),
+                    acceptedAt: new Date(),
+                });
+                await manager.save(assignment);
+
+                task.status = TaskStatus.ACCEPTED;
+                task.acceptedAt = new Date();
+                task.assignedAt = new Date();
+                task.assignedTo = command.workerId;
+                return manager.save(task);
             }
 
             this.stateMachine.validateTransition({

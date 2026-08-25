@@ -9,6 +9,7 @@ import { TaskEngineModule } from '../../task-engine/task-engine.module';
 import { MatchingEngineModule } from '../../matching-engine/matching-engine.module';
 import { AllocationEngineModule } from '../../allocation-engine/allocation-engine.module';
 import { EarningEngineModule } from '../../earning-engine/earning-engine.module';
+import { RewardEngineModule } from '../../reward-engine/reward-engine.module';
 
 // Queue Processors
 import { TaskQueueProcessor } from './processors/task-queue.processor';
@@ -29,6 +30,7 @@ import { EarningQueueProcessor } from './processors/earning-queue.processor';
     MatchingEngineModule,
     AllocationEngineModule,
     EarningEngineModule,
+    RewardEngineModule,
   ],
   providers: [
     TaskQueueProcessor,

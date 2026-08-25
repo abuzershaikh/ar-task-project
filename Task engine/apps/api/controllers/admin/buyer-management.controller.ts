@@ -28,10 +28,31 @@ export class AdminBuyerManagementController {
     @ApiOperation({ summary: 'List all buyers' })
     async listBuyers() {
         const buyers = await this.userRepo.findByRole(UserRole.BUYER);
+        const results = await Promise.all(buyers.map(async (b) => {
+            const orders = await this.orderRepo.findByBuyer(b.id);
+            const activeOrders = orders.filter((o) => (o.status || '').toUpperCase() === 'ACTIVE');
+            const totalSpend = orders.reduce(
+                (acc, o) => acc + (Number(o.totalAmount) || (Number(o.tasksCompleted || 0) * Number(o.rewardPerTask || 0))),
+                0,
+            );
+
+            return {
+                id: b.id,
+                name: (b as any).fullName || (b as any).name || b.email.split('@')[0],
+                email: b.email,
+                phone: b.phone || '',
+                status: (b.status || 'ACTIVE').toUpperCase(),
+                totalOrders: orders.length,
+                activeCampaigns: activeOrders.length,
+                totalSpend,
+                createdAt: b.createdAt,
+            };
+        }));
+
         return {
             success: true,
-            buyers,
-            total: buyers.length,
+            buyers: results,
+            total: results.length,
         };
     }
 
@@ -39,22 +60,34 @@ export class AdminBuyerManagementController {
     @ApiOperation({ summary: 'Get buyer comprehensive details' })
     async getBuyerDetail(@Param('id') buyerId: string) {
         const buyer = await this.userRepo.findById(buyerId);
-        if (!buyer || buyer.role !== UserRole.BUYER) {
+        if (!buyer) {
             throw new NotFoundException('Buyer not found');
         }
 
         const orders = await this.orderRepo.findByBuyer(buyerId);
-        const activeOrders = orders.filter((o) => o.status === 'ACTIVE' || o.status === 'active');
-        const completedOrders = orders.filter((o) => o.status === 'COMPLETED' || o.status === 'completed');
+        const activeOrders = orders.filter((o) => (o.status || '').toUpperCase() === 'ACTIVE');
+        const completedOrders = orders.filter((o) => (o.status || '').toUpperCase() === 'COMPLETED');
 
         const totalSpend = orders.reduce(
-            (acc, o) => acc + (o.totalAmount || (Number(o.tasksCompleted || 0) * Number(o.rewardPerTask || 0))),
+            (acc, o) => acc + (Number(o.totalAmount) || (Number(o.tasksCompleted || 0) * Number(o.rewardPerTask || 0))),
             0,
         );
 
+        const formattedBuyer = {
+            id: buyer.id,
+            name: (buyer as any).fullName || (buyer as any).name || buyer.email.split('@')[0],
+            email: buyer.email,
+            phone: buyer.phone || '',
+            status: (buyer.status || 'ACTIVE').toUpperCase(),
+            totalOrders: orders.length,
+            activeCampaigns: activeOrders.length,
+            totalSpend,
+            createdAt: buyer.createdAt,
+        };
+
         return {
             success: true,
-            buyer,
+            buyer: formattedBuyer,
             metrics: {
                 totalOrdersCount: orders.length,
                 activeOrdersCount: activeOrders.length,

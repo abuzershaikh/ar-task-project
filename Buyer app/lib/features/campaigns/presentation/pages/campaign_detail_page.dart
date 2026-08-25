@@ -78,11 +78,14 @@ class _CampaignDetailViewState extends State<_CampaignDetailView>
               slivers: [
                 // App Bar with Campaign Info
                 SliverAppBar(
-                  expandedHeight: 160,
+                  expandedHeight: 110,
                   floating: false,
                   pinned: true,
+                  backgroundColor: const Color(0xFF0F172A),
+                  iconTheme: const IconThemeData(color: Colors.white),
                   actions: [
                     PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
                       onSelected: (value) => _handleMenuAction(value, campaign.id),
                       itemBuilder: (context) => [
                         if (campaign.isActive)
@@ -90,9 +93,9 @@ class _CampaignDetailViewState extends State<_CampaignDetailView>
                             value: 'pause',
                             child: Row(
                               children: [
-                                Icon(Icons.pause_circle_outline),
+                                Icon(Icons.pause_circle_outline, size: 18),
                                 SizedBox(width: 8),
-                                Text('Pause Campaign'),
+                                Text('Pause Campaign', style: TextStyle(fontSize: 13)),
                               ],
                             ),
                           ),
@@ -101,9 +104,9 @@ class _CampaignDetailViewState extends State<_CampaignDetailView>
                             value: 'resume',
                             child: Row(
                               children: [
-                                Icon(Icons.play_circle_outline),
+                                Icon(Icons.play_circle_outline, size: 18),
                                 SizedBox(width: 8),
-                                Text('Resume Campaign'),
+                                Text('Resume Campaign', style: TextStyle(fontSize: 13)),
                               ],
                             ),
                           ),
@@ -111,9 +114,9 @@ class _CampaignDetailViewState extends State<_CampaignDetailView>
                           value: 'invoice',
                           child: Row(
                             children: [
-                              Icon(Icons.receipt_outlined),
+                              Icon(Icons.receipt_outlined, size: 18),
                               SizedBox(width: 8),
-                              Text('View Invoice'),
+                              Text('View Invoice', style: TextStyle(fontSize: 13)),
                             ],
                           ),
                         ),
@@ -121,9 +124,9 @@ class _CampaignDetailViewState extends State<_CampaignDetailView>
                           value: 'report',
                           child: Row(
                             children: [
-                              Icon(Icons.flag_outlined),
+                              Icon(Icons.flag_outlined, size: 18),
                               SizedBox(width: 8),
-                              Text('Report Issue'),
+                              Text('Report Issue', style: TextStyle(fontSize: 13)),
                             ],
                           ),
                         ),
@@ -132,9 +135,9 @@ class _CampaignDetailViewState extends State<_CampaignDetailView>
                             value: 'cancel',
                             child: Row(
                               children: [
-                                Icon(Icons.cancel_outlined, color: Colors.red),
+                                Icon(Icons.cancel_outlined, color: Colors.red, size: 18),
                                 SizedBox(width: 8),
-                                Text('Cancel Campaign', style: TextStyle(color: Colors.red)),
+                                Text('Cancel Campaign', style: TextStyle(color: Colors.red, fontSize: 13)),
                               ],
                             ),
                           ),
@@ -149,27 +152,31 @@ class _CampaignDetailViewState extends State<_CampaignDetailView>
                         Text(
                           campaign.name,
                           style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Row(
                           children: [
                             Text(
                               campaign.id,
                               style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.white70,
+                                fontSize: 9,
+                                color: Colors.white60,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             _StatusBadge(status: campaign.status),
                           ],
                         ),
                       ],
                     ),
-                    titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+                    titlePadding: const EdgeInsets.only(left: 48, bottom: 12, right: 48),
                   ),
                 ),
 
@@ -203,7 +210,7 @@ class _CampaignDetailViewState extends State<_CampaignDetailView>
                       TasksTab(campaignId: campaign.id),
                       ReviewsTab(campaignId: campaign.id),
                       ActivityTab(campaignId: campaign.id),
-                      AnalyticsTab(campaignId: campaign.id),
+                      AnalyticsTab(campaign: campaign),
                     ],
                   ),
                 ),

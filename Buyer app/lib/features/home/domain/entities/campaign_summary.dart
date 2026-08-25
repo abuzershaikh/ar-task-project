@@ -9,6 +9,7 @@ class CampaignSummary extends Equatable {
   final int completedTasks;
   final int pendingTasks;
   final int inProgressTasks;
+  final double amount;
   final String? expiresIn;
   final DateTime createdAt;
 
@@ -21,6 +22,7 @@ class CampaignSummary extends Equatable {
     required this.completedTasks,
     required this.pendingTasks,
     required this.inProgressTasks,
+    this.amount = 0.0,
     this.expiresIn,
     required this.createdAt,
   });
@@ -35,6 +37,7 @@ class CampaignSummary extends Equatable {
     completedTasks,
     pendingTasks,
     inProgressTasks,
+    amount,
     expiresIn,
     createdAt,
   ];

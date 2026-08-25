@@ -48,22 +48,50 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final shortId = widget.buyerId.length > 14
+        ? '#${widget.buyerId.substring(0, 8)}...${widget.buyerId.substring(widget.buyerId.length - 4)}'
+        : widget.buyerId;
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F3FF),
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Buyer Details'),
-            Text(
-              widget.buyerId,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+        titleSpacing: 14,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF4F46E5), Color(0xFF6366F1)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
+          ),
         ),
-        backgroundColor: AppColors.primary,
+        title: BlocBuilder<BuyersBloc, BuyersState>(
+          builder: (context, state) {
+            String name = 'Buyer Commercial Profile';
+            String email = shortId;
+            if (state is BuyerDetailLoaded && state.buyer.id == widget.buyerId) {
+              name = state.buyer.name.isNotEmpty ? state.buyer.name : 'Buyer Profile';
+              email = state.buyer.email.isNotEmpty ? state.buyer.email : shortId;
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white), overflow: TextOverflow.ellipsis),
+                Text(
+                  email,
+                  style: const TextStyle(fontSize: 11, color: Color(0xFFEDE9FE), fontWeight: FontWeight.w500),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            );
+          },
+        ),
+        backgroundColor: Colors.transparent,
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
               _handleAction(value);
             },
@@ -72,7 +100,7 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
                 value: 'suspend',
                 child: Row(
                   children: [
-                    Icon(Icons.pause_circle, color: AppColors.warning, size: 20),
+                    Icon(Icons.pause_circle, color: Color(0xFFD97706), size: 20),
                     SizedBox(width: 8),
                     Text('Suspend Buyer'),
                   ],
@@ -82,7 +110,7 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
                 value: 'block',
                 child: Row(
                   children: [
-                    Icon(Icons.block, color: AppColors.error, size: 20),
+                    Icon(Icons.block, color: Color(0xFFDC2626), size: 20),
                     SizedBox(width: 8),
                     Text('Block Buyer'),
                   ],
@@ -92,7 +120,7 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
                 value: 'add_credit',
                 child: Row(
                   children: [
-                    Icon(Icons.add_circle, color: AppColors.success, size: 20),
+                    Icon(Icons.add_circle, color: Color(0xFF16A34A), size: 20),
                     SizedBox(width: 8),
                     Text('Add Credit'),
                   ],
@@ -105,13 +133,13 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
           controller: _tabController,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          indicatorColor: AppColors.white,
+          indicatorColor: Colors.white,
           indicatorWeight: 3,
-          labelColor: AppColors.white,
-          unselectedLabelColor: AppColors.white.withOpacity(0.7),
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
-          labelPadding: const EdgeInsets.symmetric(horizontal: 20.0),
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 13),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 14.0),
           tabs: const [
             Tab(text: 'Overview'),
             Tab(text: 'Orders'),
@@ -126,17 +154,18 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
       ),
       body: BlocBuilder<BuyersBloc, BuyersState>(
         builder: (context, state) {
-          if (state is BuyersLoading) {
-            return const Center(child: CircularProgressIndicator());
+          if (state is BuyersLoading || state is BuyerDetailLoading) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF4F46E5)));
           }
           if (state is BuyersError) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(state.message, style: const TextStyle(color: AppColors.error)),
+                  Text(state.message, style: const TextStyle(color: Color(0xFFDC2626))),
                   const SizedBox(height: 12),
                   ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), foregroundColor: Colors.white),
                     onPressed: () {
                       context.read<BuyersBloc>().add(LoadBuyerDetailEvent(widget.buyerId));
                     },
@@ -146,28 +175,28 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
               ),
             );
           }
-
+          
           if (state is BuyerDetailLoaded) {
             final detailState = state as BuyerDetailLoaded;
             if (detailState.buyer.id != widget.buyerId) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: CircularProgressIndicator(color: Color(0xFF4F46E5)));
             }
             return TabBarView(
               controller: _tabController,
               children: [
-                BuyerOverviewTab(buyer: detailState.buyer),
-                BuyerOrdersTab(buyer: detailState.buyer, orders: detailState.orders),
-                BuyerTasksTab(tasks: detailState.tasks),
-                BuyerPaymentsTab(buyer: detailState.buyer, payments: detailState.payments),
-                BuyerReviewsTab(buyer: detailState.buyer),
-                BuyerAnalyticsTab(buyer: detailState.buyer),
-                BuyerActivityTab(activity: detailState.activity),
-                BuyerRiskTab(buyer: detailState.buyer),
+                OverviewTab(buyer: detailState.buyer, orders: detailState.orders, payments: detailState.payments),
+                OrdersTab(buyer: detailState.buyer, orders: detailState.orders),
+                TasksTab(tasks: detailState.tasks),
+                PaymentsTab(buyer: detailState.buyer, payments: detailState.payments),
+                ReviewsTab(buyer: detailState.buyer),
+                AnalyticsTab(buyer: detailState.buyer, orders: detailState.orders),
+                ActivityTab(activity: detailState.activity),
+                RiskTab(buyer: detailState.buyer),
               ],
             );
           }
-
-          return const Center(child: CircularProgressIndicator());
+          
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF4F46E5)));
         },
       ),
     );

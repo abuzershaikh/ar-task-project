@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/profile_provider.dart';
+import '../../../core/providers/task_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../profile/screens/kyc_bank_details_screen.dart';
 
-/// Separate Withdrawal Screen:
-/// - Allows user to enter payout amount, select quick chips, verify UPI ID, and request instant payout.
-/// - Styled with royal light blue & sapphire premium theme tokens.
+/// Withdrawal Screen:
+/// - Allows worker to enter payout amount, select dynamic quick chips, verify linked UPI/Bank, and request instant payout.
+/// - Fixes dark theme input decoration leakage (black stripe overlay).
+/// - Styled with Royal Light Blue & Sapphire premium theme tokens.
 class WithdrawalScreen extends StatefulWidget {
   final double availableBalance;
 
@@ -20,75 +22,26 @@ class WithdrawalScreen extends StatefulWidget {
 }
 
 class _WithdrawalScreenState extends State<WithdrawalScreen> {
-  final _amountController = TextEditingController(text: '100');
-  final _upiController = TextEditingController(text: 'worker@upi');
+  late final TextEditingController _amountController;
+  late final TextEditingController _upiController;
   bool _isLoading = false;
+  double _minLimit = 100.0;
 
-  void _requestPayout() async {
-    final amount = double.tryParse(_amountController.text.trim());
-    if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid payout amount')),
-      );
-      return;
-    }
+  @override
+  void initState() {
+    super.initState();
+    final profile = context.read<ProfileProvider>().profileData;
+    final wallet = context.read<TaskProvider>().walletData;
 
-    final kycStatus = context.read<ProfileProvider>().profileData['kycStatus'] ?? 'DRAFT';
-    if (kycStatus != 'VERIFIED') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please add and verify your bank details before withdrawing funds.'),
-          backgroundColor: const Color(0xFFDC2626),
-          action: SnackBarAction(
-            label: 'Add Details',
-            textColor: Colors.white,
-            onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const KycBankDetailsScreen()));
-            },
-          ),
-        ),
-      );
-      return;
-    }
+    _minLimit = double.tryParse(wallet['minWithdrawalLimit']?.toString() ?? '') ?? 100.0;
+    final defaultAmt = widget.availableBalance >= _minLimit ? _minLimit.toInt().toString() : '100';
+    _amountController = TextEditingController(text: defaultAmt);
 
-    if (amount < 100) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Minimum withdrawal amount is ₹100'),
-          backgroundColor: Color(0xFFDC2626),
-        ),
-      );
-      return;
-    }
-
-    if (amount > widget.availableBalance) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Entered amount exceeds available balance'),
-          backgroundColor: Color(0xFFDC2626),
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    final response =
-        await ApiService.requestPayout(amount, _upiController.text.trim());
-    setState(() => _isLoading = false);
-
-    if (mounted) {
-      final bool isSuccess = response['error'] == null;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(response['message'] ?? 'Payout Request Submitted!'),
-          backgroundColor:
-              isSuccess ? const Color(0xFF2563EB) : const Color(0xFFDC2626),
-        ),
-      );
-      if (isSuccess) {
-        Navigator.of(context).pop();
-      }
-    }
+    // Extract real UPI ID or fallback to profile email/phone UPI
+    final realUpi = profile['upiId'] ?? 
+                    profile['bankDetails']?['upiId'] ?? 
+                    (profile['phone'] != null && profile['phone'].toString().isNotEmpty ? '${profile['phone']}@upi' : '');
+    _upiController = TextEditingController(text: realUpi.toString());
   }
 
   @override
@@ -98,9 +51,140 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
     super.dispose();
   }
 
+  Future<void> _requestPayout() async {
+    final amount = double.tryParse(_amountController.text.trim());
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid withdrawal amount'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+
+    final profile = context.read<ProfileProvider>().profileData;
+    final kycStatus = (profile['kycStatus'] ?? 'DRAFT').toString().toUpperCase();
+
+    if (kycStatus != 'VERIFIED') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please add and verify your bank/UPI details before withdrawing.'),
+          backgroundColor: const Color(0xFFDC2626),
+          action: SnackBarAction(
+            label: 'Add Details',
+            textColor: Colors.white,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const KycBankDetailsScreen()),
+              ).then((_) {
+                context.read<ProfileProvider>().fetchProfile();
+              });
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (amount < _minLimit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Minimum withdrawal amount is ₹${_minLimit.toStringAsFixed(0)}'),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+
+    if (amount > widget.availableBalance) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Entered amount exceeds your available balance'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+
+    final upi = _upiController.text.trim();
+    if (upi.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please provide a valid UPI ID for payout destination'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    final response = await ApiService.requestPayout(amount, upi);
+    setState(() => _isLoading = false);
+
+    if (mounted) {
+      final bool isSuccess = response['error'] == null && (response['success'] == true || response['status'] != null);
+      if (isSuccess) {
+        // Refresh wallet and profile in background
+        context.read<TaskProvider>().fetchWalletData();
+        context.read<ProfileProvider>().fetchProfile();
+
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 28),
+                SizedBox(width: 10),
+                Text('Payout Initiated', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold, fontSize: 18)),
+              ],
+            ),
+            content: Text(
+              'Your withdrawal request of ₹${amount.toStringAsFixed(2)} has been submitted successfully to $upi. Funds will be credited shortly.',
+              style: const TextStyle(color: Color(0xFF475569), fontSize: 13.5),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? response['error'] ?? 'Failed to submit withdrawal request'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final double enteredAmount = double.tryParse(_amountController.text) ?? 100.0;
+    final profile = context.watch<ProfileProvider>().profileData;
+    final kycStatus = (profile['kycStatus'] ?? 'DRAFT').toString().toUpperCase();
+    final isKycVerified = kycStatus == 'VERIFIED';
+    final double enteredAmount = double.tryParse(_amountController.text) ?? 0.0;
+
+    // Dynamic quick chips
+    final List<int> quickChips = [];
+    if (_minLimit.toInt() > 0) quickChips.add(_minLimit.toInt());
+    if (!quickChips.contains(250) && widget.availableBalance >= 250) quickChips.add(250);
+    if (!quickChips.contains(500) && widget.availableBalance >= 500) quickChips.add(500);
+    if (!quickChips.contains(1000) && widget.availableBalance >= 1000) quickChips.add(1000);
+    if (quickChips.isEmpty) quickChips.addAll([100, 200, 500, 1000]);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -123,14 +207,14 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Available Balance Badge Card
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
@@ -156,10 +240,10 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                           'Available Balance',
                           style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
-                        SizedBox(height: 2),
+                        SizedBox(height: 3),
                         Text(
-                          'Ready to withdraw',
-                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+                          'Ready for Instant Withdrawal',
+                          style: TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -174,7 +258,8 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+
+              const SizedBox(height: 16),
 
               // Form Section Container
               Container(
@@ -199,18 +284,18 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                       style: TextStyle(
                         color: Color(0xFF0F172A),
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 15,
                       ),
                     ),
                     const SizedBox(height: 12),
 
-                    // Amount Input Box
+                    // Amount Input Box — Cleaned of dark theme overlay artifact
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                        border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.4), width: 1.5),
                       ),
                       child: Row(
                         children: [
@@ -222,22 +307,30 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                               fontSize: 22,
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: TextField(
                               controller: _amountController,
                               keyboardType: TextInputType.number,
-                              onChanged: (val) => setState(() {}),
+                              cursorColor: const Color(0xFF2563EB),
+                              onChanged: (_) => setState(() {}),
                               style: const TextStyle(
                                 color: Color(0xFF0F172A),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                               ),
                               decoration: const InputDecoration(
+                                isDense: true,
+                                filled: false,
+                                fillColor: Colors.transparent,
                                 border: InputBorder.none,
                                 enabledBorder: InputBorder.none,
                                 focusedBorder: InputBorder.none,
-                                contentPadding: EdgeInsets.zero,
+                                errorBorder: InputBorder.none,
+                                disabledBorder: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(vertical: 4),
+                                hintText: '0',
+                                hintStyle: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.bold, fontSize: 18),
                               ),
                             ),
                           ),
@@ -257,7 +350,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                                 border: Border.all(color: const Color(0xFFBAE6FD)),
                               ),
                               child: const Text(
-                                'All Balance',
+                                'Max Balance',
                                 style: TextStyle(
                                   color: Color(0xFF0284C7),
                                   fontWeight: FontWeight.bold,
@@ -269,12 +362,14 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 12),
 
                     // Quick Chips Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [100, 200, 500, 1000].map((amt) {
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: quickChips.map((amt) {
                         final isSelected = _amountController.text == amt.toString();
                         return InkWell(
                           onTap: () {
@@ -284,7 +379,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                           borderRadius: BorderRadius.circular(10),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 150),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                             decoration: BoxDecoration(
                               color: isSelected ? const Color(0xFFE0F2FE) : const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(10),
@@ -304,20 +399,44 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                         );
                       }).toList(),
                     ),
+
                     const SizedBox(height: 18),
 
-                    // Destination Box (UPI ID)
-                    const Text(
-                      'Payout Destination (UPI ID)',
-                      style: TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    // Destination Box (UPI ID / Bank Details)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Payout Destination (UPI / Bank)',
+                          style: TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const KycBankDetailsScreen()),
+                            ).then((_) {
+                              context.read<ProfileProvider>().fetchProfile();
+                            });
+                          },
+                          child: Text(
+                            isKycVerified ? 'Change' : 'Link Method',
+                            style: const TextStyle(
+                              color: Color(0xFF2563EB),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 6),
+
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(12),
@@ -328,29 +447,56 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE0F2FE),
+                              color: isKycVerified ? const Color(0xFFDCFCE7) : const Color(0xFFE0F2FE),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(
-                              Icons.account_balance_wallet_outlined,
-                              color: Color(0xFF0284C7),
+                            child: Icon(
+                              isKycVerified ? Icons.verified_user_rounded : Icons.account_balance_wallet_outlined,
+                              color: isKycVerified ? const Color(0xFF16A34A) : const Color(0xFF0284C7),
                               size: 16,
                             ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              _upiController.text,
+                            child: TextField(
+                              controller: _upiController,
+                              cursorColor: const Color(0xFF2563EB),
                               style: const TextStyle(
                                 color: Color(0xFF0F172A),
                                 fontWeight: FontWeight.bold,
-                                fontSize: 14,
+                                fontSize: 13.5,
+                              ),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                filled: false,
+                                fillColor: Colors.transparent,
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                errorBorder: InputBorder.none,
+                                disabledBorder: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                                hintText: isKycVerified ? 'Enter UPI ID' : 'Add verified UPI ID in KYC',
+                                hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
                               ),
                             ),
                           ),
+                          if (isKycVerified)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Verified',
+                                style: TextStyle(color: Color(0xFF16A34A), fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 12),
 
                     // Security Note
@@ -363,12 +509,11 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.shield_outlined,
-                              size: 14, color: Color(0xFF0284C7)),
+                          Icon(Icons.shield_outlined, size: 14, color: Color(0xFF0284C7)),
                           SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'Instant & safe withdrawal via UPI transfer.',
+                              'Instant, automated & secure payout directly to your bank/UPI.',
                               style: TextStyle(
                                 color: Color(0xFF0369A1),
                                 fontSize: 11,
@@ -379,7 +524,8 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 18),
+
+                    const SizedBox(height: 16),
 
                     // Summary Breakdown Box
                     Container(
@@ -411,7 +557,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                                   style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
                               Text('₹0.00 (Free)',
                                   style: TextStyle(
-                                      color: Color(0xFF0284C7),
+                                      color: Color(0xFF16A34A),
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold)),
                             ],
@@ -435,7 +581,8 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+
+                    const SizedBox(height: 18),
 
                     // Payout CTA Button
                     SizedBox(
@@ -452,7 +599,11 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                           elevation: 3,
                         ),
                         child: _isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
                             : const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [

@@ -10,11 +10,19 @@ class CampaignSummaryModel extends CampaignSummary {
     required super.completedTasks,
     required super.pendingTasks,
     required super.inProgressTasks,
+    super.amount = 0.0,
     super.expiresIn,
     required super.createdAt,
   });
 
   factory CampaignSummaryModel.fromJson(Map<String, dynamic> json) {
+    double parseD(dynamic v, double def) {
+      if (v == null) return def;
+      if (v is num) return v.toDouble();
+      if (v is String) return double.tryParse(v) ?? def;
+      return def;
+    }
+
     return CampaignSummaryModel(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
@@ -24,9 +32,10 @@ class CampaignSummaryModel extends CampaignSummary {
       completedTasks: json['completedTasks'] ?? 0,
       pendingTasks: json['pendingTasks'] ?? 0,
       inProgressTasks: json['inProgressTasks'] ?? 0,
+      amount: parseD(json['amount'] ?? json['totalAmount'], 0.0),
       expiresIn: json['expiresIn'],
       createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
+          ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
     );
   }
@@ -41,6 +50,7 @@ class CampaignSummaryModel extends CampaignSummary {
       'completedTasks': completedTasks,
       'pendingTasks': pendingTasks,
       'inProgressTasks': inProgressTasks,
+      'amount': amount,
       'expiresIn': expiresIn,
       'createdAt': createdAt.toIso8601String(),
     };

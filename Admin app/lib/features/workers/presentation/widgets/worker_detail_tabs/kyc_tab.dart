@@ -12,32 +12,45 @@ class KycTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isVerified = worker.kycStatus == 'VERIFIED';
-    final statusColor = isVerified ? AppColors.success : AppColors.warning;
+    final isVerified = worker.kycStatus == 'VERIFIED' || worker.kycStatus == 'APPROVED';
+    final statusColor = isVerified ? const Color(0xFF16A34A) : const Color(0xFFD97706);
+    final bgColor = isVerified ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         children: [
           // Status Card
-          Card(
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x080284C7),
+                  blurRadius: 8,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: bgColor,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isVerified ? Icons.verified : Icons.error_outline,
+                      isVerified ? Icons.verified_rounded : Icons.pending_actions_rounded,
                       color: statusColor,
-                      size: 32,
+                      size: 28,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,15 +58,16 @@ class KycTab extends StatelessWidget {
                         const Text(
                           'KYC Verification Status',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.gray500,
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3),
                         Text(
-                          worker.kycStatus,
+                          isVerified ? 'VERIFIED & APPROVED' : 'PENDING REVIEW',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: statusColor,
                           ),
@@ -66,29 +80,49 @@ class KycTab extends StatelessWidget {
             ),
           ),
           
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           
           // KYC Details Card
-          Card(
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x080284C7),
+                  blurRadius: 8,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Worker Profile Info',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.gray900,
-                    ),
+                  const Row(
+                    children: [
+                      Icon(Icons.badge_outlined, size: 18, color: Color(0xFF0284C7)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Worker Official Profile Info',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  _buildInfoRow('Full Name', worker.name),
+                  const SizedBox(height: 12),
+                  const Divider(color: Color(0xFFE2E8F0), height: 1),
+                  const SizedBox(height: 12),
+                  _buildInfoRow('Full Legal Name', worker.name),
                   _buildInfoRow('Email Address', worker.email),
-                  _buildInfoRow('Phone', worker.phone.isNotEmpty ? worker.phone : 'Not Provided'),
+                  _buildInfoRow('Phone Contact', worker.phone.isNotEmpty ? worker.phone : 'Not Provided'),
                   _buildInfoRow('Account ID', worker.id),
-                  _buildInfoRow('User ID', worker.userId),
+                  _buildInfoRow('User UID', worker.userId.isNotEmpty ? worker.userId : worker.id),
                 ],
               ),
             ),
@@ -100,7 +134,7 @@ class KycTab extends StatelessWidget {
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -109,8 +143,8 @@ class KycTab extends StatelessWidget {
             child: Text(
               label,
               style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.gray600,
+                fontSize: 12.5,
+                color: Color(0xFF64748B),
               ),
             ),
           ),
@@ -119,9 +153,9 @@ class KycTab extends StatelessWidget {
             child: Text(
               value,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: AppColors.gray900,
+                color: Color(0xFF0F172A),
               ),
             ),
           ),
@@ -130,3 +164,4 @@ class KycTab extends StatelessWidget {
     );
   }
 }
+

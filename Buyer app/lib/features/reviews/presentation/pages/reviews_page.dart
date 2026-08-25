@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/di/injection.dart';
 import '../bloc/reviews_bloc.dart';
 import '../../data/models/review_submission_model.dart';
+import 'review_detail_page.dart';
 
 class ReviewsPage extends StatelessWidget {
   const ReviewsPage({super.key});
@@ -111,69 +112,105 @@ class _ReviewsView extends StatelessWidget {
           final item = submissions[index];
           return Container(
             margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey.shade200),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      item.taskTitle,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        item.status,
-                        style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ReviewDetailPage(
+                        submissionId: item.id,
+                        initialSubmission: item,
                       ),
                     ),
-                  ],
+                  ).then((_) {
+                    if (context.mounted) {
+                      context.read<ReviewsBloc>().add(LoadPendingReviewsEvent());
+                    }
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.taskTitle,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              item.status,
+                              style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Worker: ${item.workerName}', style: const TextStyle(fontSize: 13)),
+                      if (item.proofScreenshotUrl.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        const Row(
+                          children: [
+                            Icon(Icons.image_outlined, size: 14, color: Colors.teal),
+                            SizedBox(width: 4),
+                            Text('Screenshot Proof Attached', style: TextStyle(color: Colors.teal, fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ],
+                      if (item.proofText.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text('Proof Text: ${item.proofText}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () {
+                                context.read<ReviewsBloc>().add(RejectReviewEvent(
+                                  submissionId: item.id,
+                                  reasonCode: 'INVALID_PROOF',
+                                  note: 'Proof submitted is not valid',
+                                ));
+                              },
+                              style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                              child: const Text('Reject'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                context.read<ReviewsBloc>().add(ApproveReviewEvent(item.id));
+                              },
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                              child: const Text('Approve'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text('Worker: ${item.workerName}'),
-                const SizedBox(height: 4),
-                if (item.proofText.isNotEmpty)
-                  Text('Proof Text: ${item.proofText}', style: const TextStyle(color: Colors.grey)),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          context.read<ReviewsBloc>().add(RejectReviewEvent(
-                            submissionId: item.id,
-                            reasonCode: 'INVALID_PROOF',
-                            note: 'Proof submitted is not valid',
-                          ));
-                        },
-                        style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                        child: const Text('Reject'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          context.read<ReviewsBloc>().add(ApproveReviewEvent(item.id));
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                        child: const Text('Approve'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           );
         },

@@ -9,6 +9,7 @@ import {
 export enum FileType {
     IMAGE = 'IMAGE',
     VIDEO = 'VIDEO',
+    AUDIO = 'AUDIO',
     DOCUMENT = 'DOCUMENT',
     PROOF = 'PROOF',
     KYC_DOCUMENT = 'KYC_DOCUMENT',

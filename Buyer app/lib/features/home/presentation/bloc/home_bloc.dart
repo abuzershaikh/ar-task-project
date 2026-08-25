@@ -43,7 +43,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
               completed: c.completedTasks,
               total: c.totalTasks,
               percentage: c.totalTasks > 0 ? (c.completedTasks / c.totalTasks * 100) : 0.0,
-              amount: 0.0,
+              amount: c.amount,
               status: c.status,
               remainingTime: c.expiresIn ?? '',
             )).toList(),

@@ -41,16 +41,6 @@ async function deploy() {
     await ssh.connect(config);
     console.log('Connected!');
 
-    console.log('Updating system...');
-    await execCommand('apt-get update && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y');
-    console.log('Installing dependencies...');
-    await execCommand('DEBIAN_FRONTEND=noninteractive apt-get install -y curl unzip redis-server mysql-server');
-    
-    console.log('Installing Node.js...');
-    await execCommand('curl -fsSL https://deb.nodesource.com/setup_20.x | bash -');
-    await execCommand('DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs');
-    await execCommand('npm install -g pm2');
-
     console.log('Setting up database...');
     await execCommand(`mysql -e "CREATE DATABASE IF NOT EXISTS task_platform CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"`);
     await execCommand(`mysql -e "CREATE USER IF NOT EXISTS 'taskapp'@'localhost' IDENTIFIED BY 'taskapp_password';"`);
@@ -62,7 +52,7 @@ async function deploy() {
     await ssh.putFile(ZIP_FILE, '/var/www/task-engine/source.zip');
     
     console.log('Extracting code...');
-    await execCommand('cd /var/www/task-engine && unzip -o source.zip && rm source.zip');
+    await execCommand('cd /var/www/task-engine && rm -rf apps shared task-engine allocation-engine earning-engine eligibility-engine execution-engine fraud-engine matching-engine notification-engine payout-engine progress-engine ranking-engine review-engine reward-engine scoring-engine dist && unzip -o source.zip && rm source.zip');
 
     console.log('Setting up environment...');
     const envContent = `
@@ -87,7 +77,8 @@ REDIS_PORT=6379
     await execCommand('cd /var/www/task-engine && npm run build');
 
     console.log('Starting PM2 Services (API Producer + Worker Consumer)...');
-    await execCommand('cd /var/www/task-engine && pm2 start ecosystem.config.json || pm2 restart all');
+    await execCommand('cd /var/www/task-engine && pm2 delete all || true');
+    await execCommand('cd /var/www/task-engine && pm2 start ecosystem.config.json');
     await execCommand('pm2 save');
     
     console.log('DEPLOYMENT SUCCESSFUL!');

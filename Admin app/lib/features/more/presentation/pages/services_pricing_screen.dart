@@ -15,6 +15,7 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
   bool _isLoading = true;
   String? _error;
   List<dynamic> _services = [];
+  final TextEditingController _searchController = TextEditingController();
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _codeController = TextEditingController();
@@ -29,6 +30,7 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
 
   @override
   void dispose() {
+    _searchController.dispose();
     _nameController.dispose();
     _codeController.dispose();
     _priceController.dispose();
@@ -57,117 +59,238 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
     }
   }
 
+  IconData _getServiceIcon(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('youtube') || lower.contains('video')) return Icons.play_circle_fill_rounded;
+    if (lower.contains('telegram')) return Icons.send_rounded;
+    if (lower.contains('insta')) return Icons.camera_alt_rounded;
+    return Icons.layers_rounded;
+  }
+
+  Color _getServiceColor(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('youtube') || lower.contains('video')) return Colors.redAccent;
+    if (lower.contains('telegram')) return Colors.lightBlueAccent;
+    if (lower.contains('insta')) return Colors.pinkAccent;
+    return Colors.cyanAccent;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filtered = _services.where((item) {
+      final q = _searchController.text.toLowerCase().trim();
+      if (q.isEmpty) return true;
+      final service = item['service'] ?? item;
+      final name = (service['name'] ?? '').toString().toLowerCase();
+      final code = (service['code'] ?? '').toString().toLowerCase();
+      return name.contains(q) || code.contains(q);
+    }).toList();
+
     return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: const Text('Services & Pricing Engine'),
-        backgroundColor: AppColors.primary,
+        titleSpacing: 14,
+        title: const Row(
+          children: [
+            Icon(Icons.monetization_on_rounded, color: Colors.amberAccent, size: 20),
+            SizedBox(width: 8),
+            Text(
+              'Pricing Catalog Engine',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF0F172A),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle),
-            onPressed: () => _showAddServiceDialog(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
             onPressed: _fetchServices,
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.cyanAccent,
+        foregroundColor: Colors.black,
+        icon: const Icon(Icons.add_rounded, size: 18),
+        label: const Text('Add Service', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        onPressed: () => _showAddServiceDialog(context),
+      ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Colors.cyanAccent))
           : _error != null
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(_error!, style: const TextStyle(color: AppColors.error)),
+                      Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
                       const SizedBox(height: 12),
-                      ElevatedButton(onPressed: _fetchServices, child: const Text('Retry')),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent, foregroundColor: Colors.black),
+                        onPressed: _fetchServices,
+                        child: const Text('Retry'),
+                      ),
                     ],
                   ),
                 )
-              : _services.isEmpty
-                  ? const Center(child: Text('No services found in catalog'))
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _services.length,
-                      itemBuilder: (context, index) {
-                        final item = _services[index];
-                        final service = item['service'] ?? item;
-                        final activePricing = item['activePricing'] ?? {};
-                        final name = service['name'] ?? 'Service #${index + 1}';
-                        final code = service['code'] ?? service['type'] ?? 'GENERIC';
-                        final isActive = service['isActive'] ?? true;
-                        final status = isActive ? 'ACTIVE' : 'INACTIVE';
-                        final buyerPrice = (activePricing['buyerUnitPrice'] ?? 2.0).toString();
-                        final margin = (activePricing['marginValue'] ?? 25.0).toString();
-
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          child: ExpansionTile(
-                            leading: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.shopping_bag, color: AppColors.primary),
-                            ),
-                            title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                            subtitle: Text(code),
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: status == 'ACTIVE'
-                                    ? AppColors.success.withOpacity(0.1)
-                                    : AppColors.gray300,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                status,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: status == 'ACTIVE' ? AppColors.success : AppColors.gray600,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Current Pricing', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 12),
-                                    _buildPricingRow('Buyer Unit Price', '₹$buyerPrice'),
-                                    _buildPricingRow('Platform Margin', '$margin%'),
-                                    const SizedBox(height: 16),
-                                    ElevatedButton.icon(
-                                      onPressed: () => _showUpdatePricingDialog(context, service['id']?.toString() ?? ''),
-                                      icon: const Icon(Icons.edit, size: 18),
-                                      label: const Text('Create New Pricing Version'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
+              : Column(
+                  children: [
+                    // Search Bar
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+                      child: Container(
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: 'Search service or code...',
+                            hintStyle: const TextStyle(color: Colors.white38, fontSize: 11),
+                            prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54, size: 16),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear_rounded, color: Colors.white54, size: 14),
+                                    onPressed: () => setState(() => _searchController.clear()),
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
                           ),
-                        );
-                      },
+                        ),
+                      ),
                     ),
+
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? const Center(child: Text('No services found in catalog', style: TextStyle(color: Colors.white54, fontSize: 13)))
+                          : ListView.builder(
+                              padding: const EdgeInsets.fromLTRB(14, 4, 14, 80),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final item = filtered[index];
+                                final service = item['service'] ?? item;
+                                final activePricing = item['activePricing'] ?? {};
+                                final name = service['name'] ?? 'Service #${index + 1}';
+                                final code = service['code'] ?? service['type'] ?? 'SVC';
+                                final isActive = service['isActive'] ?? true;
+                                final double buyerPrice = double.tryParse((activePricing['buyerUnitPrice'] ?? 2.0).toString()) ?? 2.0;
+                                final double margin = double.tryParse((activePricing['marginValue'] ?? 25.0).toString()) ?? 25.0;
+                                final double workerReward = double.tryParse((activePricing['workerReward'] ?? (buyerPrice * 0.75)).toString()) ?? (buyerPrice * 0.75);
+                                final iconColor = _getServiceColor(name);
+                                final iconData = _getServiceIcon(name);
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1E293B),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Header: Icon + Title + Code + Status
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(6),
+                                              decoration: BoxDecoration(
+                                                color: iconColor.withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Icon(iconData, color: iconColor, size: 16),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    name,
+                                                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                  Text(
+                                                    code,
+                                                    style: const TextStyle(color: Colors.white38, fontSize: 10),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: isActive ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                isActive ? 'ACTIVE' : 'INACTIVE',
+                                                style: TextStyle(
+                                                  color: isActive ? Colors.greenAccent : Colors.redAccent,
+                                                  fontSize: 8,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 10),
+
+                                        // Financial Chips Row
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            _buildPricingChip('Buyer Unit', '₹${buyerPrice.toStringAsFixed(0)}', Colors.cyanAccent),
+                                            _buildPricingChip('Margin', '${margin.toStringAsFixed(0)}%', Colors.tealAccent),
+                                            _buildPricingChip('Worker Payout', '₹${workerReward.toStringAsFixed(1)}', Colors.amberAccent),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFF334155),
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                minimumSize: Size.zero,
+                                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                              ),
+                                              onPressed: () => _showUpdatePricingDialog(context, service['id']?.toString() ?? ''),
+                                              child: const Text('Edit Rate', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
     );
   }
 
-  Widget _buildPricingRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildPricingChip(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.25), width: 0.8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: AppColors.gray600)),
-          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 8.5)),
+          Text(value, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -177,36 +300,68 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Add New Service Catalog Entry'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Service Name'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _codeController,
-              decoration: const InputDecoration(labelText: 'Service Code (e.g. YOUTUBE_LIKE)'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _priceController,
-              decoration: const InputDecoration(labelText: 'Buyer Unit Price (₹)'),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _marginController,
-              decoration: const InputDecoration(labelText: 'Platform Margin (₹ or %)'),
-              keyboardType: TextInputType.number,
-            ),
-          ],
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Add Service Entry', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nameController,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: const InputDecoration(
+                  labelText: 'Service Name',
+                  labelStyle: TextStyle(color: Colors.white70, fontSize: 12),
+                  filled: true,
+                  fillColor: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _codeController,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: const InputDecoration(
+                  labelText: 'Service Code (e.g. YT_WATCH)',
+                  labelStyle: TextStyle(color: Colors.white70, fontSize: 12),
+                  filled: true,
+                  fillColor: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _priceController,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: const InputDecoration(
+                  labelText: 'Buyer Unit Price (₹)',
+                  labelStyle: TextStyle(color: Colors.white70, fontSize: 12),
+                  filled: true,
+                  fillColor: Color(0xFF0F172A),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _marginController,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: const InputDecoration(
+                  labelText: 'Platform Margin (%)',
+                  labelStyle: TextStyle(color: Colors.white70, fontSize: 12),
+                  filled: true,
+                  fillColor: Color(0xFF0F172A),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+          ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent, foregroundColor: Colors.black),
             onPressed: () async {
               Navigator.pop(dialogContext);
               try {
@@ -217,7 +372,7 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
                     'code': _codeController.text.trim(),
                     'name': _nameController.text.trim(),
                     'buyerUnitPrice': double.tryParse(_priceController.text.trim()) ?? 2.0,
-                    'marginValue': double.tryParse(_marginController.text.trim()) ?? 0.5,
+                    'marginValue': double.tryParse(_marginController.text.trim()) ?? 25.0,
                   },
                 );
                 _fetchServices();
@@ -227,7 +382,7 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
                 );
               }
             },
-            child: const Text('Create'),
+            child: const Text('Create Service'),
           ),
         ],
       ),
@@ -242,26 +397,44 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Create New Pricing Version'),
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Update Pricing Rate', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: priceCtrl,
-              decoration: const InputDecoration(labelText: 'New Buyer Unit Price (₹)'),
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              decoration: const InputDecoration(
+                labelText: 'New Buyer Unit Price (₹)',
+                labelStyle: TextStyle(color: Colors.white70, fontSize: 12),
+                filled: true,
+                fillColor: Color(0xFF0F172A),
+              ),
               keyboardType: TextInputType.number,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             TextField(
               controller: marginCtrl,
-              decoration: const InputDecoration(labelText: 'New Margin Value'),
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              decoration: const InputDecoration(
+                labelText: 'New Margin % (e.g. 25)',
+                labelStyle: TextStyle(color: Colors.white70, fontSize: 12),
+                filled: true,
+                fillColor: Color(0xFF0F172A),
+              ),
               keyboardType: TextInputType.number,
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+          ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent, foregroundColor: Colors.black),
             onPressed: () async {
               Navigator.pop(dialogContext);
               try {
@@ -270,8 +443,8 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
                   ApiEndpoints.servicePricingHistory(serviceId).replaceAll('/pricing-history', '/pricing'),
                   data: {
                     'buyerUnitPrice': double.tryParse(priceCtrl.text.trim()) ?? 2.0,
-                    'marginType': 'FIXED',
-                    'marginValue': double.tryParse(marginCtrl.text.trim()) ?? 0.5,
+                    'marginType': 'PERCENTAGE',
+                    'marginValue': double.tryParse(marginCtrl.text.trim()) ?? 25.0,
                   },
                 );
                 _fetchServices();
@@ -281,10 +454,11 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
                 );
               }
             },
-            child: const Text('Update Pricing'),
+            child: const Text('Save Rate'),
           ),
         ],
       ),
     );
   }
 }
+

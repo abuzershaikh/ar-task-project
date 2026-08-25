@@ -74,3 +74,12 @@ class ServiceBuilderError extends ServiceBuilderState {
   @override
   List<Object?> get props => [message];
 }
+
+class ServiceDeletedState extends ServiceBuilderState {
+  final String message;
+  const ServiceDeletedState(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
+

@@ -1,0 +1,25 @@
+{
+  "name": "earnpost-cloudflare-media-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for EarnPost audio voice guides and video media storage powered by Cloudflare R2",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "tsc"
+  },
+  "keywords": [
+    "cloudflare",
+    "worker",
+    "r2",
+    "audio",
+    "media"
+  ],
+  "author": "EarnPost Team",
+  "license": "ISC",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241022.0",
+    "typescript": "^5.6.3",
+    "wrangler": "^3.84.1"
+  }
+}

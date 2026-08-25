@@ -23,11 +23,18 @@ export class BuyerServiceCatalogController {
 
         for (const service of services) {
             let unitPrice = 50.0;
+            let workerReward = 4.0;
+            let marginType = 'PERCENTAGE';
+            let marginValue = 20.0;
             let currency = 'INR';
+
             try {
                 const activePricing = await this.servicePricingService.getActivePricing(service.id);
-                if (activePricing && activePricing.buyerUnitPrice) {
+                if (activePricing) {
                     unitPrice = Number(activePricing.buyerUnitPrice) || 50.0;
+                    workerReward = Number(activePricing.workerReward) || 4.0;
+                    marginType = activePricing.marginType || 'PERCENTAGE';
+                    marginValue = Number(activePricing.marginValue) || 20.0;
                     currency = activePricing.currency || 'INR';
                 }
             } catch (err) {
@@ -42,11 +49,30 @@ export class BuyerServiceCatalogController {
                 elements: service.elements,
                 buyerUnitPrice: unitPrice,
                 currency: currency,
+                pricing: {
+                    modelType: 'fixed',
+                    buyerPrice: unitPrice,
+                    unitPrice: unitPrice,
+                    adminMarginPercent: marginValue,
+                    workerReward: workerReward,
+                    marginType: marginType,
+                    minQuantity: 1,
+                    maxQuantity: 10000,
+                    chips: [],
+                },
                 minAcceptHours: service.minAcceptHours || 1,
                 maxAcceptHours: service.maxAcceptHours || 72,
                 minCompleteHours: service.minCompleteHours || 1,
                 maxCompleteHours: service.maxCompleteHours || 168,
                 watchtimeSeconds: service.watchtimeSeconds || 0,
+                watchTimeOptions: service.watchTimeOptions || [0, 60, 120, 300],
+                videoTutorialUrl: service.videoTutorialUrl,
+                audioGuideUrl: service.audioGuideUrl,
+                adminInstructions: service.adminInstructions,
+                linkFieldLabel: service.linkFieldLabel || 'Target Link / URL',
+                linkFieldPlaceholder: service.linkFieldPlaceholder || 'https://...',
+                textFieldLabel: service.textFieldLabel || 'Custom Text / Instructions',
+                textFieldPlaceholder: service.textFieldPlaceholder || 'Enter comments, text, or instructions...',
             });
         }
 
@@ -71,11 +97,23 @@ export class BuyerServiceCatalogController {
             throw new NotFoundException('Service not found or inactive');
         }
 
-        let activePricing;
+        let unitPrice = 50.0;
+        let workerReward = 4.0;
+        let marginType = 'PERCENTAGE';
+        let marginValue = 20.0;
+        let currency = 'INR';
+
         try {
-            activePricing = await this.servicePricingService.getActivePricing(service.id);
+            const activePricing = await this.servicePricingService.getActivePricing(service.id);
+            if (activePricing) {
+                unitPrice = Number(activePricing.buyerUnitPrice) || 50.0;
+                workerReward = Number(activePricing.workerReward) || 4.0;
+                marginType = activePricing.marginType || 'PERCENTAGE';
+                marginValue = Number(activePricing.marginValue) || 20.0;
+                currency = activePricing.currency || 'INR';
+            }
         } catch {
-            throw new NotFoundException('Service is not currently available for purchase (missing pricing)');
+            // Keep default fallback
         }
 
         return {
@@ -86,8 +124,28 @@ export class BuyerServiceCatalogController {
                 name: service.name,
                 description: service.description,
                 elements: service.elements,
-                buyerUnitPrice: activePricing.buyerUnitPrice,
-                currency: activePricing.currency,
+                buyerUnitPrice: unitPrice,
+                currency: currency,
+                pricing: {
+                    modelType: 'fixed',
+                    buyerPrice: unitPrice,
+                    unitPrice: unitPrice,
+                    adminMarginPercent: marginValue,
+                    workerReward: workerReward,
+                    marginType: marginType,
+                    minQuantity: 1,
+                    maxQuantity: 10000,
+                    chips: [],
+                },
+                watchtimeSeconds: service.watchtimeSeconds || 0,
+                watchTimeOptions: service.watchTimeOptions || [0, 60, 120, 300],
+                videoTutorialUrl: service.videoTutorialUrl,
+                audioGuideUrl: service.audioGuideUrl,
+                adminInstructions: service.adminInstructions,
+                linkFieldLabel: service.linkFieldLabel || 'Target Link / URL',
+                linkFieldPlaceholder: service.linkFieldPlaceholder || 'https://...',
+                textFieldLabel: service.textFieldLabel || 'Custom Text / Instructions',
+                textFieldPlaceholder: service.textFieldPlaceholder || 'Enter comments, text, or instructions...',
             },
         };
     }

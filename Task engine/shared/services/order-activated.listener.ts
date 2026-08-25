@@ -8,6 +8,8 @@ import { TaskRepository } from '../database/repositories/task.repository';
 import { TaskGenerationJobRepository } from '../database/repositories/task-generation-job.repository';
 import { TaskGenerationJobStatus } from '../database/entities/task-generation-job.entity';
 
+import { ServiceCatalogRepository } from '../database/repositories/service-catalog.repository';
+
 export interface OrderActivatedEventPayload {
     orderId: string;
     jobId?: string;
@@ -28,6 +30,7 @@ export class OrderActivatedListener {
         private readonly orderRepo: OrderRepository,
         private readonly taskRepo: TaskRepository,
         private readonly jobRepo: TaskGenerationJobRepository,
+        private readonly serviceCatalogRepo: ServiceCatalogRepository,
         @InjectQueue('task') private readonly taskQueue: Queue,
     ) { }
 
@@ -63,29 +66,75 @@ export class OrderActivatedListener {
 
             await this.jobRepo.updateProgress(job.id, job.generatedTasksCount, TaskGenerationJobStatus.PROCESSING);
 
-            // Enqueue task creation job to Bull Redis Queue for asynchronous worker consumption
-            this.logger.log(`📥 Dispatching 'create-tasks' job to Bull Redis Queue ('task') for Order '${payload.orderId}'`);
-            await this.taskQueue.add(
-                'create-tasks',
-                {
-                    orderId: payload.orderId,
-                    count: payload.totalTasksRequired,
-                    taskType: payload.serviceCode || order?.taskType || 'DEFAULT',
-                    requirements: order?.requirements || {},
-                    rewardAmount,
-                    jobId: job.id,
-                },
-                {
-                    attempts: 3,
-                    backoff: { type: 'exponential', delay: 2000 },
-                    removeOnComplete: true,
-                },
-            );
+            const serviceIdentifier = payload.serviceCode || order?.serviceCode || order?.taskType;
+            const serviceCatalog = serviceIdentifier
+                ? (await this.serviceCatalogRepo.findByCode(serviceIdentifier) || await this.serviceCatalogRepo.findById(serviceIdentifier))
+                : null;
 
-            this.logger.log(`✅ Successfully queued background task generation for Order '${payload.orderId}'.`);
+            const combinedRequirements = {
+                ...(order?.requirements || {}),
+                serviceName: serviceCatalog?.name || order?.taskType || 'Task',
+                serviceDescription: serviceCatalog?.description || '',
+                videoTutorialUrl: serviceCatalog?.videoTutorialUrl || order?.requirements?.videoTutorialUrl || '',
+                audioGuideUrl: serviceCatalog?.audioGuideUrl || order?.requirements?.audioGuideUrl || '',
+                adminInstructions: serviceCatalog?.adminInstructions || serviceCatalog?.description || order?.requirements?.instructions || '',
+                targetUrl: order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '',
+                customText: order?.requirements?.customText || order?.requirements?.text || order?.requirements?.comment || '',
+                watchTimeSeconds: order?.requirements?.watchTimeSeconds || serviceCatalog?.watchtimeSeconds || 0,
+                proofType: order?.requirements?.proofType || 'SCREENSHOT',
+            };
+
+            const taskType = payload.serviceCode || order?.taskType || 'DEFAULT';
+            const count = payload.totalTasksRequired;
+
+            // Direct guaranteed task generation in MySQL
+            const existingTasks = await this.taskRepo.findByOrderId(payload.orderId);
+            const generatedCount = existingTasks.length;
+
+            if (generatedCount < count) {
+                this.logger.log(`Creating ${count - generatedCount} tasks directly for Order '${payload.orderId}'`);
+                for (let i = generatedCount; i < count; i++) {
+                    const taskReqs = {
+                        ...combinedRequirements,
+                        sequenceIndex: i,
+                        orderIdSequence: `${payload.orderId}_task_${i + 1}`,
+                    };
+
+                    await this.taskEngine.createTask({
+                        orderId: payload.orderId,
+                        campaignId: payload.orderId,
+                        taskType,
+                        requirements: taskReqs,
+                        rewardAmount,
+                    });
+                }
+            }
+
+            await this.jobRepo.updateProgress(job.id, count, TaskGenerationJobStatus.COMPLETED);
+            this.logger.log(`✅ ${count} tasks generated in MySQL and available in task feed for Order '${payload.orderId}'.`);
+
+            // Optional background queue notification
+            try {
+                await this.taskQueue.add(
+                    'create-tasks',
+                    {
+                        orderId: payload.orderId,
+                        count,
+                        taskType,
+                        requirements: combinedRequirements,
+                        rewardAmount,
+                        jobId: job.id,
+                    },
+                    {
+                        attempts: 3,
+                        backoff: { type: 'exponential', delay: 2000 },
+                        removeOnComplete: true,
+                    },
+                );
+            } catch (_) {}
         } catch (error) {
             this.logger.error(
-                `Error queueing tasks for activated Order '${payload.orderId}': ${error.message}`,
+                `Error generating tasks for activated Order '${payload.orderId}': ${error.message}`,
                 error.stack,
             );
 

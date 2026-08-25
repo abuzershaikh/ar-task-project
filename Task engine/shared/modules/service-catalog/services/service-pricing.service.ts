@@ -20,6 +20,7 @@ export class ServicePricingService {
             buyerUnitPrice: number;
             marginType: MarginType;
             marginValue: number;
+            workerReward?: number;
             currency?: string;
         },
     ): Promise<ServicePricing> {
@@ -39,7 +40,9 @@ export class ServicePricingService {
             data.marginType,
             marginValue,
         );
-        const workerReward = buyerUnitPrice - marginAmount;
+        const workerReward = (data.workerReward !== undefined && data.workerReward !== null && !isNaN(Number(data.workerReward)))
+            ? Number(data.workerReward)
+            : (buyerUnitPrice - marginAmount);
 
         // Deactivate all existing versions for this service to ensure exactly ONE active version
         await this.servicePricingRepo.deactivateAllVersions(serviceId);

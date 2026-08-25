@@ -6,19 +6,77 @@ import '../../../../core/network/dio_client.dart';
 import '../../../../core/widgets/image_viewer_dialog.dart';
 
 class TaskReviewInspectorModal extends StatelessWidget {
+  final String submissionId;
   final String taskId;
   final String workerId;
+  final String workerName;
+  final String workerEmail;
   final String? proofUrl;
+  final String? proofText;
 
   const TaskReviewInspectorModal({
     super.key,
+    this.submissionId = '',
     required this.taskId,
     required this.workerId,
+    this.workerName = '',
+    this.workerEmail = '',
     this.proofUrl,
+    this.proofText,
   });
+
+  String _formatId(String id) {
+    if (id.length <= 12) return id;
+    return '#${id.substring(0, 6)}...${id.substring(id.length - 4)}';
+  }
+
+  void _copyToClipboard(BuildContext context, String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$label copied: $text'),
+        duration: const Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF064E3B),
+      ),
+    );
+  }
+
+  Widget _buildCopySnippet(BuildContext context, String label, String fullId) {
+    if (fullId.isEmpty) return const Text('N/A', style: TextStyle(color: Color(0xFF64748B)));
+    return InkWell(
+      onTap: () => _copyToClipboard(context, fullId, label),
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFFECFDF5),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFFA7F3D0), width: 0.8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _formatId(fullId),
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF047857),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.copy_rounded, size: 12, color: Color(0xFF059669)),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final displayName = workerName.isNotEmpty ? workerName : (workerId.length > 6 ? 'Worker #${workerId.substring(0, 6)}' : workerId);
+
     return DraggableScrollableSheet(
       initialChildSize: 0.9,
       expand: false,
@@ -54,13 +112,15 @@ class TaskReviewInspectorModal extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: Color(0xFF064E3B),
                           ),
                         ),
                         Text(
-                          '$taskId • Worker: $workerId',
+                          workerEmail.isNotEmpty ? 'Worker: $displayName ($workerEmail)' : 'Worker: $displayName',
                           style: const TextStyle(
                             fontSize: 12,
-                            color: AppColors.gray600,
+                            color: Color(0xFF64748B),
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
@@ -83,63 +143,110 @@ class TaskReviewInspectorModal extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 children: [
                   // Submission Header
-                  Card(
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x08059669),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(14),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              CircleAvatar(
-                                backgroundColor: AppColors.primary.withOpacity(0.1),
-                                child: const Icon(Icons.person, color: AppColors.primary),
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFECFDF5),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.person_rounded, color: Color(0xFF059669), size: 22),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Worker: $workerId', style: const TextStyle(fontWeight: FontWeight.w600)),
-                                    const Text('Quality Score: 92.5', style: TextStyle(fontSize: 12, color: AppColors.gray600)),
+                                    Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF064E3B))),
+                                    if (workerEmail.isNotEmpty)
+                                      Text(workerEmail, style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)))
+                                    else
+                                      const Text('Quality Score: 95.0', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
                                   ],
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: AppColors.success.withOpacity(0.1),
+                                  color: const Color(0xFFDCFCE7),
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: AppColors.success),
+                                  border: Border.all(color: const Color(0xFF16A34A).withOpacity(0.4)),
                                 ),
                                 child: const Text(
-                                  'High Quality',
+                                  'Ready for Review',
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.success,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 10.5,
+                                    color: Color(0xFF16A34A),
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
-                          const Divider(height: 1),
-                          const SizedBox(height: 12),
-                          _buildInfoRow('Task ID', taskId),
-                          _buildInfoRow('Submitted', 'Recent'),
+                          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                          const SizedBox(height: 10),
+                          if (submissionId.isNotEmpty)
+                            _buildCustomRow(context, 'Submission ID', _buildCopySnippet(context, 'Submission ID', submissionId)),
+                          _buildCustomRow(context, 'Task ID', _buildCopySnippet(context, 'Task ID', taskId)),
+                          _buildCustomRow(context, 'Worker UID', _buildCopySnippet(context, 'Worker UID', workerId)),
+                          _buildInfoRow('Submitted Status', 'Awaiting Verification'),
                         ],
                       ),
                     ),
                   ),
                   
                   const SizedBox(height: 16),
+
+                  // Text Proof (if available)
+                  if (proofText != null && proofText!.isNotEmpty) ...[
+                    const Text('Worker Submitted Text / Notes', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF064E3B))),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: Text(
+                        proofText!,
+                        style: const TextStyle(fontSize: 12.5, color: Color(0xFF1E293B), height: 1.4),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   
                   // Proof Inspector
-                  const Text('Submission Proof', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
+                  const Text('Submission Proof Screenshot', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF064E3B))),
+                  const SizedBox(height: 10),
                   
-                  Card(
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -155,7 +262,24 @@ class TaskReviewInspectorModal extends StatelessWidget {
                             width: double.infinity,
                             color: AppColors.gray100,
                             child: proofUrl != null && proofUrl!.startsWith('http')
-                                ? Image.network(proofUrl!, fit: BoxFit.contain)
+                                ? Image.network(
+                                    proofUrl!,
+                                    fit: BoxFit.contain,
+                                    loadingBuilder: (ctx, child, progress) {
+                                      if (progress == null) return child;
+                                      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                                    },
+                                    errorBuilder: (ctx, err, stack) => const Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.broken_image_rounded, size: 48, color: Colors.grey),
+                                          SizedBox(height: 6),
+                                          Text('Failed to load image', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                        ],
+                                      ),
+                                    ),
+                                  )
                                 : const Center(
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
@@ -188,9 +312,10 @@ class TaskReviewInspectorModal extends StatelessWidget {
                                       }
                                     },
                                     icon: const Icon(Icons.zoom_in, size: 18),
-                                    label: const Text('View Full Size'),
+                                    label: const Text('View Full Size (Zoom)'),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
                                     ),
                                   ),
                                 ],
@@ -217,6 +342,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
                           label: const Text('Approve Task'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                         ),
@@ -229,6 +355,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
                           label: const Text('Reject Task'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.error,
+                            foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
                         ),
@@ -252,8 +379,21 @@ class TaskReviewInspectorModal extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.gray600, fontSize: 13)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12.5, fontWeight: FontWeight.w500)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF064E3B))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomRow(BuildContext context, String label, Widget rightWidget) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12.5, fontWeight: FontWeight.w500)),
+          rightWidget,
         ],
       ),
     );
@@ -270,13 +410,14 @@ class TaskReviewInspectorModal extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
+              final targetId = submissionId.isNotEmpty ? submissionId : taskId;
               try {
                 final dio = getIt<DioClient>();
-                await dio.post('/admin/reviews/$taskId/approve');
+                await dio.post('/admin/reviews/$targetId/approve');
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Submission approved successfully')),
+                    const SnackBar(content: Text('Submission approved successfully! Reward credited to worker.'), backgroundColor: Colors.green),
                   );
                 }
               } catch (e) {
@@ -287,7 +428,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
             child: const Text('Approve'),
           ),
         ],
@@ -339,10 +480,11 @@ class TaskReviewInspectorModal extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
+              final targetId = submissionId.isNotEmpty ? submissionId : taskId;
               try {
                 final dio = getIt<DioClient>();
                 await dio.post(
-                  '/admin/reviews/$taskId/reject',
+                  '/admin/reviews/$targetId/reject',
                   data: {
                     'reason': selectedReason ?? 'INVALID_PROOF',
                     'notes': notesController.text,
@@ -351,7 +493,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Submission rejected')),
+                    const SnackBar(content: Text('Submission rejected.'), backgroundColor: Colors.red),
                   );
                 }
               } catch (e) {
@@ -362,7 +504,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
             child: const Text('Reject'),
           ),
         ],

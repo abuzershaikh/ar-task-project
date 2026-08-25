@@ -12,9 +12,10 @@ export class MarginPolicy {
         }
 
         let marginAmount = 0;
-        if (marginType === MarginType.FIXED) {
+        const type = String(marginType || '').toUpperCase();
+        if (type === MarginType.FIXED || type === 'FIXED') {
             marginAmount = marginValue;
-        } else if (marginType === MarginType.PERCENTAGE) {
+        } else if (type === MarginType.PERCENTAGE || type === 'PERCENTAGE') {
             marginAmount = (buyerUnitPrice * marginValue) / 100;
         } else {
             throw new BadRequestException(`Unsupported marginType '${marginType}'`);

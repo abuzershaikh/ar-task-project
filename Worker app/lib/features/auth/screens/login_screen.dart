@@ -102,6 +102,33 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleDirectLogin() async {
+    setState(() => _isLoading = true);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    try {
+      final userData = {
+        'uid': 'worker_${DateTime.now().millisecondsSinceEpoch}',
+        'name': 'Worker User',
+        'email': 'worker_user@taskpost.com',
+        'role': 'WORKER',
+        'phone': '9876543210',
+        'isOnline': true,
+      };
+      await authProvider.setDirectUser(userData);
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainNavScreen()),
+        );
+      }
+    } catch (e) {
+      debugPrint('[DIRECT LOGIN ERROR] $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -149,12 +176,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Complete Tasks • Earn Real Money',
+                const Text(
+                  'Perform simple micro-tasks, submit proof,\nand earn instant rewards.',
                   style: TextStyle(
-                    color: AppTheme.accentColor,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    color: Colors.white70,
+                    fontSize: 13,
+                    height: 1.4,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -163,26 +190,38 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Feature Highlights
                 Container(
-                  padding: const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.white.withOpacity(0.1)),
                   ),
                   child: Column(
                     children: [
-                      _buildFeatureRow(Icons.task_alt_rounded, 'Access Daily Paid Micro-Tasks', const Color(0xFF10B981)),
+                      _buildFeatureRow(
+                        Icons.check_circle_outline_rounded,
+                        'Verified real-time payouts',
+                        const Color(0xFF10B981),
+                      ),
                       const SizedBox(height: 12),
-                      _buildFeatureRow(Icons.account_balance_wallet_rounded, 'Instant Wallet & UPI Payouts', const Color(0xFFF59E0B)),
+                      _buildFeatureRow(
+                        Icons.security_rounded,
+                        'Secure Google authentication',
+                        const Color(0xFF3B82F6),
+                      ),
                       const SizedBox(height: 12),
-                      _buildFeatureRow(Icons.verified_user_rounded, 'Verified Worker Trust Score', const Color(0xFF6366F1)),
+                      _buildFeatureRow(
+                        Icons.bolt_rounded,
+                        'Fast automated task review',
+                        const Color(0xFFF59E0B),
+                      ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
 
-                // Single Google Sign In Button
+                // Google Sign In Button
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -217,17 +256,42 @@ class _LoginScreenState extends State<LoginScreen> {
                               Text(
                                 'Sign in with Google',
                                 style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87),
                               ),
                             ],
                           ),
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
+
+                // Direct Worker Access Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: _isLoading ? null : _handleDirectLogin,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.white.withOpacity(0.25)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white70),
+                    label: const Text(
+                      'Direct Worker Access (Quick Login)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
 
                 const Text(
                   'By continuing, you agree to our Terms of Service & Privacy Policy',

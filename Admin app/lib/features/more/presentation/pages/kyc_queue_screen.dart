@@ -76,10 +76,13 @@ class _KycQueueScreenState extends State<KycQueueScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    kyc.workerName.isNotEmpty ? kyc.workerName : 'Worker ${kyc.workerId}',
+                                    kyc.workerName.isNotEmpty ? kyc.workerName : 'Worker Account',
                                     style: const TextStyle(fontWeight: FontWeight.w600),
                                   ),
-                                  Text('Worker ID: ${kyc.workerId}', style: const TextStyle(fontSize: 12, color: AppColors.gray500)),
+                                  Text(
+                                    kyc.workerEmail.isNotEmpty ? kyc.workerEmail : (kyc.workerId.length > 8 ? 'ID: #${kyc.workerId.substring(0, 8)}' : 'ID: ${kyc.workerId}'),
+                                    style: const TextStyle(fontSize: 12, color: AppColors.gray500),
+                                  ),
                                 ],
                               ),
                             ),

@@ -11,22 +11,22 @@ class OverviewTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Progress Card
           _ProgressCard(campaign: campaign),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Campaign Details
           _DetailsCard(campaign: campaign),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Deadline Status
           if (campaign.hasExtensions) ...[
             _DeadlineCard(campaign: campaign),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
           ],
 
           // Performance Metrics
@@ -44,15 +44,18 @@ class _ProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double progress = campaign.completionPercentage / 100;
+
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -63,86 +66,113 @@ class _ProgressCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Progress',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+              const Row(
+                children: [
+                  Icon(Icons.pie_chart_outline_rounded, size: 16, color: Color(0xFF2563EB)),
+                  SizedBox(width: 6),
+                  Text(
+                    'Task Completion Progress',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '${campaign.completedTasks} / ${campaign.totalTasks}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${campaign.completedTasks} / ${campaign.totalTasks} Tasks',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2563EB),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          
+          const SizedBox(height: 12),
+
           // Progress Bar
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: campaign.completionPercentage / 100,
-              minHeight: 12,
-              backgroundColor: Colors.grey.shade200,
+              value: progress.clamp(0.0, 1.0),
+              minHeight: 6,
+              backgroundColor: const Color(0xFFF1F5F9),
               valueColor: AlwaysStoppedAnimation<Color>(
                 _getProgressColor(campaign.completionPercentage),
               ),
             ),
           ),
           const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              '${campaign.completionPercentage.toStringAsFixed(1)}% Complete',
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${campaign.totalTasks - campaign.completedTasks} tasks remaining',
+                style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
               ),
-            ),
+              Text(
+                '${campaign.completionPercentage.toStringAsFixed(1)}% Complete',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _getProgressColor(campaign.completionPercentage),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
 
-          // Task Status Grid
+          // Task Status 4-Grid
           Row(
             children: [
               Expanded(
                 child: _StatusItem(
-                  icon: Icons.check_circle,
-                  iconColor: Colors.green,
+                  icon: Icons.check_circle_rounded,
+                  iconColor: const Color(0xFF10B981),
+                  bgColor: const Color(0xFFECFDF5),
                   label: 'Completed',
                   value: campaign.completedTasks,
                 ),
               ),
+              const SizedBox(width: 8),
               Expanded(
                 child: _StatusItem(
-                  icon: Icons.pending,
-                  iconColor: Colors.blue,
+                  icon: Icons.sync_rounded,
+                  iconColor: const Color(0xFF2563EB),
+                  bgColor: const Color(0xFFEFF6FF),
                   label: 'In Progress',
                   value: campaign.inProgressTasks,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: _StatusItem(
-                  icon: Icons.circle_outlined,
-                  iconColor: Colors.grey,
+                  icon: Icons.hourglass_top_rounded,
+                  iconColor: const Color(0xFFF59E0B),
+                  bgColor: const Color(0xFFFFFBEB),
                   label: 'Pending',
                   value: campaign.pendingTasks,
                 ),
               ),
+              const SizedBox(width: 8),
               Expanded(
                 child: _StatusItem(
-                  icon: Icons.cancel,
-                  iconColor: Colors.red,
+                  icon: Icons.cancel_rounded,
+                  iconColor: const Color(0xFFEF4444),
+                  bgColor: const Color(0xFFFEF2F2),
                   label: 'Rejected',
                   value: campaign.rejectedTasks,
                 ),
@@ -155,22 +185,24 @@ class _ProgressCard extends StatelessWidget {
   }
 
   Color _getProgressColor(double percentage) {
-    if (percentage >= 80) return Colors.green;
-    if (percentage >= 50) return Colors.blue;
-    if (percentage >= 25) return Colors.orange;
-    return Colors.red;
+    if (percentage >= 80) return const Color(0xFF10B981);
+    if (percentage >= 50) return const Color(0xFF2563EB);
+    if (percentage >= 25) return const Color(0xFFF59E0B);
+    return const Color(0xFFEF4444);
   }
 }
 
 class _StatusItem extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
+  final Color bgColor;
   final String label;
   final int value;
 
   const _StatusItem({
     required this.icon,
     required this.iconColor,
+    required this.bgColor,
     required this.label,
     required this.value,
   });
@@ -178,34 +210,40 @@ class _StatusItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: iconColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: iconColor.withOpacity(0.2)),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: iconColor),
+          Icon(icon, size: 16, color: iconColor),
           const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value.toString(),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: iconColor,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value.toString(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: iconColor,
+                  ),
                 ),
-              ),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[600],
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -221,14 +259,15 @@ class _DetailsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -236,16 +275,23 @@ class _DetailsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Campaign Details',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
+          const Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF2563EB)),
+              SizedBox(width: 6),
+              Text(
+                'Campaign Details',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          
-          _DetailRow('Service', campaign.serviceName),
+          const SizedBox(height: 12),
+
+          _DetailRow('Service Type', campaign.serviceName),
           _DetailRow('Status', campaign.status.toUpperCase()),
           _DetailRow('Created', timeago.format(campaign.createdAt)),
           if (campaign.currentDeadline != null)
@@ -254,21 +300,23 @@ class _DetailsCard extends StatelessWidget {
               '${campaign.currentDeadline!.day} ${_getMonthName(campaign.currentDeadline!.month)}, ${_formatTime(campaign.currentDeadline!)}',
             ),
           if (campaign.remainingTime != null)
-            _DetailRow('Remaining', campaign.remainingTime!),
-          
-          const Divider(height: 24),
-          
-          const Text(
-            'Campaign Amount',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+            _DetailRow('Remaining Time', campaign.remainingTime!),
+
+          const Divider(height: 18, color: Color(0xFFF1F5F9)),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Total Campaign Budget',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+              ),
+              Text(
+                CurrencyFormatter.formatINR(campaign.totalAmount),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          
-          _DetailRow('Total', CurrencyFormatter.formatINR(campaign.totalAmount)),
-          _DetailRow('Payment', campaign.paymentStatus.toUpperCase()),
         ],
       ),
     );
@@ -276,22 +324,23 @@ class _DetailsCard extends StatelessWidget {
 
   Widget _DetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF64748B),
             ),
           ),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
+              color: Color(0xFF1E293B),
             ),
           ),
         ],
@@ -322,69 +371,70 @@ class _DeadlineCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orange.shade200),
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFDE68A)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              Icon(Icons.schedule, color: Colors.orange.shade700),
-              const SizedBox(width: 8),
-              const Text(
-                'Deadline History',
+              Icon(Icons.schedule_rounded, color: Color(0xFFD97706), size: 16),
+              SizedBox(width: 6),
+              Text(
+                'Deadline Extensions',
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF92400E),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          
+          const SizedBox(height: 8),
+
           if (campaign.extensions != null)
             ...campaign.extensions!.map((extension) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 4,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          extension.reason,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 3,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Extended by ${extension.extensionHours} hours',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              extension.reason,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF78350F),
+                              ),
+                            ),
+                            Text(
+                              'Extended by ${extension.extensionHours} hours',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF92400E),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )),
+                )),
         ],
       ),
     );
@@ -399,14 +449,15 @@ class _MetricsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -414,50 +465,61 @@ class _MetricsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Performance Metrics',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
+          const Row(
+            children: [
+              Icon(Icons.query_stats_rounded, size: 16, color: Color(0xFF2563EB)),
+              SizedBox(width: 6),
+              Text(
+                'Performance Metrics',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          
+          const SizedBox(height: 12),
+
           Row(
             children: [
               Expanded(
                 child: _MetricItem(
                   label: 'Approval Rate',
                   value: '${campaign.approvalRate.toStringAsFixed(1)}%',
-                  color: Colors.green,
+                  color: const Color(0xFF10B981),
+                  bgColor: const Color(0xFFECFDF5),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: _MetricItem(
                   label: 'Rejection Rate',
                   value: '${campaign.rejectionRate.toStringAsFixed(1)}%',
-                  color: Colors.red,
+                  color: const Color(0xFFEF4444),
+                  bgColor: const Color(0xFFFEF2F2),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
                 child: _MetricItem(
                   label: 'Avg Review Time',
                   value: '${campaign.averageReviewTimeMinutes} min',
-                  color: Colors.blue,
+                  color: const Color(0xFF2563EB),
+                  bgColor: const Color(0xFFEFF6FF),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: _MetricItem(
                   label: 'Pending Reviews',
                   value: campaign.pendingReviews.toString(),
-                  color: Colors.orange,
+                  color: const Color(0xFFF59E0B),
+                  bgColor: const Color(0xFFFFFBEB),
                 ),
               ),
             ],
@@ -472,39 +534,42 @@ class _MetricItem extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final Color bgColor;
 
   const _MetricItem({
     required this.label,
     required this.value,
     required this.color,
+    required this.bgColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             value,
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[700],
+            style: const TextStyle(
+              fontSize: 10,
+              color: Color(0xFF64748B),
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],

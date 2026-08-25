@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/task_provider.dart';
-import '../../task_detail/screens/task_detail_screen.dart';
+import '../../task_detail/screens/task_detail_premium_screen.dart';
 import '../widgets/my_task_card.dart';
 
 /// Single list view for a specific task stage.
@@ -70,7 +70,7 @@ class TaskStageListView extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => TaskDetailScreen(task: task),
+                  builder: (_) => TaskDetailPremiumScreen(task: task),
                 ),
               );
             },

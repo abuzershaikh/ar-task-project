@@ -22,8 +22,10 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _availableTasks = await ApiService.getAvailableTasks();
+      debugPrint('[TaskProvider] Fetched ${_availableTasks.length} available tasks successfully');
     } catch (e) {
-      _error = e.toString();
+      debugPrint('[TaskProvider ERROR] fetchAvailableTasks failed: $e');
+      _error = e.toString().replaceAll('Exception: ', '');
       _availableTasks = [];
     }
     _isLoading = false;
@@ -37,8 +39,10 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _myTasks = await ApiService.getMyTasks(stage);
+      debugPrint('[TaskProvider] Fetched ${_myTasks.length} my tasks ($stage)');
     } catch (e) {
-      _error = e.toString();
+      debugPrint('[TaskProvider ERROR] fetchMyTasks failed: $e');
+      _error = e.toString().replaceAll('Exception: ', '');
       _myTasks = [];
     }
     _isLoading = false;
@@ -80,10 +84,12 @@ class TaskProvider extends ChangeNotifier {
     try {
       final res = await ApiService.acceptTask(taskId);
       if (res['success'] == true || res['status'] == 'assigned' || res['status'] == 'ASSIGNED') {
-        fetchAvailableTasks();
+        await fetchAvailableTasks();
+        await fetchMyTasks('assigned');
         return true;
       }
     } catch (e) {
+      debugPrint('[TaskProvider ERROR] acceptTask: $e');
       _error = e.toString();
       notifyListeners();
     }
@@ -94,10 +100,11 @@ class TaskProvider extends ChangeNotifier {
     try {
       final res = await ApiService.startTask(taskId);
       if (res['success'] == true || res['status'] == 'IN_PROGRESS' || res['status'] == 'in_progress') {
-        fetchMyTasks(_selectedStage);
+        await fetchMyTasks('assigned');
         return true;
       }
     } catch (e) {
+      debugPrint('[TaskProvider ERROR] startTask: $e');
       _error = e.toString();
       notifyListeners();
     }
@@ -111,21 +118,28 @@ class TaskProvider extends ChangeNotifier {
 
       if (imagePath != null && imagePath.isNotEmpty) {
         final uploadRes = await ApiService.uploadFile(imagePath);
-        if (uploadRes['success'] == true && uploadRes['file'] != null) {
-          final fileData = uploadRes['file'];
-          fileId = fileData['id']?.toString() ?? fileData['fileId']?.toString();
-          final rawPath = (fileData['filePath'] ?? fileData['path'] ?? '').toString();
-          fileUrl = rawPath.startsWith('http')
-              ? rawPath
-              : '${ApiService.baseUrl.replaceAll('/api/v1', '')}$rawPath';
+        if (uploadRes['success'] == true) {
+          final fileData = uploadRes['file'] ?? {};
+          fileId = fileData['id']?.toString() ?? uploadRes['fileId']?.toString() ?? 'proof-1';
+          fileUrl = (uploadRes['url'] ?? fileData['url'] ?? '').toString();
+          if (fileUrl.isEmpty) {
+            final rawPath = (fileData['filePath'] ?? fileData['path'] ?? '').toString();
+            if (rawPath.isNotEmpty) {
+              fileUrl = rawPath.startsWith('http')
+                  ? rawPath
+                  : '${ApiService.baseUrl.replaceAll('/api/v1', '')}/${rawPath.replaceFirst(RegExp(r'^/+'), '')}';
+            }
+          }
         }
       }
 
       final res = await ApiService.submitTaskProof(taskId, {
         'data': {
           'textProof': textProof,
+          'proofUrl': fileUrl ?? '',
+          'screenshotUrl': fileUrl ?? '',
         },
-        'proofs': (fileId != null || fileUrl != null)
+        'proofs': (fileId != null || (fileUrl != null && fileUrl.isNotEmpty))
             ? [
                 {
                   'fileId': fileId ?? 'proof-1',

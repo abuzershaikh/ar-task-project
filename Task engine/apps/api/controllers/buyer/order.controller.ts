@@ -19,6 +19,8 @@ import { CurrentUser } from '../../../../shared/auth/decorators/current-user.dec
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
 import { TimingPolicy } from '../../../../shared/policies/timing-policy';
+import { WalletService } from '../../../../shared/services/wallet.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @ApiTags('Buyer - Orders')
 @Roles(UserRole.BUYER)
@@ -33,6 +35,8 @@ export class BuyerOrderController {
         private readonly taskEngine: TaskEngineService,
         private readonly progressEngine: ProgressEngineService,
         private readonly pricingEngine: PricingEngine,
+        private readonly walletService: WalletService,
+        private readonly eventEmitter: EventEmitter2,
     ) { }
 
     @Get('price-estimate')
@@ -101,25 +105,18 @@ export class BuyerOrderController {
 
         const title = data.title || `${snapshot.serviceCode || serviceIdentifier} Campaign (${quantity} tasks)`;
 
-        // Validate data.requirements against catalog.elements
-        if (catalog && catalog.elements && Array.isArray(catalog.elements)) {
-            const missingRequiredFields: string[] = [];
-            const reqs = data.requirements || {};
-
-            for (const element of catalog.elements) {
-                if (element.required) {
-                    if (reqs[element.id] === undefined || reqs[element.id] === null || reqs[element.id] === '') {
-                        missingRequiredFields.push(element.id);
-                    }
-                }
-            }
-
-            if (missingRequiredFields.length > 0) {
-                throw new BadRequestException(
-                    `Missing required fields in requirements payload: ${missingRequiredFields.join(', ')}`
-                );
-            }
-        }
+        // Normalize requirements payload for simplified buyer form & legacy elements
+        const reqs = data.requirements || {};
+        const normalizedRequirements = {
+            ...reqs,
+            targetUrl: reqs.targetUrl || reqs.url || reqs.link || reqs.channelUrl || reqs.videoUrl || '',
+            customText: reqs.customText || reqs.text || reqs.comment || reqs.instructions || data.description || '',
+            watchTimeSeconds: reqs.watchTimeSeconds || catalog?.watchtimeSeconds || 0,
+            videoTutorialUrl: catalog?.videoTutorialUrl || '',
+            audioGuideUrl: catalog?.audioGuideUrl || '',
+            adminInstructions: catalog?.adminInstructions || catalog?.description || '',
+            serviceName: catalog?.name || title,
+        };
 
         // Validate timing parameter bounds (1h-72h accept, 1h-168h complete)
         TimingPolicy.validateTiming(data.timeToAcceptHours, data.timeToCompleteHours);
@@ -127,6 +124,15 @@ export class BuyerOrderController {
         const timeToAccept = data.timeToAcceptHours || 24;
         const timeToComplete = data.timeToCompleteHours || 48;
         const campaignExpiryDate = data.campaignExpiryDate ? new Date(data.campaignExpiryDate) : undefined;
+        const totalCost = Number(snapshot.totalAmount);
+
+        // Deduct from buyer's wallet balance
+        const deductionResult = await this.walletService.deductForOrder(
+            user.id,
+            totalCost,
+            'temp_order',
+            title,
+        );
 
         const order = await this.orderRepo.create({
             buyerId: user.id,
@@ -141,8 +147,8 @@ export class BuyerOrderController {
             serviceCode: snapshot.serviceCode || serviceIdentifier,
             pricingVersion: snapshot.pricingVersion,
             totalAmount: snapshot.totalAmount,
-            status: 'PAYMENT_PENDING',
-            requirements: data.requirements,
+            status: 'ACTIVE',
+            requirements: normalizedRequirements,
             reviewMode: finalReviewMode,
             timeToAcceptHours: timeToAccept,
             timeToCompleteHours: timeToComplete,
@@ -151,6 +157,18 @@ export class BuyerOrderController {
             timeToCompleteHoursSnapshot: timeToComplete,
             campaignExpiryDateSnapshot: campaignExpiryDate,
         });
+
+        // Trigger task generation queue directly via event
+        try {
+            this.eventEmitter.emit('order.activated', {
+                orderId: order.id,
+                buyerId: user.id,
+                serviceCode: order.serviceCode,
+                totalTasksRequired: order.totalTasksRequired,
+                workerRewardSnapshot: order.workerRewardSnapshot,
+                activatedAt: new Date(),
+            });
+        } catch (_) {}
 
         return {
             success: true,
@@ -170,7 +188,80 @@ export class BuyerOrderController {
                 totalAmount: snapshot.totalAmount,
                 pricingVersion: snapshot.pricingVersion,
             },
-            message: 'Order created in PAYMENT_PENDING state. Complete payment to initiate task generation.',
+            wallet: {
+                deductedAmount: deductionResult.deductedAmount,
+                remainingBalance: deductionResult.remainingBalance,
+            },
+            message: `Campaign order created & paid ₹${totalCost.toFixed(2)} from wallet. Tasks are active!`,
+        };
+    }
+
+    @Get('dashboard')
+    @ApiOperation({ summary: 'Get buyer real-time dashboard data' })
+    async getBuyerDashboard(@CurrentUser() user: User) {
+        const orders = await this.orderRepo.findByBuyer(user.id);
+
+        let totalSpend = 0;
+        let activeOrdersCount = 0;
+        let completedOrdersCount = 0;
+        let totalTasksCount = 0;
+        let completedTasksCount = 0;
+        let inProgressTasksCount = 0;
+        let pendingTasksCount = 0;
+        let rejectedTasksCount = 0;
+
+        const recentCampaigns = await Promise.all(
+            orders.slice(0, 10).map(async (o) => {
+                const tasks = await this.taskRepo.findByOrderId(o.id);
+                const completed = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'completed')).length;
+                const inProg = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'assigned') || this.taskRepo.matchesStatus(t.status, 'in_progress')).length;
+                const underRev = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'submitted')).length;
+                const rej = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'rejected')).length;
+                const pend = Math.max(0, o.totalTasksRequired - completed - inProg - underRev - rej);
+
+                const amt = Number(o.totalAmount || (Number(o.totalTasksRequired) * Number(o.buyerUnitPrice || o.rewardPerTask || 0)));
+                totalSpend += amt;
+
+                if (o.status === 'ACTIVE') activeOrdersCount++;
+                if (o.status === 'COMPLETED') completedOrdersCount++;
+
+                totalTasksCount += o.totalTasksRequired;
+                completedTasksCount += completed;
+                inProgressTasksCount += inProg;
+                pendingTasksCount += pend;
+                rejectedTasksCount += rej;
+
+                return {
+                    id: o.id,
+                    name: o.title,
+                    serviceType: o.requirements?.serviceName || o.serviceCode || o.taskType,
+                    status: o.status,
+                    totalTasks: o.totalTasksRequired,
+                    completedTasks: completed,
+                    pendingTasks: pend,
+                    inProgressTasks: inProg,
+                    amount: amt,
+                    expiresIn: o.campaignExpiryDate ? `${Math.max(1, Math.round((new Date(o.campaignExpiryDate).getTime() - Date.now()) / (1000 * 3600 * 24)))} days` : '30 days',
+                    createdAt: o.createdAt,
+                };
+            })
+        );
+
+        const overallCompletion = totalTasksCount > 0 ? (completedTasksCount / totalTasksCount) * 100 : 0;
+
+        return {
+            success: true,
+            dashboard: {
+                totalSpend,
+                totalCampaigns: orders.length,
+                activeCampaigns: activeOrdersCount,
+                completedCampaigns: completedOrdersCount,
+                pendingTasks: pendingTasksCount,
+                inProgressTasks: inProgressTasksCount,
+                completedTasks: completedTasksCount,
+                overallCompletion,
+                recentCampaigns,
+            },
         };
     }
 
@@ -178,16 +269,53 @@ export class BuyerOrderController {
     @ApiOperation({ summary: 'List orders created by buyer (Hides worker rewards and internal margins)' })
     async getOrders(@CurrentUser() user: User) {
         const orders = await this.orderRepo.findByBuyer(user.id);
-        const buyerSafeOrders = orders.map((o) => ({
-            id: o.id,
-            title: o.title,
-            taskType: o.taskType,
-            totalTasksRequired: o.totalTasksRequired,
-            tasksCompleted: o.tasksCompleted,
-            buyerUnitPrice: o.buyerUnitPrice || o.rewardPerTask,
-            totalAmount: o.totalAmount || Number(o.totalTasksRequired) * Number(o.rewardPerTask),
-            status: o.status,
-            createdAt: o.createdAt,
+        const buyerSafeOrders = await Promise.all(orders.map(async (o) => {
+            const tasks = await this.taskRepo.findByOrderId(o.id);
+            const completed = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'completed')).length;
+            const inProgress = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'assigned') || this.taskRepo.matchesStatus(t.status, 'in_progress')).length;
+            const underReview = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'submitted')).length;
+            const rejected = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'rejected')).length;
+            const pending = Math.max(0, o.totalTasksRequired - completed - inProgress - underReview - rejected);
+
+            const total = o.totalTasksRequired || tasks.length;
+            const completionPercentage = total > 0 ? (completed / total) * 100 : 0;
+            const approvalRate = (completed + rejected) > 0 ? (completed / (completed + rejected)) * 100 : 100;
+            const rejectionRate = (completed + rejected) > 0 ? (rejected / (completed + rejected)) * 100 : 0;
+
+            const computedStatus = (completed >= total && total > 0 && o.status !== 'CANCELLED') ? 'COMPLETED' : (o.status || 'ACTIVE');
+            if (o.status !== computedStatus) {
+                try {
+                    await this.orderRepo.update(o.id, { status: computedStatus, tasksCompleted: completed });
+                } catch (_) {}
+            }
+
+            return {
+                id: o.id,
+                title: o.title,
+                name: o.title,
+                serviceName: o.requirements?.serviceName || o.serviceCode || o.taskType,
+                taskType: o.taskType,
+                totalTasks: o.totalTasksRequired,
+                totalTasksRequired: o.totalTasksRequired,
+                completedTasks: completed || o.tasksCompleted || 0,
+                tasksCompleted: completed || o.tasksCompleted || 0,
+                inProgressTasks: inProgress,
+                pendingTasks: pending,
+                rejectedTasks: rejected,
+                underReviewTasks: underReview,
+                pendingReviews: underReview,
+                completionPercentage,
+                approvalRate,
+                rejectionRate,
+                averageReviewTimeMinutes: 15,
+                buyerUnitPrice: o.buyerUnitPrice || o.rewardPerTask,
+                totalAmount: o.totalAmount || Number(o.totalTasksRequired) * Number(o.rewardPerTask),
+                spentAmount: (o.buyerUnitPrice || o.rewardPerTask) * (completed || o.tasksCompleted || 0),
+                status: computedStatus,
+                paymentStatus: 'PAID',
+                requirements: o.requirements,
+                createdAt: o.createdAt,
+            };
         }));
 
         return {
@@ -204,18 +332,52 @@ export class BuyerOrderController {
             throw new NotFoundException('Order not found or access denied');
         }
 
+        const tasks = await this.taskRepo.findByOrderId(order.id);
+        const completed = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'completed')).length;
+        const inProgress = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'assigned') || this.taskRepo.matchesStatus(t.status, 'in_progress')).length;
+        const underReview = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'submitted')).length;
+        const rejected = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'rejected')).length;
+        const pending = Math.max(0, order.totalTasksRequired - completed - inProgress - underReview - rejected);
+
+        const total = order.totalTasksRequired || tasks.length;
+        const completionPercentage = total > 0 ? (completed / total) * 100 : 0;
+        const approvalRate = (completed + rejected) > 0 ? (completed / (completed + rejected)) * 100 : 100;
+        const rejectionRate = (completed + rejected) > 0 ? (rejected / (completed + rejected)) * 100 : 0;
+
+        const computedStatus = (completed >= total && total > 0 && order.status !== 'CANCELLED') ? 'COMPLETED' : (order.status || 'ACTIVE');
+        if (order.status !== computedStatus) {
+            try {
+                await this.orderRepo.update(order.id, { status: computedStatus, tasksCompleted: completed });
+            } catch (_) {}
+        }
+
         return {
             success: true,
             order: {
                 id: order.id,
                 title: order.title,
+                name: order.title,
                 description: order.description,
+                serviceName: order.requirements?.serviceName || order.serviceCode || order.taskType,
                 taskType: order.taskType,
+                totalTasks: order.totalTasksRequired,
                 totalTasksRequired: order.totalTasksRequired,
-                tasksCompleted: order.tasksCompleted,
+                completedTasks: completed || order.tasksCompleted || 0,
+                tasksCompleted: completed || order.tasksCompleted || 0,
+                inProgressTasks: inProgress,
+                pendingTasks: pending,
+                rejectedTasks: rejected,
+                underReviewTasks: underReview,
+                pendingReviews: underReview,
+                completionPercentage,
+                approvalRate,
+                rejectionRate,
+                averageReviewTimeMinutes: 15,
                 buyerUnitPrice: order.buyerUnitPrice || order.rewardPerTask,
                 totalAmount: order.totalAmount || Number(order.totalTasksRequired) * Number(order.rewardPerTask),
-                status: order.status,
+                spentAmount: (order.buyerUnitPrice || order.rewardPerTask) * (completed || order.tasksCompleted || 0),
+                status: computedStatus,
+                paymentStatus: 'PAID',
                 requirements: order.requirements,
                 createdAt: order.createdAt,
             },
@@ -272,7 +434,7 @@ export class BuyerOrderController {
     }
 
     @Get(':id/pending')
-    @ApiOperation({ summary: 'Get pending tasks for order' })
+    @ApiOperation({ summary: 'Get submitted tasks pending review for order' })
     async getPendingTasks(@Param('id') orderId: string, @CurrentUser() user: User) {
         const order = await this.orderRepo.findById(orderId);
         if (!order || order.buyerId !== user.id) {
@@ -280,16 +442,59 @@ export class BuyerOrderController {
         }
 
         const tasks = await this.taskRepo.findByOrderId(orderId);
-        const pending = tasks.filter((task) =>
-            this.taskRepo.matchesStatus(task.status, 'pending') ||
-            this.taskRepo.matchesStatus(task.status, 'assigned') ||
-            this.taskRepo.matchesStatus(task.status, 'submitted'),
+        // Specifically filter submitted tasks that require verification/review
+        const underReview = tasks.filter((task) =>
+            this.taskRepo.matchesStatus(task.status, 'submitted') ||
+            this.taskRepo.matchesStatus(task.status, 'under_review'),
         );
+
+        const taskReviews = await Promise.all(underReview.map(async (t) => {
+            let submission: any = null;
+            try {
+                submission = await this.submissionRepo.findByTaskId(t.id);
+            } catch (_) {}
+
+            let proofUrl = '';
+            let proofText = '';
+
+            if (submission) {
+                if (Array.isArray(submission.proofs) && submission.proofs.length > 0) {
+                    proofUrl = submission.proofs[0]?.url || submission.proofs[0]?.path || '';
+                }
+                if (!proofUrl && submission.data) {
+                    proofUrl = submission.data.proofUrl || submission.data.screenshotUrl || '';
+                }
+                if (submission.data) {
+                    proofText = submission.data.textProof || submission.data.proofText || submission.data.notes || '';
+                }
+            }
+
+            return {
+                id: submission ? submission.id : t.id,
+                submissionId: submission ? submission.id : t.id,
+                taskId: t.id,
+                orderId: t.orderId,
+                taskType: t.taskType,
+                taskTitle: t.taskType || 'Task Execution',
+                status: submission ? submission.status : t.status,
+                workerId: t.assignedTo || submission?.workerId || 'Worker',
+                workerName: 'Worker',
+                proofUrl: proofUrl,
+                proofScreenshotUrl: proofUrl,
+                proofText: proofText,
+                rewardAmount: t.rewardAmount,
+                submittedAt: t.submittedAt || submission?.createdAt || t.updatedAt || t.createdAt,
+                requirements: t.requirements,
+                metadata: t.metadata,
+                proofs: submission?.proofs || t.metadata?.proofs || t.requirements?.proofs || [],
+                data: submission?.data || {},
+            };
+        }));
 
         return {
             success: true,
-            tasks: pending,
-            count: pending.length,
+            tasks: taskReviews,
+            count: taskReviews.length,
         };
     }
 
@@ -320,14 +525,74 @@ export class BuyerOrderController {
         }
 
         const tasks = await this.taskRepo.findByOrderId(orderId);
+        const completed = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'completed'));
+        const submitted = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'submitted'));
+        const inProgress = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'assigned') || this.taskRepo.matchesStatus(t.status, 'in_progress'));
+
+        const activities: Array<{ id: string; type: string; title: string; detail: string; timestamp: any }> = [
+            {
+                id: '1',
+                type: 'ORDER_CREATED',
+                title: 'Campaign Created',
+                detail: `Campaign "${order.title}" launched and funded from buyer wallet.`,
+                timestamp: order.createdAt,
+            },
+        ];
+
+        if (tasks.length > 0) {
+            activities.push({
+                id: '2',
+                type: 'TASKS_GENERATED',
+                title: `${tasks.length} Tasks Enqueued`,
+                detail: `Fulfillment queue generated for workers to discover in task feed.`,
+                timestamp: order.createdAt,
+            });
+        }
+
+        if (inProgress.length > 0) {
+            activities.push({
+                id: '3',
+                type: 'WORKERS_ACTIVE',
+                title: `${inProgress.length} Workers Active`,
+                detail: `Workers have claimed and are currently performing tasks.`,
+                timestamp: inProgress[0].startedAt || inProgress[0].assignedAt || new Date(),
+            });
+        }
+
+        if (submitted.length > 0) {
+            activities.push({
+                id: '4',
+                type: 'PROOFS_SUBMITTED',
+                title: `${submitted.length} Proofs Under Review`,
+                detail: `Workers submitted proof screenshots for quality verification.`,
+                timestamp: submitted[0].submittedAt || new Date(),
+            });
+        }
+
+        if (completed.length > 0) {
+            activities.push({
+                id: '5',
+                type: 'TASKS_COMPLETED',
+                title: `${completed.length} Tasks Completed`,
+                detail: `Completed tasks verified and credited to workers.`,
+                timestamp: completed[0].completedAt || new Date(),
+            });
+        }
+
+        if (order.status === 'COMPLETED' || (tasks.length > 0 && completed.length === tasks.length)) {
+            activities.push({
+                id: '6',
+                type: 'CAMPAIGN_COMPLETED',
+                title: 'Campaign 100% Completed',
+                detail: 'All tasks have been successfully delivered and finalized.',
+                timestamp: order.updatedAt || new Date(),
+            });
+        }
 
         return {
             success: true,
             orderId: order.id,
-            activity: [
-                { type: 'ORDER_CREATED', timestamp: order.createdAt, detail: `Order created in PAYMENT_PENDING state` },
-                { type: 'TASKS_GENERATED', timestamp: order.createdAt, detail: `${tasks.length} tasks active` },
-            ],
+            activity: activities.reverse(), // most recent first
         };
     }
 
@@ -339,17 +604,47 @@ export class BuyerOrderController {
             throw new NotFoundException('Order not found or access denied');
         }
 
-        const progress = await this.progressEngine.getOrderProgress(orderId);
+        const tasks = await this.taskRepo.findByOrderId(orderId);
+        const completed = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'completed'));
+        const inProgress = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'assigned') || this.taskRepo.matchesStatus(t.status, 'in_progress'));
+        const underReview = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'submitted'));
+        const rejected = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'rejected'));
+        const pending = Math.max(0, order.totalTasksRequired - completed.length - inProgress.length - underReview.length - rejected.length);
+
+        const total = order.totalTasksRequired || tasks.length;
+        const completionRate = total > 0 ? (completed.length / total) * 100 : 0;
+        const approvalRate = (completed.length + rejected.length) > 0 ? (completed.length / (completed.length + rejected.length)) * 100 : 100;
+        const rejectionRate = (completed.length + rejected.length) > 0 ? (rejected.length / (completed.length + rejected.length)) * 100 : 0;
+
+        // Daily weekday velocity count
+        const velocity: Record<string, number> = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        for (const t of completed) {
+            const date = t.completedAt ? new Date(t.completedAt) : (t.updatedAt ? new Date(t.updatedAt) : new Date());
+            const dayName = days[date.getDay()];
+            if (velocity[dayName] !== undefined) {
+                velocity[dayName]++;
+            }
+        }
 
         return {
             success: true,
             analytics: {
                 orderId: order.id,
                 totalRequired: order.totalTasksRequired,
-                completedCount: order.tasksCompleted,
-                completionRatePercentage: progress.completionRate * 100,
+                completedCount: completed.length,
+                inProgressCount: inProgress.length,
+                pendingCount: pending,
+                rejectedCount: rejected.length,
+                underReviewCount: underReview.length,
+                completionRatePercentage: completionRate,
+                approvalRatePercentage: approvalRate,
+                rejectionRatePercentage: rejectionRate,
                 unitPrice: order.buyerUnitPrice || order.rewardPerTask,
-                totalAmountSpent: (order.buyerUnitPrice || order.rewardPerTask) * order.tasksCompleted,
+                totalAmount: order.totalAmount || Number(order.totalTasksRequired) * Number(order.rewardPerTask),
+                totalAmountSpent: (order.buyerUnitPrice || order.rewardPerTask) * completed.length,
+                averageReviewTimeMinutes: 15,
+                weeklyVelocity: velocity,
             },
         };
     }

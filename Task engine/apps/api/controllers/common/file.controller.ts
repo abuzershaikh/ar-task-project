@@ -30,11 +30,11 @@ export class FileController {
 
     @Post('upload')
     @ApiBearerAuth('bearer')
-    @ApiOperation({ summary: 'Upload a file (proof, image, doc)' })
+    @ApiOperation({ summary: 'Upload a file (proof, image, audio, doc)' })
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(FileInterceptor('file', {
         limits: {
-            fileSize: 5 * 1024 * 1024, // 5 MB limit
+            fileSize: 25 * 1024 * 1024, // 25 MB limit
         },
         fileFilter: (req, file, cb) => {
             const allowedMimeTypes = [
@@ -43,11 +43,21 @@ export class FileController {
                 'image/webp',
                 'image/gif',
                 'application/pdf',
+                'audio/m4a',
+                'audio/mp4',
+                'audio/mpeg',
+                'audio/mp3',
+                'audio/wav',
+                'audio/aac',
+                'audio/ogg',
+                'audio/x-m4a',
+                'video/mp4',
+                'video/webm',
             ];
-            if (allowedMimeTypes.includes(file.mimetype)) {
+            if (allowedMimeTypes.includes(file.mimetype) || file.mimetype.startsWith('audio/') || file.mimetype.startsWith('image/')) {
                 cb(null, true);
             } else {
-                cb(new BadRequestException('Invalid file type. Only JPEG, PNG, WEBP, GIF, and PDF are allowed.'), false);
+                cb(new BadRequestException('Invalid file type. Supported types: images, audio (m4a, mp3, wav), video, and PDF.'), false);
             }
         },
     }))
@@ -62,26 +72,45 @@ export class FileController {
         let type = FileType.DOCUMENT;
         if (file.mimetype.startsWith('image/')) type = FileType.IMAGE;
         else if (file.mimetype.startsWith('video/')) type = FileType.VIDEO;
+        else if (file.mimetype.startsWith('audio/')) type = FileType.AUDIO;
 
         const savedFile = await this.fileStorage.saveFile({
-            uploadedBy: user.id,
+            uploadedBy: user ? user.id : 'system',
             type,
             originalName: file.originalname,
             mimeType: file.mimetype,
             buffer: file.buffer,
         });
 
+        const publicUrl = `http://95.179.178.6:3000/api/v1/files/raw/${savedFile.id}`;
+
         return {
             success: true,
+            url: publicUrl,
             file: {
                 id: savedFile.id,
                 originalName: savedFile.originalName,
                 mimeType: savedFile.mimeType,
                 fileSize: savedFile.fileSize,
                 filePath: savedFile.filePath,
+                url: publicUrl,
                 createdAt: savedFile.createdAt,
             },
         };
+    }
+
+    @Get('raw/:id')
+    @ApiOperation({ summary: 'Public stream / raw file content by ID for audio guides and media' })
+    async streamRawFile(
+        @Param('id') fileId: string,
+        @Res() res: Response,
+    ) {
+        const { stream, file } = await this.fileStorage.getFileStream(fileId);
+        res.setHeader('Content-Type', file.mimeType || 'audio/m4a');
+        res.setHeader('Content-Disposition', `inline; filename="${file.originalName}"`);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        stream.pipe(res);
     }
 
     @Get(':id')
@@ -130,6 +159,7 @@ export class FileController {
         const { stream, file } = await this.fileStorage.getFileStream(fileId);
 
         if (
+            user &&
             user.role !== UserRole.ADMIN &&
             user.role !== UserRole.SUPER_ADMIN &&
             file.uploadedBy !== user.id &&
@@ -140,6 +170,7 @@ export class FileController {
 
         res.setHeader('Content-Type', file.mimeType);
         res.setHeader('Content-Disposition', `inline; filename="${file.originalName}"`);
+        res.setHeader('Access-Control-Allow-Origin', '*');
         stream.pipe(res);
     }
 

@@ -146,105 +146,175 @@ class _CampaignsViewState extends State<_CampaignsView> with SingleTickerProvide
 
   Widget _buildCampaignCard(BuildContext context, CampaignDetail campaign) {
     Color statusColor;
+    Color statusBg;
     switch (campaign.status.toLowerCase()) {
       case 'active':
-        statusColor = AppColors.success;
+        statusColor = const Color(0xFF10B981);
+        statusBg = const Color(0xFFECFDF5);
         break;
       case 'paused':
-        statusColor = AppColors.warning;
+        statusColor = const Color(0xFFF59E0B);
+        statusBg = const Color(0xFFFFFBEB);
         break;
       case 'completed':
-        statusColor = AppColors.info;
+        statusColor = const Color(0xFF2563EB);
+        statusBg = const Color(0xFFEFF6FF);
         break;
       case 'cancelled':
-        statusColor = AppColors.error;
+        statusColor = const Color(0xFFEF4444);
+        statusBg = const Color(0xFFFEF2F2);
         break;
       default:
-        statusColor = AppColors.textSecondary;
+        statusColor = const Color(0xFF64748B);
+        statusBg = const Color(0xFFF8FAFC);
     }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
+    final double progress = campaign.totalTasks > 0 ? (campaign.completedTasks / campaign.totalTasks).clamp(0.0, 1.0) : 0.0;
+    final int percent = (progress * 100).toInt();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          Navigator.pushNamed(
-            context,
-            AppRouter.campaignDetail,
-            arguments: campaign.id,
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      campaign.name,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      campaign.status.toUpperCase(),
-                      style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              AppRouter.campaignDetail,
+              arguments: campaign.id,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Header: Title + Status Chip
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            campaign.name,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            campaign.serviceName.isNotEmpty ? campaign.serviceName : 'Custom Service',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Service: ${campaign.serviceName}',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 12),
-              LinearProgressIndicator(
-                value: campaign.totalTasks > 0 ? (campaign.completedTasks / campaign.totalTasks) : 0,
-                backgroundColor: const Color(0xFFE2E8F0),
-                color: const Color(0xFF2563EB),
-                minHeight: 6,
-                borderRadius: BorderRadius.circular(3),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${campaign.completedTasks} / ${campaign.totalTasks} completed',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
-                  ),
-                  Text(
-                    '₹${campaign.totalAmount.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2563EB),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: statusBg,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            campaign.status.toUpperCase(),
+                            style: TextStyle(
+                              color: statusColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 9,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // 2. Mini Analytics Progress Bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      progress >= 1.0 ? const Color(0xFF10B981) : const Color(0xFF2563EB),
+                    ),
+                    minHeight: 5,
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 8),
+
+                // 3. Compact Metrics Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Tasks Count & %
+                    Row(
+                      children: [
+                        const Icon(Icons.task_alt_rounded, size: 13, color: Color(0xFF64748B)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${campaign.completedTasks}/${campaign.totalTasks}',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                        ),
+                        Text(
+                          ' ($percent%)',
+                          style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                    // Budget Amount
+                    Row(
+                      children: [
+                        const Icon(Icons.payments_outlined, size: 13, color: Color(0xFF64748B)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '₹${campaign.totalAmount.toStringAsFixed(0)}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
+                        ),
+                      ],
+                    ),
+                    // Analytics Arrow
+                    const Row(
+                      children: [
+                        Text('Analytics', style: TextStyle(fontSize: 10, color: Color(0xFF2563EB), fontWeight: FontWeight.w600)),
+                        Icon(Icons.chevron_right_rounded, size: 14, color: Color(0xFF2563EB)),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-
     );
   }
 

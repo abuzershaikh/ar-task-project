@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import '../../../campaigns/presentation/pages/create_campaign_page.dart';
 
 class ServiceDetailPage extends StatelessWidget {
   final String serviceId;
@@ -8,11 +8,7 @@ class ServiceDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Service Detail')),
-      body: Center(
-        child: Text('Service Detail - To be implemented', style: AppTextStyles.bodyMedium),
-      ),
-    );
+    return CreateCampaignPage(serviceId: serviceId);
   }
 }
+

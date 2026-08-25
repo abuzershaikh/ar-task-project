@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/task_provider.dart';
 import '../../../shared/widgets/platform_logo.dart';
-import '../../task_detail/screens/task_detail_screen.dart';
+import '../../task_detail/screens/task_detail_premium_screen.dart';
 import '../widgets/task_feed_card.dart';
 
 /// Task Feed Screen — exact replica of the user's provided UI screenshot.
@@ -13,17 +13,57 @@ class TaskFeedScreen extends StatefulWidget {
   State<TaskFeedScreen> createState() => _TaskFeedScreenState();
 }
 
-class _TaskFeedScreenState extends State<TaskFeedScreen> {
+class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObserver {
   String _selectedPlatform = 'All Tasks';
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-      taskProvider.fetchAvailableTasks();
-      taskProvider.fetchWalletData();
+      _refreshFeed();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshFeed();
+    }
+  }
+
+  void _refreshFeed() {
+    if (!mounted) return;
+    final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+    taskProvider.fetchAvailableTasks();
+    taskProvider.fetchWalletData();
+  }
+
+  String _detectPlatform(dynamic task) {
+    if (task == null) return 'general';
+    if (task['platform'] != null && task['platform'].toString().trim().isNotEmpty) {
+      return task['platform'].toString().toLowerCase().trim();
+    }
+    final type = (task['taskType'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toLowerCase();
+    String reqStr = '';
+    if (task['requirements'] is Map) {
+      reqStr = task['requirements'].toString().toLowerCase();
+    }
+    final metaStr = (task['metadata'] != null) ? task['metadata'].toString().toLowerCase() : '';
+    final combined = '$type $reqStr $metaStr';
+    if (combined.contains('youtube') || combined.contains('yt_')) return 'youtube';
+    if (combined.contains('instagram') || combined.contains('insta')) return 'instagram';
+    if (combined.contains('facebook') || combined.contains('fb')) return 'facebook';
+    if (combined.contains('google') || combined.contains('maps') || combined.contains('playstore')) return 'google';
+    if (combined.contains('twitter') || combined.contains(' x ') || combined.contains('x.com')) return 'x';
+    if (combined.contains('telegram')) return 'telegram';
+    return 'youtube'; // Default popular platform
   }
 
   @override
@@ -32,14 +72,21 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
 
     final tasksToDisplay = taskProvider.availableTasks;
     final wallet = taskProvider.walletData;
-    final double walletBalance = 
-        (wallet['balance'] ?? wallet['availableBalance'] ?? 0.0).toDouble();
+    double walletBalance = 0.0;
+    final rawBal = wallet['balance'] ?? wallet['availableBalance'];
+    if (rawBal is num) {
+      walletBalance = rawBal.toDouble();
+    } else if (rawBal != null) {
+      walletBalance = double.tryParse(rawBal.toString()) ?? 0.0;
+    }
 
     final filteredTasks = _selectedPlatform == 'All Tasks'
         ? tasksToDisplay
         : tasksToDisplay.where((t) {
-            final p = (t['platform'] ?? t['taskType'] ?? t['serviceCode'] ?? '').toString().toLowerCase();
-            return p.contains(_selectedPlatform.toLowerCase());
+            final p = _detectPlatform(t);
+            final sel = _selectedPlatform.toLowerCase();
+            return p.contains(sel) ||
+                   t.toString().toLowerCase().contains(sel);
           }).toList();
 
     return Scaffold(
@@ -120,11 +167,15 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                     child: Center(
                       child: Column(
                         children: [
-                          const Icon(Icons.task_rounded, size: 48, color: Colors.black26),
+                          Icon(
+                            taskProvider.error != null ? Icons.cloud_off_rounded : Icons.task_rounded,
+                            size: 48,
+                            color: taskProvider.error != null ? Colors.redAccent.withOpacity(0.6) : Colors.black26,
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             taskProvider.error != null
-                                ? 'Failed to fetch tasks from server'
+                                ? 'Unable to connect to server'
                                 : 'No available tasks right now',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
@@ -133,11 +184,31 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            taskProvider.error ?? 'Pull down to refresh and check for new tasks',
-                            style: const TextStyle(fontSize: 12, color: Colors.black45),
-                            textAlign: TextAlign.center,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(
+                              taskProvider.error ?? 'Pull down to refresh and check for new tasks',
+                              style: const TextStyle(fontSize: 12, color: Colors.black45),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
+                          if (taskProvider.error != null) ...[
+                            const SizedBox(height: 14),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF00875A),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
+                              label: const Text('Tap to Retry', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              onPressed: () {
+                                taskProvider.fetchAvailableTasks();
+                                taskProvider.fetchWalletData();
+                              },
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -154,7 +225,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => TaskDetailScreen(task: task),
+                              builder: (_) => TaskDetailPremiumScreen(task: task),
                             ),
                           );
                         },

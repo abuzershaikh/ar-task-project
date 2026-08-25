@@ -91,8 +91,13 @@ class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
                               context: context,
                               isScrollControlled: true,
                               builder: (context) => TaskReviewInspectorModal(
+                                submissionId: item.id,
                                 taskId: item.taskId,
                                 workerId: item.workerId,
+                                workerName: item.workerName,
+                                workerEmail: item.workerEmail,
+                                proofUrl: item.proofUrl,
+                                proofText: item.proofText,
                               ),
                             );
                           },
@@ -105,8 +110,8 @@ class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        'Submission #${item.id}',
-                                        style: const TextStyle(fontWeight: FontWeight.w600),
+                                        item.taskTitle.isNotEmpty ? item.taskTitle : 'Submission #${item.id}',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                       ),
                                     ),
                                     Container(
@@ -127,30 +132,41 @@ class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
                                 
                                 Row(
                                   children: [
-                                    const Icon(Icons.task, size: 14, color: AppColors.gray500),
+                                    const Icon(Icons.task_alt_rounded, size: 14, color: AppColors.gray500),
                                     const SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
                                         'Task ID: ${item.taskId}',
-                                        style: const TextStyle(fontSize: 13, color: AppColors.gray600),
+                                        style: const TextStyle(fontSize: 12, color: AppColors.gray600),
                                       ),
                                     ),
                                   ],
                                 ),
                                 
-                                const SizedBox(height: 8),
+                                const SizedBox(height: 6),
                                 
                                 Row(
                                   children: [
                                     CircleAvatar(
-                                      radius: 12,
+                                      radius: 10,
                                       backgroundColor: AppColors.primary.withOpacity(0.1),
-                                      child: const Text('W', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                      child: const Text('W', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text('Worker ID: ${item.workerId}', style: const TextStyle(fontSize: 12)),
-                                    ),
+                                    const SizedBox(width: 6),
+                                     Expanded(
+                                       child: Text(
+                                         item.workerName.isNotEmpty
+                                             ? (item.workerEmail.isNotEmpty ? '${item.workerName} (${item.workerEmail})' : item.workerName)
+                                             : (item.workerEmail.isNotEmpty ? item.workerEmail : 'Worker #${item.workerId.length > 6 ? item.workerId.substring(0, 6) : item.workerId}'),
+                                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                                         overflow: TextOverflow.ellipsis,
+                                       ),
+                                     ),
+                                    if (item.proofUrl.isNotEmpty) ...[
+                                      const Icon(Icons.attachment_rounded, size: 14, color: Color(0xFF059669)),
+                                      const SizedBox(width: 2),
+                                      const Text('Proof Image', style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
+                                    ],
                                   ],
                                 ),
                                 
@@ -166,6 +182,7 @@ class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
                                         style: ElevatedButton.styleFrom(
                                           padding: const EdgeInsets.symmetric(vertical: 8),
                                           backgroundColor: AppColors.success,
+                                          foregroundColor: Colors.white,
                                         ),
                                         child: const Text('Approve Submission', style: TextStyle(fontSize: 13)),
                                       ),
@@ -178,8 +195,13 @@ class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
                                           context: context,
                                           isScrollControlled: true,
                                           builder: (context) => TaskReviewInspectorModal(
+                                            submissionId: item.id,
                                             taskId: item.taskId,
                                             workerId: item.workerId,
+                                            workerName: item.workerName,
+                                            workerEmail: item.workerEmail,
+                                            proofUrl: item.proofUrl,
+                                            proofText: item.proofText,
                                           ),
                                         );
                                       },

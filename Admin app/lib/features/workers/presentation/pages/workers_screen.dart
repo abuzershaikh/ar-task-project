@@ -109,6 +109,7 @@ class _WorkersScreenState extends State<WorkersScreen> {
                         return _WorkerCard(
                           workerId: worker.id,
                           name: worker.name,
+                          email: worker.email,
                           rating: worker.rating,
                           qualityScore: 90, // Map appropriately if available
                           completionRate: 95, // Map appropriately if available
@@ -152,6 +153,7 @@ class _WorkersScreenState extends State<WorkersScreen> {
 class _WorkerCard extends StatelessWidget {
   final String workerId;
   final String name;
+  final String email;
   final double rating;
   final int qualityScore;
   final int completionRate;
@@ -163,6 +165,7 @@ class _WorkerCard extends StatelessWidget {
   const _WorkerCard({
     required this.workerId,
     required this.name,
+    required this.email,
     required this.rating,
     required this.qualityScore,
     required this.completionRate,
@@ -251,7 +254,7 @@ class _WorkerCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          workerId,
+                          email.isNotEmpty ? email : (workerId.length > 8 ? '#${workerId.substring(0, 8)}' : workerId),
                           style: const TextStyle(
                             color: AppColors.gray500,
                             fontSize: 12,

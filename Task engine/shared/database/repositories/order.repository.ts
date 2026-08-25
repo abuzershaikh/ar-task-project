@@ -22,9 +22,15 @@ export class OrderRepository {
         return this.repository.find({ where: { buyerId } });
     }
 
+    async findAll(): Promise<Order[]> {
+        return this.repository.find({
+            order: { createdAt: 'DESC' },
+        });
+    }
+
     async findActiveOrders(): Promise<Order[]> {
         return this.repository.find({
-            where: [{ status: 'ACTIVE' }, { status: 'active' }],
+            order: { createdAt: 'DESC' },
         });
     }
 

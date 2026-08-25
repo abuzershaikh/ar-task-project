@@ -107,14 +107,25 @@ class AddElementDrawer extends StatelessWidget {
                             final newId = 'el_${DateTime.now().millisecondsSinceEpoch}';
                             final key = '${type.name}_${newId.substring(newId.length - 4)}';
                             
+                            final bool isWorkerMedia = type == ElementType.youtube || type == ElementType.audio || type.category == ElementCategory.system;
+                            final String initialLabel = type == ElementType.youtube
+                                ? 'YouTube Tutorial Video'
+                                : (type == ElementType.audio ? 'Admin Voice Audio Guide' : type.label);
+                            final Map<String, dynamic> initialProps = type == ElementType.youtube
+                                ? {'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'videoUrl': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'}
+                                : (type == ElementType.audio
+                                    ? {'url': 'https://earnpost-media-worker.aawuazer.workers.dev/audio/sample_voice_guide.m4a', 'audioUrl': 'https://earnpost-media-worker.aawuazer.workers.dev/audio/sample_voice_guide.m4a'}
+                                    : {});
+
                             final element = TemplateElement(
                               id: newId,
                               key: key,
-                              label: type.label,
+                              label: initialLabel,
                               category: type.category,
                               type: type,
-                              visibility: type.category == ElementCategory.system ? VisibilityContext.workerOnly : VisibilityContext.both,
+                              visibility: isWorkerMedia ? VisibilityContext.workerOnly : VisibilityContext.both,
                               editability: type.category == ElementCategory.input ? EditabilityMode.buyerInput : EditabilityMode.adminFixed,
+                              properties: initialProps,
                             );
 
                             onElementSelected(element);

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,10 +9,12 @@ class ApiService {
   static String get baseUrl => AppConstants.apiBaseUrl;
 
   static Future<String?> getToken() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser != null) {
-      return await currentUser.getIdToken();
-    }
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        return await currentUser.getIdToken().timeout(const Duration(seconds: 4));
+      }
+    } catch (_) {}
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token');
   }
@@ -21,24 +24,55 @@ class ApiService {
     await prefs.setString('auth_token', token);
   }
 
+  static Future<void> saveUserData({required String email, required String uid, String? name}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_email', email);
+    await prefs.setString('user_id', uid);
+    if (name != null) await prefs.setString('user_name', name);
+  }
+
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
+    await prefs.remove('user_email');
+    await prefs.remove('user_id');
+    await prefs.remove('user_name');
   }
 
   static Future<Map<String, String>> _headers() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    final token = await getToken();
+    final prefs = await SharedPreferences.getInstance();
+    String? email = prefs.getString('user_email');
+    String? uid = prefs.getString('user_id');
+    String? token = prefs.getString('auth_token');
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        if (currentUser.email != null && currentUser.email!.isNotEmpty) {
+          email = currentUser.email;
+        }
+        uid = currentUser.uid;
+        try {
+          final idToken = await currentUser.getIdToken().timeout(const Duration(seconds: 4));
+          if (idToken != null && idToken.isNotEmpty) {
+            token = idToken;
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    // Fallback worker identifier for backend UserSyncService
+    email ??= 'worker_app_user@taskpost.com';
+    uid ??= 'worker_device_user';
+
     final headers = <String, String>{
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'x-user-email': email,
+      'x-user-id': uid,
+      'x-user-role': 'WORKER',
     };
-    if (currentUser?.email != null) {
-      headers['x-user-email'] = currentUser!.email!;
-    }
-    if (currentUser?.uid != null) {
-      headers['x-user-id'] = currentUser!.uid;
-    }
-    if (token != null) {
+    if (token != null && token.isNotEmpty) {
       headers['Authorization'] = 'Bearer $token';
     }
     return headers;
@@ -46,32 +80,47 @@ class ApiService {
 
   // --- Auth APIs ---
   static Future<Map<String, dynamic>> login(String email, String password) async {
+    final url = Uri.parse('$baseUrl/auth/login');
+    debugPrint('[API] Logging in: $url');
     final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
+      url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
-    );
+    ).timeout(const Duration(seconds: 15));
+    debugPrint('[API] Login response: ${response.statusCode}');
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic> && data['token'] != null) {
+        await saveToken(data['token'].toString());
+      }
+      return data;
     }
     throw Exception('Login failed: ${response.statusCode} - ${response.body}');
   }
 
   static Future<Map<String, dynamic>> googleLogin(String idToken) async {
+    final url = Uri.parse('$baseUrl/auth/google');
+    debugPrint('[API] Google login: $url');
     final response = await http.post(
-      Uri.parse('$baseUrl/auth/google'),
+      url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'idToken': idToken, 'role': 'WORKER'}),
-    );
+    ).timeout(const Duration(seconds: 15));
+    debugPrint('[API] Google login response: ${response.statusCode}');
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic> && data['token'] != null) {
+        await saveToken(data['token'].toString());
+      }
+      return data;
     }
     throw Exception('Google Login failed: ${response.statusCode} - ${response.body}');
   }
 
   static Future<Map<String, dynamic>> register(String email, String password, String name) async {
+    final url = Uri.parse('$baseUrl/auth/register');
     final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
+      url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'email': email,
@@ -79,9 +128,13 @@ class ApiService {
         'fullName': name,
         'role': 'WORKER',
       }),
-    );
+    ).timeout(const Duration(seconds: 15));
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic> && data['token'] != null) {
+        await saveToken(data['token'].toString());
+      }
+      return data;
     }
     throw Exception('Register failed: ${response.statusCode} - ${response.body}');
   }
@@ -89,57 +142,82 @@ class ApiService {
   // --- Worker Task APIs ---
   static Future<List<dynamic>> getAvailableTasks() async {
     final headers = await _headers();
-    final response = await http.get(
-      Uri.parse('$baseUrl/worker/tasks/available'),
-      headers: headers,
-    );
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data is List ? data : (data['tasks'] ?? []);
+    final url = Uri.parse('$baseUrl/worker/tasks/available');
+    debugPrint('[API] GET available tasks: $url headers: $headers');
+    try {
+      final response = await http.get(url, headers: headers).timeout(const Duration(seconds: 15));
+      debugPrint('[API] Available tasks status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) return data;
+        if (data is Map && data.containsKey('tasks') && data['tasks'] is List) {
+          return data['tasks'];
+        }
+        return [];
+      }
+      debugPrint('[API ERROR] ${response.statusCode} - ${response.body}');
+      throw Exception('Server returned ${response.statusCode}: ${response.body}');
+    } catch (e) {
+      debugPrint('[API EXCEPTION getAvailableTasks] $e');
+      rethrow;
     }
-    throw Exception('Failed to load available tasks (${response.statusCode})');
   }
 
   static Future<List<dynamic>> getMyTasks(String stage) async {
     final headers = await _headers();
     final normalizedStage = stage.replaceAll('_', '-');
-    final response = await http.get(
-      Uri.parse('$baseUrl/worker/tasks/$normalizedStage'),
-      headers: headers,
-    );
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data is List ? data : (data['tasks'] ?? []);
+    final url = Uri.parse('$baseUrl/worker/tasks/$normalizedStage');
+    debugPrint('[API] GET my tasks ($stage): $url');
+    try {
+      final response = await http.get(url, headers: headers).timeout(const Duration(seconds: 15));
+      debugPrint('[API] My tasks response status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) return data;
+        if (data is Map && data.containsKey('tasks') && data['tasks'] is List) {
+          return data['tasks'];
+        }
+        return [];
+      }
+      throw Exception('Failed to load tasks for stage "$stage" (${response.statusCode})');
+    } catch (e) {
+      debugPrint('[API EXCEPTION getMyTasks] $e');
+      rethrow;
     }
-    throw Exception('Failed to load tasks for stage "$stage" (${response.statusCode})');
   }
 
   static Future<Map<String, dynamic>> acceptTask(String taskId) async {
     final headers = await _headers();
-    final response = await http.post(
-      Uri.parse('$baseUrl/worker/tasks/$taskId/accept'),
-      headers: headers,
-    );
-    return jsonDecode(response.body);
+    final url = Uri.parse('$baseUrl/worker/tasks/$taskId/accept');
+    final response = await http.post(url, headers: headers).timeout(const Duration(seconds: 15));
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Accept task failed (${response.statusCode}): ${response.body}');
   }
 
   static Future<Map<String, dynamic>> startTask(String taskId) async {
     final headers = await _headers();
-    final response = await http.post(
-      Uri.parse('$baseUrl/worker/tasks/$taskId/start'),
-      headers: headers,
-    );
-    return jsonDecode(response.body);
+    final url = Uri.parse('$baseUrl/worker/tasks/$taskId/start');
+    final response = await http.post(url, headers: headers).timeout(const Duration(seconds: 15));
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Start task failed (${response.statusCode}): ${response.body}');
   }
 
   static Future<Map<String, dynamic>> submitTaskProof(String taskId, Map<String, dynamic> proofData) async {
     final headers = await _headers();
+    final url = Uri.parse('$baseUrl/worker/tasks/$taskId/submit');
     final response = await http.post(
-      Uri.parse('$baseUrl/worker/tasks/$taskId/submit'),
+      url,
       headers: headers,
       body: jsonEncode(proofData),
-    );
-    return jsonDecode(response.body);
+    ).timeout(const Duration(seconds: 15));
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('Submit proof failed (${response.statusCode}): ${response.body}');
   }
 
   static Future<Map<String, dynamic>> uploadFile(String filePath) async {
@@ -148,7 +226,7 @@ class ApiService {
     request.headers.addAll(headers);
     request.files.add(await http.MultipartFile.fromPath('file', filePath));
     
-    final streamedResponse = await request.send();
+    final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
     final response = await http.Response.fromStream(streamedResponse);
     return jsonDecode(response.body);
   }
@@ -160,19 +238,21 @@ class ApiService {
       Uri.parse('$baseUrl/worker/kyc'),
       headers: headers,
       body: jsonEncode(data),
-    );
+    ).timeout(const Duration(seconds: 15));
     return jsonDecode(response.body);
   }
 
   static Future<Map<String, dynamic>> getProfile() async {
-    final headers = await _headers();
-    final response = await http.get(
-      Uri.parse('$baseUrl/worker/profile'),
-      headers: headers,
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
+    try {
+      final headers = await _headers();
+      final response = await http.get(
+        Uri.parse('$baseUrl/worker/profile'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
     return {};
   }
 
@@ -185,7 +265,7 @@ class ApiService {
       Uri.parse('$baseUrl/worker/profile'),
       headers: headers,
       body: jsonEncode(nestedData),
-    );
+    ).timeout(const Duration(seconds: 15));
     return jsonDecode(response.body);
   }
 
@@ -196,46 +276,50 @@ class ApiService {
         Uri.parse('$baseUrl/worker/notifications/device-token'),
         headers: headers,
         body: jsonEncode({'deviceToken': token}),
-      );
-    } catch (_) {
-      // Ignore if not supported by backend yet
-    }
+      ).timeout(const Duration(seconds: 5));
+    } catch (_) {}
   }
 
   // --- Worker Dashboard & Earnings APIs ---
   static Future<Map<String, dynamic>> getDashboard() async {
-    final headers = await _headers();
-    final response = await http.get(
-      Uri.parse('$baseUrl/worker/dashboard'),
-      headers: headers,
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
+    try {
+      final headers = await _headers();
+      final response = await http.get(
+        Uri.parse('$baseUrl/worker/dashboard'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
     return {};
   }
 
   static Future<Map<String, dynamic>> getEarnings() async {
-    final headers = await _headers();
-    final response = await http.get(
-      Uri.parse('$baseUrl/worker/earnings'),
-      headers: headers,
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
+    try {
+      final headers = await _headers();
+      final response = await http.get(
+        Uri.parse('$baseUrl/worker/earnings'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
     return {};
   }
 
   static Future<Map<String, dynamic>> getWallet() async {
-    final headers = await _headers();
-    final response = await http.get(
-      Uri.parse('$baseUrl/worker/earnings/wallet'),
-      headers: headers,
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
+    try {
+      final headers = await _headers();
+      final response = await http.get(
+        Uri.parse('$baseUrl/worker/earnings/wallet'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
     return {};
   }
 
@@ -245,7 +329,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/worker/availability/ping'),
         headers: headers,
-      );
+      ).timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
@@ -262,7 +346,7 @@ class ApiService {
         'amount': amount,
         'paymentMethodId': paymentMethodId,
       }),
-    );
+    ).timeout(const Duration(seconds: 15));
     return jsonDecode(response.body);
   }
 
@@ -271,10 +355,11 @@ class ApiService {
     final response = await http.get(
       Uri.parse('$baseUrl/worker/score'),
       headers: headers,
-    );
+    ).timeout(const Duration(seconds: 10));
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
     throw Exception('Failed to load score (${response.statusCode})');
   }
 }
+

@@ -132,13 +132,20 @@ class _PayoutsQueueScreenState extends State<PayoutsQueueScreen> {
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          item.workerName.isNotEmpty ? item.workerName : 'Worker ${item.workerId}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
+                                         const SizedBox(height: 4),
+                                         Text(
+                                           item.workerName.isNotEmpty ? item.workerName : 'Worker Account',
+                                           style: const TextStyle(
+                                             fontWeight: FontWeight.w600,
+                                           ),
+                                         ),
+                                         Text(
+                                           item.workerEmail.isNotEmpty ? item.workerEmail : (item.workerId.length > 8 ? 'ID: #${item.workerId.substring(0, 8)}' : 'ID: ${item.workerId}'),
+                                           style: const TextStyle(
+                                             fontSize: 11,
+                                             color: AppColors.gray500,
+                                           ),
+                                         ),
                                       ],
                                     ),
                                   ),

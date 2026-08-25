@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../task_feed/screens/task_feed_screen.dart';
 import '../../my_tasks/my_tasks_screen.dart';
+import '../../rewards/screens/rewards_screen.dart';
 import '../../wallet/screens/wallet_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 
+import 'package:provider/provider.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/providers/task_provider.dart';
 
 /// Main Navigation Shell with 5 bottom tabs:
-/// Task Feed | My Tasks | Rewards (Center Gift) | Wallet | Profile
+/// Task Feed | My Tasks | Rewards (3D Gaming Strike Center) | Wallet | Profile
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({super.key});
 
@@ -33,7 +36,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
   final List<Widget> _screens = const [
     TaskFeedScreen(),
     MyTasksScreen(),
-    _RewardsPlaceholderScreen(),
+    RewardsScreen(),
     WalletScreen(),
     ProfileScreen(),
   ];
@@ -74,7 +77,13 @@ class _MainNavScreenState extends State<MainNavScreen> {
 
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _currentIndex = index),
+        onTap: () {
+          setState(() => _currentIndex = index);
+          if (index == 0) {
+            Provider.of<TaskProvider>(context, listen: false).fetchAvailableTasks();
+            Provider.of<TaskProvider>(context, listen: false).fetchWalletData();
+          }
+        },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -100,7 +109,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
 
   Widget _buildCenterRewardNavItem(int index) {
     final isSelected = _currentIndex == index;
-    const activeColor = Color(0xFF00875A);
+    const activeColor = Color(0xFFF59E0B);
     const inactiveColor = Color(0xFF94A3B8);
 
     return Expanded(
@@ -110,28 +119,30 @@ class _MainNavScreenState extends State<MainNavScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFF00875A),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF00875A).withOpacity(0.4),
+                    color: const Color(0xFFF59E0B).withOpacity(0.4),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.card_giftcard_rounded,
-                color: Colors.white,
-                size: 19,
+              child: const Center(
+                child: Text('🔥', style: TextStyle(fontSize: 18)),
               ),
             ),
             const SizedBox(height: 2),
             Text(
-              'Rewards',
+              'Strike',
               style: TextStyle(
                 color: isSelected ? activeColor : inactiveColor,
                 fontSize: 10,
@@ -145,48 +156,3 @@ class _MainNavScreenState extends State<MainNavScreen> {
   }
 }
 
-class _RewardsPlaceholderScreen extends StatelessWidget {
-  const _RewardsPlaceholderScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FA),
-      appBar: AppBar(
-        title: const Text('Rewards & Bonuses', style: TextStyle(color: Color(0xFF0F172A))),
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Color(0xFFE6F4EA),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.card_giftcard_rounded,
-                  size: 64, color: Color(0xFF00875A)),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Claim Daily Rewards & Bonuses!',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0F172A),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Complete 5 tasks daily to unlock bonus scratch cards.',
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

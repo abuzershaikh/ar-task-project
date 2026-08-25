@@ -68,6 +68,7 @@ import { AdminAuditLogController } from './controllers/admin/audit-log.controlle
 import { AdminServiceCatalogController } from './controllers/admin/service-catalog.controller';
 import { AdminAuditController } from './controllers/admin/audit.controller';
 import { AdminSystemSettingsController } from './controllers/admin/system-settings.controller';
+import { AdminWalletController } from './controllers/admin/wallet.controller';
 
 @Module({
     imports: [
@@ -147,6 +148,7 @@ import { AdminSystemSettingsController } from './controllers/admin/system-settin
         AdminServiceCatalogController,
         AdminAuditController,
         AdminSystemSettingsController,
+        AdminWalletController,
     ],
 })
 export class AppModule { }

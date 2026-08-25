@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/injection.dart';
-import '../../../../core/network/dio_client.dart';
+import '../../data/models/review_submission_model.dart';
 import '../../data/repositories/review_repository.dart';
 
 /// ReviewDetailPage - Worker Task Proof Verification & Approval Screen
-/// Is page par Buyer worker dwara submit kiya hua task proof (Screenshot / Text proof) review karke Approve ya Reject karta hai.
+/// Is page par Buyer worker dwara submit kiya hua real task proof (Screenshot / Text proof) review karke Approve ya Reject karta hai.
 class ReviewDetailPage extends StatefulWidget {
   final String submissionId;
+  final ReviewSubmissionModel? initialSubmission;
 
-  const ReviewDetailPage({super.key, required this.submissionId});
+  const ReviewDetailPage({
+    super.key,
+    required this.submissionId,
+    this.initialSubmission,
+  });
 
   @override
   State<ReviewDetailPage> createState() => _ReviewDetailPageState();
 }
 
 class _ReviewDetailPageState extends State<ReviewDetailPage> {
+  bool _isLoading = false;
   bool _isProcessing = false;
   String _status = 'PENDING';
+  ReviewSubmissionModel? _submission;
   
   late final ReviewRepository _reviewRepo;
 
@@ -25,6 +32,70 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
   void initState() {
     super.initState();
     _reviewRepo = getIt<ReviewRepository>();
+    if (widget.initialSubmission != null) {
+      _submission = widget.initialSubmission;
+      _status = widget.initialSubmission!.status;
+    }
+    _loadSubmissionDetail();
+  }
+
+  Future<void> _loadSubmissionDetail() async {
+    if (_submission == null) {
+      setState(() => _isLoading = true);
+    }
+    final result = await _reviewRepo.getReviewDetail(widget.submissionId);
+    if (!mounted) return;
+
+    result.fold(
+      (failure) {
+        if (_submission == null) {
+          setState(() => _isLoading = false);
+        }
+      },
+      (detail) {
+        setState(() {
+          _isLoading = false;
+          _submission = detail;
+          _status = detail.status;
+        });
+      },
+    );
+  }
+
+  void _showFullScreenImage(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Center(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (c, child, progress) {
+                    if (progress == null) return child;
+                    return const Center(child: CircularProgressIndicator(color: Colors.white));
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Worker task proof approval handler function
@@ -60,7 +131,6 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
       },
     );
   }
-
 
   /// Worker task proof rejection handler function (opens reason dialog)
   void _rejectTaskProof() {
@@ -141,13 +211,36 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
+    if (_isLoading && _submission == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0F172A),
+        appBar: AppBar(
+          title: Text('Proof Review #${widget.submissionId.length > 8 ? widget.submissionId.substring(0, 8) : widget.submissionId}'),
+          backgroundColor: const Color(0xFF0F172A),
+        ),
+        body: const Center(child: CircularProgressIndicator(color: Colors.cyanAccent)),
+      );
+    }
+
+    final taskTitle = _submission?.taskTitle.isNotEmpty == true ? _submission!.taskTitle : 'Task Submission';
+    final workerName = _submission?.workerName.isNotEmpty == true ? _submission!.workerName : 'Worker';
+    final workerId = _submission?.workerId ?? '';
+    final proofUrl = _submission?.proofScreenshotUrl ?? '';
+    final proofText = _submission?.proofText ?? '';
+    final submittedDateStr = _submission?.submittedAt != null
+        ? '${_submission!.submittedAt.day}/${_submission!.submittedAt.month}/${_submission!.submittedAt.year} ${_submission!.submittedAt.hour.toString().padLeft(2, '0')}:${_submission!.submittedAt.minute.toString().padLeft(2, '0')}'
+        : 'Recent';
+
+    final bool isApproved = _status == 'APPROVED';
+    final bool isRejected = _status == 'REJECTED';
+    final bool isPending = !isApproved && !isRejected;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: Text('Proof Review #${widget.submissionId}'),
+        title: Text('Proof Review #${widget.submissionId.length > 8 ? widget.submissionId.substring(0, 8) : widget.submissionId}'),
         backgroundColor: const Color(0xFF0F172A),
       ),
       body: ListView(
@@ -165,13 +258,18 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('YouTube Channel Subscribe Task', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Expanded(
+                        child: Text(
+                          taskTitle,
+                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _status == 'APPROVED'
+                          color: isApproved
                               ? Colors.green.withOpacity(0.2)
-                              : _status == 'REJECTED'
+                              : isRejected
                                   ? Colors.red.withOpacity(0.2)
                                   : Colors.amberAccent.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
@@ -179,9 +277,9 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
                         child: Text(
                           _status,
                           style: TextStyle(
-                            color: _status == 'APPROVED'
+                            color: isApproved
                                 ? Colors.greenAccent
-                                : _status == 'REJECTED'
+                                : isRejected
                                     ? Colors.redAccent
                                     : Colors.amberAccent,
                             fontWeight: FontWeight.bold,
@@ -191,14 +289,47 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  const Text('Worker ID: WRK_894021', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                  const Text('Submitted At: 12 Aug 2026, 04:30 PM', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                  const SizedBox(height: 10),
+                  Text('Worker: $workerName ${workerId.isNotEmpty ? '($workerId)' : ''}', style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
+                  const SizedBox(height: 4),
+                  Text('Submitted At: $submittedDateStr', style: const TextStyle(color: Colors.white54, fontSize: 11.5)),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 16),
+
+          // Worker Text Proof Card (if available)
+          if (proofText.isNotEmpty) ...[
+            Card(
+              color: const Color(0xFF1E293B),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Worker Submitted Text / Notes:', style: TextStyle(color: Colors.cyanAccent, fontSize: 14, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Text(
+                        proofText,
+                        style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // Worker Proof Screenshot Card
           Card(
@@ -209,24 +340,87 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Worker Submitted Screenshot Proof:', style: TextStyle(color: Colors.cyanAccent, fontSize: 14, fontWeight: FontWeight.bold)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Worker Submitted Screenshot Proof:', style: TextStyle(color: Colors.cyanAccent, fontSize: 14, fontWeight: FontWeight.bold)),
+                      if (proofUrl.isNotEmpty && proofUrl.startsWith('http'))
+                        TextButton.icon(
+                          onPressed: () => _showFullScreenImage(proofUrl),
+                          icon: const Icon(Icons.zoom_in_rounded, color: Colors.cyanAccent, size: 18),
+                          label: const Text('Zoom', style: TextStyle(color: Colors.cyanAccent, fontSize: 12)),
+                        ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
-                  Container(
-                    height: 220,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.image_rounded, size: 54, color: Colors.white38),
-                        SizedBox(height: 8),
-                        Text('Proof Screenshot Attachment Preview', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                        Text('YouTube Subscribed Badge Visible', style: TextStyle(color: Colors.greenAccent, fontSize: 11)),
-                      ],
+                  GestureDetector(
+                    onTap: () {
+                      if (proofUrl.isNotEmpty && proofUrl.startsWith('http')) {
+                        _showFullScreenImage(proofUrl);
+                      }
+                    },
+                    child: Container(
+                      height: 240,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: proofUrl.isNotEmpty && proofUrl.startsWith('http')
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(11),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Image.network(
+                                    proofUrl,
+                                    fit: BoxFit.contain,
+                                    loadingBuilder: (c, child, progress) {
+                                      if (progress == null) return child;
+                                      return const Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
+                                    },
+                                    errorBuilder: (c, err, stack) => const Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.broken_image_rounded, size: 48, color: Colors.white38),
+                                          SizedBox(height: 6),
+                                          Text('Failed to load image', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.7),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                                          SizedBox(width: 4),
+                                          Text('Tap to zoom', style: TextStyle(color: Colors.white, fontSize: 10)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.image_not_supported_rounded, size: 54, color: Colors.white38),
+                                SizedBox(height: 8),
+                                Text('No Screenshot Uploaded', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                              ],
+                            ),
                     ),
                   ),
                 ],
@@ -236,7 +430,7 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
           const SizedBox(height: 24),
 
           // Action Buttons: Approve / Reject
-          if (_status == 'PENDING') ...[
+          if (isPending) ...[
             Row(
               children: [
                 Expanded(
@@ -274,14 +468,14 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: _status == 'APPROVED' ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
+                color: isApproved ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _status == 'APPROVED' ? Colors.greenAccent : Colors.redAccent),
+                border: Border.all(color: isApproved ? Colors.greenAccent : Colors.redAccent),
               ),
               child: Text(
-                _status == 'APPROVED' ? '✓ Task proof has been approved and payout released.' : '✗ Task proof has been rejected.',
+                isApproved ? '✓ Task proof has been approved and payout released.' : '✗ Task proof has been rejected.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: _status == 'APPROVED' ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold),
+                style: TextStyle(color: isApproved ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold),
               ),
             ),
           ],

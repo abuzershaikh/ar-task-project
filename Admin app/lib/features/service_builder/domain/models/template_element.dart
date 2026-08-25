@@ -89,6 +89,20 @@ class TemplateElement {
       return 0;
     }
 
+    Map<String, dynamic> parsedProps = {};
+    if (json['properties'] != null) {
+      if (json['properties'] is Map) {
+        parsedProps = Map<String, dynamic>.from(json['properties'] as Map);
+      } else if (json['properties'] is String) {
+        try {
+          final decoded = json['properties'];
+          if (decoded != null && decoded is Map) {
+            parsedProps = Map<String, dynamic>.from(decoded);
+          }
+        } catch (_) {}
+      }
+    }
+
     return TemplateElement(
       id: json['id']?.toString() ?? '',
       key: json['key']?.toString() ?? '',
@@ -110,7 +124,7 @@ class TemplateElement {
         orElse: () => EditabilityMode.buyerInput,
       ),
       isRequired: json['isRequired'] as bool? ?? true,
-      properties: Map<String, dynamic>.from(json['properties'] ?? {}),
+      properties: parsedProps,
       actionType: json['actionType'] != null
           ? ActionType.values.firstWhere((e) => e.name == json['actionType']?.toString(), orElse: () => ActionType.openUrl)
           : null,
@@ -121,3 +135,4 @@ class TemplateElement {
     );
   }
 }
+

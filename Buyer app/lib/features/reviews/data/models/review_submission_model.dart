@@ -22,18 +22,44 @@ class ReviewSubmissionModel {
   });
 
   factory ReviewSubmissionModel.fromJson(Map<String, dynamic> json) {
+    String extractedProofUrl = (json['proofScreenshotUrl'] ?? json['proofUrl'] ?? '').toString();
+    
+    // Extract from proofs array if present
+    if (extractedProofUrl.isEmpty && json['proofs'] is List && (json['proofs'] as List).isNotEmpty) {
+      final first = (json['proofs'] as List).first;
+      if (first is Map) {
+        extractedProofUrl = (first['url'] ?? first['path'] ?? '').toString();
+      } else if (first is String) {
+        extractedProofUrl = first;
+      }
+    }
+
+    // Extract from data object if present
+    String extractedProofText = (json['proofText'] ?? json['notes'] ?? '').toString();
+    if (json['data'] is Map) {
+      final dataMap = json['data'] as Map;
+      if (extractedProofUrl.isEmpty) {
+        extractedProofUrl = (dataMap['proofUrl'] ?? dataMap['screenshotUrl'] ?? '').toString();
+      }
+      if (extractedProofText.isEmpty) {
+        extractedProofText = (dataMap['textProof'] ?? dataMap['proofText'] ?? dataMap['notes'] ?? '').toString();
+      }
+    }
+
     return ReviewSubmissionModel(
-      id: (json['id'] ?? json['_id'] ?? '').toString(),
+      id: (json['id'] ?? json['_id'] ?? json['submissionId'] ?? '').toString(),
       taskId: (json['taskId'] ?? '').toString(),
       taskTitle: (json['taskTitle'] ?? json['taskType'] ?? 'Task Submission').toString(),
       workerId: (json['workerId'] ?? '').toString(),
       workerName: (json['workerName'] ?? json['worker']?['name'] ?? 'Worker').toString(),
-      proofScreenshotUrl: (json['proofScreenshotUrl'] ?? json['proofUrl'] ?? '').toString(),
-      proofText: (json['proofText'] ?? json['notes'] ?? '').toString(),
-      status: (json['status'] ?? 'PENDING').toString(),
+      proofScreenshotUrl: extractedProofUrl,
+      proofText: extractedProofText,
+      status: (json['status'] ?? 'PENDING').toString().toUpperCase(),
       submittedAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+          : (json['submittedAt'] != null
+              ? DateTime.tryParse(json['submittedAt'].toString()) ?? DateTime.now()
+              : DateTime.now()),
     );
   }
 

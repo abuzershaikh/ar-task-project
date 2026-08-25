@@ -30,7 +30,7 @@ export class AdminDashboardController {
     @Get()
     @ApiOperation({ summary: 'Master Admin Dashboard single-call high-level metrics' })
     async getMasterDashboard() {
-        const workers = await this.workerRepo.findActiveWorkers();
+        const workers = await this.userRepo.findByRole(UserRole.WORKER);
         const buyers = await this.userRepo.findByRole(UserRole.BUYER);
         const pendingKyc = await this.kycRepo.findPending();
         const pendingReviews = await this.submissionRepo.findPendingReviews();
@@ -43,7 +43,7 @@ export class AdminDashboardController {
                     totalBuyers: buyers.length,
                     activeBuyers: buyers.filter((b) => b.status === 'ACTIVE').length,
                     totalWorkers: workers.length,
-                    activeWorkers: workers.filter((w) => w.status === 'active').length,
+                    activeWorkers: workers.filter((w) => w.status === 'ACTIVE').length,
                 },
                 queues: {
                     pendingKycCount: pendingKyc.length,
@@ -105,13 +105,14 @@ export class AdminDashboardController {
     @Get('workers')
     @ApiOperation({ summary: 'Admin Dashboard - Worker tier and status metrics' })
     async getWorkersDashboard() {
-        const workers = await this.workerRepo.findActiveWorkers();
+        const workers = await this.userRepo.findByRole(UserRole.WORKER);
+        const workerProfiles = await this.workerRepo.findActiveWorkers();
         return {
             success: true,
             workersSummary: {
                 totalWorkers: workers.length,
-                activeCount: workers.filter((w) => w.status === 'active').length,
-                kycVerifiedCount: workers.filter((w) => w.kycStatus === 'verified').length,
+                activeCount: workers.filter((w) => w.status === 'ACTIVE').length,
+                kycVerifiedCount: workerProfiles.filter((w) => w.kycStatus === 'approved' || w.kycStatus === 'verified').length,
             },
         };
     }

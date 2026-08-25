@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/routes/app_router.dart';
 import '../../../services/domain/models/service_model.dart';
 import '../../../services/domain/models/pricing_config.dart';
 import '../../../services/domain/models/template_element.dart';
@@ -34,7 +35,10 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   // Dynamic Pricing State
   PriceChipModel? _selectedChip;
   int _selectedQuantity = 100;
+  final TextEditingController _quantityController = TextEditingController(text: '100');
+  int _selectedWatchTime = 0;
   bool _isSubmitting = false;
+  double _walletBalance = 0.0;
 
   // Service card gradient colors
   static const _cardGradients = [
@@ -62,6 +66,25 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   void initState() {
     super.initState();
     _loadPublishedServices();
+    _loadWalletBalance();
+  }
+
+  Future<void> _loadWalletBalance() async {
+    try {
+      if (_serviceRepository.dioClient != null) {
+        final res = await _serviceRepository.dioClient!.get('/buyer/wallet/balance');
+        if (res.statusCode == 200 && res.data != null) {
+          final bal = res.data['balance'];
+          if (bal != null && bal['available'] != null) {
+            if (mounted) {
+              setState(() {
+                _walletBalance = (bal['available'] as num).toDouble();
+              });
+            }
+          }
+        }
+      }
+    } catch (_) {}
   }
 
   /// Backend repository se active services load karne ka Hinglish function
@@ -85,6 +108,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   void _selectService(ServiceModel service) {
     setState(() {
       _selectedService = service;
+      _selectedWatchTime = service.watchtimeSeconds;
       _formControllers.clear();
 
       // Pricing package chip initialization
@@ -92,12 +116,20 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       if (p.chips.isNotEmpty) {
         _selectedChip = p.chips.firstWhere((c) => c.isPopular, orElse: () => p.chips.first);
         _selectedQuantity = _selectedChip!.quantity;
+      } else if (p.modelType == PricingModelType.fixed) {
+        _selectedChip = null;
+        _selectedQuantity = service.workerLimit > 0 ? service.workerLimit : 1;
       } else {
         _selectedChip = null;
         _selectedQuantity = p.minQuantity;
       }
+      _quantityController.text = '$_selectedQuantity';
 
-      // Dynamic Form TextControllers initialize karo for buyer visible/editable elements
+      // Simplified Buyer Fields: Target URL + Custom Text
+      _formControllers['targetUrl'] = TextEditingController();
+      _formControllers['customText'] = TextEditingController();
+
+      // Dynamic Form TextControllers initialize karo for any extra buyer editable elements
       for (var element in service.elements) {
         if (element.visibility == VisibilityContext.both ||
             element.visibility == VisibilityContext.buyerOnly) {
@@ -131,8 +163,18 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     setState(() => _isSubmitting = true);
 
     try {
+      final targetUrl = _formControllers['targetUrl']?.text.trim() ?? '';
+      final customText = _formControllers['customText']?.text.trim() ?? '';
+
       // 1. Collect dynamic text field entries keyed by element.key/element.id
-      final Map<String, dynamic> requirementsMap = {};
+      final Map<String, dynamic> requirementsMap = {
+        'targetUrl': targetUrl,
+        'customText': customText,
+        'url': targetUrl,
+        'link': targetUrl,
+        'instructions': customText,
+        'watchTimeSeconds': _selectedWatchTime,
+      };
       for (var entry in _formControllers.entries) {
         requirementsMap[entry.key] = entry.value.text.trim();
       }
@@ -142,7 +184,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         'serviceId': _selectedService!.id,
         'serviceCode': _selectedService!.code,
         'title': '${_selectedService!.name} Campaign ($_selectedQuantity tasks)',
-        'description': requirementsMap['buyer_instructions'] ?? _selectedService!.description,
+        'description': customText.isNotEmpty ? customText : _selectedService!.description,
         'quantity': _selectedQuantity,
         'totalTasksRequired': _selectedQuantity,
         'requirements': requirementsMap,
@@ -157,8 +199,14 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         throw Exception('Failed to launch campaign order');
       }
 
-      if (!mounted) return;
-      setState(() => _isSubmitting = false);
+      final cost = _calculateTotalCost();
+      if (mounted) {
+        setState(() {
+          _walletBalance = (_walletBalance - cost).clamp(0.0, double.infinity);
+          _isSubmitting = false;
+        });
+      }
+      _loadWalletBalance();
 
       // Success dialog showing launched campaign summary
       showDialog(
@@ -187,36 +235,64 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(_selectedService!.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF334155))),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text('₹${_calculateTotalCost().toStringAsFixed(0)} paid', style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 14)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('₹${cost.toStringAsFixed(0)} Paid', style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 13)),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6F4EA),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text('Balance: ₹${_walletBalance.toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFF00875A), fontWeight: FontWeight.w700, fontSize: 13)),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
-              const Text('Your campaign is now live and workers will start completing tasks shortly.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4)),
+              const Text('Your campaign is now active and tasks are instantly live in the workers pool.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4)),
             ],
           ),
           actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  elevation: 0,
-                ),
-                child: const Text('Back to Services', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  setState(() => _selectedService = null);
-                },
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                setState(() {
+                  _selectedService = null;
+                  _selectedQuantity = 100;
+                  for (var controller in _formControllers.values) {
+                    controller.clear();
+                  }
+                });
+              },
+              child: const Text('Create Another', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
               ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                setState(() {
+                  _selectedService = null;
+                });
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  AppRouter.mainNavigation,
+                  (route) => false,
+                );
+              },
+              child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -224,10 +300,20 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
+      String errorMessage = e.toString();
+      try {
+        final dynamic err = e;
+        if (err.response?.data != null) {
+          final data = err.response.data;
+          errorMessage = data['error']?['message'] ?? data['message'] ?? errorMessage;
+        }
+      } catch (_) {}
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to launch campaign: $e'),
-          backgroundColor: Colors.red,
+          content: Text('⚠️ $errorMessage'),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -271,6 +357,28 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
 
   /// VIEW A: Published Services Catalog Selector Grid
   Widget _buildServicesCatalogView() {
+    // Derive dynamic categories from active published services
+    final Set<String> dynamicCategories = {'ALL'};
+    for (var s in _publishedServices) {
+      if (s.code.contains('_')) {
+        final prefix = s.code.split('_').first.toUpperCase();
+        if (prefix.isNotEmpty && prefix.length > 1) {
+          dynamicCategories.add(prefix);
+        }
+      } else if (s.code.isNotEmpty && s.code.length > 1) {
+        dynamicCategories.add(s.code.toUpperCase());
+      }
+    }
+
+    final filteredServices = _selectedCategoryFilter == 'ALL'
+        ? _publishedServices
+        : _publishedServices.where((s) {
+            final filter = _selectedCategoryFilter.toUpperCase();
+            return s.code.toUpperCase().contains(filter) ||
+                s.name.toUpperCase().contains(filter) ||
+                s.description.toUpperCase().contains(filter);
+          }).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
@@ -290,14 +398,14 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           // Header
           const Text('Choose a Service', style: TextStyle(color: Color(0xFF0F172A), fontSize: 20, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          const Text('Select a service to launch your marketing campaign.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w400, height: 1.4)),
+          const Text('Select an admin-configured service to launch your campaign.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, fontWeight: FontWeight.w400, height: 1.4)),
           const SizedBox(height: 16),
 
-          // Category Filter Chips
+          // Dynamic Category Filter Chips
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: ['ALL', 'YOUTUBE', 'INSTAGRAM', 'WEBSITE'].map((cat) {
+              children: dynamicCategories.map((cat) {
                 final isSelected = _selectedCategoryFilter == cat;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8.0),
@@ -331,9 +439,24 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           const SizedBox(height: 20),
 
           // Service Cards List
-          ..._publishedServices.asMap().entries.map((entry) {
-            final index = entry.key;
-            final service = entry.value;
+          if (filteredServices.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.search_off_rounded, size: 48, color: Color(0xFF94A3B8)),
+                    SizedBox(height: 12),
+                    Text('No services found in this category.', style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                  ],
+                ),
+              ),
+            )
+          else
+            ...filteredServices.asMap().entries.map((entry) {
+              final index = entry.key;
+              final service = entry.value;
             final p = service.pricing;
             final gradientColors = _cardGradients[index % _cardGradients.length];
 
@@ -497,32 +620,71 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Total Budget', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.w500)),
+                    Row(
+                      children: [
+                        const Text('Budget: ', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w500)),
+                        Text('₹${totalCost.toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.w800)),
+                      ],
+                    ),
                     const SizedBox(height: 2),
-                    Text('₹${totalCost.toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFF0F172A), fontSize: 22, fontWeight: FontWeight.w700)),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet_rounded,
+                          size: 13,
+                          color: _walletBalance >= totalCost ? const Color(0xFF00875A) : Colors.red.shade600,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Wallet: ₹${_walletBalance.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            color: _walletBalance >= totalCost ? const Color(0xFF00875A) : Colors.red.shade600,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
+                  backgroundColor: _walletBalance >= totalCost ? const Color(0xFF2563EB) : Colors.amber.shade800,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                onPressed: _isSubmitting ? null : _submitCampaign,
+                onPressed: _isSubmitting
+                    ? null
+                    : () {
+                        if (_walletBalance < totalCost) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Insufficient wallet balance (₹${_walletBalance.toStringAsFixed(0)}). Required: ₹${totalCost.toStringAsFixed(0)}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+                        _submitCampaign();
+                      },
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (_isSubmitting)
                       const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     else
-                      const Icon(Icons.rocket_launch_rounded, size: 16),
+                      Icon(_walletBalance >= totalCost ? Icons.rocket_launch_rounded : Icons.add_card_rounded, size: 16),
                     const SizedBox(width: 8),
                     Text(
-                      _isSubmitting ? 'Launching...' : 'Pay & Launch',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      _isSubmitting
+                          ? 'Launching...'
+                          : _walletBalance >= totalCost
+                              ? 'Pay ₹${totalCost.toStringAsFixed(0)} & Launch'
+                              : 'Top-Up Wallet',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                     ),
                   ],
                 ),
@@ -536,35 +698,109 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Service Summary Header
+            // Service Summary Header (Admin Dynamic Title & Description)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 3))],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _publishedServices.contains(service)
+                            ? _cardGradients[_publishedServices.indexOf(service) % _cardGradients.length]
+                            : _cardGradients[0],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(_getServiceIcon(service.code), color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                service.name,
+                                style: const TextStyle(color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.bolt_rounded, size: 12, color: Color(0xFF2563EB)),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '${service.minCompleteHours}-${service.maxCompleteHours}h Delivery',
+                                    style: const TextStyle(color: Color(0xFF2563EB), fontSize: 10, fontWeight: FontWeight.w700),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          service.description.isNotEmpty ? service.description : 'Follow the service requirements below to launch your campaign.',
+                          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, height: 1.4),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Delivery SLA & Organic Fulfillment Notice Card
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: const Color(0xFFF0FDF4),
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+                border: Border.all(color: const Color(0xFFBBF7D0)),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 42,
-                    height: 42,
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: _cardGradients[_publishedServices.indexOf(service) % _cardGradients.length],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(_getServiceIcon(service.code), color: Colors.white, size: 20),
+                    child: const Icon(Icons.schedule_rounded, color: Color(0xFF16A34A), size: 18),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(service.name, style: const TextStyle(color: Color(0xFF0F172A), fontSize: 14, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 2),
-                        Text(service.description, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 10, height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis),
+                        Text(
+                          'Expected Delivery: ${service.minCompleteHours} - ${service.maxCompleteHours} Hours',
+                          style: const TextStyle(color: Color(0xFF15803D), fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Fulfilled organically by real verified workers. Minimum delivery SLA is ${service.minCompleteHours} Hours — orders cannot be completed in minutes.',
+                          style: const TextStyle(color: Color(0xFF166534), fontSize: 11, height: 1.3),
+                        ),
                       ],
                     ),
                   ),
@@ -692,43 +928,110 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                           child: const Icon(Icons.tune_rounded, color: Color(0xFF16A34A), size: 16),
                         ),
                         const SizedBox(width: 8),
-                        const Expanded(child: Text('Target Quantity', style: TextStyle(color: Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600))),
+                        const Expanded(child: Text('Target Quantity (Subscribers/Count)', style: TextStyle(color: Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600))),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF0F9FF),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text('₹${pricing.unitPrice.toStringAsFixed(1)}/unit', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 10, fontWeight: FontWeight.w600)),
+                          child: Text('₹${pricing.unitPrice.toStringAsFixed(2)} / each', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 10, fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
+
+                    // Direct Numeric Input + Counter Controls
                     Row(
                       children: [
-                        _buildQuantityButton(Icons.remove_rounded, _selectedQuantity > pricing.minQuantity
-                            ? () => setState(() => _selectedQuantity -= 10)
-                            : null),
+                        _buildQuantityButton(
+                          Icons.remove_rounded,
+                          _selectedQuantity > pricing.minQuantity
+                              ? () {
+                                  setState(() {
+                                    final step = _selectedQuantity >= 100 ? 50 : 10;
+                                    _selectedQuantity = (_selectedQuantity - step).clamp(pricing.minQuantity, pricing.maxQuantity);
+                                    _quantityController.text = '$_selectedQuantity';
+                                  });
+                                }
+                              : null,
+                        ),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 12),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
                             ),
-                            child: Text(
-                              '$_selectedQuantity',
+                            child: TextFormField(
+                              controller: _quantityController,
+                              keyboardType: TextInputType.number,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w700, fontSize: 18),
+                              style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w800, fontSize: 18),
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                hintText: 'Enter quantity',
+                              ),
+                              onChanged: (val) {
+                                final parsed = int.tryParse(val.trim());
+                                if (parsed != null && parsed > 0) {
+                                  setState(() {
+                                    _selectedQuantity = parsed;
+                                  });
+                                }
+                              },
                             ),
                           ),
                         ),
-                        _buildQuantityButton(Icons.add_rounded, () => setState(() => _selectedQuantity += 10)),
+                        const SizedBox(width: 10),
+                        _buildQuantityButton(
+                          Icons.add_rounded,
+                          _selectedQuantity < pricing.maxQuantity
+                              ? () {
+                                  setState(() {
+                                    final step = _selectedQuantity >= 100 ? 50 : 10;
+                                    _selectedQuantity = (_selectedQuantity + step).clamp(pricing.minQuantity, pricing.maxQuantity);
+                                    _quantityController.text = '$_selectedQuantity';
+                                  });
+                                }
+                              : null,
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 12),
+
+                    // Quick Quantity Presets
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [50, 100, 250, 500, 1000, 2500, 5000].where((q) => q >= pricing.minQuantity && q <= pricing.maxQuantity).map((q) {
+                        final isSelected = (_selectedQuantity == q);
+                        return ActionChip(
+                          label: Text(
+                            '+$q',
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : const Color(0xFF334155),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
+                          ),
+                          backgroundColor: isSelected ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
+                          side: BorderSide(color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0)),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          onPressed: () {
+                            setState(() {
+                              _selectedQuantity = q;
+                              _quantityController.text = '$q';
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
                     const SizedBox(height: 10),
+
+                    // Min/Max bounds info
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -742,7 +1045,104 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               const SizedBox(height: 16),
             ],
 
-            // 2. Dynamic Template Form Elements Card
+            if (pricing.modelType == PricingModelType.fixed) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.flash_on_rounded, color: Color(0xFF16A34A), size: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(child: Text('Flat Rate Package', style: TextStyle(color: Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600))),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text('₹${pricing.buyerPrice.toStringAsFixed(0)} Flat', style: const TextStyle(color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.w700)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // 2. Watch Time Selection (If configured for service)
+            if (service.watchtimeSeconds > 0 || (service.watchTimeOptions != null && service.watchTimeOptions!.isNotEmpty)) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.timer_outlined, color: Color(0xFFD97706), size: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Watch Time Requirement', style: TextStyle(color: Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('Default (0s)'),
+                          selected: _selectedWatchTime == 0,
+                          onSelected: (val) => setState(() => _selectedWatchTime = 0),
+                        ),
+                        ChoiceChip(
+                          label: const Text('60 Seconds'),
+                          selected: _selectedWatchTime == 60,
+                          onSelected: (val) => setState(() => _selectedWatchTime = 60),
+                        ),
+                        ChoiceChip(
+                          label: const Text('120 Seconds'),
+                          selected: _selectedWatchTime == 120,
+                          onSelected: (val) => setState(() => _selectedWatchTime = 120),
+                        ),
+                        ChoiceChip(
+                          label: const Text('300 Seconds'),
+                          selected: _selectedWatchTime == 300,
+                          onSelected: (val) => setState(() => _selectedWatchTime = 300),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // 3. Simplified Campaign Input Fields Card (Target Link + Custom Text)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -758,27 +1158,131 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
+                          color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.edit_note_rounded, color: Color(0xFFF59E0B), size: 16),
+                        child: const Icon(Icons.link_rounded, color: Color(0xFF2563EB), size: 16),
                       ),
                       const SizedBox(width: 8),
                       const Text('Campaign Details', style: TextStyle(color: Color(0xFF0F172A), fontSize: 13, fontWeight: FontWeight.w600)),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  const Text('Fill in the required information for your campaign.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, height: 1.3)),
+                  const Text('Enter your target link and custom instructions for workers.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, height: 1.3)),
                   const SizedBox(height: 14),
                   Container(height: 1, color: const Color(0xFFF1F5F9)),
                   const SizedBox(height: 14),
 
-                  ...buyerElements.map((element) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14.0),
-                      child: _renderElementInputWidget(element),
-                    );
-                  }),
+                  // A. Target Link / URL Field
+                  Row(
+                    children: [
+                      Text(
+                        service.linkFieldLabel?.isNotEmpty == true ? service.linkFieldLabel! : 'Target Link / URL',
+                        style: const TextStyle(color: Color(0xFF334155), fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      const Text(' *', style: TextStyle(color: Colors.red, fontSize: 12)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _formControllers['targetUrl'],
+                    style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+                    onChanged: (_) => setState(() {}),
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Target Link / URL is required';
+                      }
+                      if (!val.trim().startsWith('http://') && !val.trim().startsWith('https://')) {
+                        return 'Please enter a valid URL starting with https://';
+                      }
+                      return null;
+                    },
+                    decoration: InputDecoration(
+                      hintText: service.linkFieldPlaceholder?.isNotEmpty == true ? service.linkFieldPlaceholder! : 'https://...',
+                      hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      prefixIcon: const Icon(Icons.link_rounded, color: Color(0xFF2563EB), size: 18),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                    ),
+                  ),
+
+                  // Live Video Preview if Target Link is a YouTube URL
+                  Builder(
+                    builder: (context) {
+                      final url = _formControllers['targetUrl']?.text ?? '';
+                      final ytId = _extractYouTubeId(url);
+                      if (ytId == null) return const SizedBox.shrink();
+
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 10.0),
+                        child: Container(
+                          width: double.infinity,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(12),
+                            image: DecorationImage(
+                              image: NetworkImage('https://img.youtube.com/vi/$ytId/hqdefault.jpg'),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(color: Colors.black.withOpacity(0.3)),
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(color: Color(0xFFEF4444), shape: BoxShape.circle),
+                                child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
+                              ),
+                              Positioned(
+                                top: 8,
+                                left: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(6)),
+                                  child: const Text('Target Video Preview', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // B. Custom Text / Instructions Field
+                  Row(
+                    children: [
+                      Text(
+                        service.textFieldLabel?.isNotEmpty == true ? service.textFieldLabel! : 'Custom Text / Instructions',
+                        style: const TextStyle(color: Color(0xFF334155), fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 4),
+                      const Text('(Optional)', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _formControllers['customText'],
+                    maxLines: 3,
+                    style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: service.textFieldPlaceholder?.isNotEmpty == true ? service.textFieldPlaceholder! : 'Enter custom comments to post, keywords, or specific instructions...',
+                      hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.all(12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1059,10 +1563,14 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   child: const Icon(Icons.ads_click_rounded, color: Color(0xFF16A34A), size: 14),
                 ),
                 const SizedBox(width: 8),
-                Text(element.label, style: const TextStyle(color: Color(0xFF334155), fontSize: 12, fontWeight: FontWeight.w600)),
+                Expanded(
+                  child: Text(element.label, style: const TextStyle(color: Color(0xFF334155), fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
                 if (element.isRequired) const Text(' *', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
               ],
             ),
+            const SizedBox(height: 2),
+            const Text('Worker will see an interactive clickable button leading to this URL.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10)),
             const SizedBox(height: 6),
             TextFormField(
               controller: controller,
@@ -1084,6 +1592,85 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF16A34A), width: 1.5)),
               ),
+            ),
+          ],
+        );
+
+      case ElementType.numberField:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(element.label, style: const TextStyle(color: Color(0xFF334155), fontSize: 12, fontWeight: FontWeight.w500)),
+                if (element.isRequired) const Text(' *', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: Color(0xFF0F172A), fontSize: 13),
+              validator: (val) {
+                if (element.isRequired && (val == null || val.trim().isEmpty)) {
+                  return 'This number field is required';
+                }
+                return null;
+              },
+              decoration: InputDecoration(
+                hintText: element.properties['placeholder'] as String? ?? 'Enter number (e.g. 100)',
+                hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                prefixIcon: const Icon(Icons.pin_rounded, color: Color(0xFF2563EB), size: 18),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5)),
+              ),
+            ),
+          ],
+        );
+
+      case ElementType.dropdownField:
+        final options = (element.properties['options'] is List)
+            ? (element.properties['options'] as List).map((e) => e.toString()).toList()
+            : ['Option 1', 'Option 2', 'Option 3'];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(element.label, style: const TextStyle(color: Color(0xFF334155), fontSize: 12, fontWeight: FontWeight.w500)),
+                if (element.isRequired) const Text(' *', style: TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              value: (controller?.text.isNotEmpty == true && options.contains(controller!.text))
+                  ? controller.text
+                  : null,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              ),
+              hint: Text(element.properties['placeholder'] as String? ?? 'Select an option', style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12)),
+              items: options.map((opt) => DropdownMenuItem(value: opt, child: Text(opt, style: const TextStyle(fontSize: 13)))).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  controller?.text = val;
+                }
+              },
+              validator: (val) {
+                if (element.isRequired && (val == null || val.isEmpty)) {
+                  return 'Please select an option';
+                }
+                return null;
+              },
             ),
           ],
         );

@@ -113,19 +113,29 @@ class PricingConfig {
     int minQuantity = 1,
     int maxQuantity = 10000,
     required double adminMarginPercent,
+    double? workerReward,
     String marginType = 'PERCENTAGE',
     List<PriceChipModel> chips = const [],
   }) {
-    final effectivePrice = modelType == PricingModelType.fixed
-        ? buyerPrice
-        : (chips.isNotEmpty ? chips.first.price : buyerPrice);
-        
     final double calculatedReward;
-    if (marginType.toUpperCase() == 'FIXED') {
-      calculatedReward = effectivePrice - adminMarginPercent;
+    if (workerReward != null && workerReward >= 0) {
+      calculatedReward = workerReward;
     } else {
-      final marginFraction = adminMarginPercent / 100.0;
-      calculatedReward = effectivePrice * (1.0 - marginFraction);
+      final double effectivePrice;
+      if (modelType == PricingModelType.countBased) {
+        effectivePrice = unitPrice > 0 ? unitPrice : buyerPrice;
+      } else if (modelType == PricingModelType.tieredChips && chips.isNotEmpty) {
+        effectivePrice = chips.first.price;
+      } else {
+        effectivePrice = buyerPrice;
+      }
+          
+      if (marginType.toUpperCase() == 'FIXED') {
+        calculatedReward = effectivePrice - adminMarginPercent;
+      } else {
+        final marginFraction = adminMarginPercent / 100.0;
+        calculatedReward = effectivePrice * (1.0 - marginFraction);
+      }
     }
 
     return PricingConfig(

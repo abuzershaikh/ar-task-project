@@ -3,10 +3,10 @@ import '../../../shared/widgets/platform_logo.dart';
 import '../../../shared/widgets/marquee_text.dart';
 
 /// Clean Task Feed Card:
+/// - Entire card is clickable (no separate Start button)
 /// - Logo box on left
 /// - Badge & Title (Single-line Marquee slow scrolling if long)
 /// - Reward text on right (e.g. ₹10 Per Task)
-/// - Centered "Start Task ➔" green button at bottom
 class TaskFeedCard extends StatelessWidget {
   final dynamic task;
   final VoidCallback onTap;
@@ -17,12 +17,127 @@ class TaskFeedCard extends StatelessWidget {
     required this.onTap,
   });
 
+  String _formatTitle(dynamic task) {
+    if (task == null) return 'Task';
+    if (task['title'] != null && task['title'].toString().trim().isNotEmpty) {
+      return task['title'].toString().trim();
+    }
+    if (task['serviceTitle'] != null && task['serviceTitle'].toString().trim().isNotEmpty) {
+      return task['serviceTitle'].toString().trim();
+    }
+    if (task['requirements'] != null && task['requirements'] is Map) {
+      final req = task['requirements'] as Map;
+      if (req['serviceName'] != null && req['serviceName'].toString().trim().isNotEmpty) {
+        return req['serviceName'].toString().trim();
+      }
+      if (req['title'] != null && req['title'].toString().trim().isNotEmpty) {
+        return req['title'].toString().trim();
+      }
+      if (req['serviceTitle'] != null && req['serviceTitle'].toString().trim().isNotEmpty) {
+        return req['serviceTitle'].toString().trim();
+      }
+      for (final entry in req.entries) {
+        final k = entry.key.toString().toLowerCase();
+        final v = entry.value.toString().trim();
+        if ((k.contains('heading') || k.contains('title') || k.contains('name')) && v.isNotEmpty) {
+          return v;
+        }
+      }
+      for (final entry in req.entries) {
+        final k = entry.key.toString().toLowerCase();
+        final v = entry.value.toString().trim();
+        if ((k.contains('textfield') || k.contains('text') || k.contains('desc') || k.contains('instruction') || k.contains('comment')) && v.isNotEmpty) {
+          return v;
+        }
+      }
+    }
+    if (task['metadata'] != null && task['metadata'] is Map) {
+      final meta = task['metadata'] as Map;
+      if (meta['serviceName'] != null && meta['serviceName'].toString().trim().isNotEmpty) {
+        return meta['serviceName'].toString().trim();
+      }
+      if (meta['title'] != null && meta['title'].toString().trim().isNotEmpty) {
+        return meta['title'].toString().trim();
+      }
+      if (meta['serviceTitle'] != null && meta['serviceTitle'].toString().trim().isNotEmpty) {
+        return meta['serviceTitle'].toString().trim();
+      }
+    }
+    final rawType = (task['taskType'] ?? task['type'] ?? 'Task').toString();
+    if (rawType.toUpperCase().startsWith('SERVICE_') || rawType.toUpperCase().startsWith('SRV_')) {
+      final plat = _getPlatform(task);
+      return '${plat[0].toUpperCase()}${plat.substring(1)} Promotion Task';
+    }
+    return rawType
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
+        .join(' ');
+  }
+
+  String _getPlatform(dynamic task) {
+    if (task == null) return 'youtube';
+    if (task['platform'] != null && task['platform'].toString().trim().isNotEmpty) {
+      return task['platform'].toString().toLowerCase().trim();
+    }
+    final type = (task['taskType'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toLowerCase();
+    String reqStr = '';
+    if (task['requirements'] is Map) {
+      reqStr = task['requirements'].toString().toLowerCase();
+    }
+    final metaStr = (task['metadata'] != null) ? task['metadata'].toString().toLowerCase() : '';
+    final titleStr = (task['title'] ?? task['serviceTitle'] ?? '').toString().toLowerCase();
+
+    final combined = '$type $reqStr $metaStr $titleStr';
+    if (combined.contains('youtube') || combined.contains('yt_')) return 'youtube';
+    if (combined.contains('instagram') || combined.contains('insta')) return 'instagram';
+    if (combined.contains('facebook') || combined.contains('fb')) return 'facebook';
+    if (combined.contains('google') || combined.contains('g_map') || combined.contains('maps') || combined.contains('playstore')) return 'google';
+    if (combined.contains('twitter') || combined.contains(' x ') || combined.contains('x.com')) return 'x';
+    if (combined.contains('telegram')) return 'telegram';
+    return 'youtube';
+  }
+
+  String _getReward(dynamic task) {
+    if (task == null) return '10';
+    final raw = task['rewardAmount'] ?? task['rewardPerTask'] ?? task['reward'] ?? task['workerReward'] ?? task['payout'];
+    if (raw is num) {
+      return raw.toStringAsFixed(raw == raw.roundToDouble() ? 0 : 2);
+    }
+    if (raw != null) {
+      final parsed = double.tryParse(raw.toString());
+      if (parsed != null) {
+        return parsed.toStringAsFixed(parsed == parsed.roundToDouble() ? 0 : 2);
+      }
+    }
+    if (task['metadata'] is Map && (task['metadata'] as Map)['rewardSnapshot'] is Map) {
+      final snap = (task['metadata'] as Map)['rewardSnapshot'] as Map;
+      final tot = snap['totalReward'] ?? snap['baseReward'];
+      if (tot != null) {
+        final parsed = double.tryParse(tot.toString());
+        if (parsed != null) {
+          return parsed.toStringAsFixed(parsed == parsed.roundToDouble() ? 0 : 2);
+        }
+      }
+    }
+    return '10';
+  }
+
+  String _getBadge(dynamic task) {
+    if (task == null) return 'TASK';
+    if (task['badge'] != null && task['badge'].toString().trim().isNotEmpty) {
+      return task['badge'].toString().trim();
+    }
+    final platform = _getPlatform(task);
+    return platform.toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final title = task['title'] ?? task['taskType'] ?? 'Review on Google';
-    final reward = task['rewardPerTask'] ?? task['reward'] ?? 10;
-    final platform = (task['platform'] ?? task['taskType'] ?? 'Google').toString();
-    final badge = (task['badge'] ?? 'Featured').toString();
+    final title = _formatTitle(task);
+    final reward = _getReward(task);
+    final platform = _getPlatform(task);
+    final badge = _getBadge(task);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -32,137 +147,103 @@ class TaskFeedCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14.0),
-        child: Column(
-          children: [
-            // Top Row: Logo | Badge + Title | Reward
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Left Logo Icon Box
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFEDF2F7)),
-                  ),
-                  child: Center(
-                    child: PlatformLogo(platform: platform, size: 32),
-                  ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.all(14.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Left Logo Icon Box
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFEDF2F7)),
                 ),
-                const SizedBox(width: 12),
-
-                // Middle Content: Badge & Title Marquee
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE6F4EA),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          badge,
-                          style: const TextStyle(
-                            color: Color(0xFF00875A),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-
-                      // Single-line Marquee Title
-                      MarqueeText(
-                        text: title,
-                        style: const TextStyle(
-                          color: Color(0xFF0F172A),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14.5,
-                        ),
-                      ),
-                    ],
-                  ),
+                child: Center(
+                  child: PlatformLogo(platform: platform, size: 32),
                 ),
-                const SizedBox(width: 8),
+              ),
+              const SizedBox(width: 12),
 
-                // Right Reward Box
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+              // Middle Content: Badge & Title Marquee
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      '₹$reward',
-                      style: const TextStyle(
-                        color: Color(0xFF00875A),
-                        fontWeight: FontWeight.w900,
-                        fontSize: 20,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE6F4EA),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        badge,
+                        style: const TextStyle(
+                          color: Color(0xFF00875A),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
                       ),
                     ),
-                    const Text(
-                      'Per Task',
-                      style: TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
+                    const SizedBox(height: 4),
+
+                    // Single-line Marquee Title
+                    MarqueeText(
+                      text: title,
+                      style: const TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.5,
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Centered "Start Task ➔" Button
-            Center(
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00875A),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF00875A).withOpacity(0.25),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Start Task',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                      SizedBox(width: 6),
-                      Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 15),
-                    ],
-                  ),
-                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+
+              // Right Reward Box + Arrow
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '₹$reward',
+                    style: const TextStyle(
+                      color: Color(0xFF00875A),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const Text(
+                    'Per Task',
+                    style: TextStyle(
+                      color: Color(0xFF94A3B8),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFFCBD5E1),
+                size: 22,
+              ),
+            ],
+          ),
         ),
       ),
     );

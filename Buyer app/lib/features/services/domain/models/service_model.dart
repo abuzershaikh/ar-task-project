@@ -14,7 +14,16 @@ class ServiceModel {
   final int maxAcceptHours;
   final int minCompleteHours;
   final int maxCompleteHours;
+  final int workerLimit;
   final int watchtimeSeconds;
+  final String? videoTutorialUrl;
+  final String? audioGuideUrl;
+  final String? adminInstructions;
+  final String? linkFieldLabel;
+  final String? linkFieldPlaceholder;
+  final String? textFieldLabel;
+  final String? textFieldPlaceholder;
+  final List<int>? watchTimeOptions;
   final DateTime updatedAt;
 
   const ServiceModel({
@@ -30,7 +39,16 @@ class ServiceModel {
     this.maxAcceptHours = 72,
     this.minCompleteHours = 1,
     this.maxCompleteHours = 168,
+    this.workerLimit = 1,
     this.watchtimeSeconds = 0,
+    this.videoTutorialUrl,
+    this.audioGuideUrl,
+    this.adminInstructions,
+    this.linkFieldLabel = 'Target Link / URL',
+    this.linkFieldPlaceholder = 'https://...',
+    this.textFieldLabel = 'Custom Text / Instructions',
+    this.textFieldPlaceholder = 'Enter comments, text, or instructions...',
+    this.watchTimeOptions,
     required this.updatedAt,
   });
 
@@ -47,7 +65,16 @@ class ServiceModel {
     int? maxAcceptHours,
     int? minCompleteHours,
     int? maxCompleteHours,
+    int? workerLimit,
     int? watchtimeSeconds,
+    String? videoTutorialUrl,
+    String? audioGuideUrl,
+    String? adminInstructions,
+    String? linkFieldLabel,
+    String? linkFieldPlaceholder,
+    String? textFieldLabel,
+    String? textFieldPlaceholder,
+    List<int>? watchTimeOptions,
     DateTime? updatedAt,
   }) {
     return ServiceModel(
@@ -63,7 +90,16 @@ class ServiceModel {
       maxAcceptHours: maxAcceptHours ?? this.maxAcceptHours,
       minCompleteHours: minCompleteHours ?? this.minCompleteHours,
       maxCompleteHours: maxCompleteHours ?? this.maxCompleteHours,
+      workerLimit: workerLimit ?? this.workerLimit,
       watchtimeSeconds: watchtimeSeconds ?? this.watchtimeSeconds,
+      videoTutorialUrl: videoTutorialUrl ?? this.videoTutorialUrl,
+      audioGuideUrl: audioGuideUrl ?? this.audioGuideUrl,
+      adminInstructions: adminInstructions ?? this.adminInstructions,
+      linkFieldLabel: linkFieldLabel ?? this.linkFieldLabel,
+      linkFieldPlaceholder: linkFieldPlaceholder ?? this.linkFieldPlaceholder,
+      textFieldLabel: textFieldLabel ?? this.textFieldLabel,
+      textFieldPlaceholder: textFieldPlaceholder ?? this.textFieldPlaceholder,
+      watchTimeOptions: watchTimeOptions ?? this.watchTimeOptions,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -82,7 +118,16 @@ class ServiceModel {
       'maxAcceptHours': maxAcceptHours,
       'minCompleteHours': minCompleteHours,
       'maxCompleteHours': maxCompleteHours,
+      'workerLimit': workerLimit,
       'watchtimeSeconds': watchtimeSeconds,
+      'videoTutorialUrl': videoTutorialUrl,
+      'audioGuideUrl': audioGuideUrl,
+      'adminInstructions': adminInstructions,
+      'linkFieldLabel': linkFieldLabel,
+      'linkFieldPlaceholder': linkFieldPlaceholder,
+      'textFieldLabel': textFieldLabel,
+      'textFieldPlaceholder': textFieldPlaceholder,
+      'watchTimeOptions': watchTimeOptions,
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
@@ -122,11 +167,22 @@ class ServiceModel {
           ? PricingConfig.fromJson(Map<String, dynamic>.from(json['pricing'] as Map))
           : PricingConfig.calculate(buyerPrice: buyerUnitPrice, adminMarginPercent: 20),
       elements: parsedElements,
-      minAcceptHours: parseI(json['minAcceptHours'], 1),
-      maxAcceptHours: parseI(json['maxAcceptHours'], 72),
-      minCompleteHours: parseI(json['minCompleteHours'], 1),
-      maxCompleteHours: parseI(json['maxCompleteHours'], 168),
-      watchtimeSeconds: parseI(json['watchtimeSeconds'], 0),
+      minAcceptHours: parseI(json['minAcceptHours'] ?? json['min_accept_hours'], 1),
+      maxAcceptHours: parseI(json['maxAcceptHours'] ?? json['max_accept_hours'], 24),
+      minCompleteHours: parseI(json['minCompleteHours'] ?? json['min_complete_hours'], 24),
+      maxCompleteHours: parseI(json['maxCompleteHours'] ?? json['max_complete_hours'], 72),
+      workerLimit: parseI(json['workerLimit'] ?? json['worker_limit'], 1),
+      watchtimeSeconds: parseI(json['watchtimeSeconds'] ?? json['watchtime_seconds'], 0),
+      videoTutorialUrl: json['videoTutorialUrl']?.toString() ?? json['video_tutorial_url']?.toString(),
+      audioGuideUrl: json['audioGuideUrl']?.toString() ?? json['audio_guide_url']?.toString(),
+      adminInstructions: json['adminInstructions']?.toString() ?? json['admin_instructions']?.toString(),
+      linkFieldLabel: json['linkFieldLabel']?.toString() ?? json['link_field_label']?.toString() ?? 'Target Link / URL',
+      linkFieldPlaceholder: json['linkFieldPlaceholder']?.toString() ?? json['link_field_placeholder']?.toString() ?? 'https://...',
+      textFieldLabel: json['textFieldLabel']?.toString() ?? json['text_field_label']?.toString() ?? 'Custom Text / Instructions',
+      textFieldPlaceholder: json['textFieldPlaceholder']?.toString() ?? json['text_field_placeholder']?.toString() ?? 'Enter comments, text, or instructions...',
+      watchTimeOptions: (json['watchTimeOptions'] ?? json['watch_time_options']) is List
+          ? (json['watchTimeOptions'] ?? json['watch_time_options'] as List).map((e) => parseI(e, 0)).toList()
+          : null,
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'].toString()) ?? DateTime.now()
           : DateTime.now(),

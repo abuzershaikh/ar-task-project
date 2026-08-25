@@ -81,12 +81,12 @@ class CampaignDetail extends Equatable {
     required this.pendingReviews,
   });
 
-  bool get isActive => status == 'active';
-  bool get isPaused => status == 'paused';
-  bool get isCompleted => status == 'completed';
-  bool get isCancelled => status == 'cancelled';
+  bool get isActive => status.toLowerCase() == 'active';
+  bool get isPaused => status.toLowerCase() == 'paused';
+  bool get isCompleted => status.toLowerCase() == 'completed' || (totalTasks > 0 && completedTasks >= totalTasks);
+  bool get isCancelled => status.toLowerCase() == 'cancelled' || status.toLowerCase() == 'canceled';
   bool get hasExtensions => extensions != null && extensions!.isNotEmpty;
-  bool get hasPendingReviews => pendingReviews > 0;
+  bool get hasPendingReviews => pendingReviews > 0 || underReviewTasks > 0;
 
   @override
   List<Object?> get props => [

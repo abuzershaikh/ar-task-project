@@ -15,7 +15,7 @@ class EarningsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -26,43 +26,61 @@ class EarningsTab extends StatelessWidget {
                 child: _buildFinanceCard(
                   'Total Earned',
                   '₹${worker.totalEarnings.toStringAsFixed(2)}',
-                  Icons.currency_rupee,
-                  AppColors.primary,
+                  Icons.currency_rupee_rounded,
+                  const Color(0xFF0284C7),
+                  const Color(0xFFE0F2FE),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: _buildFinanceCard(
                   'Completed Tasks',
                   '${worker.completedTasks}',
-                  Icons.task_alt,
-                  AppColors.success,
+                  Icons.task_alt_rounded,
+                  const Color(0xFF16A34A),
+                  const Color(0xFFDCFCE7),
                 ),
               ),
             ],
           ),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           
           // Transaction Stream
-          const Text(
-            'Earnings History',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.gray900,
-            ),
+          const Row(
+            children: [
+              Icon(Icons.history_edu_rounded, size: 18, color: Color(0xFF0284C7)),
+              SizedBox(width: 8),
+              Text(
+                'Earnings & Payout Stream',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           
           earnings.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(
-                    child: Text(
-                      'No earnings records found',
-                      style: TextStyle(color: AppColors.gray600, fontSize: 14),
-                    ),
+              ? Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+                  ),
+                  child: const Column(
+                    children: [
+                      Icon(Icons.account_balance_wallet_outlined, size: 40, color: Color(0xFF94A3B8)),
+                      SizedBox(height: 8),
+                      Text(
+                        'No payout records recorded yet',
+                        style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+                      ),
+                    ],
                   ),
                 )
               : ListView.builder(
@@ -72,33 +90,38 @@ class EarningsTab extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final item = earnings[index];
                     final amount = item['amount'] != null ? '₹${item['amount']}' : '₹0.00';
-                    final description = item['description'] ?? item['title'] ?? 'Task Payout';
+                    final description = item['description'] ?? item['title'] ?? 'Task Completion Reward';
 
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBAE6FD), width: 1),
+                      ),
                       child: ListTile(
                         leading: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.1),
+                            color: const Color(0xFFDCFCE7),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(
-                            Icons.add_circle,
-                            color: AppColors.success,
-                            size: 20,
+                            Icons.arrow_downward_rounded,
+                            color: Color(0xFF16A34A),
+                            size: 18,
                           ),
                         ),
                         title: Text(
                           description.toString(),
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF0F172A)),
                         ),
                         trailing: Text(
                           amount,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: AppColors.success,
+                            fontSize: 14,
+                            color: Color(0xFF16A34A),
                           ),
                         ),
                       ),
@@ -110,10 +133,22 @@ class EarningsTab extends StatelessWidget {
     );
   }
 
-  Widget _buildFinanceCard(String title, String amount, IconData icon, Color color) {
-    return Card(
+  Widget _buildFinanceCard(String title, String amount, IconData icon, Color color, Color bgColor) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080284C7),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -123,20 +158,28 @@ class EarningsTab extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.gray600,
+                    fontSize: 11,
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                Icon(icon, size: 18, color: color),
+                Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(icon, size: 14, color: color),
+                ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
               amount,
-              style: TextStyle(
-                fontSize: 18,
+              style: const TextStyle(
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: color,
+                color: Color(0xFF0F172A),
               ),
             ),
           ],

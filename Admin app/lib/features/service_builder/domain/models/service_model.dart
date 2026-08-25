@@ -20,7 +20,17 @@ class ServiceModel {
   final int maxAcceptHours;
   final int minCompleteHours;
   final int maxCompleteHours;
+  final int workerLimit; // Default workers to assign for flat rate
+  final List<int> workerLimitOptions; // Options for Buyer to choose worker divide (e.g. [5, 10, 20, 25, 50])
   final int watchtimeSeconds;
+  final String? videoTutorialUrl;
+  final String? audioGuideUrl;
+  final String? adminInstructions;
+  final String? linkFieldLabel;
+  final String? linkFieldPlaceholder;
+  final String? textFieldLabel;
+  final String? textFieldPlaceholder;
+  final List<int>? watchTimeOptions;
   final DateTime updatedAt;
 
   const ServiceModel({
@@ -42,7 +52,17 @@ class ServiceModel {
     this.maxAcceptHours = 72,
     this.minCompleteHours = 1,
     this.maxCompleteHours = 168,
+    this.workerLimit = 10,
+    this.workerLimitOptions = const [5, 10, 20, 25, 50],
     this.watchtimeSeconds = 0,
+    this.videoTutorialUrl,
+    this.audioGuideUrl,
+    this.adminInstructions,
+    this.linkFieldLabel = 'Target Link / URL',
+    this.linkFieldPlaceholder = 'https://...',
+    this.textFieldLabel = 'Custom Text / Instructions',
+    this.textFieldPlaceholder = 'Enter text, comments or keywords...',
+    this.watchTimeOptions,
     required this.updatedAt,
   });
 
@@ -65,7 +85,17 @@ class ServiceModel {
     int? maxAcceptHours,
     int? minCompleteHours,
     int? maxCompleteHours,
+    int? workerLimit,
+    List<int>? workerLimitOptions,
     int? watchtimeSeconds,
+    String? videoTutorialUrl,
+    String? audioGuideUrl,
+    String? adminInstructions,
+    String? linkFieldLabel,
+    String? linkFieldPlaceholder,
+    String? textFieldLabel,
+    String? textFieldPlaceholder,
+    List<int>? watchTimeOptions,
     DateTime? updatedAt,
   }) {
     return ServiceModel(
@@ -87,7 +117,17 @@ class ServiceModel {
       maxAcceptHours: maxAcceptHours ?? this.maxAcceptHours,
       minCompleteHours: minCompleteHours ?? this.minCompleteHours,
       maxCompleteHours: maxCompleteHours ?? this.maxCompleteHours,
+      workerLimit: workerLimit ?? this.workerLimit,
+      workerLimitOptions: workerLimitOptions ?? this.workerLimitOptions,
       watchtimeSeconds: watchtimeSeconds ?? this.watchtimeSeconds,
+      videoTutorialUrl: videoTutorialUrl ?? this.videoTutorialUrl,
+      audioGuideUrl: audioGuideUrl ?? this.audioGuideUrl,
+      adminInstructions: adminInstructions ?? this.adminInstructions,
+      linkFieldLabel: linkFieldLabel ?? this.linkFieldLabel,
+      linkFieldPlaceholder: linkFieldPlaceholder ?? this.linkFieldPlaceholder,
+      textFieldLabel: textFieldLabel ?? this.textFieldLabel,
+      textFieldPlaceholder: textFieldPlaceholder ?? this.textFieldPlaceholder,
+      watchTimeOptions: watchTimeOptions ?? this.watchTimeOptions,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -112,7 +152,17 @@ class ServiceModel {
       'maxAcceptHours': maxAcceptHours,
       'minCompleteHours': minCompleteHours,
       'maxCompleteHours': maxCompleteHours,
+      'workerLimit': workerLimit,
+      'workerLimitOptions': workerLimitOptions,
       'watchtimeSeconds': watchtimeSeconds,
+      'videoTutorialUrl': videoTutorialUrl,
+      'audioGuideUrl': audioGuideUrl,
+      'adminInstructions': adminInstructions,
+      'linkFieldLabel': linkFieldLabel,
+      'linkFieldPlaceholder': linkFieldPlaceholder,
+      'textFieldLabel': textFieldLabel,
+      'textFieldPlaceholder': textFieldPlaceholder,
+      'watchTimeOptions': watchTimeOptions,
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
@@ -123,6 +173,13 @@ class ServiceModel {
       if (v is num) return v.toInt();
       if (v is String) return int.tryParse(v) ?? def;
       return def;
+    }
+
+    final rawOptions = json['workerLimitOptions'] ?? json['worker_limit_options'];
+    List<int> parsedOptions = const [5, 10, 20, 25, 50];
+    if (rawOptions is List) {
+      parsedOptions = rawOptions.map((e) => parseI(e, 10)).where((e) => e > 0).toList();
+      if (parsedOptions.isEmpty) parsedOptions = const [5, 10, 20, 25, 50];
     }
 
     return ServiceModel(
@@ -146,7 +203,19 @@ class ServiceModel {
       maxAcceptHours: parseI(json['maxAcceptHours'], 72),
       minCompleteHours: parseI(json['minCompleteHours'], 1),
       maxCompleteHours: parseI(json['maxCompleteHours'], 168),
+      workerLimit: parseI(json['workerLimit'] ?? json['worker_limit'], 10),
+      workerLimitOptions: parsedOptions,
       watchtimeSeconds: parseI(json['watchtimeSeconds'], 0),
+      videoTutorialUrl: json['videoTutorialUrl']?.toString() ?? json['video_tutorial_url']?.toString(),
+      audioGuideUrl: json['audioGuideUrl']?.toString() ?? json['audio_guide_url']?.toString(),
+      adminInstructions: json['adminInstructions']?.toString() ?? json['admin_instructions']?.toString(),
+      linkFieldLabel: json['linkFieldLabel']?.toString() ?? json['link_field_label']?.toString() ?? 'Target Link / URL',
+      linkFieldPlaceholder: json['linkFieldPlaceholder']?.toString() ?? json['link_field_placeholder']?.toString() ?? 'https://...',
+      textFieldLabel: json['textFieldLabel']?.toString() ?? json['text_field_label']?.toString() ?? 'Custom Text / Instructions',
+      textFieldPlaceholder: json['textFieldPlaceholder']?.toString() ?? json['text_field_placeholder']?.toString() ?? 'Enter text, comments or keywords...',
+      watchTimeOptions: (json['watchTimeOptions'] ?? json['watch_time_options']) is List
+          ? (json['watchTimeOptions'] ?? json['watch_time_options'] as List).map((e) => parseI(e, 0)).toList()
+          : null,
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
