@@ -807,7 +807,92 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+
+            // Admin Guidelines & Instructions Card (Read-Only Text for Buyer)
+            if (service.adminInstructions != null && service.adminInstructions!.trim().isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.assignment_outlined, color: Color(0xFF2563EB), size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Service Guidelines',
+                            style: TextStyle(color: Color(0xFF0F172A), fontSize: 12, fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            service.adminInstructions!,
+                            style: const TextStyle(color: Color(0xFF475569), fontSize: 11, height: 1.4),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Admin Video Tutorial Reference Card (Read-Only)
+            if (service.videoTutorialUrl != null && service.videoTutorialUrl!.trim().isNotEmpty) ...[
+              Builder(builder: (ctx) {
+                final ytId = _extractYouTubeId(service.videoTutorialUrl!);
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.play_circle_fill_rounded, color: Color(0xFFEF4444), size: 18),
+                          const SizedBox(width: 8),
+                          const Text('Worker Tutorial Video Attached', style: TextStyle(color: Color(0xFF0F172A), fontSize: 12, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      if (ytId != null) ...[
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            'https://img.youtube.com/vi/$ytId/hqdefault.jpg',
+                            height: 120,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }),
+              const SizedBox(height: 12),
+            ],
+            const SizedBox(height: 4),
 
             // 1. Dynamic Pricing Package Selector Card
             if (pricing.modelType == PricingModelType.tieredChips && pricing.chips.isNotEmpty) ...[
