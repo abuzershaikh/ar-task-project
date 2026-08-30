@@ -78,7 +78,7 @@ export class ReviewDecisionService {
             // Notify Worker
             await this.notificationEngine.sendNotification(
                 submission.workerId,
-                'Your task submission has been approved! Reward credited to your wallet.',
+                'Your task submission has been approved successfully!',
                 'TASK_APPROVED',
                 { taskId: submission.taskId, submissionId },
             );

@@ -123,7 +123,7 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Task proof approved! Worker reward released.'),
+              content: Text('Task approved successfully!'),
               backgroundColor: AppColors.success,
             ),
           );
@@ -458,7 +458,7 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
                     icon: _isProcessing
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
                         : const Icon(Icons.check_circle_rounded, size: 20),
-                    label: Text(_isProcessing ? 'Processing...' : 'Approve & Release', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    label: Text(_isProcessing ? 'Processing...' : 'Approve Task', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     onPressed: _isProcessing ? null : _approveTaskProof,
                   ),
                 ),
@@ -473,7 +473,7 @@ class _ReviewDetailPageState extends State<ReviewDetailPage> {
                 border: Border.all(color: isApproved ? Colors.greenAccent : Colors.redAccent),
               ),
               child: Text(
-                isApproved ? '✓ Task proof has been approved and payout released.' : '✗ Task proof has been rejected.',
+                isApproved ? '✓ Task approved successfully.' : '✗ Task proof has been rejected.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: isApproved ? Colors.greenAccent : Colors.redAccent, fontWeight: FontWeight.bold),
               ),

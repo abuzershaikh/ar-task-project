@@ -991,7 +991,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
       case 'COMPLETED':
         cardColor = const Color(0xFF059669);
         icon = Icons.check_circle_rounded;
-        text = 'Task Approved — Reward Credited to Wallet!';
+        text = 'Task Approved Successfully!';
         break;
       case 'REJECTED':
         cardColor = const Color(0xFFDC2626);

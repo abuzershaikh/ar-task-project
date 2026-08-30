@@ -398,7 +398,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Approve Task'),
-        content: const Text('This will mark the task submission as approved and credit earnings to worker.'),
+        content: const Text('Are you sure you want to approve this task submission?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           ElevatedButton(
@@ -411,7 +411,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Submission approved successfully! Reward credited to worker.'), backgroundColor: Colors.green),
+                    const SnackBar(content: Text('Task approved successfully!'), backgroundColor: Colors.green),
                   );
                 }
               } catch (e) {
@@ -423,7 +423,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
-            child: const Text('Approve'),
+            child: const Text('Confirm Approve'),
           ),
         ],
       ),

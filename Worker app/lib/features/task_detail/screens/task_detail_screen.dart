@@ -1013,7 +1013,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       case 'COMPLETED':
         cardColor = Colors.green.shade700;
         icon = Icons.check_circle_rounded;
-        text = 'Task Approved — Reward Credited!';
+        text = 'Task Approved Successfully!';
         break;
       case 'REJECTED':
         cardColor = Colors.red.shade700;
