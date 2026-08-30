@@ -4,6 +4,7 @@ import { EarningRepository } from '../../shared/database/repositories/earning.re
 import { Earning as EarningType } from '../types/earning';
 import { Earning } from '../../shared/database/entities/earning.entity';
 import { Worker } from '../../shared/database/entities/worker.entity';
+import { User } from '../../shared/database/entities/user.entity';
 import { Task } from '../../shared/database/entities/task.entity';
 import { Order } from '../../shared/database/entities/order.entity';
 import { Wallet } from '../../shared/database/entities/wallet.entity';
@@ -43,17 +44,30 @@ export class EarningPostingService {
             });
             const created = await manager.save(earning);
 
-            // Update worker stats
-            let worker = await manager.findOne(Worker, { 
-                where: { userId: earningData.workerId }, 
-                lock: { mode: 'pessimistic_write' } 
-            });
-            if (!worker) {
-                worker = await manager.findOne(Worker, { 
-                    where: { id: earningData.workerId }, 
-                    lock: { mode: 'pessimistic_write' } 
+            // Resolve User
+            let user: User | null = null;
+            try {
+                user = await manager.findOne(User, {
+                    where: { id: earningData.workerId },
                 });
+            } catch (_) {
+                user = null;
             }
+
+            // Update worker stats
+            const workerLookup: any[] = [
+                { userId: earningData.workerId },
+                { id: earningData.workerId },
+            ];
+            if (user) {
+                workerLookup.push({ userId: user.id });
+                workerLookup.push({ id: user.id });
+            }
+
+            let worker = await manager.findOne(Worker, { 
+                where: workerLookup, 
+                lock: { mode: 'pessimistic_write' } 
+            }).catch(() => null);
 
             if (worker) {
                 worker.totalEarnings = Number(worker.totalEarnings || 0) + Number(earningData.amount || 0);
@@ -63,31 +77,31 @@ export class EarningPostingService {
                 worker.successRate = totalAttempts > 0 ? (worker.totalTasksCompleted / totalAttempts) * 100 : 100;
                 
                 await manager.save(worker);
-                
-                // Credit to wallet — Use worker.userId (references User entity), NOT worker.id
-                const walletUserId = worker.userId || worker.id;
-                let wallet = await manager.findOne(Wallet, { 
-                    where: { userId: walletUserId }, 
-                    lock: { mode: 'pessimistic_write' } 
-                });
-                
-                if (!wallet) {
-                    wallet = manager.create(Wallet, { userId: walletUserId, availableBalance: 0, reservedBalance: 0 });
-                }
-                
-                wallet.availableBalance = Number(wallet.availableBalance || 0) + Number(earningData.amount);
-                await manager.save(wallet);
-                
-                const tx = manager.create(WalletTransaction, {
-                    walletId: wallet.id,
-                    type: 'CREDIT',
-                    amount: earningData.amount,
-                    description: `Earning for task ${earningData.taskId}`,
-                    status: 'COMPLETED',
-                    referenceId: created.id,
-                });
-                await manager.save(tx);
             }
+
+            // Credit to wallet — Use worker.userId (references User entity) or user.id
+            const walletUserId = user?.id || worker?.userId || worker?.id || earningData.workerId;
+            let wallet = await manager.findOne(Wallet, { 
+                where: [{ userId: walletUserId }, { userId: earningData.workerId }], 
+                lock: { mode: 'pessimistic_write' } 
+            }).catch(() => null);
+            
+            if (!wallet) {
+                wallet = manager.create(Wallet, { userId: walletUserId, availableBalance: 0, reservedBalance: 0 });
+            }
+            
+            wallet.availableBalance = Number(wallet.availableBalance || 0) + Number(earningData.amount);
+            await manager.save(wallet);
+            
+            const tx = manager.create(WalletTransaction, {
+                walletId: wallet.id,
+                type: 'CREDIT',
+                amount: earningData.amount,
+                description: `Earning for task ${earningData.taskId}`,
+                status: 'COMPLETED',
+                referenceId: created.id,
+            });
+            await manager.save(tx);
 
             // Update order completed tasks count
             const task = await manager.findOne(Task, { where: { id: earningData.taskId } });

@@ -13,12 +13,12 @@ export interface StateTransition {
 export class TaskStateMachine {
     private static readonly transitions: Map<TaskStatus, TaskStatus[]> = new Map([
         [TaskStatus.DRAFT, [TaskStatus.ACTIVE, TaskStatus.CANCELLED]],
-        [TaskStatus.ACTIVE, [TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
-        [TaskStatus.ASSIGNED, [TaskStatus.ACCEPTED, TaskStatus.ACTIVE, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
-        [TaskStatus.ACCEPTED, [TaskStatus.IN_PROGRESS, TaskStatus.ACTIVE, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
+        [TaskStatus.ACTIVE, [TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.IN_PROGRESS, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
+        [TaskStatus.ASSIGNED, [TaskStatus.ACCEPTED, TaskStatus.IN_PROGRESS, TaskStatus.ACTIVE, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
+        [TaskStatus.ACCEPTED, [TaskStatus.IN_PROGRESS, TaskStatus.SUBMITTED, TaskStatus.ACTIVE, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
         [TaskStatus.IN_PROGRESS, [TaskStatus.SUBMITTED, TaskStatus.ACTIVE, TaskStatus.EXPIRED, TaskStatus.CANCELLED]],
-        [TaskStatus.SUBMITTED, [TaskStatus.UNDER_REVIEW, TaskStatus.IN_PROGRESS, TaskStatus.ACTIVE, TaskStatus.EXPIRED]],
-        [TaskStatus.UNDER_REVIEW, [TaskStatus.APPROVED, TaskStatus.REJECTED, TaskStatus.IN_PROGRESS]],
+        [TaskStatus.SUBMITTED, [TaskStatus.APPROVED, TaskStatus.REJECTED, TaskStatus.UNDER_REVIEW, TaskStatus.IN_PROGRESS, TaskStatus.ACTIVE, TaskStatus.EXPIRED]],
+        [TaskStatus.UNDER_REVIEW, [TaskStatus.APPROVED, TaskStatus.REJECTED, TaskStatus.IN_PROGRESS, TaskStatus.ACTIVE]],
         [TaskStatus.REJECTED, [TaskStatus.SUBMITTED, TaskStatus.IN_PROGRESS, TaskStatus.ACTIVE, TaskStatus.ASSIGNED, TaskStatus.FAILED, TaskStatus.APPROVED]], // SUBMITTED & IN_PROGRESS added for worker resubmission & Admin Override
         [TaskStatus.APPROVED, []],
         [TaskStatus.CANCELLED, []],
