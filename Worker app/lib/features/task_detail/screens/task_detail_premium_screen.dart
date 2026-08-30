@@ -1253,7 +1253,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
             ],
           ),
           child: const Center(
-            child: Text('🏆', style: TextStyle(fontSize: 24)),
+            child: Icon(Icons.workspace_premium_rounded, size: 26, color: Color(0xFFD97706)),
           ),
         ),
         const SizedBox(height: 5),

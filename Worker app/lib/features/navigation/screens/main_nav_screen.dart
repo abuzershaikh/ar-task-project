@@ -140,7 +140,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
 
   Widget _buildCenterRewardNavItem(int index) {
     final isSelected = _currentIndex == index;
-    const activeColor = Color(0xFFF59E0B);
+    const activeColor = Color(0xFF00875A);
     const inactiveColor = Color(0xFF94A3B8);
 
     return Expanded(
@@ -154,26 +154,26 @@ class _MainNavScreenState extends State<MainNavScreen> {
               height: 36,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+                  colors: [Color(0xFF00875A), Color(0xFF059669)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFF59E0B).withOpacity(0.4),
-                    blurRadius: 8,
+                    color: const Color(0xFF00875A).withOpacity(0.3),
+                    blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: const Center(
-                child: Text('🔥', style: TextStyle(fontSize: 18)),
+                child: Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 20),
               ),
             ),
             const SizedBox(height: 2),
             Text(
-              'Strike',
+              'Rewards',
               style: TextStyle(
                 color: isSelected ? activeColor : inactiveColor,
                 fontSize: 10,

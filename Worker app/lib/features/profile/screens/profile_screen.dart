@@ -106,10 +106,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 context: context,
                 title: 'Daily Streak & Rewards',
                 subtitle: '7-Day active task streak & bonus multipliers',
-                icon: Icons.local_fire_department_rounded,
-                iconBgColor: const Color(0xFFFFFBEB),
-                iconColor: const Color(0xFFF59E0B),
-                badgeText: '7 Days 🔥',
+                icon: Icons.card_giftcard_rounded,
+                iconBgColor: const Color(0xFFE6F4EA),
+                iconColor: const Color(0xFF00875A),
+                badgeText: 'Active',
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -128,7 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 icon: Icons.star_rounded,
                 iconBgColor: const Color(0xFFFEF3C7),
                 iconColor: const Color(0xFFD97706),
-                badgeText: '${rating.toStringAsFixed(1)} ⭐',
+                badgeText: '${rating.toStringAsFixed(1)} ★',
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
