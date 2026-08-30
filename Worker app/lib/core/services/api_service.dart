@@ -17,6 +17,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/app_constants.dart';
@@ -259,9 +260,28 @@ class ApiService {
     final headers = await _headers();
     final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/files/upload'));
     request.headers.addAll(headers);
-    request.files.add(await http.MultipartFile.fromPath('file', filePath));
-    debugPrint('[API] Uploading proof file: $filePath to $baseUrl/files/upload');
-    
+
+    final ext = filePath.split('.').last.toLowerCase();
+    MediaType contentType;
+    if (ext == 'png') {
+      contentType = MediaType('image', 'png');
+    } else if (ext == 'webp') {
+      contentType = MediaType('image', 'webp');
+    } else if (ext == 'gif') {
+      contentType = MediaType('image', 'gif');
+    } else if (ext == 'pdf') {
+      contentType = MediaType('application', 'pdf');
+    } else {
+      contentType = MediaType('image', 'jpeg');
+    }
+
+    request.files.add(await http.MultipartFile.fromPath(
+      'file',
+      filePath,
+      contentType: contentType,
+    ));
+    debugPrint('[API] Uploading proof file: $filePath (MIME: $contentType) to $baseUrl/files/upload');
+
     final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
     final response = await http.Response.fromStream(streamedResponse);
     debugPrint('[API] Upload file response: ${response.statusCode} -> ${response.body}');

@@ -39,27 +39,22 @@ export class FileController {
             fileSize: 25 * 1024 * 1024, // 25 MB limit
         },
         fileFilter: (req, file, cb) => {
-            const allowedMimeTypes = [
-                'image/jpeg',
-                'image/png',
-                'image/webp',
-                'image/gif',
-                'application/pdf',
-                'audio/m4a',
-                'audio/mp4',
-                'audio/mpeg',
-                'audio/mp3',
-                'audio/wav',
-                'audio/aac',
-                'audio/ogg',
-                'audio/x-m4a',
-                'video/mp4',
-                'video/webm',
-            ];
-            if (allowedMimeTypes.includes(file.mimetype) || file.mimetype.startsWith('audio/') || file.mimetype.startsWith('image/')) {
+            const rawMime = (file.mimetype || '').toLowerCase();
+            const originalName = (file.originalname || '').toLowerCase();
+            const ext = originalName.split('.').pop() || '';
+            const validExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf', 'm4a', 'mp4', 'mp3', 'wav', 'aac', 'ogg', 'webm'];
+
+            if (
+                rawMime.startsWith('image/') ||
+                rawMime.startsWith('audio/') ||
+                rawMime.startsWith('video/') ||
+                rawMime === 'application/pdf' ||
+                validExtensions.includes(ext) ||
+                rawMime === 'application/octet-stream'
+            ) {
                 cb(null, true);
             } else {
-                cb(new BadRequestException('Invalid file type. Supported types: images, audio (m4a, mp3, wav), video, and PDF.'), false);
+                cb(new BadRequestException(`Invalid file type (${rawMime}). Supported types: images, audio, video, and PDF.`), false);
             }
         },
     }))
@@ -71,16 +66,30 @@ export class FileController {
             throw new BadRequestException('No file provided or file type rejected');
         }
 
+        const originalName = (file.originalname || 'upload.png').toLowerCase();
+        const ext = originalName.split('.').pop() || 'png';
+        let mimeType = file.mimetype;
+        if (!mimeType || mimeType === 'application/octet-stream') {
+            if (['jpg', 'jpeg'].includes(ext)) mimeType = 'image/jpeg';
+            else if (ext === 'png') mimeType = 'image/png';
+            else if (ext === 'webp') mimeType = 'image/webp';
+            else if (ext === 'gif') mimeType = 'image/gif';
+            else if (ext === 'pdf') mimeType = 'application/pdf';
+            else if (['mp3', 'm4a', 'wav', 'aac', 'ogg'].includes(ext)) mimeType = `audio/${ext === 'mp3' ? 'mpeg' : ext}`;
+            else if (['mp4', 'webm'].includes(ext)) mimeType = `video/${ext}`;
+            else mimeType = 'image/jpeg';
+        }
+
         let type = FileType.DOCUMENT;
-        if (file.mimetype.startsWith('image/')) type = FileType.IMAGE;
-        else if (file.mimetype.startsWith('video/')) type = FileType.VIDEO;
-        else if (file.mimetype.startsWith('audio/')) type = FileType.AUDIO;
+        if (mimeType.startsWith('image/')) type = FileType.IMAGE;
+        else if (mimeType.startsWith('video/')) type = FileType.VIDEO;
+        else if (mimeType.startsWith('audio/')) type = FileType.AUDIO;
 
         const savedFile = await this.fileStorage.saveFile({
             uploadedBy: user ? user.id : 'system',
             type,
-            originalName: file.originalname,
-            mimeType: file.mimetype,
+            originalName: file.originalname || `proof_${Date.now()}.${ext}`,
+            mimeType,
             buffer: file.buffer,
         });
 
