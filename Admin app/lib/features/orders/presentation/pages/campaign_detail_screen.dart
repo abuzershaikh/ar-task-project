@@ -141,6 +141,13 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
 
           final order = state is OrderDetailLoaded ? state.order : null;
           final tasks = state is OrderDetailLoaded ? state.tasks : [];
+          final submissions = state is OrderDetailLoaded ? state.submissions : [];
+          final activeSubmissions = submissions.isNotEmpty
+              ? submissions
+              : tasks.where((t) {
+                  final s = (t['status'] ?? '').toString().toLowerCase();
+                  return s == 'submitted' || s == 'under_review' || s == 'review' || s == 'approved' || s == 'completed';
+                }).toList();
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(14),
@@ -258,7 +265,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            Expanded(child: _buildStatCard('Submissions', '${tasks.length}', const Color(0xFFD97706))),
+                            Expanded(child: _buildStatCard('Submissions', '${activeSubmissions.length}', const Color(0xFFD97706))),
                             const SizedBox(width: 10),
                             Expanded(child: _buildStatCard('Total Budget', '₹${(order?.totalBudget ?? 0.0).toStringAsFixed(0)}', const Color(0xFF0284C7))),
                           ],
@@ -283,7 +290,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                if (tasks.isEmpty)
+                if (activeSubmissions.isEmpty)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(28),
@@ -308,9 +315,9 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: tasks.length,
+                    itemCount: activeSubmissions.length,
                     itemBuilder: (context, index) {
-                      final item = tasks[index];
+                      final item = activeSubmissions[index];
                       final taskId = item['id']?.toString() ?? 'T-${1000 + index}';
                       final workerId = item['workerId']?.toString() ?? item['assignedTo']?.toString() ?? 'W-${100 + index}';
                       final workerName = item['workerName'] ?? item['worker']?['name'] ?? (item['workerEmail'] != null ? item['workerEmail'].toString().split('@').first : (workerId.length > 6 ? 'Worker #${workerId.substring(0, 6)}' : workerId));
