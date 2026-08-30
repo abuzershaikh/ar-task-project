@@ -21,8 +21,23 @@ class TaskProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      _availableTasks = await ApiService.getAvailableTasks();
-      debugPrint('[TaskProvider] Fetched ${_availableTasks.length} available tasks successfully');
+      final rawTasks = await ApiService.getAvailableTasks();
+      // Ensure distinct campaigns: Each worker can only see 1 task per campaign/order
+      final seenCampaigns = <String>{};
+      final uniqueTasks = <dynamic>[];
+      for (final t in rawTasks) {
+        if (t is Map) {
+          final cId = (t['campaignId'] ?? t['orderId'] ?? t['id']).toString();
+          if (!seenCampaigns.contains(cId)) {
+            seenCampaigns.add(cId);
+            uniqueTasks.add(t);
+          }
+        } else {
+          uniqueTasks.add(t);
+        }
+      }
+      _availableTasks = uniqueTasks;
+      debugPrint('[TaskProvider] Fetched ${_availableTasks.length} distinct available tasks successfully');
     } catch (e) {
       debugPrint('[TaskProvider ERROR] fetchAvailableTasks failed: $e');
       _error = e.toString().replaceAll('Exception: ', '');

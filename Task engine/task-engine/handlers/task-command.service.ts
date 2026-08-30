@@ -113,13 +113,28 @@ export class TaskCommandService {
 
             if (task.status === TaskStatus.ACTIVE && !task.assignedTo) {
                 const campaignId = task.campaignId || task.orderId;
+                
+                // 1. Verify worker has not already participated in this campaign
                 const existingParticipation = await manager.findOne(CampaignWorkerParticipation, { where: { campaignId, workerId: command.workerId } });
-                if (!existingParticipation) {
-                    try {
-                        const participation = manager.create(CampaignWorkerParticipation, { campaignId, workerId: command.workerId, status: ParticipationStatus.ASSIGNED });
-                        await manager.save(participation);
-                    } catch (_) {}
+                if (existingParticipation) {
+                    throw new BadRequestException('You have already participated in this campaign. Each worker can only complete 1 task per campaign.');
                 }
+
+                // 2. Verify worker does not already hold another task for this campaign/order
+                const existingTask = await manager.findOne(Task, {
+                    where: [
+                        { campaignId, assignedTo: command.workerId },
+                        { orderId: task.orderId, assignedTo: command.workerId },
+                    ],
+                });
+                if (existingTask && existingTask.id !== task.id) {
+                    throw new BadRequestException('You have already taken a task for this order. Each worker can only complete 1 task per campaign.');
+                }
+
+                try {
+                    const participation = manager.create(CampaignWorkerParticipation, { campaignId, workerId: command.workerId, status: ParticipationStatus.ASSIGNED });
+                    await manager.save(participation);
+                } catch (_) {}
 
                 const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
                 const assignment = manager.create(TaskAssignment, {
