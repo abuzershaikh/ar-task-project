@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../auth/screens/login_screen.dart';
@@ -8,14 +10,11 @@ import 'quality_score_screen.dart';
 import 'kyc_bank_details_screen.dart';
 import '../../../core/providers/profile_provider.dart';
 
-/// Main Profile Overview Screen:
-/// - Styled with Warm Gold Amber (#F59E0B / #D97706) & Slate theme tokens.
-/// - Avatar Header with Pencil Edit Badge (clicking opens EditProfileScreen).
-/// - 3 Feature Cards:
-///   1) "Edit Profile Data" (Name, Mobile, Age, Email autofetched)
-///   2) "Daily Streak" (7 Days Streak 🔥)
-///   3) "Quality Score & Rating" (98.5% / 4.9★ ⭐)
-/// - Logout Account button.
+/// Professional Worker Profile Screen
+/// - Poppins font throughout for clean, modern typography
+/// - No emojis — uses Material icons only
+/// - Subtle gradients, refined spacing, professional color palette
+/// - Premium card-based layout with polished micro details
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -31,6 +30,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context.read<ProfileProvider>().fetchProfile();
     });
   }
+
+  // ── Color Palette ───────────────────────────────────────────────────────────
+  static const _bgColor = Color(0xFFF1F5F9);
+  static const _cardColor = Colors.white;
+  static const _headingColor = Color(0xFF0F172A);
+  static const _mutedColor = Color(0xFF94A3B8);
+  static const _borderColor = Color(0xFFE2E8F0);
+  static const _accentBlue = Color(0xFF2563EB);
+  static const _accentAmber = Color(0xFFD97706);
+  static const _accentGreen = Color(0xFF059669);
+  static const _accentSky = Color(0xFF0284C7);
+  static const _dangerColor = Color(0xFFDC2626);
 
   @override
   Widget build(BuildContext context) {
@@ -55,42 +66,232 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     final int completedTasks = int.tryParse(profile['totalTasksCompleted']?.toString() ?? '0') ?? 0;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
+      child: Scaffold(
+        backgroundColor: _bgColor,
+        body: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── 1. Top Header Bar ────────────────────────────────────────
-              _buildHeaderBar(),
-              const SizedBox(height: 20),
+              // ── 1. Top Header with gradient background ────────────────────
+              _buildTopHeader(context, name, email, mobile, age, kycStatus),
 
-              // ── 2. Avatar Profile Header Card ────────────────────────────
-              _buildProfileHeaderCard(context, name, email, mobile, age, kycStatus, qualityScore, rating, completedTasks),
-              const SizedBox(height: 24),
-
-              // ── 3. Profile Navigation Cards Section ───────────────────────
-              const Text(
-                'Account & Performance',
-                style: TextStyle(
-                  color: Color(0xFF0F172A),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              // ── 2. Performance Stats Row ──────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Transform.translate(
+                  offset: const Offset(0, -28),
+                  child: _buildStatsRow(qualityScore, rating, completedTasks),
                 ),
               ),
-              const SizedBox(height: 12),
 
-              // Card 1: Edit Profile Data (Pencil)
-              _buildNavigationCard(
-                context: context,
-                title: 'Edit Profile Data',
-                subtitle: 'Update name, mobile number & age (Email autofetched)',
-                icon: Icons.edit_rounded,
-                iconBgColor: const Color(0xFFFEF3C7),
-                iconColor: const Color(0xFFD97706),
-                badgeText: 'Editable',
+              // ── 3. Menu Items ─────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Account',
+                      style: GoogleFonts.poppins(
+                        color: _headingColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildMenuCard(
+                      icon: Icons.person_outline_rounded,
+                      iconBg: const Color(0xFFEFF6FF),
+                      iconColor: _accentBlue,
+                      title: 'Edit Profile',
+                      subtitle: 'Name, mobile, age & email',
+                      trailing: _buildChip('Editable', _accentBlue),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => EditProfileScreen(
+                              initialName: name,
+                              initialEmail: email,
+                              initialMobile: mobile,
+                              initialAge: age,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _buildMenuCard(
+                      icon: Icons.account_balance_outlined,
+                      iconBg: const Color(0xFFF0F9FF),
+                      iconColor: _accentSky,
+                      title: 'Payout & Bank Details',
+                      subtitle: 'Bank account, UPI or PayPal',
+                      trailing: _buildChip(
+                        kycStatus == 'VERIFIED' ? 'Verified' : 'Update',
+                        kycStatus == 'VERIFIED' ? _accentGreen : _accentAmber,
+                      ),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const KycBankDetailsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    Text(
+                      'Performance',
+                      style: GoogleFonts.poppins(
+                        color: _headingColor,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildMenuCard(
+                      icon: Icons.local_fire_department_outlined,
+                      iconBg: const Color(0xFFFFF7ED),
+                      iconColor: _accentAmber,
+                      title: 'Daily Streak & Rewards',
+                      subtitle: '7-day task streak & bonus multipliers',
+                      trailing: _buildChip('Active', _accentGreen),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const DayStreakScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _buildMenuCard(
+                      icon: Icons.insights_rounded,
+                      iconBg: const Color(0xFFFEF3C7),
+                      iconColor: _accentAmber,
+                      title: 'Quality Score & Rating',
+                      subtitle: '${qualityScore.toStringAsFixed(1)}% score  |  ${rating.toStringAsFixed(1)} rating',
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.star_rounded, size: 14, color: _accentAmber),
+                          const SizedBox(width: 2),
+                          Text(
+                            rating.toStringAsFixed(1),
+                            style: GoogleFonts.poppins(
+                              color: _accentAmber,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const QualityScoreScreen(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // ── 4. Logout Button ────────────────────────────────────
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: _dangerColor.withValues(alpha: 0.3)),
+                          foregroundColor: _dangerColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          await authProvider.logout();
+                          if (context.mounted) {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            );
+                          }
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.logout_rounded, size: 18, color: _dangerColor),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Logout Account',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                color: _dangerColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Top Header Section ──────────────────────────────────────────────────────
+  Widget _buildTopHeader(
+    BuildContext context,
+    String name,
+    String email,
+    String mobile,
+    String age,
+    String kycStatus,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 12, 20, 48),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0F172A),
+            Color(0xFF1E3A5F),
+            Color(0xFF1E3A8A),
+          ],
+        ),
+      ),
+      child: Column(
+        children: [
+          // Title bar
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'My Profile',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              GestureDetector(
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -103,357 +304,125 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   );
                 },
-              ),
-              const SizedBox(height: 12),
-
-              // Card 2: Daily Streak
-              _buildNavigationCard(
-                context: context,
-                title: 'Daily Streak & Rewards',
-                subtitle: '7-Day active task streak & bonus multipliers',
-                icon: Icons.card_giftcard_rounded,
-                iconBgColor: const Color(0xFFE6F4EA),
-                iconColor: const Color(0xFF00875A),
-                badgeText: 'Active',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const DayStreakScreen(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // Card 3: Quality Score & Rating
-              _buildNavigationCard(
-                context: context,
-                title: 'Quality Score & Rating',
-                subtitle: '${qualityScore.toStringAsFixed(1)}% quality score • ${rating.toStringAsFixed(1)}★ rating & badges',
-                icon: Icons.star_rounded,
-                iconBgColor: const Color(0xFFFEF3C7),
-                iconColor: const Color(0xFFD97706),
-                badgeText: '${rating.toStringAsFixed(1)} ★',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const QualityScoreScreen(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // Card 4: Payout & Bank Details
-              _buildNavigationCard(
-                context: context,
-                title: 'Payout & Bank Details',
-                subtitle: 'Add bank, UPI or PayPal for withdrawals',
-                icon: Icons.account_balance_rounded,
-                iconBgColor: const Color(0xFFE0F2FE),
-                iconColor: const Color(0xFF0284C7),
-                badgeText: kycStatus == 'VERIFIED' ? 'Verified' : 'Update',
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const KycBankDetailsScreen(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 28),
-
-              // ── 4. Logout Account Button ─────────────────────────────────
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFDC2626)),
-                    foregroundColor: const Color(0xFFDC2626),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.15),
                     ),
                   ),
-                  onPressed: () async {
-                    await authProvider.logout();
-                    if (context.mounted) {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.logout_rounded, size: 20),
-                  label: const Text(
-                    'Logout Account',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 36),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Header Bar ─────────────────────────────────────────────────────────────
-  Widget _buildHeaderBar() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        RichText(
-          text: const TextSpan(
-            children: [
-              TextSpan(
-                text: 'Worker ',
-                style: TextStyle(
-                  color: Color(0xFF0F172A),
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              TextSpan(
-                text: 'Profile',
-                style: TextStyle(
-                  color: Color(0xFFD97706),
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: const Icon(
-            Icons.settings_outlined,
-            color: Color(0xFF334155),
-            size: 20,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ── Profile Header Card with Pencil Edit Icon Button ───────────────────────
-  Widget _buildProfileHeaderCard(
-    BuildContext context,
-    String name,
-    String email,
-    String mobile,
-    String age,
-    String kycStatus,
-    double qualityScore,
-    double rating,
-    int completedTasks,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Avatar + Pencil Edit Icon Badge
-          Stack(
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFFFEF3C7),
-                  border: Border.all(color: const Color(0xFFF59E0B), width: 2),
-                ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  size: 46,
-                  color: Color(0xFFD97706),
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => EditProfileScreen(
-                          initialName: name,
-                          initialEmail: email,
-                          initialMobile: mobile,
-                          initialAge: age,
-                        ),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD97706),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFD97706).withOpacity(0.4),
-                          blurRadius: 6,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.edit_rounded,
-                      size: 14,
-                      color: Colors.white,
-                    ),
+                  child: const Icon(
+                    Icons.edit_outlined,
+                    color: Colors.white70,
+                    size: 17,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 24),
+
+          // Avatar
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.12),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.25),
+                width: 2,
+              ),
+            ),
+            child: Icon(
+              Icons.person_rounded,
+              size: 38,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+          const SizedBox(height: 14),
 
           // Name
           Text(
             name,
-            style: const TextStyle(
-              color: Color(0xFF0F172A),
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 19,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
             ),
           ),
           const SizedBox(height: 4),
 
-          // Email & Mobile Subtitle
+          // Contact info
           Text(
-            '$mobile  •  $email',
-            style: const TextStyle(
-              color: Color(0xFF64748B),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+            '$email  |  $mobile',
+            style: GoogleFonts.poppins(
+              color: Colors.white.withValues(alpha: 0.55),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w400,
             ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
 
-          // KYC Verified Pill
-          if (kycStatus == 'VERIFIED')
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE6F4EA),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFA7F3D0)),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.verified_rounded, size: 14, color: Color(0xFF00875A)),
-                  SizedBox(width: 5),
-                  Text(
-                    'KYC Verified Worker',
-                    style: TextStyle(
-                      color: Color(0xFF00875A),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else if (kycStatus == 'SUBMITTED')
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFBEB),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFFDE68A)),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.pending_actions_rounded, size: 14, color: Color(0xFFD97706)),
-                  SizedBox(width: 5),
-                  Text(
-                    'KYC Pending Approval',
-                    style: TextStyle(
-                      color: Color(0xFFD97706),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFFECACA)),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.error_outline_rounded, size: 14, color: Color(0xFFDC2626)),
-                  SizedBox(width: 5),
-                  Text(
-                    'KYC Unverified',
-                    style: TextStyle(
-                      color: Color(0xFFDC2626),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // KYC status badge
+          _buildKycBadge(kycStatus),
+        ],
+      ),
+    );
+  }
 
-          const SizedBox(height: 16),
+  // ── KYC Status Badge ────────────────────────────────────────────────────────
+  Widget _buildKycBadge(String kycStatus) {
+    IconData icon;
+    String label;
+    Color bgColor;
+    Color textColor;
+    Color borderColor;
 
-          // ── Quick Performance Stats Bar ──
-          InkWell(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const QualityScoreScreen()),
-              );
-            },
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildHeaderStatItem('Quality Score', '${qualityScore.toStringAsFixed(1)}%', Icons.verified_rounded, const Color(0xFF00875A)),
-                  Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
-                  _buildHeaderStatItem('Worker Rating', '${rating.toStringAsFixed(1)} ★', Icons.star_rounded, const Color(0xFFD97706)),
-                  Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
-                  _buildHeaderStatItem('Tasks Done', '$completedTasks', Icons.task_alt_rounded, const Color(0xFF0284C7)),
-                ],
-              ),
+    if (kycStatus == 'VERIFIED') {
+      icon = Icons.verified_rounded;
+      label = 'KYC Verified';
+      bgColor = _accentGreen.withValues(alpha: 0.15);
+      textColor = const Color(0xFF34D399);
+      borderColor = _accentGreen.withValues(alpha: 0.25);
+    } else if (kycStatus == 'SUBMITTED') {
+      icon = Icons.schedule_rounded;
+      label = 'KYC Pending';
+      bgColor = _accentAmber.withValues(alpha: 0.15);
+      textColor = const Color(0xFFFBBF24);
+      borderColor = _accentAmber.withValues(alpha: 0.25);
+    } else {
+      icon = Icons.info_outline_rounded;
+      label = 'KYC Incomplete';
+      bgColor = _dangerColor.withValues(alpha: 0.12);
+      textColor = const Color(0xFFFCA5A5);
+      borderColor = _dangerColor.withValues(alpha: 0.2);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: textColor),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              color: textColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 11,
+              letterSpacing: 0.2,
             ),
           ),
         ],
@@ -461,20 +430,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildHeaderStatItem(String label, String value, IconData icon, Color color) {
+  // ── Stats Row (3 Stat Cards overlapping header) ─────────────────────────────
+  Widget _buildStatsRow(double qualityScore, double rating, int completedTasks) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const QualityScoreScreen()),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildStatItem(
+                Icons.verified_outlined,
+                _accentGreen,
+                '${qualityScore.toStringAsFixed(1)}%',
+                'Quality',
+              ),
+            ),
+            Container(width: 1, height: 36, color: _borderColor),
+            Expanded(
+              child: _buildStatItem(
+                Icons.star_outline_rounded,
+                _accentAmber,
+                rating.toStringAsFixed(1),
+                'Rating',
+              ),
+            ),
+            Container(width: 1, height: 36, color: _borderColor),
+            Expanded(
+              child: _buildStatItem(
+                Icons.task_alt_outlined,
+                _accentSky,
+                '$completedTasks',
+                'Tasks',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(IconData icon, Color color, String value, String label) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 13, color: color),
+            Icon(icon, size: 14, color: color),
             const SizedBox(width: 4),
             Text(
               value,
-              style: TextStyle(
-                color: color,
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
+              style: GoogleFonts.poppins(
+                color: _headingColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -482,9 +509,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF64748B),
-            fontSize: 10,
+          style: GoogleFonts.poppins(
+            color: _mutedColor,
+            fontSize: 10.5,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -492,97 +519,109 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ── Navigation Action Card ─────────────────────────────────────────────────
-  Widget _buildNavigationCard({
-    required BuildContext context,
+  // ── Menu Card ───────────────────────────────────────────────────────────────
+  Widget _buildMenuCard({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
     required String title,
     required String subtitle,
-    required IconData icon,
-    required Color iconBgColor,
-    required Color iconColor,
-    required String badgeText,
+    required Widget trailing,
     required VoidCallback onTap,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(14),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                // Icon container
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 20),
                 ),
-                child: Icon(icon, color: iconColor, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            color: Color(0xFF0F172A),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14.5,
-                          ),
+                const SizedBox(width: 12),
+
+                // Text
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          color: _headingColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13.5,
+                          letterSpacing: 0.1,
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEF3C7),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            badgeText,
-                            style: const TextStyle(
-                              color: Color(0xFFD97706),
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 11,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.poppins(
+                          color: _mutedColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: Color(0xFF94A3B8),
-                size: 15,
-              ),
-            ],
+
+                // Trailing
+                trailing,
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: _mutedColor.withValues(alpha: 0.6),
+                  size: 20,
+                ),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // ── Small Chip/Badge ────────────────────────────────────────────────────────
+  Widget _buildChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
         ),
       ),
     );
