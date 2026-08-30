@@ -16,10 +16,12 @@ class TaskProvider extends ChangeNotifier {
   Map<String, dynamic> get dashboardStats => _dashboardStats;
   String? get error => _error;
 
-  Future<void> fetchAvailableTasks() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+  Future<void> fetchAvailableTasks({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+    }
     try {
       final rawTasks = await ApiService.getAvailableTasks();
       // Ensure distinct campaigns: Each worker can only see 1 task per campaign/order
@@ -37,13 +39,18 @@ class TaskProvider extends ChangeNotifier {
         }
       }
       _availableTasks = uniqueTasks;
+      _error = null;
       debugPrint('[TaskProvider] Fetched ${_availableTasks.length} distinct available tasks successfully');
     } catch (e) {
       debugPrint('[TaskProvider ERROR] fetchAvailableTasks failed: $e');
-      _error = e.toString().replaceAll('Exception: ', '');
-      _availableTasks = [];
+      if (!silent) {
+        _error = e.toString().replaceAll('Exception: ', '');
+        _availableTasks = [];
+      }
     }
-    _isLoading = false;
+    if (!silent) {
+      _isLoading = false;
+    }
     notifyListeners();
   }
 

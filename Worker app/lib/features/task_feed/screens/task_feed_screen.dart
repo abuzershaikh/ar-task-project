@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/task_provider.dart';
@@ -15,6 +16,7 @@ class TaskFeedScreen extends StatefulWidget {
 
 class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObserver {
   String _selectedPlatform = 'All Tasks';
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
@@ -22,11 +24,13 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshFeed();
+      _startAutoRefreshTimer();
     });
   }
 
   @override
   void dispose() {
+    _autoRefreshTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -35,7 +39,21 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _refreshFeed();
+      _startAutoRefreshTimer();
+    } else if (state == AppLifecycleState.paused) {
+      _autoRefreshTimer?.cancel();
     }
+  }
+
+  void _startAutoRefreshTimer() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) {
+        final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+        taskProvider.fetchAvailableTasks(silent: true);
+        taskProvider.fetchWalletData();
+      }
+    });
   }
 
   void _refreshFeed() {
