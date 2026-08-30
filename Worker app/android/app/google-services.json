@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "311090572825-da6961k8b4f1fjtdpq2nmk17fs39lrm1.apps.googleusercontent.com",
+          "client_id": "311090572825-1s5dich8l809q0vifqfq47tqi3da41gv.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.buy.taskpost.marketing_pro",
-            "certificate_hash": "23d3f04590e1de305c7827e383f25f4015af9875"
+            "certificate_hash": "a3dfe1dd89d776f7a9ea4e9d40643dd461858c78"
           }
         },
         {
@@ -50,14 +50,6 @@
         }
       },
       "oauth_client": [
-        {
-          "client_id": "311090572825-1r5dprj47ncjrkc1i2tocefsejc4vov4.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.taskearning.earning.money.app",
-            "certificate_hash": "0eae3be869459053006446677eeb9d0665c173d8"
-          }
-        },
         {
           "client_id": "311090572825-37l22d2akkabmhhardidbumpdopqjn1c.apps.googleusercontent.com",
           "client_type": 1,
