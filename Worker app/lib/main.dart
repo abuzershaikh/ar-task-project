@@ -11,15 +11,8 @@ import 'features/navigation/screens/main_nav_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'core/services/crashlytics_service.dart';
+import 'core/services/notification_service.dart';
 import 'firebase_options.dart';
-
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  print("Handling a background message: ${message.messageId}");
-}
 
 // Set to false to enable authentication screens
 const bool kBypassAuth = false;
@@ -39,8 +32,10 @@ void main() async {
   // Initialize Firebase Crashlytics & Global Error Reporting
   await CrashlyticsService.initialize();
 
+  // Initialize Firebase Messaging Background Handler & Push Engine
   try {
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    await NotificationService.instance.initialize();
   } catch (e) {
     debugPrint('Firebase messaging init error: $e');
   }

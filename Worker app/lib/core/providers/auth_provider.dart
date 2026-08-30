@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../services/firestore_service.dart';
 import '../services/api_service.dart';
 import '../services/crashlytics_service.dart';
+import '../services/notification_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   bool _isAuthenticated = false;
@@ -61,6 +62,8 @@ class AuthProvider extends ChangeNotifier {
       name: name,
       role: 'WORKER',
     );
+    // Sync FCM Token for Worker Push Notifications
+    await NotificationService.instance.syncUserToken(uid);
     notifyListeners();
   }
 

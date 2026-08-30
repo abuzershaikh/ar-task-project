@@ -37,6 +37,10 @@ export class FirebaseAdminService implements OnModuleInit {
     return admin.auth();
   }
 
+  get messaging(): admin.messaging.Messaging {
+    return admin.messaging();
+  }
+
   /// Get user document from Firestore by UID or Email
   async getFirestoreUser(uidOrEmail: string): Promise<any> {
     try {
@@ -74,6 +78,134 @@ export class FirebaseAdminService implements OnModuleInit {
     } catch (error) {
       this.logger.warn(`Firebase ID Token verification failed: ${error.message}`);
       return null;
+    }
+  }
+
+  /// Broadcast New Task Push Notification to all workers
+  async sendTaskBroadcastNotification(params: {
+    title?: string;
+    body?: string;
+    taskId?: string;
+    orderId?: string;
+    reward?: number;
+    serviceCode?: string;
+  }): Promise<void> {
+    try {
+      const rewardFormatted = params.reward ? `₹${params.reward}` : 'Cash Reward';
+      const notificationTitle = params.title || `🎉 New Task Available! Earn ${rewardFormatted}`;
+      const notificationBody =
+        params.body ||
+        `A new ${params.serviceCode || 'reward'} task is ready. Accept now before slots fill up!`;
+
+      const dataPayload: Record<string, string> = {
+        type: 'NEW_TASK',
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        taskId: params.taskId || '',
+        orderId: params.orderId || '',
+        reward: String(params.reward || '0'),
+        serviceCode: params.serviceCode || '',
+        createdAt: new Date().toISOString(),
+      };
+
+      // 1. Send to FCM Topic 'workers'
+      const topicMessage: admin.messaging.Message = {
+        topic: 'workers',
+        notification: {
+          title: notificationTitle,
+          body: notificationBody,
+        },
+        data: dataPayload,
+        android: {
+          priority: 'high',
+          notification: {
+            channelId: 'task_notifications',
+            priority: 'high',
+            sound: 'default',
+            clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+          },
+        },
+      };
+
+      await this.messaging.send(topicMessage);
+      this.logger.log(`📢 [FCM BROADCAST] Push sent to topic 'workers': ${notificationTitle}`);
+
+      // 2. Also send to individual registered worker tokens from Firestore for maximum delivery
+      const workerDocs = await this.firestore
+        .collection('users')
+        .where('role', '==', 'WORKER')
+        .get();
+
+      const tokens: string[] = [];
+      workerDocs.forEach((doc) => {
+        const token = doc.data()?.fcmToken;
+        if (token && typeof token === 'string' && token.length > 20) {
+          tokens.push(token);
+        }
+      });
+
+      if (tokens.length > 0) {
+        const multicastMessage: admin.messaging.MulticastMessage = {
+          tokens,
+          notification: {
+            title: notificationTitle,
+            body: notificationBody,
+          },
+          data: dataPayload,
+          android: {
+            priority: 'high',
+            notification: {
+              channelId: 'task_notifications',
+              priority: 'high',
+              sound: 'default',
+              clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+            },
+          },
+        };
+
+        const response = await this.messaging.sendEachForMulticast(multicastMessage);
+        this.logger.log(
+          `📱 [FCM DIRECT MULTICAST] Sent to ${tokens.length} workers (${response.successCount} succeeded, ${response.failureCount} failed)`
+        );
+      }
+    } catch (error) {
+      this.logger.error('Failed to send task broadcast push notification', error);
+    }
+  }
+
+  /// Send Direct Push Notification to a specific worker
+  async sendDirectPushNotification(
+    fcmToken: string,
+    title: string,
+    body: string,
+    data: Record<string, string> = {}
+  ): Promise<boolean> {
+    try {
+      if (!fcmToken || fcmToken.length < 20) return false;
+
+      const message: admin.messaging.Message = {
+        token: fcmToken,
+        notification: { title, body },
+        data: {
+          ...data,
+          click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        },
+        android: {
+          priority: 'high',
+          notification: {
+            channelId: 'task_notifications',
+            priority: 'high',
+            sound: 'default',
+            clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+          },
+        },
+      };
+
+      await this.messaging.send(message);
+      this.logger.log(`📱 [FCM DIRECT PUSH] Sent to device: ${title}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Error sending direct push to token: ${error.message}`);
+      return false;
     }
   }
 }

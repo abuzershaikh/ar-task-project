@@ -10,6 +10,7 @@ import { TaskGenerationJobStatus } from '../database/entities/task-generation-jo
 import { ServiceCatalogRepository } from '../database/repositories/service-catalog.repository';
 import { OrderUnitRepository } from '../database/repositories/order-unit.repository';
 import { AiGeneratorService } from '../ai-generator/ai-generator.service';
+import { FirebaseAdminService } from './firebase-admin.service';
 
 export interface OrderActivatedEventPayload {
     orderId: string;
@@ -34,6 +35,7 @@ export class OrderActivatedListener {
         private readonly serviceCatalogRepo: ServiceCatalogRepository,
         private readonly orderUnitRepo: OrderUnitRepository,
         private readonly aiGeneratorService: AiGeneratorService,
+        private readonly firebaseAdmin: FirebaseAdminService,
         @InjectQueue('task') private readonly taskQueue: Queue,
     ) { }
 
@@ -157,6 +159,20 @@ export class OrderActivatedListener {
 
             await this.jobRepo.updateProgress(job.id, count, TaskGenerationJobStatus.COMPLETED);
             this.logger.log(`✅ ${count} order units and worker tasks generated in MySQL for Order '${payload.orderId}'.`);
+
+            // 📢 Broadcast Instant Push Notification to Workers
+            try {
+                const serviceTitle = serviceCatalog?.name || payload.serviceCode.replace(/_/g, ' ');
+                await this.firebaseAdmin.sendTaskBroadcastNotification({
+                    title: `🎉 New Task Available! Earn ₹${rewardAmount}`,
+                    body: `${count} new slots for ${serviceTitle} available. Complete tasks and earn cash!`,
+                    orderId: payload.orderId,
+                    reward: rewardAmount,
+                    serviceCode: payload.serviceCode,
+                });
+            } catch (pushErr) {
+                this.logger.warn(`Push notification dispatch warning: ${pushErr.message}`);
+            }
 
         } catch (error) {
             this.logger.error(
