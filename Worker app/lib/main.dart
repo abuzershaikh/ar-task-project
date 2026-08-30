@@ -61,6 +61,17 @@ class TaskRewardApp extends StatelessWidget {
             ? const MainNavScreen()
             : Consumer<AuthProvider>(
                 builder: (context, auth, _) {
+                  if (!auth.isInitialized) {
+                    return const Scaffold(
+                      backgroundColor: Color(0xFF0F172A),
+                      body: Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF00875A),
+                          strokeWidth: 3,
+                        ),
+                      ),
+                    );
+                  }
                   if (auth.isAuthenticated) {
                     return const MainNavScreen();
                   }
