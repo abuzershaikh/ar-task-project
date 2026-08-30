@@ -7,8 +7,9 @@ import { OrderRepository } from '../database/repositories/order.repository';
 import { TaskRepository } from '../database/repositories/task.repository';
 import { TaskGenerationJobRepository } from '../database/repositories/task-generation-job.repository';
 import { TaskGenerationJobStatus } from '../database/entities/task-generation-job.entity';
-
 import { ServiceCatalogRepository } from '../database/repositories/service-catalog.repository';
+import { OrderUnitRepository } from '../database/repositories/order-unit.repository';
+import { AiGeneratorService } from '../ai-generator/ai-generator.service';
 
 export interface OrderActivatedEventPayload {
     orderId: string;
@@ -31,6 +32,8 @@ export class OrderActivatedListener {
         private readonly taskRepo: TaskRepository,
         private readonly jobRepo: TaskGenerationJobRepository,
         private readonly serviceCatalogRepo: ServiceCatalogRepository,
+        private readonly orderUnitRepo: OrderUnitRepository,
+        private readonly aiGeneratorService: AiGeneratorService,
         @InjectQueue('task') private readonly taskQueue: Queue,
     ) { }
 
@@ -49,7 +52,6 @@ export class OrderActivatedListener {
 
             const rewardAmount = payload.workerRewardSnapshot || Number(order?.workerRewardSnapshot || order?.rewardPerTask || 5);
 
-            // Protection Pillar 3: Get or create durable TaskGenerationJob for progress tracking & crash recovery
             let job = await this.jobRepo.findByOrderId(payload.orderId);
             if (!job) {
                 job = await this.jobRepo.create({
@@ -71,33 +73,76 @@ export class OrderActivatedListener {
                 ? (await this.serviceCatalogRepo.findByCode(serviceIdentifier) || await this.serviceCatalogRepo.findById(serviceIdentifier))
                 : null;
 
+            const isAiGeneratorEnabled = serviceCatalog?.aiGeneratorEnabled || 
+                (serviceIdentifier.includes('COMMENT') || serviceIdentifier.includes('COMBO') || order?.requirements?.aiGeneratorEnabled);
+
+            const count = payload.totalTasksRequired;
+            const targetUrl = order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '';
+            const topic = order?.requirements?.topic || order?.requirements?.customText || order?.requirements?.comment || '';
+            const language = order?.requirements?.language || 'English';
+            const tone = order?.requirements?.tone || 'natural';
+
+            // Generate AI Content Batch if AI generator is enabled for this service
+            let generatedComments: string[] = [];
+            if (isAiGeneratorEnabled) {
+                this.logger.log(`🤖 Triggering AI Generator for ${count} units (Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
+                generatedComments = await this.aiGeneratorService.generateContentBatch(
+                    'youtube_comment',
+                    count,
+                    { topic, language, tone, uniqueness: true },
+                );
+            }
+
             const combinedRequirements = {
                 ...(order?.requirements || {}),
-                serviceName: serviceCatalog?.name || order?.taskType || 'Task',
+                platform: 'youtube',
+                serviceName: serviceCatalog?.name || order?.taskType || 'YouTube Task',
                 serviceDescription: serviceCatalog?.description || '',
                 videoTutorialUrl: serviceCatalog?.videoTutorialUrl || order?.requirements?.videoTutorialUrl || '',
                 audioGuideUrl: serviceCatalog?.audioGuideUrl || order?.requirements?.audioGuideUrl || '',
                 adminInstructions: serviceCatalog?.adminInstructions || serviceCatalog?.description || order?.requirements?.instructions || '',
-                targetUrl: order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '',
-                customText: order?.requirements?.customText || order?.requirements?.text || order?.requirements?.comment || '',
+                targetUrl,
                 watchTimeSeconds: order?.requirements?.watchTimeSeconds || serviceCatalog?.watchtimeSeconds || 0,
                 proofType: order?.requirements?.proofType || 'SCREENSHOT',
+                actions: {
+                    like: serviceIdentifier.includes('LIKE') || serviceIdentifier.includes('COMBO'),
+                    subscribe: serviceIdentifier.includes('SUBSCRIBE') || serviceIdentifier.includes('COMBO'),
+                    comment: serviceIdentifier.includes('COMMENT') || serviceIdentifier.includes('COMBO'),
+                },
             };
 
             const taskType = payload.serviceCode || order?.taskType || 'DEFAULT';
-            const count = payload.totalTasksRequired;
 
-            // Direct guaranteed task generation in MySQL
+            // Direct guaranteed task & order_unit generation in MySQL
             const existingTasks = await this.taskRepo.findByOrderId(payload.orderId);
             const generatedCount = existingTasks.length;
 
             if (generatedCount < count) {
-                this.logger.log(`Creating ${count - generatedCount} tasks directly for Order '${payload.orderId}'`);
+                this.logger.log(`Creating ${count - generatedCount} tasks and order_units directly for Order '${payload.orderId}'`);
+                
+                const unitsToCreate = [];
                 for (let i = generatedCount; i < count; i++) {
+                    const assignedComment = generatedComments[i] || (topic ? `Great video regarding ${topic}!` : 'Awesome content, very helpful!');
+                    unitsToCreate.push({
+                        orderId: payload.orderId,
+                        unitNumber: i + 1,
+                        targetUrl,
+                        generatedContent: isAiGeneratorEnabled ? assignedComment : (order?.requirements?.customText || null),
+                        status: 'PENDING',
+                    });
+                }
+
+                const savedUnits = await this.orderUnitRepo.createBatch(unitsToCreate);
+
+                for (let i = 0; i < savedUnits.length; i++) {
+                    const unit = savedUnits[i];
                     const taskReqs = {
                         ...combinedRequirements,
-                        sequenceIndex: i,
-                        orderIdSequence: `${payload.orderId}_task_${i + 1}`,
+                        unitNumber: unit.unitNumber,
+                        orderUnitId: unit.id,
+                        commentText: unit.generatedContent || '',
+                        sequenceIndex: generatedCount + i,
+                        orderIdSequence: `${payload.orderId}_task_${generatedCount + i + 1}`,
                     };
 
                     await this.taskEngine.createTask({
@@ -111,27 +156,8 @@ export class OrderActivatedListener {
             }
 
             await this.jobRepo.updateProgress(job.id, count, TaskGenerationJobStatus.COMPLETED);
-            this.logger.log(`✅ ${count} tasks generated in MySQL and available in task feed for Order '${payload.orderId}'.`);
+            this.logger.log(`✅ ${count} order units and worker tasks generated in MySQL for Order '${payload.orderId}'.`);
 
-            // Optional background queue notification
-            try {
-                await this.taskQueue.add(
-                    'create-tasks',
-                    {
-                        orderId: payload.orderId,
-                        count,
-                        taskType,
-                        requirements: combinedRequirements,
-                        rewardAmount,
-                        jobId: job.id,
-                    },
-                    {
-                        attempts: 3,
-                        backoff: { type: 'exponential', delay: 2000 },
-                        removeOnComplete: true,
-                    },
-                );
-            } catch (_) {}
         } catch (error) {
             this.logger.error(
                 `Error generating tasks for activated Order '${payload.orderId}': ${error.message}`,

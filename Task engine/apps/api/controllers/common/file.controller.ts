@@ -82,7 +82,8 @@ export class FileController {
             buffer: file.buffer,
         });
 
-        const publicUrl = `http://95.179.178.6:3000/api/v1/files/raw/${savedFile.id}`;
+        const appUrl = process.env.APP_URL || 'http://65.20.77.112:3000';
+        const publicUrl = `${appUrl}/api/v1/files/raw/${savedFile.id}`;
 
         return {
             success: true,

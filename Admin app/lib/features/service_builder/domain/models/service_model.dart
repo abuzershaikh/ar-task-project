@@ -6,8 +6,12 @@ class ServiceModel {
   final String code; // Immutable uppercase identifier e.g. YT_SUB, TELEGRAM_JOIN
   final String name;
   final String description;
+  final String category;
+  final String serviceType;
   final String icon;
   final bool isActive;
+  final bool aiGeneratorEnabled;
+  final Map<String, dynamic>? aiGeneratorConfig;
   final int currentVersion;
   final PricingConfig pricing;
   final List<TemplateElement> elements;
@@ -38,8 +42,12 @@ class ServiceModel {
     required this.code,
     required this.name,
     required this.description,
+    this.category = 'YouTube',
+    this.serviceType = 'like',
     this.icon = 'stars_rounded',
     this.isActive = true,
+    this.aiGeneratorEnabled = false,
+    this.aiGeneratorConfig,
     this.currentVersion = 1,
     required this.pricing,
     required this.elements,
@@ -71,8 +79,12 @@ class ServiceModel {
     String? code,
     String? name,
     String? description,
+    String? category,
+    String? serviceType,
     String? icon,
     bool? isActive,
+    bool? aiGeneratorEnabled,
+    Map<String, dynamic>? aiGeneratorConfig,
     int? currentVersion,
     PricingConfig? pricing,
     List<TemplateElement>? elements,
@@ -103,8 +115,12 @@ class ServiceModel {
       code: code ?? this.code,
       name: name ?? this.name,
       description: description ?? this.description,
+      category: category ?? this.category,
+      serviceType: serviceType ?? this.serviceType,
       icon: icon ?? this.icon,
       isActive: isActive ?? this.isActive,
+      aiGeneratorEnabled: aiGeneratorEnabled ?? this.aiGeneratorEnabled,
+      aiGeneratorConfig: aiGeneratorConfig ?? this.aiGeneratorConfig,
       currentVersion: currentVersion ?? this.currentVersion,
       pricing: pricing ?? this.pricing,
       elements: elements ?? this.elements,
@@ -138,8 +154,12 @@ class ServiceModel {
       'code': code,
       'name': name,
       'description': description,
+      'category': category,
+      'serviceType': serviceType,
       'icon': icon,
       'isActive': isActive,
+      'aiGeneratorEnabled': aiGeneratorEnabled,
+      'aiGeneratorConfig': aiGeneratorConfig,
       'currentVersion': currentVersion,
       'pricing': pricing.toJson(),
       'elements': elements.map((e) => e.toJson()).toList(),
@@ -187,8 +207,14 @@ class ServiceModel {
       code: json['code']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
+      category: json['category']?.toString() ?? 'YouTube',
+      serviceType: json['serviceType']?.toString() ?? json['service_type']?.toString() ?? 'like',
       icon: json['icon']?.toString() ?? 'stars_rounded',
       isActive: json['isActive'] as bool? ?? true,
+      aiGeneratorEnabled: json['aiGeneratorEnabled'] as bool? ?? json['ai_generator_enabled'] as bool? ?? false,
+      aiGeneratorConfig: json['aiGeneratorConfig'] is Map
+          ? Map<String, dynamic>.from(json['aiGeneratorConfig'])
+          : (json['ai_generator_config'] is Map ? Map<String, dynamic>.from(json['ai_generator_config']) : null),
       currentVersion: parseI(json['currentVersion'] ?? json['version'], 1),
       pricing: PricingConfig.fromJson(Map<String, dynamic>.from(json['pricing'] ?? json['activePricing'] ?? {})),
       elements: (json['elements'] as List? ?? [])

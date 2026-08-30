@@ -6,7 +6,11 @@ class ServiceModel {
   final String code;
   final String name;
   final String description;
+  final String category;
+  final String serviceType;
   final bool isActive;
+  final bool aiGeneratorEnabled;
+  final Map<String, dynamic>? aiGeneratorConfig;
   final int currentVersion;
   final PricingConfig pricing;
   final List<TemplateElement> elements;
@@ -31,7 +35,11 @@ class ServiceModel {
     required this.code,
     required this.name,
     required this.description,
+    this.category = 'YouTube',
+    this.serviceType = 'like',
     required this.isActive,
+    this.aiGeneratorEnabled = false,
+    this.aiGeneratorConfig,
     required this.currentVersion,
     required this.pricing,
     required this.elements,
@@ -57,7 +65,11 @@ class ServiceModel {
     String? code,
     String? name,
     String? description,
+    String? category,
+    String? serviceType,
     bool? isActive,
+    bool? aiGeneratorEnabled,
+    Map<String, dynamic>? aiGeneratorConfig,
     int? currentVersion,
     PricingConfig? pricing,
     List<TemplateElement>? elements,
@@ -82,7 +94,11 @@ class ServiceModel {
       code: code ?? this.code,
       name: name ?? this.name,
       description: description ?? this.description,
+      category: category ?? this.category,
+      serviceType: serviceType ?? this.serviceType,
       isActive: isActive ?? this.isActive,
+      aiGeneratorEnabled: aiGeneratorEnabled ?? this.aiGeneratorEnabled,
+      aiGeneratorConfig: aiGeneratorConfig ?? this.aiGeneratorConfig,
       currentVersion: currentVersion ?? this.currentVersion,
       pricing: pricing ?? this.pricing,
       elements: elements ?? this.elements,
@@ -110,7 +126,11 @@ class ServiceModel {
       'code': code,
       'name': name,
       'description': description,
+      'category': category,
+      'serviceType': serviceType,
       'isActive': isActive,
+      'aiGeneratorEnabled': aiGeneratorEnabled,
+      'aiGeneratorConfig': aiGeneratorConfig,
       'currentVersion': currentVersion,
       'pricing': pricing.toJson(),
       'elements': elements.map((e) => e.toJson()).toList(),
@@ -153,24 +173,50 @@ class ServiceModel {
 
     final double buyerUnitPrice = parseD(
       json['buyerUnitPrice'] ?? json['pricing']?['buyerUnitPrice'] ?? json['pricing']?['buyerPrice'],
-      50.0,
+      5.0,
     );
+
+    final rawAiConfig = json['aiGeneratorConfig'] ?? json['ai_generator_config'];
+    Map<String, dynamic>? parsedAiConfig;
+    if (rawAiConfig is Map) {
+      parsedAiConfig = Map<String, dynamic>.from(rawAiConfig);
+    }
+
+    final bool aiEnabled = (json['aiGeneratorEnabled'] ?? json['ai_generator_enabled']) as bool? ??
+        (json['code']?.toString().toUpperCase().contains('COMMENT') == true ||
+         json['code']?.toString().toUpperCase().contains('COMBO') == true);
+
+    String derivedCategory = json['category']?.toString() ?? 'YouTube';
+    final codeUpper = (json['code'] ?? '').toString().toUpperCase();
+    if (codeUpper.startsWith('YOUTUBE') || codeUpper.startsWith('YT')) {
+      derivedCategory = 'YouTube';
+    } else if (codeUpper.startsWith('TELEGRAM') || codeUpper.startsWith('TG')) {
+      derivedCategory = 'Telegram';
+    } else if (codeUpper.startsWith('INSTA')) {
+      derivedCategory = 'Instagram';
+    } else if (codeUpper.startsWith('APP')) {
+      derivedCategory = 'App Install & Review';
+    }
 
     return ServiceModel(
       id: (json['id'] ?? '').toString(),
       code: (json['code'] ?? '').toString(),
       name: (json['name'] ?? json['title'] ?? '').toString(),
       description: (json['description'] ?? '').toString(),
+      category: derivedCategory,
+      serviceType: (json['serviceType'] ?? json['service_type'] ?? 'general').toString(),
       isActive: json['isActive'] as bool? ?? true,
+      aiGeneratorEnabled: aiEnabled,
+      aiGeneratorConfig: parsedAiConfig,
       currentVersion: parseI(json['currentVersion'] ?? json['version'], 1),
       pricing: json['pricing'] != null
           ? PricingConfig.fromJson(Map<String, dynamic>.from(json['pricing'] as Map))
           : PricingConfig.calculate(buyerPrice: buyerUnitPrice, adminMarginPercent: 20),
       elements: parsedElements,
       minAcceptHours: parseI(json['minAcceptHours'] ?? json['min_accept_hours'], 1),
-      maxAcceptHours: parseI(json['maxAcceptHours'] ?? json['max_accept_hours'], 24),
+      maxAcceptHours: parseI(json['maxAcceptHours'] ?? json['max_accept_hours'], 72),
       minCompleteHours: parseI(json['minCompleteHours'] ?? json['min_complete_hours'], 24),
-      maxCompleteHours: parseI(json['maxCompleteHours'] ?? json['max_complete_hours'], 72),
+      maxCompleteHours: parseI(json['maxCompleteHours'] ?? json['max_complete_hours'], 168),
       workerLimit: parseI(json['workerLimit'] ?? json['worker_limit'], 1),
       watchtimeSeconds: parseI(json['watchtimeSeconds'] ?? json['watchtime_seconds'], 0),
       videoTutorialUrl: json['videoTutorialUrl']?.toString() ?? json['video_tutorial_url']?.toString(),
@@ -189,4 +235,3 @@ class ServiceModel {
     );
   }
 }
-

@@ -7,6 +7,7 @@ import { User } from './entities/user.entity';
 import { Worker } from './entities/worker.entity';
 import { WorkerScore } from './entities/worker-score.entity';
 import { Order } from './entities/order.entity';
+import { OrderUnit } from './entities/order-unit.entity';
 import { Task } from './entities/task.entity';
 import { TaskSubmission } from './entities/submission.entity';
 import { Earning } from './entities/earning.entity';
@@ -32,6 +33,7 @@ import { UserRepository } from './repositories/user.repository';
 import { WorkerRepository } from './repositories/worker.repository';
 import { WorkerScoreRepository } from './repositories/worker-score.repository';
 import { OrderRepository } from './repositories/order.repository';
+import { OrderUnitRepository } from './repositories/order-unit.repository';
 import { TaskRepository } from './repositories/task.repository';
 import { SubmissionRepository } from './repositories/submission.repository';
 import { EarningRepository } from './repositories/earning.repository';
@@ -57,6 +59,7 @@ const entities = [
     Worker,
     WorkerScore,
     Order,
+    OrderUnit,
     Task,
     TaskSubmission,
     Earning,
@@ -83,6 +86,7 @@ const repositories = [
     WorkerRepository,
     WorkerScoreRepository,
     OrderRepository,
+    OrderUnitRepository,
     TaskRepository,
     SubmissionRepository,
     EarningRepository,

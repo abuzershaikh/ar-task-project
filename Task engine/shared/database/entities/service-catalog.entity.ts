@@ -21,8 +21,20 @@ export class ServiceCatalog {
     @Column({ type: 'text', nullable: true })
     description: string;
 
+    @Column({ type: 'varchar', length: 100, default: 'YouTube' })
+    category: string;
+
+    @Column({ name: 'service_type', type: 'varchar', length: 100, default: 'like' })
+    serviceType: string;
+
     @Column({ name: 'is_active', type: 'boolean', default: true })
     isActive: boolean;
+
+    @Column({ name: 'ai_generator_enabled', type: 'boolean', default: false })
+    aiGeneratorEnabled: boolean;
+
+    @Column({ name: 'ai_generator_config', type: 'json', nullable: true })
+    aiGeneratorConfig: any;
 
     @Column({ type: 'json', nullable: true })
     elements: any; // Defines the form inputs (ITemplateElement array)

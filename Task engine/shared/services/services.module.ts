@@ -20,6 +20,10 @@ import { ServiceCatalogService } from '../modules/service-catalog/services/servi
 import { ServicePricingService } from '../modules/service-catalog/services/service-pricing.service';
 import { ServiceVersionService } from '../modules/service-catalog/services/service-version.service';
 
+// AI Generator Services
+import { YouTubeCommentGenerator } from '../ai-generator/generators/youtube-comment.generator';
+import { AiGeneratorService } from '../ai-generator/ai-generator.service';
+
 // Order State Machine & Event Listeners
 import { OrderStateMachineService } from './order-state-machine.service';
 import { OrderActivatedListener } from './order-activated.listener';
@@ -52,6 +56,8 @@ const providers = [
     ServiceCatalogService,
     ServicePricingService,
     ServiceVersionService,
+    YouTubeCommentGenerator,
+    AiGeneratorService,
     OrderStateMachineService,
     OrderActivatedListener,
     TaskReleaseService,

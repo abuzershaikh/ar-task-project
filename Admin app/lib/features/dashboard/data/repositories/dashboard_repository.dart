@@ -11,11 +11,18 @@ class DashboardRepository {
   Future<Map<String, dynamic>> getMasterDashboard() async {
     try {
       final response = await _dioClient.get(ApiEndpoints.dashboard);
-      if (response.statusCode == 200) {
-        return response.data['dashboard'] as Map<String, dynamic>;
+      if (response.statusCode == 200 && response.data != null) {
+        final raw = response.data['dashboard'] ?? response.data;
+        return Map<String, dynamic>.from(raw as Map);
       } else {
         throw ServerException('Failed to load dashboard data');
       }
+    } on ServerException {
+      rethrow;
+    } on NetworkException {
+      rethrow;
+    } on AuthException {
+      rethrow;
     } catch (e) {
       throw ServerException(e.toString());
     }
@@ -24,11 +31,18 @@ class DashboardRepository {
   Future<Map<String, dynamic>> getEarningsDashboard() async {
     try {
       final response = await _dioClient.get(ApiEndpoints.dashboardEarnings);
-      if (response.statusCode == 200) {
-        return response.data['financialSummary'] as Map<String, dynamic>;
+      if (response.statusCode == 200 && response.data != null) {
+        final raw = response.data['financialSummary'] ?? response.data;
+        return Map<String, dynamic>.from(raw as Map);
       } else {
         throw ServerException('Failed to load earnings data');
       }
+    } on ServerException {
+      rethrow;
+    } on NetworkException {
+      rethrow;
+    } on AuthException {
+      rethrow;
     } catch (e) {
       throw ServerException(e.toString());
     }

@@ -3,7 +3,7 @@
     {
       "name": "task-engine-api",
       "script": "dist/main.js",
-      "cwd": "/var/www/task-engine",
+      "cwd": "/opt/task-engine",
       "instances": 1,
       "autorestart": true,
       "env": {
@@ -24,7 +24,7 @@
     {
       "name": "task-engine-worker",
       "script": "dist/worker.js",
-      "cwd": "/var/www/task-engine",
+      "cwd": "/opt/task-engine",
       "instances": 1,
       "autorestart": true,
       "env": {
@@ -42,3 +42,4 @@
     }
   ]
 }
+

@@ -79,6 +79,10 @@ export class AdminServiceCatalogController {
             code: string;
             name: string;
             description?: string;
+            category?: string;
+            serviceType?: string;
+            aiGeneratorEnabled?: boolean;
+            aiGeneratorConfig?: any;
             buyerUnitPrice?: number;
             marginType?: MarginType;
             marginValue?: number;
@@ -105,6 +109,10 @@ export class AdminServiceCatalogController {
             code: body.code,
             name: body.name,
             description: body.description,
+            category: body.category,
+            serviceType: body.serviceType,
+            aiGeneratorEnabled: body.aiGeneratorEnabled,
+            aiGeneratorConfig: body.aiGeneratorConfig,
             elements: body.elements,
             reviewMode: body.reviewMode,
             workerLimit: body.workerLimit,
@@ -149,6 +157,10 @@ export class AdminServiceCatalogController {
         body: {
             name?: string;
             description?: string;
+            category?: string;
+            serviceType?: string;
+            aiGeneratorEnabled?: boolean;
+            aiGeneratorConfig?: any;
             isActive?: boolean;
             elements?: any;
             reviewMode?: string;

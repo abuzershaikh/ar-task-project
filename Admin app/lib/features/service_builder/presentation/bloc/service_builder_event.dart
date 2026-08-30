@@ -42,6 +42,10 @@ class CreateNewServiceDraftEvent extends ServiceBuilderEvent {
 class UpdateServiceInfoEvent extends ServiceBuilderEvent {
   final String name;
   final String description;
+  final String? category;
+  final String? serviceType;
+  final bool? aiGeneratorEnabled;
+  final Map<String, dynamic>? aiGeneratorConfig;
   final String? videoTutorialUrl;
   final String? audioGuideUrl;
   final String? adminInstructions;
@@ -54,6 +58,10 @@ class UpdateServiceInfoEvent extends ServiceBuilderEvent {
   const UpdateServiceInfoEvent({
     required this.name,
     required this.description,
+    this.category,
+    this.serviceType,
+    this.aiGeneratorEnabled,
+    this.aiGeneratorConfig,
     this.videoTutorialUrl,
     this.audioGuideUrl,
     this.adminInstructions,
@@ -68,6 +76,10 @@ class UpdateServiceInfoEvent extends ServiceBuilderEvent {
   List<Object?> get props => [
         name,
         description,
+        category,
+        serviceType,
+        aiGeneratorEnabled,
+        aiGeneratorConfig,
         videoTutorialUrl,
         audioGuideUrl,
         adminInstructions,

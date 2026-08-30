@@ -91,8 +91,14 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
               code: (s['code'] ?? s['id'] ?? 'CUSTOM_SRV').toString().toUpperCase(),
               name: (s['name'] ?? s['title'] ?? 'Custom Service').toString(),
               description: (s['description'] ?? '').toString(),
+              category: (s['category'] ?? 'YouTube').toString(),
+              serviceType: (s['serviceType'] ?? s['service_type'] ?? 'like').toString(),
               icon: 'settings_suggest_rounded',
               isActive: s['isActive'] ?? s['isPublished'] ?? true,
+              aiGeneratorEnabled: s['aiGeneratorEnabled'] ?? s['ai_generator_enabled'] ?? false,
+              aiGeneratorConfig: s['aiGeneratorConfig'] is Map
+                  ? Map<String, dynamic>.from(s['aiGeneratorConfig'])
+                  : (s['ai_generator_config'] is Map ? Map<String, dynamic>.from(s['ai_generator_config']) : null),
               currentVersion: _toInt(s['version'], 1),
               pricing: PricingConfig.calculate(
                 buyerPrice: buyerPrice,
@@ -240,6 +246,10 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
         'code': service.code.isNotEmpty ? service.code : 'SRV_${DateTime.now().millisecondsSinceEpoch}',
         'name': service.name,
         'description': service.description,
+        'category': service.category,
+        'serviceType': service.serviceType,
+        'aiGeneratorEnabled': service.aiGeneratorEnabled,
+        'aiGeneratorConfig': service.aiGeneratorConfig,
         'buyerUnitPrice': dynamicBuyerUnitPrice,
         'marginType': service.pricing.marginType,
         'marginValue': service.pricing.adminMarginPercent,
@@ -275,6 +285,10 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
         await dioClient!.patch('/admin/services/${service.id}', data: {
           'name': service.name,
           'description': service.description,
+          'category': service.category,
+          'serviceType': service.serviceType,
+          'aiGeneratorEnabled': service.aiGeneratorEnabled,
+          'aiGeneratorConfig': service.aiGeneratorConfig,
           'isActive': service.isActive,
           'elements': elementsJson,
           'reviewMode': service.reviewMode,

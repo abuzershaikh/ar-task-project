@@ -34,6 +34,10 @@ export class ServiceCatalogService {
         code: string;
         name: string;
         description?: string;
+        category?: string;
+        serviceType?: string;
+        aiGeneratorEnabled?: boolean;
+        aiGeneratorConfig?: any;
         elements?: any;
         reviewMode?: string;
         videoTutorialUrl?: string;
@@ -60,6 +64,10 @@ export class ServiceCatalogService {
             code: data.code.toUpperCase(),
             name: data.name,
             description: data.description,
+            category: data.category || 'YouTube',
+            serviceType: data.serviceType || 'like',
+            aiGeneratorEnabled: data.aiGeneratorEnabled ?? false,
+            aiGeneratorConfig: data.aiGeneratorConfig,
             elements: data.elements,
             reviewMode: data.reviewMode || 'buyer',
             workerLimit: data.workerLimit || 1,
@@ -86,6 +94,10 @@ export class ServiceCatalogService {
         data: {
             name?: string;
             description?: string;
+            category?: string;
+            serviceType?: string;
+            aiGeneratorEnabled?: boolean;
+            aiGeneratorConfig?: any;
             isActive?: boolean;
             elements?: any;
             reviewMode?: string;

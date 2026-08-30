@@ -258,6 +258,10 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
       final updatedDraft = currentState.serviceDraft.copyWith(
         name: event.name,
         description: event.description,
+        category: event.category ?? currentState.serviceDraft.category,
+        serviceType: event.serviceType ?? currentState.serviceDraft.serviceType,
+        aiGeneratorEnabled: event.aiGeneratorEnabled ?? currentState.serviceDraft.aiGeneratorEnabled,
+        aiGeneratorConfig: event.aiGeneratorConfig ?? currentState.serviceDraft.aiGeneratorConfig,
         elements: updatedElements,
         videoTutorialUrl: event.videoTutorialUrl,
         audioGuideUrl: event.audioGuideUrl,

@@ -55,12 +55,14 @@ export class WalletService {
             );
         }
 
+        const remainingBalance = currentBalance - amount;
         await this.walletRepo.deductBalance(wallet.id, amount);
 
         const txn = await this.transactionRepo.create({
             walletId: wallet.id,
             type: 'DEBIT',
             amount,
+            balanceAfter: remainingBalance,
             referenceId: orderId,
             description: orderTitle ? `Campaign Order: ${orderTitle}` : `Campaign Order #${orderId.slice(0, 8)}`,
             status: 'COMPLETED',
@@ -69,7 +71,7 @@ export class WalletService {
         return {
             success: true,
             deductedAmount: amount,
-            remainingBalance: currentBalance - amount,
+            remainingBalance,
             transactionId: txn.id,
         };
     }
@@ -83,21 +85,23 @@ export class WalletService {
         }
 
         const wallet = await this.getOrCreateWallet(userId);
+        const currentBalance = Number(wallet.availableBalance);
+        const newBalance = currentBalance + amount;
         await this.walletRepo.updateBalance(wallet.id, amount, true);
 
         const txn = await this.transactionRepo.create({
             walletId: wallet.id,
             type: 'CREDIT',
             amount,
+            balanceAfter: newBalance,
             description,
             status: 'COMPLETED',
         });
 
-        const updatedWallet = await this.walletRepo.findByUserId(userId);
         return {
             success: true,
             addedAmount: amount,
-            newBalance: Number(updatedWallet?.availableBalance || 0),
+            newBalance,
             transaction: txn,
         };
     }
@@ -124,9 +128,12 @@ export class WalletService {
             );
         }
 
+        let newBalance = currentBalance;
         if (type === 'CREDIT') {
+            newBalance += amount;
             await this.walletRepo.updateBalance(wallet.id, amount, true);
         } else {
+            newBalance -= amount;
             await this.walletRepo.deductBalance(wallet.id, amount);
         }
 
@@ -134,18 +141,18 @@ export class WalletService {
             walletId: wallet.id,
             type,
             amount,
+            balanceAfter: newBalance,
             description: notes || `Admin Manual ${type === 'CREDIT' ? 'Credit' : 'Debit'}`,
             status: 'COMPLETED',
         });
 
-        const updatedWallet = await this.walletRepo.findByUserId(buyerId);
         return {
             success: true,
             buyerId,
             type,
             amount,
             previousBalance: currentBalance,
-            newBalance: Number(updatedWallet?.availableBalance || 0),
+            newBalance,
             transaction: txn,
         };
     }

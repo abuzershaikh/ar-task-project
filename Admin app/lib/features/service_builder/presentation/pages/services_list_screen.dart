@@ -536,6 +536,8 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                                                 'Margin: ${pricing.adminMarginPercent.toStringAsFixed(0)}%', Colors.tealAccent),
                                             _buildTag(
                                                 'Worker: ₹${pricing.workerReward.toStringAsFixed(1)}', Colors.amberAccent),
+                                            if (service.aiGeneratorEnabled)
+                                              _buildTag('🤖 AI ON', Colors.purpleAccent),
                                           ],
                                         ),
                                         const SizedBox(height: 10),

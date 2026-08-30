@@ -303,10 +303,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   String _extractCustomText() {
     final t = widget.task;
+    if (t['commentText'] != null && t['commentText'].toString().trim().isNotEmpty) return t['commentText'].toString().trim();
+    if (t['comment_text'] != null && t['comment_text'].toString().trim().isNotEmpty) return t['comment_text'].toString().trim();
     if (t['customText'] != null && t['customText'].toString().trim().isNotEmpty) return t['customText'].toString().trim();
     if (t['comment'] != null && t['comment'].toString().trim().isNotEmpty) return t['comment'].toString().trim();
     if (t['requirements'] is Map) {
       final req = t['requirements'] as Map;
+      if (req['commentText'] != null && req['commentText'].toString().trim().isNotEmpty) return req['commentText'].toString().trim();
+      if (req['comment_text'] != null && req['comment_text'].toString().trim().isNotEmpty) return req['comment_text'].toString().trim();
+      if (req['generatedContent'] != null && req['generatedContent'].toString().trim().isNotEmpty) return req['generatedContent'].toString().trim();
       if (req['customText'] != null && req['customText'].toString().trim().isNotEmpty) return req['customText'].toString().trim();
       if (req['comment'] != null && req['comment'].toString().trim().isNotEmpty) return req['comment'].toString().trim();
       if (req['text'] != null && req['text'].toString().trim().isNotEmpty) return req['text'].toString().trim();
@@ -320,6 +325,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     }
     if (t['metadata'] is Map) {
       final meta = t['metadata'] as Map;
+      if (meta['commentText'] != null && meta['commentText'].toString().trim().isNotEmpty) return meta['commentText'].toString().trim();
       if (meta['customText'] != null && meta['customText'].toString().trim().isNotEmpty) return meta['customText'].toString().trim();
       if (meta['comment'] != null && meta['comment'].toString().trim().isNotEmpty) return meta['comment'].toString().trim();
     }

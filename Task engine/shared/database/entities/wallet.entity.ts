@@ -5,18 +5,18 @@ export class Wallet {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ type: 'uuid', unique: true })
+    @Column({ name: 'user_id', type: 'uuid', unique: true })
     userId: string; // References User entity
 
-    @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+    @Column({ name: 'available_balance', type: 'decimal', precision: 12, scale: 2, default: 0 })
     availableBalance: number;
 
-    @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+    @Column({ name: 'reserved_balance', type: 'decimal', precision: 12, scale: 2, default: 0 })
     reservedBalance: number;
 
-    @CreateDateColumn()
+    @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 
-    @UpdateDateColumn()
+    @UpdateDateColumn({ name: 'updated_at' })
     updatedAt: Date;
 }

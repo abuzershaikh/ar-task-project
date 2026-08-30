@@ -1,13 +1,13 @@
 plugins {
     id("com.android.application")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.buy.taskpost.marketing_pro"
-    compileSdk = 37
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -19,26 +19,33 @@ android {
     defaultConfig {
         applicationId = "com.buy.taskpost.marketing_pro"
         minSdk = flutter.minSdkVersion
-        targetSdk = 37
+        targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
     signingConfigs {
         create("customRelease") {
-            storeFile = file("buyer-key.jks")
-            storePassword = "buyerpassword123"
-            keyAlias = "buyerkey"
-            keyPassword = "buyerpassword123"
+            val keyFile = file("buyer-key.jks")
+            if (keyFile.exists()) {
+                storeFile = keyFile
+                storePassword = "buyerpassword123"
+                keyAlias = "buyerkey"
+                keyPassword = "buyerpassword123"
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("customRelease")
+            signingConfig = if (file("buyer-key.jks").exists()) {
+                signingConfigs.getByName("customRelease")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
         debug {
-            signingConfig = signingConfigs.getByName("customRelease")
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -49,9 +56,9 @@ android {
     }
 }
 
-kotlin {
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
     }
 }
 

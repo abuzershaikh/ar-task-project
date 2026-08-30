@@ -10,7 +10,7 @@ class AppConstants {
   // ── API ───────────────────────────────────────────────────────────────
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://95.179.178.6:3000/api/v1',
+    defaultValue: 'http://65.20.77.112:3000/api/v1',
   );
 
   // ── Task Stages (backend-aligned) ────────────────────────────────────
