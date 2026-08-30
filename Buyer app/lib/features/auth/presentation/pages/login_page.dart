@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/services/firestore_service.dart';
+import '../../../../core/services/crashlytics_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/storage/secure_storage_service.dart';
@@ -52,6 +53,14 @@ class _LoginPageState extends State<LoginPage> {
           await storage.saveUserEmail(firebaseUser.email ?? account.email);
           await storage.saveUserName(firebaseUser.displayName ?? account.displayName ?? '');
           await storage.saveUserId(firebaseUser.uid);
+
+          // Link user to Crashlytics reports
+          await CrashlyticsService.setUser(
+            id: firebaseUser.uid,
+            email: firebaseUser.email ?? account.email,
+            name: firebaseUser.displayName ?? account.displayName,
+            role: 'BUYER',
+          );
 
           final userData = await FirestoreService.syncUserProfile(
             uid: firebaseUser.uid,

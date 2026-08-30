@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../services/firestore_service.dart';
 import '../services/api_service.dart';
+import '../services/crashlytics_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   bool _isAuthenticated = false;
@@ -45,10 +46,20 @@ class AuthProvider extends ChangeNotifier {
   Future<void> setFirebaseUser(User firebaseUser, Map<String, dynamic> userData) async {
     _isAuthenticated = true;
     _user = userData;
+    final email = firebaseUser.email ?? userData['email'] ?? 'worker@taskpost.com';
+    final uid = firebaseUser.uid;
+    final name = userData['name'] ?? firebaseUser.displayName ?? 'Worker';
+
     await ApiService.saveUserData(
-      email: firebaseUser.email ?? userData['email'] ?? 'worker@taskpost.com',
-      uid: firebaseUser.uid,
-      name: userData['name'] ?? firebaseUser.displayName,
+      email: email,
+      uid: uid,
+      name: name,
+    );
+    await CrashlyticsService.setUser(
+      id: uid,
+      email: email,
+      name: name,
+      role: 'WORKER',
     );
     notifyListeners();
   }
@@ -56,10 +67,20 @@ class AuthProvider extends ChangeNotifier {
   Future<void> setDirectUser(Map<String, dynamic> userData) async {
     _isAuthenticated = true;
     _user = userData;
+    final email = userData['email'] ?? 'worker@taskpost.com';
+    final uid = userData['uid'] ?? 'worker_device_user';
+    final name = userData['name'] ?? 'Worker';
+
     await ApiService.saveUserData(
-      email: userData['email'] ?? 'worker@taskpost.com',
-      uid: userData['uid'] ?? 'worker_device_user',
-      name: userData['name'] ?? 'Worker',
+      email: email,
+      uid: uid,
+      name: name,
+    );
+    await CrashlyticsService.setUser(
+      id: uid,
+      email: email,
+      name: name,
+      role: 'WORKER',
     );
     notifyListeners();
   }

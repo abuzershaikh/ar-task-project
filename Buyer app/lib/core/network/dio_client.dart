@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../constants/app_constants.dart';
 import '../errors/exceptions.dart';
+import '../services/crashlytics_service.dart';
 
 class DioClient {
   final Dio _dio;
@@ -117,11 +118,26 @@ class DioClient {
 
   // Error Handler
   Exception _handleError(DioException error) {
+    final endpoint = error.requestOptions.path;
+    final method = error.requestOptions.method;
+    final statusCode = error.response?.statusCode;
+    final responseData = error.response?.data?.toString();
+
+    // Log to Crashlytics
+    CrashlyticsService.recordApiError(
+      endpoint: endpoint,
+      method: method,
+      statusCode: statusCode,
+      error: error,
+      stackTrace: error.stackTrace,
+      responseSnippet: responseData,
+    );
+
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return NetworkException('Connection timeout');
+        return NetworkException('Connection timeout. Please check your internet connection.');
       
       case DioExceptionType.badResponse:
         return _handleResponseError(error.response);
@@ -130,7 +146,7 @@ class DioClient {
         return NetworkException('Request cancelled');
       
       default:
-        return NetworkException('Network error occurred');
+        return NetworkException('Network error occurred. No response received from server.');
     }
   }
 
@@ -142,7 +158,7 @@ class DioClient {
     switch (response.statusCode) {
       case 400:
         return BadRequestException(
-          response.data['message'] ?? 'Bad request',
+          response.data is Map ? (response.data['message'] ?? 'Bad request') : 'Bad request',
         );
       case 401:
         return UnauthorizedException('Unauthorized access');
@@ -152,15 +168,15 @@ class DioClient {
         return NotFoundException('Resource not found');
       case 422:
         return ValidationException(
-          response.data['message'] ?? 'Validation failed',
-          response.data['errors'],
+          response.data is Map ? (response.data['message'] ?? 'Validation failed') : 'Validation failed',
+          response.data is Map ? response.data['errors'] : null,
         );
       case 500:
       case 502:
       case 503:
-        return ServerException('Server error');
+        return ServerException('Server error (${response.statusCode})');
       default:
-        return ServerException('Unknown error occurred');
+        return ServerException('Unknown error occurred (${response.statusCode})');
     }
   }
 }

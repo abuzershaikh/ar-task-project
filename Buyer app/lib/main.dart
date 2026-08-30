@@ -9,6 +9,7 @@ import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/home/presentation/bloc/dashboard_bloc.dart';
 import 'features/wallet/presentation/bloc/wallet_bloc.dart';
 
+import 'core/services/crashlytics_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -16,6 +17,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Initialize Firebase Crashlytics & Global Error Reporting
+  await CrashlyticsService.initialize();
   
   // Initialize dependencies
   await initializeDependencies();

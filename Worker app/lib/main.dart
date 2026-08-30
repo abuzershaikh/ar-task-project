@@ -10,6 +10,7 @@ import 'features/navigation/screens/main_nav_screen.dart';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'core/services/crashlytics_service.dart';
 import 'firebase_options.dart';
 
 @pragma('vm:entry-point')
@@ -34,6 +35,10 @@ void main() async {
   } catch (e) {
     debugPrint('Firebase core init error: $e');
   }
+
+  // Initialize Firebase Crashlytics & Global Error Reporting
+  await CrashlyticsService.initialize();
+
   try {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   } catch (e) {

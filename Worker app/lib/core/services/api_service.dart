@@ -4,9 +4,28 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/app_constants.dart';
+import 'crashlytics_service.dart';
 
 class ApiService {
   static String get baseUrl => AppConstants.apiBaseUrl;
+
+  static void _reportApiError({
+    required String endpoint,
+    required String method,
+    int? statusCode,
+    required dynamic error,
+    StackTrace? stackTrace,
+    String? responseBody,
+  }) {
+    CrashlyticsService.recordApiError(
+      endpoint: endpoint,
+      method: method,
+      statusCode: statusCode,
+      error: error,
+      stackTrace: stackTrace,
+      responseSnippet: responseBody,
+    );
+  }
 
   static Future<String?> getToken() async {
     try {
