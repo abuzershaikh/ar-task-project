@@ -992,6 +992,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ),
             ),
           ],
+          const SizedBox(height: 40),
         ],
       ),
     );

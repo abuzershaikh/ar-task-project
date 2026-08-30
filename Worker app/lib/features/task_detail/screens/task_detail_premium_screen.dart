@@ -869,7 +869,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
 
                 // ── 8. Remember / Guidelines Box ───────────────────────────
                 _buildRememberSection(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 140),
               ],
             ),
           ),

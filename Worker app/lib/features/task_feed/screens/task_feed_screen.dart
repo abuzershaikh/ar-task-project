@@ -250,7 +250,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                       );
                     },
                   ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 40),
               ],
             ),
           ),

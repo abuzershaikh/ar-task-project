@@ -110,7 +110,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 36),
               ],
             ),
           ),

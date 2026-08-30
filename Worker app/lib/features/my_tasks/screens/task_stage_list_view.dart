@@ -61,7 +61,7 @@ class TaskStageListView extends StatelessWidget {
       color: const Color(0xFF00875A),
       onRefresh: () => taskProvider.fetchMyTasks(stage),
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 28),
         itemCount: taskList.length,
         itemBuilder: (context, index) {
           final task = taskList[index];

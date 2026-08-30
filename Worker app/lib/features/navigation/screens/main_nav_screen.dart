@@ -9,6 +9,8 @@ import 'package:provider/provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/providers/task_provider.dart';
 
+import 'package:flutter/services.dart';
+
 /// Main Navigation Shell with 5 bottom tabs:
 /// Task Feed | My Tasks | Rewards (3D Gaming Strike Center) | Wallet | Profile
 class MainNavScreen extends StatefulWidget {
@@ -20,6 +22,7 @@ class MainNavScreen extends StatefulWidget {
 
 class _MainNavScreenState extends State<MainNavScreen> {
   int _currentIndex = 0;
+  DateTime? _lastBackPressTime;
 
   @override
   void initState() {
@@ -43,26 +46,54 @@ class _MainNavScreenState extends State<MainNavScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: Container(
-        color: const Color(0xFF0D192B), // Dark slate matching screenshot
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 68,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(0, Icons.explore_rounded, 'Feed'),
-                _buildNavItem(1, Icons.assignment_outlined, 'Tasks'),
-                _buildCenterRewardNavItem(2),
-                _buildNavItem(3, Icons.account_balance_wallet_outlined, 'Wallet'),
-                _buildNavItem(4, Icons.person_outline_rounded, 'Profile'),
-              ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_currentIndex != 0) {
+          // If on another tab (Tasks, Rewards, Wallet, Profile), go back to Feed (Home) first
+          setState(() => _currentIndex = 0);
+          return;
+        }
+
+        // If on Task Feed (Home), require double back press to exit
+        final now = DateTime.now();
+        if (_lastBackPressTime == null ||
+            now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+          _lastBackPressTime = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Press back again to exit'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
+        ),
+        bottomNavigationBar: Container(
+          color: const Color(0xFF0D192B), // Dark slate matching design
+          child: SafeArea(
+            top: false,
+            bottom: true,
+            child: SizedBox(
+              height: 64,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(0, Icons.explore_rounded, 'Feed'),
+                  _buildNavItem(1, Icons.assignment_outlined, 'Tasks'),
+                  _buildCenterRewardNavItem(2),
+                  _buildNavItem(3, Icons.account_balance_wallet_outlined, 'Wallet'),
+                  _buildNavItem(4, Icons.person_outline_rounded, 'Profile'),
+                ],
+              ),
             ),
           ),
         ),

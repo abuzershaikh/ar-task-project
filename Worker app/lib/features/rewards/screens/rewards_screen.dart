@@ -424,7 +424,7 @@ class _RewardsScreenState extends State<RewardsScreen> with TickerProviderStateM
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(14, 6, 14, 24),
+          padding: const EdgeInsets.fromLTRB(14, 6, 14, 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
