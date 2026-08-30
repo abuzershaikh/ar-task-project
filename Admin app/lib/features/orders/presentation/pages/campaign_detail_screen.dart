@@ -373,14 +373,32 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                             ],
                           ),
                           onTap: () {
+                            final submissionId = item['submissionId']?.toString() ?? item['id']?.toString() ?? '';
+                            String proofUrl = (item['proofUrl'] ?? item['proofScreenshotUrl'] ?? '').toString();
+                            if (proofUrl.isEmpty && item['proofs'] is List && (item['proofs'] as List).isNotEmpty) {
+                              final p0 = (item['proofs'] as List).first;
+                              if (p0 is Map) proofUrl = (p0['url'] ?? p0['path'] ?? '').toString();
+                              else if (p0 is String) proofUrl = p0;
+                            }
+                            if (proofUrl.isEmpty && item['data'] is Map) {
+                              proofUrl = (item['data']['proofUrl'] ?? item['data']['screenshotUrl'] ?? '').toString();
+                            }
+                            String proofText = (item['proofText'] ?? item['notes'] ?? '').toString();
+                            if (proofText.isEmpty && item['data'] is Map) {
+                              proofText = (item['data']['textProof'] ?? item['data']['proofText'] ?? item['data']['notes'] ?? '').toString();
+                            }
+
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
                               builder: (context) => TaskReviewInspectorModal(
+                                submissionId: submissionId,
                                 taskId: taskId,
                                 workerId: workerId,
                                 workerName: workerName.toString(),
                                 workerEmail: workerEmail.toString(),
+                                proofUrl: proofUrl.isNotEmpty ? proofUrl : null,
+                                proofText: proofText.isNotEmpty ? proofText : null,
                               ),
                             );
                           },

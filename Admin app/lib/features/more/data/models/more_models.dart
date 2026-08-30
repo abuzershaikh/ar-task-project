@@ -129,6 +129,13 @@ class ReviewItemModel {
       }
     }
 
+    if (extractedProofUrl.isNotEmpty && !extractedProofUrl.startsWith('http')) {
+      final clean = extractedProofUrl.startsWith('/') ? extractedProofUrl : '/$extractedProofUrl';
+      extractedProofUrl = clean.contains('/files/raw')
+          ? 'http://65.20.77.112:3000$clean'
+          : 'http://65.20.77.112:3000/api/v1/files/raw/$extractedProofUrl';
+    }
+
     return ReviewItemModel(
       id: json['id']?.toString() ?? '',
       taskId: json['taskId']?.toString() ?? '',

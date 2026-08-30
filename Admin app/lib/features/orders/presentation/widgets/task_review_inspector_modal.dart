@@ -77,6 +77,14 @@ class TaskReviewInspectorModal extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayName = workerName.isNotEmpty ? workerName : (workerId.length > 6 ? 'Worker #${workerId.substring(0, 6)}' : workerId);
 
+    String? normalizedProofUrl = proofUrl;
+    if (normalizedProofUrl != null && normalizedProofUrl.isNotEmpty && !normalizedProofUrl.startsWith('http')) {
+      final clean = normalizedProofUrl.startsWith('/') ? normalizedProofUrl : '/$normalizedProofUrl';
+      normalizedProofUrl = clean.contains('/files/raw')
+          ? 'http://65.20.77.112:3000$clean'
+          : 'http://65.20.77.112:3000/api/v1/files/raw/$normalizedProofUrl';
+    }
+
     return DraggableScrollableSheet(
       initialChildSize: 0.9,
       expand: false,
@@ -169,47 +177,33 @@ class TaskReviewInspectorModal extends StatelessWidget {
                                   color: Color(0xFFECFDF5),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.person_rounded, color: Color(0xFF059669), size: 22),
+                                child: const Icon(Icons.verified_user_rounded, color: Color(0xFF059669), size: 24),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF064E3B))),
-                                    if (workerEmail.isNotEmpty)
-                                      Text(workerEmail, style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)))
-                                    else
-                                      const Text('Quality Score: 95.0', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                                    Text(
+                                      displayName,
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF064E3B)),
+                                    ),
+                                    Text(
+                                      workerEmail.isNotEmpty ? workerEmail : 'ID: $workerId',
+                                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                    ),
                                   ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFDCFCE7),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: const Color(0xFF16A34A).withOpacity(0.4)),
-                                ),
-                                child: const Text(
-                                  'Ready for Review',
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    color: Color(0xFF16A34A),
-                                    fontWeight: FontWeight.bold,
-                                  ),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
-                          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                          const Divider(height: 1),
                           const SizedBox(height: 10),
+                          _buildCustomRow(context, 'Task ID', _buildCopySnippet(context, 'Task ID', taskId)),
                           if (submissionId.isNotEmpty)
                             _buildCustomRow(context, 'Submission ID', _buildCopySnippet(context, 'Submission ID', submissionId)),
-                          _buildCustomRow(context, 'Task ID', _buildCopySnippet(context, 'Task ID', taskId)),
-                          _buildCustomRow(context, 'Worker UID', _buildCopySnippet(context, 'Worker UID', workerId)),
-                          _buildInfoRow('Submitted Status', 'Awaiting Verification'),
+                          _buildCustomRow(context, 'Worker ID', _buildCopySnippet(context, 'Worker ID', workerId)),
                         ],
                       ),
                     ),
@@ -253,17 +247,17 @@ class TaskReviewInspectorModal extends StatelessWidget {
                         // Screenshot Preview
                         InkWell(
                           onTap: () {
-                            if (proofUrl != null && proofUrl!.isNotEmpty) {
-                              ImageViewerDialog.show(context, imageUrl: proofUrl!, title: 'Proof Screenshot');
+                            if (normalizedProofUrl != null && normalizedProofUrl.isNotEmpty) {
+                              ImageViewerDialog.show(context, imageUrl: normalizedProofUrl, title: 'Proof Screenshot');
                             }
                           },
                           child: Container(
                             height: 240,
                             width: double.infinity,
                             color: AppColors.gray100,
-                            child: proofUrl != null && proofUrl!.startsWith('http')
+                            child: normalizedProofUrl != null && normalizedProofUrl.startsWith('http')
                                 ? Image.network(
-                                    proofUrl!,
+                                    normalizedProofUrl,
                                     fit: BoxFit.contain,
                                     loadingBuilder: (ctx, child, progress) {
                                       if (progress == null) return child;
@@ -303,8 +297,8 @@ class TaskReviewInspectorModal extends StatelessWidget {
                                 children: [
                                   ElevatedButton.icon(
                                     onPressed: () {
-                                      if (proofUrl != null && proofUrl!.isNotEmpty) {
-                                        ImageViewerDialog.show(context, imageUrl: proofUrl!, title: 'Proof Screenshot');
+                                      if (normalizedProofUrl != null && normalizedProofUrl.isNotEmpty) {
+                                        ImageViewerDialog.show(context, imageUrl: normalizedProofUrl, title: 'Proof Screenshot');
                                       } else {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(content: Text('No image URL available')),

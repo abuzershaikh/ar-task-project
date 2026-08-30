@@ -162,6 +162,7 @@ export class AdminOrderController {
         }
 
         let submissions: any[] = [];
+        const appUrl = process.env.APP_URL || 'http://65.20.77.112:3000';
         for (const t of tasks) {
             const sub = await this.submissionRepo.findByTaskId(t.id);
             if (sub) {
@@ -169,10 +170,38 @@ export class AdminOrderController {
                 const workerName = (workerUser as any)?.fullName || (workerUser as any)?.name || (workerUser?.email ? workerUser.email.split('@')[0] : 'Worker');
                 const workerEmail = workerUser?.email || '';
 
+                let proofUrl = '';
+                if (Array.isArray(sub.proofs) && sub.proofs.length > 0) {
+                    proofUrl = sub.proofs[0]?.url || sub.proofs[0]?.path || '';
+                }
+                if (!proofUrl && sub.data) {
+                    proofUrl = sub.data.proofUrl || sub.data.screenshotUrl || '';
+                }
+                if (proofUrl && !proofUrl.startsWith('http')) {
+                    if (proofUrl.startsWith('/')) {
+                        proofUrl = `${appUrl}${proofUrl}`;
+                    } else if (proofUrl.includes('/')) {
+                        proofUrl = `${appUrl}/api/v1/files/raw/${encodeURIComponent(proofUrl)}`;
+                    } else {
+                        proofUrl = `${appUrl}/api/v1/files/raw/${proofUrl}`;
+                    }
+                }
+
+                let proofText = '';
+                if (sub.data) {
+                    proofText = sub.data.textProof || sub.data.proofText || sub.data.notes || '';
+                }
+
                 submissions.push({
                     ...sub,
+                    submissionId: sub.id,
+                    taskTitle: t.taskType || 'Task Execution',
+                    orderId: t.orderId || orderId,
                     workerName,
                     workerEmail,
+                    proofUrl,
+                    proofScreenshotUrl: proofUrl,
+                    proofText,
                 });
             }
         }

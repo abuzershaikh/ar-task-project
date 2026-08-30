@@ -57,6 +57,17 @@ export class AdminReviewController {
             proofUrl = sub.data.proofUrl || sub.data.screenshotUrl || '';
         }
 
+        const appUrl = process.env.APP_URL || 'http://65.20.77.112:3000';
+        if (proofUrl && !proofUrl.startsWith('http')) {
+            if (proofUrl.startsWith('/')) {
+                proofUrl = `${appUrl}${proofUrl}`;
+            } else if (proofUrl.includes('/')) {
+                proofUrl = `${appUrl}/api/v1/files/raw/${encodeURIComponent(proofUrl)}`;
+            } else {
+                proofUrl = `${appUrl}/api/v1/files/raw/${proofUrl}`;
+            }
+        }
+
         let proofText = '';
         if (sub.data) {
             proofText = sub.data.textProof || sub.data.proofText || sub.data.notes || '';
