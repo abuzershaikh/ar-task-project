@@ -260,10 +260,15 @@ class ApiService {
     final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/files/upload'));
     request.headers.addAll(headers);
     request.files.add(await http.MultipartFile.fromPath('file', filePath));
+    debugPrint('[API] Uploading proof file: $filePath to $baseUrl/files/upload');
     
     final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
     final response = await http.Response.fromStream(streamedResponse);
-    return jsonDecode(response.body);
+    debugPrint('[API] Upload file response: ${response.statusCode} -> ${response.body}');
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('File upload failed (${response.statusCode}): ${response.body}');
   }
 
   // --- Worker Profile & KYC APIs ---

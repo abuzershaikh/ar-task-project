@@ -59,10 +59,16 @@ export class BuyerReviewController {
 
         let proofUrl = '';
         if (Array.isArray(sub.proofs) && sub.proofs.length > 0) {
-            proofUrl = sub.proofs[0]?.url || sub.proofs[0]?.path || '';
+            proofUrl = sub.proofs[0]?.url || sub.proofs[0]?.path || sub.proofs[0]?.filePath || '';
         }
         if (!proofUrl && sub.data) {
-            proofUrl = sub.data.proofUrl || sub.data.screenshotUrl || '';
+            proofUrl = sub.data.proofUrl || sub.data.screenshotUrl || sub.data.image || sub.data.fileUrl || '';
+        }
+
+        const appUrl = process.env.APP_URL || 'http://65.20.77.112:3000';
+        if (proofUrl && !proofUrl.startsWith('http')) {
+            const cleanKey = proofUrl.replace(/^\/+/, '').replace(/^uploads\//, '');
+            proofUrl = `${appUrl}/api/v1/files/raw/${cleanKey}`;
         }
 
         let proofText = '';

@@ -20,6 +20,8 @@ import { CurrentUser } from '../../../../shared/auth/decorators/current-user.dec
 import { User, UserRole } from '../../../../shared/database/entities/user.entity';
 import { FileType } from '../../../../shared/database/entities/file.entity';
 
+import { Public } from '../../../../shared/auth/decorators/public.decorator';
+
 @ApiTags('Files')
 @Controller('files')
 export class FileController {
@@ -100,6 +102,7 @@ export class FileController {
         };
     }
 
+    @Public()
     @Get('raw/:id')
     @ApiOperation({ summary: 'Public stream / raw file content by ID for audio guides and media' })
     async streamRawFile(
@@ -107,7 +110,22 @@ export class FileController {
         @Res() res: Response,
     ) {
         const { stream, file } = await this.fileStorage.getFileStream(fileId);
-        res.setHeader('Content-Type', file.mimeType || 'audio/m4a');
+        res.setHeader('Content-Type', file.mimeType || 'image/jpeg');
+        res.setHeader('Content-Disposition', `inline; filename="${file.originalName}"`);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        stream.pipe(res);
+    }
+
+    @Public()
+    @Get('stream/:id')
+    @ApiOperation({ summary: 'Public stream media endpoint' })
+    async streamMediaFile(
+        @Param('id') fileId: string,
+        @Res() res: Response,
+    ) {
+        const { stream, file } = await this.fileStorage.getFileStream(fileId);
+        res.setHeader('Content-Type', file.mimeType || 'image/jpeg');
         res.setHeader('Content-Disposition', `inline; filename="${file.originalName}"`);
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');

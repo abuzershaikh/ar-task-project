@@ -64,15 +64,56 @@ export class FileStorageService {
         return path.join(this.uploadDir, basename);
     }
 
-    async getFileStream(fileId: string): Promise<{ stream: fs.ReadStream; file: File }> {
-        const file = await this.getFileRecord(fileId);
-        const fullPath = this.getAbsoluteFilePath(file.fileName);
+    async getFileStream(fileIdOrName: string): Promise<{ stream: fs.ReadStream; file: Partial<File> }> {
+        let file: File | null = null;
+        try {
+            file = await this.fileRepo.findById(fileIdOrName);
+        } catch (_) {}
+
+        if (!file) {
+            try {
+                file = await this.fileRepo.findByFileName(fileIdOrName);
+            } catch (_) {}
+        }
+
+        let fullPath: string;
+        if (file) {
+            fullPath = this.getAbsoluteFilePath(file.fileName || file.filePath);
+        } else {
+            fullPath = this.getAbsoluteFilePath(fileIdOrName);
+        }
 
         if (!fs.existsSync(fullPath)) {
-            throw new NotFoundException('Physical file missing on server');
+            const cwdAltPath = path.join(process.cwd(), fileIdOrName);
+            if (fs.existsSync(cwdAltPath)) {
+                fullPath = cwdAltPath;
+            } else {
+                throw new NotFoundException(`Physical file missing on server: ${fileIdOrName}`);
+            }
+        }
+
+        const ext = path.extname(fullPath).toLowerCase();
+        let mimeType = file?.mimeType;
+        if (!mimeType) {
+            if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
+            else if (ext === '.png') mimeType = 'image/png';
+            else if (ext === '.webp') mimeType = 'image/webp';
+            else if (ext === '.gif') mimeType = 'image/gif';
+            else if (ext === '.mp4') mimeType = 'video/mp4';
+            else if (ext === '.mp3') mimeType = 'audio/mpeg';
+            else if (ext === '.m4a') mimeType = 'audio/m4a';
+            else if (ext === '.wav') mimeType = 'audio/wav';
+            else if (ext === '.pdf') mimeType = 'application/pdf';
+            else mimeType = 'application/octet-stream';
         }
 
         const stream = fs.createReadStream(fullPath);
-        return { stream, file };
+        return {
+            stream,
+            file: {
+                originalName: file?.originalName || path.basename(fullPath),
+                mimeType,
+            },
+        };
     }
 }

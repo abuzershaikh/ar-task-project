@@ -14,6 +14,10 @@ export class FileRepository {
         return this.repository.findOne({ where: { id } });
     }
 
+    async findByFileName(fileName: string): Promise<File | null> {
+        return this.repository.findOne({ where: { fileName } });
+    }
+
     async findByUploadedBy(uploadedBy: string): Promise<File[]> {
         return this.repository.find({
             where: { uploadedBy },

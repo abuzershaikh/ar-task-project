@@ -39,11 +39,16 @@ class ReviewSubmissionModel {
     if (json['data'] is Map) {
       final dataMap = json['data'] as Map;
       if (extractedProofUrl.isEmpty) {
-        extractedProofUrl = (dataMap['proofUrl'] ?? dataMap['screenshotUrl'] ?? '').toString();
+        extractedProofUrl = (dataMap['proofUrl'] ?? dataMap['screenshotUrl'] ?? dataMap['image'] ?? dataMap['fileUrl'] ?? '').toString();
       }
       if (extractedProofText.isEmpty) {
         extractedProofText = (dataMap['textProof'] ?? dataMap['proofText'] ?? dataMap['notes'] ?? '').toString();
       }
+    }
+
+    if (extractedProofUrl.isNotEmpty && !extractedProofUrl.startsWith('http')) {
+      final clean = extractedProofUrl.replaceAll(RegExp(r'^/+'), '').replaceAll('uploads/', '');
+      extractedProofUrl = 'http://65.20.77.112:3000/api/v1/files/raw/$clean';
     }
 
     return ReviewSubmissionModel(
