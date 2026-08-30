@@ -35,18 +35,28 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
+        create("customRelease") {
+            val keyFile = file("worker-release-key.jks")
+            if (keyFile.exists()) {
+                storeFile = keyFile
+                storePassword = "artaskworkerpass"
+                keyAlias = "upload"
+                keyPassword = "artaskworkerpass"
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists() && keystoreProperties.containsKey("storeFile")) {
-                signingConfigs.getByName("release")
+            signingConfig = if (file("worker-release-key.jks").exists()) {
+                signingConfigs.getByName("customRelease")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+        }
+        debug {
+            signingConfig = if (file("worker-release-key.jks").exists()) {
+                signingConfigs.getByName("customRelease")
             } else {
                 signingConfigs.getByName("debug")
             }
