@@ -45,10 +45,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final age = (profile['profile'] is Map ? profile['profile']['age'] : null)?.toString() ?? 'Not Set';
     final kycStatus = profile['kycStatus'] ?? 'DRAFT';
 
-    final double rating = (profile['averageRating'] != null) ? double.parse(profile['averageRating'].toString()) : 4.8;
+    final double rating = (profile['averageRating'] != null && double.tryParse(profile['averageRating'].toString()) != null && double.parse(profile['averageRating'].toString()) > 0)
+        ? double.parse(profile['averageRating'].toString())
+        : (profile['score']?['breakdown']?['rating'] != null ? (double.tryParse(profile['score']['breakdown']['rating'].toString()) ?? 4.9) : 4.9);
+
     final double qualityScore = (profile['score'] != null && profile['score']['totalScore'] != null)
-        ? double.parse(profile['score']['totalScore'].toString())
-        : 94.2;
+        ? (double.tryParse(profile['score']['totalScore'].toString()) ?? 96.5)
+        : (profile['score']?['overallScore'] != null ? (double.tryParse(profile['score']['overallScore'].toString()) ?? 96.5) : 96.5);
+
+    final int completedTasks = int.tryParse(profile['totalTasksCompleted']?.toString() ?? '0') ?? 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -63,7 +68,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 20),
 
               // ── 2. Avatar Profile Header Card ────────────────────────────
-              _buildProfileHeaderCard(context, name, email, mobile, age, kycStatus),
+              _buildProfileHeaderCard(context, name, email, mobile, age, kycStatus, qualityScore, rating, completedTasks),
               const SizedBox(height: 24),
 
               // ── 3. Profile Navigation Cards Section ───────────────────────
@@ -246,6 +251,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String mobile,
     String age,
     String kycStatus,
+    double qualityScore,
+    double rating,
+    int completedTasks,
   ) {
     return Container(
       width: double.infinity,
@@ -418,8 +426,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+
+          const SizedBox(height: 16),
+
+          // ── Quick Performance Stats Bar ──
+          InkWell(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const QualityScoreScreen()),
+              );
+            },
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildHeaderStatItem('Quality Score', '${qualityScore.toStringAsFixed(1)}%', Icons.verified_rounded, const Color(0xFF00875A)),
+                  Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
+                  _buildHeaderStatItem('Worker Rating', '${rating.toStringAsFixed(1)} ★', Icons.star_rounded, const Color(0xFFD97706)),
+                  Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
+                  _buildHeaderStatItem('Tasks Done', '$completedTasks', Icons.task_alt_rounded, const Color(0xFF0284C7)),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeaderStatItem(String label, String value, IconData icon, Color color) {
+    return Column(
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 4),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 

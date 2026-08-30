@@ -45,14 +45,20 @@ class _QualityScoreScreenState extends State<QualityScoreScreen> {
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
-    final scoreObj = _scoreData['score'] ?? {};
-    final breakdownObj = scoreObj['breakdown'] ?? {};
+    final profile = profileProvider.profileData;
+    final scoreObj = (_scoreData['score'] is Map ? _scoreData['score'] : null) ?? 
+                     (profile['score'] is Map ? profile['score'] : {});
+    final breakdownObj = (scoreObj['breakdown'] is Map) ? scoreObj['breakdown'] : {};
 
-    final rating = (breakdownObj['rating'] ?? 4.9).toDouble();
-    final accuracyRate = (breakdownObj['quality'] ?? 98.5).toDouble();
-    final onTimeRate = (breakdownObj['reliability'] ?? 99.2).toDouble();
-    final totalApproved = (profileProvider.profileData['totalTasksCompleted'] ?? 42).toInt();
-    final rejectionRate = (100.0 - accuracyRate).clamp(0.0, 100.0);
+    final double rating = double.tryParse(breakdownObj['rating']?.toString() ?? '') ?? 
+                          double.tryParse(profile['averageRating']?.toString() ?? '') ?? 
+                          4.9;
+    final double accuracyRate = double.tryParse(breakdownObj['quality']?.toString() ?? '') ?? 
+                                double.tryParse(profile['successRate']?.toString() ?? '') ?? 
+                                98.5;
+    final double onTimeRate = double.tryParse(breakdownObj['reliability']?.toString() ?? '') ?? 99.2;
+    final int totalApproved = int.tryParse(profile['totalTasksCompleted']?.toString() ?? '') ?? 0;
+    final double rejectionRate = (100.0 - accuracyRate).clamp(0.0, 100.0);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),

@@ -23,22 +23,35 @@ export class WorkerScoreController {
         if (!worker) {
             return {
                 success: true,
-                score: { overallScore: 75.0, breakdown: { quality: 80, completion: 75, reliability: 80, rating: 4.5 } },
+                score: { 
+                    overallScore: 94.5, 
+                    breakdown: { quality: 98.5, completion: 98.0, reliability: 99.2, rating: 4.9 },
+                    workerTier: 'GOLD',
+                    updatedAt: new Date()
+                },
             };
         }
 
         const scoreRecord = await this.scoreRepo.findByWorker(worker.id);
 
+        const completed = Number(worker.totalTasksCompleted || 0);
+        const rejected = Number(worker.totalTasksRejected || 0);
+        const total = completed + rejected;
+        const quality = total > 0 ? Math.round((completed / total) * 1000) / 10 : 98.5;
+        const reliability = total > 0 ? Math.max(85, Math.round((1 - (rejected / total)) * 1000) / 10) : 99.2;
+        const rating = (worker.averageRating && Number(worker.averageRating) > 0) ? Number(worker.averageRating) : 4.9;
+        const calculatedOverall = Math.round(((quality * 0.45) + (reliability * 0.35) + ((rating / 5) * 100 * 0.20)) * 10) / 10;
+
         const breakdown = scoreRecord ? scoreRecord.breakdown : {
-            quality: 96,
-            completion: 98,
-            reliability: 95,
-            rating: worker.averageRating || 4.8,
-            recentPerformance: 93,
-            experience: 88,
+            quality,
+            completion: total > 0 ? 100 : 98.0,
+            reliability,
+            rating,
+            recentPerformance: 95.0,
+            experience: Math.min(100, 70 + (completed * 2)),
         };
 
-        const overallScore = scoreRecord ? scoreRecord.totalScore : 94.2;
+        const overallScore = scoreRecord ? scoreRecord.totalScore : calculatedOverall;
 
         return {
             success: true,
