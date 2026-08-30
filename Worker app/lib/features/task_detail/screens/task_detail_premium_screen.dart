@@ -384,12 +384,12 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
   void _onPressSubmit() {
     final textProof = _proofTextController.text.trim();
 
-    if (_selectedProofImage == null && textProof.isEmpty) {
+    if (_selectedProofImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('⚠️ Please attach a screenshot proof before submitting.'),
+          content: Text('⚠️ Please tap "Tap to Upload Screenshot Proof" first to attach your proof image.'),
           backgroundColor: Color(0xFFDC2626),
-          duration: Duration(seconds: 2),
+          duration: Duration(seconds: 3),
         ),
       );
       return;
@@ -420,7 +420,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
                 top: 40,
                 right: 20,
                 child: Container(
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.black54,
                     shape: BoxShape.circle,
                   ),
@@ -464,25 +464,23 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
               children: [
                 // Header
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
                   decoration: const BoxDecoration(
-                    color: Color(0xFFF8FAFC),
+                    color: Color(0xFF0F172A),
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(24),
                       topRight: Radius.circular(24),
                     ),
-                    border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFECFDF5),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                          color: const Color(0xFF10B981).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.verified_user_rounded, color: Color(0xFF059669), size: 22),
+                        child: const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 20),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -490,40 +488,43 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Verify Proof Screenshot',
+                              'Confirm Submission',
                               style: TextStyle(
+                                color: Colors.white,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF0F172A),
                               ),
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'Ensure this is the correct proof for this task',
-                              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                              'Review your proof before sending',
+                              style: TextStyle(
+                                color: Color(0xFF94A3B8),
+                                fontSize: 11.5,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      InkWell(
-                        onTap: () => Navigator.of(dialogContext).pop(),
-                        child: const Icon(Icons.close_rounded, color: Color(0xFF94A3B8), size: 22),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 22),
+                        onPressed: () => Navigator.of(dialogContext).pop(),
                       ),
                     ],
                   ),
                 ),
 
-                // Scrollable Body
+                // Scrollable Content
                 Flexible(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Full Screenshot Preview
+                        // Screenshot Preview
                         if (_selectedProofImage != null) ...[
                           const Text(
-                            'Selected Screenshot Preview:',
+                            'Attached Screenshot Proof:',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -534,18 +535,18 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
                           GestureDetector(
                             onTap: () => _showFullScreenImage(_selectedProofImage!),
                             child: Container(
+                              height: 180,
                               width: double.infinity,
-                              height: 220,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                                color: const Color(0xFF0F172A),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
                               ),
                               child: Stack(
                                 fit: StackFit.expand,
                                 children: [
                                   ClipRRect(
-                                    borderRadius: BorderRadius.circular(15),
+                                    borderRadius: BorderRadius.circular(14),
                                     child: Image.file(
                                       _selectedProofImage!,
                                       fit: BoxFit.contain,
@@ -720,16 +721,31 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
 
     try {
       if (taskId.isNotEmpty) {
-        await taskProvider.submitTaskProof(
+        final success = await taskProvider.submitTaskProof(
           taskId,
           textProof.isNotEmpty ? textProof : 'Screenshot attached',
           _selectedProofImage?.path,
         );
+        if (!success) {
+          throw Exception(taskProvider.error ?? 'Proof submission failed');
+        }
       }
       if (widget.task is Map) {
         widget.task['status'] = 'UNDER_REVIEW';
       }
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Upload Error: $e'),
+            backgroundColor: const Color(0xFFDC2626),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      setState(() => _isSubmitting = false);
+      return;
+    }
 
     _countdownTimer?.cancel();
 

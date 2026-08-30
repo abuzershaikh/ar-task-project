@@ -159,11 +159,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   void _submitProof() async {
     final textProof = _proofTextController.text.trim();
 
-    if (_selectedProofImage == null && textProof.isEmpty) {
+    if (_selectedProofImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please attach screenshot proof or enter proof details.'),
+          content: Text('⚠️ Please attach screenshot proof from gallery before submitting.'),
           backgroundColor: AppTheme.dangerColor,
+          duration: Duration(seconds: 3),
         ),
       );
       return;
@@ -175,13 +176,28 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
     try {
       if (taskId.isNotEmpty) {
-        await taskProvider.submitTaskProof(
+        final success = await taskProvider.submitTaskProof(
           taskId,
           textProof.isNotEmpty ? textProof : 'Screenshot attached',
           _selectedProofImage?.path,
         );
+        if (!success) {
+          throw Exception(taskProvider.error ?? 'Proof submission failed');
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      setState(() => _isSubmitting = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Upload Error: $e'),
+            backgroundColor: AppTheme.dangerColor,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
 
     setState(() => _isSubmitting = false);
     if (mounted) {

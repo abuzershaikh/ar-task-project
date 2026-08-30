@@ -133,7 +133,7 @@ class TaskProvider extends ChangeNotifier {
 
       if (imagePath != null && imagePath.isNotEmpty) {
         final uploadRes = await ApiService.uploadFile(imagePath);
-        if (uploadRes['success'] == true) {
+        if (uploadRes['success'] == true || uploadRes['url'] != null) {
           final fileData = uploadRes['file'] ?? {};
           fileId = fileData['id']?.toString() ?? uploadRes['fileId']?.toString() ?? 'proof-1';
           fileUrl = (uploadRes['url'] ?? fileData['url'] ?? '').toString();
@@ -145,6 +145,8 @@ class TaskProvider extends ChangeNotifier {
                   : '${ApiService.baseUrl.replaceAll('/api/v1', '')}/${rawPath.replaceFirst(RegExp(r'^/+'), '')}';
             }
           }
+        } else {
+          throw Exception(uploadRes['message'] ?? 'Image upload failed');
         }
       }
 
@@ -167,11 +169,13 @@ class TaskProvider extends ChangeNotifier {
       if (res['success'] == true || res['status'] == 'SUBMITTED' || res['status'] == 'submitted') {
         fetchMyTasks(_selectedStage);
         return true;
+      } else {
+        throw Exception(res['message'] ?? 'Failed to submit task proof');
       }
     } catch (e) {
       _error = e.toString();
       notifyListeners();
+      rethrow;
     }
-    return false;
   }
 }
