@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../shared/widgets/platform_logo.dart';
-import '../../../shared/widgets/marquee_text.dart';
 
-/// Clean Task Feed Card:
-/// - Entire card is clickable (no separate Start button)
-/// - Logo box on left
-/// - Badge & Title (Single-line Marquee slow scrolling if long)
-/// - Reward text on right (e.g. ₹10 Per Task)
+/// Clean Task Feed Card matching the screenshot UI:
+/// - Platform logo in rounded container on left
+/// - Title & Subtitle + Easy / Duration tags
+/// - + ₹X reward pill & Green "Start" pill button
 class TaskFeedCard extends StatelessWidget {
   final dynamic task;
   final VoidCallback onTap;
@@ -43,13 +42,6 @@ class TaskFeedCard extends StatelessWidget {
           return v;
         }
       }
-      for (final entry in req.entries) {
-        final k = entry.key.toString().toLowerCase();
-        final v = entry.value.toString().trim();
-        if ((k.contains('textfield') || k.contains('text') || k.contains('desc') || k.contains('instruction') || k.contains('comment')) && v.isNotEmpty) {
-          return v;
-        }
-      }
     }
     if (task['metadata'] != null && task['metadata'] is Map) {
       final meta = task['metadata'] as Map;
@@ -64,8 +56,14 @@ class TaskFeedCard extends StatelessWidget {
       }
     }
     final rawType = (task['taskType'] ?? task['type'] ?? 'Task').toString();
+    final plat = _getPlatform(task);
+    if (plat == 'google') return 'Write a review on Google';
+    if (plat == 'youtube') return 'Like & Comment on YouTube';
+    if (plat == 'facebook') return 'Follow on Facebook Page';
+    if (plat == 'instagram') return 'Follow on Instagram';
+    if (plat == 'x') return 'Follow & Repost on X';
+
     if (rawType.toUpperCase().startsWith('SERVICE_') || rawType.toUpperCase().startsWith('SRV_')) {
-      final plat = _getPlatform(task);
       return '${plat[0].toUpperCase()}${plat.substring(1)} Promotion Task';
     }
     return rawType
@@ -73,6 +71,36 @@ class TaskFeedCard extends StatelessWidget {
         .split(' ')
         .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
         .join(' ');
+  }
+
+  String _getSubtitle(dynamic task, String platform) {
+    if (task != null && task['description'] != null && task['description'].toString().trim().isNotEmpty) {
+      final desc = task['description'].toString().trim();
+      if (desc.length <= 35) return desc;
+      return '${desc.substring(0, 32)}...';
+    }
+    if (task != null && task['category'] != null && task['category'].toString().trim().isNotEmpty) {
+      return task['category'].toString().trim();
+    }
+    switch (platform) {
+      case 'google':
+        return 'Share your experience';
+      case 'youtube':
+        return 'Engage with videos';
+      case 'facebook':
+        return 'Stay updated';
+      case 'instagram':
+        return 'Support the creator';
+      case 'x':
+        return 'Follow & engage';
+      default:
+        return 'Complete simple actions';
+    }
+  }
+
+  String _getDuration(dynamic task, String platform) {
+    if (platform == 'google') return '~ 2 Min';
+    return '~ 1 Min';
   }
 
   String _getPlatform(dynamic task) {
@@ -99,7 +127,7 @@ class TaskFeedCard extends StatelessWidget {
   }
 
   String _getReward(dynamic task) {
-    if (task == null) return '10';
+    if (task == null) return '5';
     final raw = task['rewardAmount'] ?? task['rewardPerTask'] ?? task['reward'] ?? task['workerReward'] ?? task['payout'];
     if (raw is num) {
       return raw.toStringAsFixed(raw == raw.roundToDouble() ? 0 : 2);
@@ -120,129 +148,174 @@ class TaskFeedCard extends StatelessWidget {
         }
       }
     }
-    return '10';
-  }
-
-  String _getBadge(dynamic task) {
-    if (task == null) return 'TASK';
-    if (task['badge'] != null && task['badge'].toString().trim().isNotEmpty) {
-      return task['badge'].toString().trim();
-    }
-    final platform = _getPlatform(task);
-    return platform.toUpperCase();
+    return '5';
   }
 
   @override
   Widget build(BuildContext context) {
     final title = _formatTitle(task);
-    final reward = _getReward(task);
     final platform = _getPlatform(task);
-    final badge = _getBadge(task);
+    final subtitle = _getSubtitle(task, platform);
+    final duration = _getDuration(task, platform);
+    final reward = _getReward(task);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.all(14.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Left Logo Icon Box
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFEDF2F7)),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // ── Platform Logo on Left ──
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFEDF2F7)),
+                  ),
+                  child: Center(
+                    child: PlatformLogo(platform: platform, size: 30),
+                  ),
                 ),
-                child: Center(
-                  child: PlatformLogo(platform: platform, size: 32),
-                ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
 
-              // Middle Content: Badge & Title Marquee
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
+                // ── Middle Details: Title, Subtitle & Tags ──
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF0F172A),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13.5,
+                          letterSpacing: 0.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF64748B),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Tags Row (Easy, ~ 2 Min)
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE6F4EA),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Easy',
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF00875A),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 9.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              duration,
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                                fontSize: 9.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+
+                // ── Right: Reward Pill & Start Button ──
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE6F4EA),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        badge,
-                        style: const TextStyle(
-                          color: Color(0xFF00875A),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
+                        '+ ₹$reward',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF00875A),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-
-                    // Single-line Marquee Title
-                    MarqueeText(
-                      text: title,
-                      style: const TextStyle(
-                        color: Color(0xFF0F172A),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14.5,
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00875A),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF00875A).withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'Start',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
-
-              // Right Reward Box + Arrow
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '₹$reward',
-                    style: const TextStyle(
-                      color: Color(0xFF00875A),
-                      fontWeight: FontWeight.w900,
-                      fontSize: 20,
-                    ),
-                  ),
-                  const Text(
-                    'Per Task',
-                    style: TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: Color(0xFFCBD5E1),
-                size: 22,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
