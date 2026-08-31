@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -105,106 +106,117 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFF01140B), // Deep Dark Jungle Emerald
-        body: RefreshIndicator(
-          color: const Color(0xFF22C55E),
-          backgroundColor: const Color(0xFF032617),
-          onRefresh: () async {
-            await taskProvider.fetchWalletData();
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── 1. Top Jungle Canopy with CoinBar Lottie Balance ─────────
-                _buildJungleTopHero(context, topPadding, walletBalance),
-                const SizedBox(height: 18),
+        body: Stack(
+          children: [
+            RefreshIndicator(
+              color: const Color(0xFF22C55E),
+              backgroundColor: const Color(0xFF032617),
+              onRefresh: () async {
+                await taskProvider.fetchWalletData();
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── 1. Top Jungle Canopy with CoinBar Lottie Balance ─────────
+                    _buildJungleTopHero(context, topPadding, walletBalance),
+                    const SizedBox(height: 18),
 
-                // ── 2. Withdrawal Rules & Info Banner ─────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildJungleWithdrawalInfoCard(walletBalance),
-                ),
-                const SizedBox(height: 22),
-
-                // ── 3. Quick Actions Section ──────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'Quick Actions',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.2,
+                    // ── 2. Withdrawal Rules & Info Banner ─────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildJungleWithdrawalInfoCard(walletBalance),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 12),
+                    const SizedBox(height: 22),
 
-                // Button 1: Withdraw Earnings
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildJungleActionButton(
-                    context: context,
-                    title: 'Withdraw Earnings',
-                    subtitle: 'Transfer funds directly to your UPI ID or Bank',
-                    icon: Icons.account_balance_wallet_rounded,
-                    iconBgColor: const Color(0xFF064E2B),
-                    iconColor: const Color(0xFF4ADE80),
-                    badgeText: 'Instant',
-                    badgeBg: const Color(0xFF047857),
-                    badgeColor: const Color(0xFFD1FAE5),
-                    onTap: () async {
-                      _audioPlayer?.pause();
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => WithdrawalScreen(
-                            availableBalance: walletBalance,
-                          ),
+                    // ── 3. Quick Actions Section ──────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Quick Actions',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.2,
                         ),
-                      );
-                      if (mounted && widget.isCurrentTab && !_isMuted) {
-                        _audioPlayer?.resume();
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
 
-                // Button 2: Transaction History
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildJungleActionButton(
-                    context: context,
-                    title: 'Transaction History',
-                    subtitle: 'View detailed records of payouts & earnings',
-                    icon: Icons.receipt_long_rounded,
-                    iconBgColor: const Color(0xFF0F3A4A),
-                    iconColor: const Color(0xFF38BDF8),
-                    badgeText: 'Logs',
-                    badgeBg: const Color(0xFF0369A1),
-                    badgeColor: const Color(0xFFE0F2FE),
-                    onTap: () async {
-                      _audioPlayer?.pause();
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const TransactionsHistoryScreen(),
-                        ),
-                      );
-                      if (mounted && widget.isCurrentTab && !_isMuted) {
-                        _audioPlayer?.resume();
-                      }
-                    },
-                  ),
-                ),
-                const SizedBox(height: 24),
+                    // Button 1: Withdraw Earnings
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildJungleActionButton(
+                        context: context,
+                        title: 'Withdraw Earnings',
+                        subtitle: 'Transfer funds directly to your UPI ID or Bank',
+                        icon: Icons.account_balance_wallet_rounded,
+                        iconBgColor: const Color(0xFF064E2B),
+                        iconColor: const Color(0xFF4ADE80),
+                        badgeText: 'Instant',
+                        badgeBg: const Color(0xFF047857),
+                        badgeColor: const Color(0xFFD1FAE5),
+                        onTap: () async {
+                          _audioPlayer?.pause();
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => WithdrawalScreen(
+                                availableBalance: walletBalance,
+                              ),
+                            ),
+                          );
+                          if (mounted && widget.isCurrentTab && !_isMuted) {
+                            _audioPlayer?.resume();
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
 
-                // ── 4. Bottom Jungle Foliage & Plant Base ─────────────────────
-                _buildJungleBottomFoliage(),
-              ],
+                    // Button 2: Transaction History
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildJungleActionButton(
+                        context: context,
+                        title: 'Transaction History',
+                        subtitle: 'View detailed records of payouts & earnings',
+                        icon: Icons.receipt_long_rounded,
+                        iconBgColor: const Color(0xFF0F3A4A),
+                        iconColor: const Color(0xFF38BDF8),
+                        badgeText: 'Logs',
+                        badgeBg: const Color(0xFF0369A1),
+                        badgeColor: const Color(0xFFE0F2FE),
+                        onTap: () async {
+                          _audioPlayer?.pause();
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const TransactionsHistoryScreen(),
+                            ),
+                          );
+                          if (mounted && widget.isCurrentTab && !_isMuted) {
+                            _audioPlayer?.resume();
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── 4. Bottom Jungle Foliage & Plant Base ─────────────────────
+                    _buildJungleBottomFoliage(),
+                  ],
+                ),
+              ),
             ),
-          ),
+
+            // ── Dynamic Rainforest Rain Weather Overlay (Randomly starts & stops) ──
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: _DynamicRainforestRainOverlay(),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -793,8 +805,9 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
 
 /// Dynamic Living Jungle Parrot on Branch:
 /// - Branch is always solid & visible on the left edge
-/// - Parrot sits on branch, periodically flies into canopy and returns after a few seconds
-/// - User can also tap the parrot to trigger a cute fly-away animation
+/// - 🎲 Fully randomized: Sometimes parrot is absent on open, sometimes present
+/// - Randomized flight intervals (15-45s) and away times (10-35s)
+/// - User can tap the parrot to trigger a fly-away animation
 class _AnimatedJungleParrotBranch extends StatefulWidget {
   const _AnimatedJungleParrotBranch();
 
@@ -808,7 +821,8 @@ class _AnimatedJungleParrotBranchState extends State<_AnimatedJungleParrotBranch
   late final Animation<Offset> _flightOffsetAnimation;
   late final Animation<double> _flightFadeAnimation;
   late final Animation<double> _flightScaleAnimation;
-  Timer? _periodicFlightTimer;
+  final math.Random _random = math.Random();
+  Timer? _flightTimer;
   bool _isAway = false;
 
   @override
@@ -843,36 +857,60 @@ class _AnimatedJungleParrotBranchState extends State<_AnimatedJungleParrotBranch
       curve: Curves.easeInOutCubic,
     ));
 
-    _startPeriodicFlightRoutine();
+    // 🎲 Random presence on screen open: 45% chance parrot is already away in the jungle!
+    _isAway = _random.nextDouble() < 0.45;
+    if (_isAway) {
+      _flightController.value = 1.0; // Starts hidden off-screen
+      _scheduleReturn(initialDelaySeconds: 6 + _random.nextInt(16));
+    } else {
+      _flightController.value = 0.0; // Starts perched on branch
+      _scheduleFlyAway(initialDelaySeconds: 12 + _random.nextInt(28));
+    }
   }
 
-  void _startPeriodicFlightRoutine() {
-    _periodicFlightTimer = Timer.periodic(const Duration(seconds: 24), (_) {
-      if (!mounted) return;
-      if (!_isAway) {
-        _triggerFlyAway();
-      }
+  void _scheduleFlyAway({int? initialDelaySeconds}) {
+    _flightTimer?.cancel();
+    final delay = Duration(seconds: initialDelaySeconds ?? (15 + _random.nextInt(30)));
+    _flightTimer = Timer(delay, () {
+      if (!mounted || _isAway) return;
+      _triggerFlyAway();
+    });
+  }
+
+  void _scheduleReturn({int? initialDelaySeconds}) {
+    _flightTimer?.cancel();
+    final delay = Duration(seconds: initialDelaySeconds ?? (10 + _random.nextInt(25)));
+    _flightTimer = Timer(delay, () {
+      if (!mounted || !_isAway) return;
+      _triggerReturn();
     });
   }
 
   void _triggerFlyAway() {
     if (_isAway) return;
+    _flightTimer?.cancel();
     setState(() => _isAway = true);
     _flightController.forward().then((_) {
-      Future.delayed(const Duration(seconds: 7), () {
-        if (!mounted) return;
-        _flightController.reverse().then((_) {
-          if (mounted) {
-            setState(() => _isAway = false);
-          }
-        });
-      });
+      if (mounted) {
+        _scheduleReturn();
+      }
+    });
+  }
+
+  void _triggerReturn() {
+    if (!_isAway) return;
+    _flightTimer?.cancel();
+    _flightController.reverse().then((_) {
+      if (mounted) {
+        setState(() => _isAway = false);
+        _scheduleFlyAway();
+      }
     });
   }
 
   @override
   void dispose() {
-    _periodicFlightTimer?.cancel();
+    _flightTimer?.cancel();
     _flightController.dispose();
     super.dispose();
   }
@@ -922,6 +960,138 @@ class _AnimatedJungleParrotBranchState extends State<_AnimatedJungleParrotBranch
       ),
     );
   }
+}
+
+/// Dynamic Rainforest Rain Overlay:
+/// - Randomly starts soft tropical drizzle and fades away into sunny jungle canopy
+/// - Shimmering animated rain streaks with subtle water mist reflection
+class _DynamicRainforestRainOverlay extends StatefulWidget {
+  const _DynamicRainforestRainOverlay();
+
+  @override
+  State<_DynamicRainforestRainOverlay> createState() =>
+      _DynamicRainforestRainOverlayState();
+}
+
+class _DynamicRainforestRainOverlayState
+    extends State<_DynamicRainforestRainOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _rainController;
+  late final List<_RainDrop> _rainDrops;
+  final math.Random _random = math.Random();
+  Timer? _weatherTimer;
+  double _targetRainOpacity = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _rainController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 750),
+    )..repeat();
+
+    _rainDrops = List.generate(70, (_) => _RainDrop(_random));
+
+    // 50% random chance rain is already falling on load
+    _targetRainOpacity = _random.nextDouble() < 0.5 ? 0.75 : 0.0;
+
+    _scheduleWeatherTransition();
+  }
+
+  void _scheduleWeatherTransition() {
+    _weatherTimer?.cancel();
+    final duration = Duration(seconds: 14 + _random.nextInt(20));
+    _weatherTimer = Timer(duration, () {
+      if (!mounted) return;
+      setState(() {
+        if (_targetRainOpacity > 0.1) {
+          _targetRainOpacity = 0.0; // Sun emerges, rain clears
+        } else {
+          _targetRainOpacity = 0.60 + _random.nextDouble() * 0.35; // Gentle tropical downpour
+        }
+      });
+      _scheduleWeatherTransition();
+    });
+  }
+
+  @override
+  void dispose() {
+    _weatherTimer?.cancel();
+    _rainController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: _targetRainOpacity,
+      duration: const Duration(seconds: 3),
+      curve: Curves.easeInOut,
+      child: AnimatedBuilder(
+        animation: _rainController,
+        builder: (context, child) {
+          return CustomPaint(
+            painter: _RainforestRainPainter(
+              progress: _rainController.value,
+              rainDrops: _rainDrops,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _RainDrop {
+  final double x;
+  final double speed;
+  final double length;
+  final double opacity;
+  final double offset;
+
+  _RainDrop(math.Random rand)
+      : x = rand.nextDouble(),
+        speed = 0.85 + rand.nextDouble() * 0.75,
+        length = 18.0 + rand.nextDouble() * 22.0,
+        opacity = 0.22 + rand.nextDouble() * 0.45,
+        offset = rand.nextDouble();
+}
+
+class _RainforestRainPainter extends CustomPainter {
+  final double progress;
+  final List<_RainDrop> rainDrops;
+
+  _RainforestRainPainter({
+    required this.progress,
+    required this.rainDrops,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rainPaint = Paint()
+      ..strokeWidth = 1.3
+      ..strokeCap = StrokeCap.round;
+
+    for (final drop in rainDrops) {
+      final y = ((drop.offset + progress * drop.speed) % 1.0) *
+              (size.height + drop.length) -
+          drop.length;
+      final x = drop.x * size.width;
+
+      const slant = 4.0;
+      rainPaint.color =
+          const Color(0xFF67E8F9).withValues(alpha: drop.opacity);
+
+      canvas.drawLine(
+        Offset(x, y),
+        Offset(x - slant, y + drop.length),
+        rainPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RainforestRainPainter oldDelegate) => true;
 }
 
 /// Custom painter for ambient golden glowing fireflies in the jungle
