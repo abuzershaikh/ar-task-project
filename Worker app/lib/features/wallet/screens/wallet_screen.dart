@@ -233,12 +233,12 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
       width: double.infinity,
       child: Stack(
         children: [
-          // 1. Realistic 3D Jungle Canopy Background Image
+          // 1. Realistic 3D Jungle Canopy Background Image (Seamless depth)
           Positioned(
             left: 0,
             right: 0,
             top: 0,
-            height: 290 + topPadding,
+            height: 380 + topPadding,
             child: Image.asset(
               'assets/images/jungle_wallet_bg.jpg',
               fit: BoxFit.cover,
@@ -260,24 +260,25 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
             ),
           ),
 
-          // 2. Gradient Overlay for smooth blending into dark jungle base
+          // 2. Multi-Stop Seamless Gradient Fade (Completely blends into dark jungle floor - ZERO cutout edge!)
           Positioned(
             left: 0,
             right: 0,
             top: 0,
-            height: 290 + topPadding,
+            height: 380 + topPadding,
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.45),
+                    Colors.black.withValues(alpha: 0.35),
                     Colors.transparent,
-                    const Color(0xFF01140B).withValues(alpha: 0.85),
+                    const Color(0xFF01140B).withValues(alpha: 0.40),
+                    const Color(0xFF01140B).withValues(alpha: 0.88),
                     const Color(0xFF01140B),
                   ],
-                  stops: const [0.0, 0.4, 0.85, 1.0],
+                  stops: const [0.0, 0.28, 0.60, 0.85, 1.0],
                 ),
               ),
             ),
@@ -496,6 +497,32 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
+                            // 0. Ambient Floor Shadow & Golden Halo under CoinBar
+                            Positioned(
+                              left: barWidth * 0.08,
+                              right: barWidth * 0.08,
+                              bottom: 0,
+                              height: 14,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(100),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.90),
+                                      blurRadius: 26,
+                                      spreadRadius: 4,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                    BoxShadow(
+                                      color: const Color(0xFFF59E0B).withValues(alpha: 0.20),
+                                      blurRadius: 32,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
                             // 1. CoinBar Lottie Animation (500x150)
                             Positioned.fill(
                               child: Lottie.asset(
@@ -1081,12 +1108,13 @@ class _RainforestRainPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     for (final drop in rainDrops) {
+      // Rain starts above the top status & notification bar (y = -35.0) and cascades smoothly
       final y = ((drop.offset + progress * drop.speed) % 1.0) *
-              (size.height + drop.length) -
-          drop.length;
+              (size.height + drop.length + 50) -
+          35.0;
       final x = drop.x * size.width;
 
-      const slant = 2.0; // Gentle angle
+      const slant = 2.0; // Gentle natural angle
       rainPaint.color =
           const Color(0xFFBAE6FD).withValues(alpha: drop.opacity);
 
