@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -776,18 +777,145 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
             ),
           ),
 
-          // 3. Animated Jungle Parrot sitting on branch extending from left edge
-          Positioned(
+          // 3. Dynamic Animated Jungle Parrot on Branch (Touches left edge + can fly away and return)
+          const Positioned(
             left: -8,
             bottom: 0,
             width: 160,
             height: 160,
+            child: _AnimatedJungleParrotBranch(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dynamic Living Jungle Parrot on Branch:
+/// - Branch is always solid & visible on the left edge
+/// - Parrot sits on branch, periodically flies into canopy and returns after a few seconds
+/// - User can also tap the parrot to trigger a cute fly-away animation
+class _AnimatedJungleParrotBranch extends StatefulWidget {
+  const _AnimatedJungleParrotBranch();
+
+  @override
+  State<_AnimatedJungleParrotBranch> createState() => _AnimatedJungleParrotBranchState();
+}
+
+class _AnimatedJungleParrotBranchState extends State<_AnimatedJungleParrotBranch>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _flightController;
+  late final Animation<Offset> _flightOffsetAnimation;
+  late final Animation<double> _flightFadeAnimation;
+  late final Animation<double> _flightScaleAnimation;
+  Timer? _periodicFlightTimer;
+  bool _isAway = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _flightController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    _flightOffsetAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(1.2, -1.5),
+    ).animate(CurvedAnimation(
+      parent: _flightController,
+      curve: Curves.easeInOutCubic,
+    ));
+
+    _flightFadeAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _flightController,
+      curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
+    ));
+
+    _flightScaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.65,
+    ).animate(CurvedAnimation(
+      parent: _flightController,
+      curve: Curves.easeInOutCubic,
+    ));
+
+    _startPeriodicFlightRoutine();
+  }
+
+  void _startPeriodicFlightRoutine() {
+    _periodicFlightTimer = Timer.periodic(const Duration(seconds: 24), (_) {
+      if (!mounted) return;
+      if (!_isAway) {
+        _triggerFlyAway();
+      }
+    });
+  }
+
+  void _triggerFlyAway() {
+    if (_isAway) return;
+    setState(() => _isAway = true);
+    _flightController.forward().then((_) {
+      Future.delayed(const Duration(seconds: 7), () {
+        if (!mounted) return;
+        _flightController.reverse().then((_) {
+          if (mounted) {
+            setState(() => _isAway = false);
+          }
+        });
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _periodicFlightTimer?.cancel();
+    _flightController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 160,
+      height: 160,
+      child: Stack(
+        children: [
+          // 1. Solid Tree Branch touching the left edge (Always visible)
+          Positioned.fill(
             child: Lottie.asset(
-              'assets/animations/parrot.json',
+              'assets/animations/parrot_branch_only.json',
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return const SizedBox();
+              errorBuilder: (context, error, stackTrace) => const SizedBox(),
+            ),
+          ),
+
+          // 2. Animated Parrot that flies into jungle canopy and returns + Tap trigger
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () {
+                if (!_isAway) {
+                  _triggerFlyAway();
+                }
               },
+              child: SlideTransition(
+                position: _flightOffsetAnimation,
+                child: FadeTransition(
+                  opacity: _flightFadeAnimation,
+                  child: ScaleTransition(
+                    scale: _flightScaleAnimation,
+                    alignment: Alignment.center,
+                    child: Lottie.asset(
+                      'assets/animations/parrot_bird_only.json',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
