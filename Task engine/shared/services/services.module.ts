@@ -22,6 +22,7 @@ import { ServiceVersionService } from '../modules/service-catalog/services/servi
 
 // AI Generator Services
 import { YouTubeCommentGenerator } from '../ai-generator/generators/youtube-comment.generator';
+import { DeepSeekCommentGenerator } from '../ai-generator/generators/deepseek-comment.generator';
 import { AiGeneratorService } from '../ai-generator/ai-generator.service';
 
 // Order State Machine & Event Listeners
@@ -57,6 +58,7 @@ const providers = [
     ServicePricingService,
     ServiceVersionService,
     YouTubeCommentGenerator,
+    DeepSeekCommentGenerator,
     AiGeneratorService,
     OrderStateMachineService,
     OrderActivatedListener,

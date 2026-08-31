@@ -33,6 +33,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   String _selectedLanguage = 'English';
   String _selectedTone = 'natural';
   bool _isSubmitting = false;
+  List<String> _sampleComments = [];
+  bool _isGeneratingPreview = false;
 
   @override
   void initState() {
@@ -47,6 +49,44 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     _topicController.dispose();
     _quantityController.dispose();
     super.dispose();
+  }
+
+  Future<void> _generateSampleComments() async {
+    setState(() => _isGeneratingPreview = true);
+    try {
+      if (_serviceRepository.dioClient != null) {
+        final res = await _serviceRepository.dioClient!.post(
+          '/buyer/orders/ai-preview-comments',
+          data: {
+            'topic': _topicController.text.trim(),
+            'language': _selectedLanguage,
+            'tone': _selectedTone,
+            'count': _selectedQuantity,
+            'serviceCode': _selectedService?.code,
+            'targetUrl': _targetUrlController.text.trim(),
+          },
+        );
+        if (res.statusCode == 200 && res.data != null && res.data['sampleComments'] != null) {
+          setState(() {
+            _sampleComments = List<String>.from(res.data['sampleComments']);
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not generate sample preview: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingPreview = false);
+      }
+    }
   }
 
   Future<void> _loadWalletBalance() async {
@@ -89,6 +129,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       _quantityController.text = '10';
       _targetUrlController.clear();
       _topicController.clear();
+      _sampleComments = [];
     });
   }
 
@@ -470,8 +511,18 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   topicController: _topicController,
                   selectedLanguage: _selectedLanguage,
                   selectedTone: _selectedTone,
-                  onLanguageChanged: (lang) => setState(() => _selectedLanguage = lang),
-                  onToneChanged: (tone) => setState(() => _selectedTone = tone),
+                  selectedQuantity: _selectedQuantity,
+                  sampleComments: _sampleComments,
+                  isGeneratingPreview: _isGeneratingPreview,
+                  onGeneratePreview: _generateSampleComments,
+                  onLanguageChanged: (lang) => setState(() {
+                    _selectedLanguage = lang;
+                    _sampleComments = [];
+                  }),
+                  onToneChanged: (tone) => setState(() {
+                    _selectedTone = tone;
+                    _sampleComments = [];
+                  }),
                 ),
                 const SizedBox(height: 16),
               ],

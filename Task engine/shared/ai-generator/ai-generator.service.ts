@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { DeepSeekCommentGenerator } from './generators/deepseek-comment.generator';
 import { YouTubeCommentGenerator } from './generators/youtube-comment.generator';
 import { GenerationOptions, IContentGenerator } from './generators/generator.interface';
 
@@ -8,10 +9,13 @@ export class AiGeneratorService {
     private readonly generators = new Map<string, IContentGenerator>();
 
     constructor(
+        private readonly deepSeekGen: DeepSeekCommentGenerator,
         private readonly youtubeCommentGen: YouTubeCommentGenerator,
     ) {
-        this.generators.set('youtube_comment', this.youtubeCommentGen);
-        this.generators.set('youtube_combo', this.youtubeCommentGen);
+        this.generators.set('youtube_comment', this.deepSeekGen);
+        this.generators.set('youtube_combo', this.deepSeekGen);
+        this.generators.set('social_comment', this.deepSeekGen);
+        this.generators.set('template_comment', this.youtubeCommentGen);
     }
 
     async generateContentBatch(
@@ -21,7 +25,7 @@ export class AiGeneratorService {
     ): Promise<string[]> {
         this.logger.log(`Generating batch of ${count} items using generator '${generatorType}' (Lang: ${options?.language || 'EN'}, Tone: ${options?.tone || 'natural'})`);
 
-        const generator = this.generators.get(generatorType) || this.youtubeCommentGen;
+        const generator = this.generators.get(generatorType) || this.deepSeekGen;
         
         // Handle in micro-batches if count is large (e.g. 500+)
         const batchSize = 100;

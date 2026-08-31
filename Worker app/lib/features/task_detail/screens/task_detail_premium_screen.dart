@@ -235,6 +235,12 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
 
   String _getCustomText() {
     final t = widget.task;
+    if (t['commentText'] != null && t['commentText'].toString().trim().isNotEmpty) {
+      return t['commentText'].toString().trim();
+    }
+    if (t['generatedContent'] != null && t['generatedContent'].toString().trim().isNotEmpty) {
+      return t['generatedContent'].toString().trim();
+    }
     if (t['customText'] != null && t['customText'].toString().trim().isNotEmpty) {
       return t['customText'].toString().trim();
     }
@@ -243,6 +249,12 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     }
     if (t['requirements'] is Map) {
       final req = t['requirements'] as Map;
+      if (req['commentText'] != null && req['commentText'].toString().trim().isNotEmpty) {
+        return req['commentText'].toString().trim();
+      }
+      if (req['generatedContent'] != null && req['generatedContent'].toString().trim().isNotEmpty) {
+        return req['generatedContent'].toString().trim();
+      }
       if (req['customText'] != null && req['customText'].toString().trim().isNotEmpty) {
         return req['customText'].toString().trim();
       }

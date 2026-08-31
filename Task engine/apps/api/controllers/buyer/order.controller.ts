@@ -20,6 +20,7 @@ import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
 import { TimingPolicy } from '../../../../shared/policies/timing-policy';
 import { WalletService } from '../../../../shared/services/wallet.service';
+import { AiGeneratorService } from '../../../../shared/ai-generator/ai-generator.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @ApiTags('Buyer - Orders')
@@ -36,8 +37,43 @@ export class BuyerOrderController {
         private readonly progressEngine: ProgressEngineService,
         private readonly pricingEngine: PricingEngine,
         private readonly walletService: WalletService,
+        private readonly aiGeneratorService: AiGeneratorService,
         private readonly eventEmitter: EventEmitter2,
     ) { }
+
+    @Post('ai-preview-comments')
+    @ApiOperation({ summary: 'Generate 5 sample comments preview using DeepSeek AI' })
+    async previewAiComments(
+        @Body() body: {
+            topic?: string;
+            language?: string;
+            tone?: string;
+            count?: number;
+            serviceCode?: string;
+            targetUrl?: string;
+        },
+    ) {
+        const topic = body.topic?.trim() || '';
+        const language = body.language || 'English';
+        const tone = body.tone || 'natural';
+        const requestedTotal = body.count || 10;
+        const previewCount = Math.min(5, requestedTotal > 0 ? requestedTotal : 5);
+
+        const sampleComments = await this.aiGeneratorService.generateContentBatch(
+            'youtube_comment',
+            previewCount,
+            { topic, language, tone, uniqueness: true, videoTitle: body.targetUrl },
+        );
+
+        return {
+            success: true,
+            sampleComments,
+            totalRequested: requestedTotal,
+            previewCount: sampleComments.length,
+            remainingToGenerate: Math.max(0, requestedTotal - sampleComments.length),
+            message: `Generated ${sampleComments.length} sample comments via DeepSeek AI. Remaining comments will be generated upon order placement.`,
+        };
+    }
 
     @Get('price-estimate')
     @ApiOperation({ summary: 'Get server-calculated price estimate for buyer (Display-only preview)' })
