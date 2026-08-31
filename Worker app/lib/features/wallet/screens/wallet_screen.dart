@@ -671,51 +671,18 @@ class _WalletScreenState extends State<WalletScreen> {
             ),
           ),
 
-          // 3. Animated Jungle Parrot sitting on branch from the right edge of screen
+          // 3. Animated Jungle Parrot sitting on branch extending from left edge
           Positioned(
-            right: -6,
+            left: -8,
             bottom: 0,
-            width: 145,
-            height: 145,
+            width: 160,
+            height: 160,
             child: Lottie.asset(
               'assets/animations/parrot.json',
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
                 return const SizedBox();
               },
-            ),
-          ),
-
-          // 4. Subtle Jungle Shield / Vault Accent Label
-          Align(
-            alignment: Alignment.bottomLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 20, bottom: 18),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF032617).withValues(alpha: 0.75),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF22C55E).withValues(alpha: 0.25),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.eco_rounded, color: Color(0xFF22C55E), size: 14),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Protected by Encrypted Vault',
-                      style: GoogleFonts.poppins(
-                        color: Colors.white70,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
           ),
         ],
