@@ -15,7 +15,12 @@ import 'transactions_history_screen.dart';
 /// - Jungle-themed Quick Actions & Withdrawal Info with glowing fireflies & lush foliage
 /// - Low-volume soothing ambient jungle bird chirping sound effect matching theme
 class WalletScreen extends StatefulWidget {
-  const WalletScreen({super.key});
+  final bool isCurrentTab;
+
+  const WalletScreen({
+    super.key,
+    this.isCurrentTab = true,
+  });
 
   @override
   State<WalletScreen> createState() => _WalletScreenState();
@@ -39,11 +44,29 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
   Future<void> _initJungleAudio() async {
     try {
       _audioPlayer = AudioPlayer();
-      await _audioPlayer?.setVolume(0.18); // Low subtle volume matching theme
+      await _audioPlayer?.setVolume(0.25); // Gentle ambient rainforest volume
       await _audioPlayer?.setReleaseMode(ReleaseMode.loop);
-      await _audioPlayer?.play(AssetSource('audio/jungle_bird_1.ogg'));
+      if (widget.isCurrentTab && !_isMuted) {
+        await _audioPlayer?.play(AssetSource('audio/jungle_rainforest_ambient.ogg'));
+      } else {
+        await _audioPlayer?.setSource(AssetSource('audio/jungle_rainforest_ambient.ogg'));
+      }
     } catch (_) {
       // Audio playback fails gracefully if unsupported
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant WalletScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isCurrentTab != oldWidget.isCurrentTab) {
+      if (widget.isCurrentTab && !_isMuted) {
+        _audioPlayer?.resume().catchError((_) {
+          _audioPlayer?.play(AssetSource('audio/jungle_rainforest_ambient.ogg'));
+        });
+      } else {
+        _audioPlayer?.pause();
+      }
     }
   }
 
@@ -52,7 +75,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       _audioPlayer?.pause();
     } else if (state == AppLifecycleState.resumed) {
-      if (!_isMuted) {
+      if (widget.isCurrentTab && !_isMuted) {
         _audioPlayer?.resume();
       }
     }
@@ -131,14 +154,18 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                     badgeText: 'Instant',
                     badgeBg: const Color(0xFF047857),
                     badgeColor: const Color(0xFFD1FAE5),
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      _audioPlayer?.pause();
+                      await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => WithdrawalScreen(
                             availableBalance: walletBalance,
                           ),
                         ),
                       );
+                      if (mounted && widget.isCurrentTab && !_isMuted) {
+                        _audioPlayer?.resume();
+                      }
                     },
                   ),
                 ),
@@ -157,12 +184,16 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                     badgeText: 'Logs',
                     badgeBg: const Color(0xFF0369A1),
                     badgeColor: const Color(0xFFE0F2FE),
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      _audioPlayer?.pause();
+                      await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const TransactionsHistoryScreen(),
                         ),
                       );
+                      if (mounted && widget.isCurrentTab && !_isMuted) {
+                        _audioPlayer?.resume();
+                      }
                     },
                   ),
                 ),

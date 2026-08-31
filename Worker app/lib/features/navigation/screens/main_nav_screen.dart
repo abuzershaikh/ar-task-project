@@ -35,14 +35,6 @@ class _MainNavScreenState extends State<MainNavScreen> {
     } catch (_) {}
   }
 
-  final List<Widget> _screens = const [
-    TaskFeedScreen(),
-    MyTasksScreen(),
-    RewardsScreen(),
-    WalletScreen(),
-    ProfileScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -75,7 +67,13 @@ class _MainNavScreenState extends State<MainNavScreen> {
       child: Scaffold(
         body: IndexedStack(
           index: _currentIndex,
-          children: _screens,
+          children: [
+            const TaskFeedScreen(),
+            const MyTasksScreen(),
+            const RewardsScreen(),
+            WalletScreen(isCurrentTab: _currentIndex == 3),
+            const ProfileScreen(),
+          ],
         ),
         bottomNavigationBar: Container(
           decoration: const BoxDecoration(
