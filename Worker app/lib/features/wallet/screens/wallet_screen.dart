@@ -233,15 +233,12 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
       width: double.infinity,
       child: Stack(
         children: [
-          // 1. Realistic 3D Jungle Canopy Background Image (Seamless depth)
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            height: 380 + topPadding,
+          // 1. Realistic 3D Jungle Canopy Background Image (Original natural scale)
+          Positioned.fill(
             child: Image.asset(
               'assets/images/jungle_wallet_bg.jpg',
               fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
                   decoration: const BoxDecoration(
@@ -260,25 +257,20 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
             ),
           ),
 
-          // 2. Multi-Stop Seamless Gradient Fade (Completely blends into dark jungle floor - ZERO cutout edge!)
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            height: 380 + topPadding,
+          // 2. Smooth Vignette & Dark Emerald Shadow Fade (Melt seamlessly into Minimum Limit card section)
+          Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.35),
+                    Colors.black.withValues(alpha: 0.40),
                     Colors.transparent,
-                    const Color(0xFF01140B).withValues(alpha: 0.40),
-                    const Color(0xFF01140B).withValues(alpha: 0.88),
+                    const Color(0xFF01140B).withValues(alpha: 0.45),
                     const Color(0xFF01140B),
                   ],
-                  stops: const [0.0, 0.28, 0.60, 0.85, 1.0],
+                  stops: const [0.0, 0.40, 0.75, 1.0],
                 ),
               ),
             ),
