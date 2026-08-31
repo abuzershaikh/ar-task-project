@@ -7,10 +7,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// 🌴 3D Jungle Adventure Strike & Multiplier Trail Screen:
 /// - Game-style winding stone road map through the tropical jungle
+/// - Distinct ancient Mayan jungle temple artwork (jungle_strike_bg.jpg)
 /// - 7-Day interactive stepping stone milestones with active flame & vine states
 /// - Day 7 Grand Finale featuring the 3D Treasure Chest Lottie animation
+/// - Focuses purely on Task Earning Multipliers & Quality Score (no direct cash text)
 /// - Real-time countdown timer, daily check-in handler, and SharedPreferences persistence
-/// - Dark emerald forest theme matching Feed & Wallet aesthetics
 class RewardsScreen extends StatefulWidget {
   const RewardsScreen({super.key});
 
@@ -123,7 +124,7 @@ class _RewardsScreenState extends State<RewardsScreen>
     final now = DateTime.now();
 
     final addedScore = _getScoreForDay(_currentStreak);
-    final cashBonus = _currentStreak == 7 ? 25.0 : 0.0;
+    final isGrand = _currentStreak == 7;
     final newScore = (_workerScore + (addedScore / 10)).clamp(0.0, 100.0);
 
     await prefs.setInt('worker_daily_streak', nextStreak);
@@ -142,7 +143,7 @@ class _RewardsScreenState extends State<RewardsScreen>
     _startCountdown();
 
     if (mounted) {
-      _show3DCelebrationDialog(addedScore, cashBonus);
+      _show3DCelebrationDialog(addedScore, isGrand);
     }
   }
 
@@ -180,7 +181,7 @@ class _RewardsScreenState extends State<RewardsScreen>
     return '$h:$m:$s';
   }
 
-  void _show3DCelebrationDialog(int addedScore, double cashBonus) {
+  void _show3DCelebrationDialog(int addedScore, bool isGrand) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -238,7 +239,7 @@ class _RewardsScreenState extends State<RewardsScreen>
               const SizedBox(height: 12),
 
               Text(
-                'STRIKE REWARD UNLOCKED!',
+                isGrand ? 'EPIC TREASURE UNLOCKED!' : 'STRIKE REWARD UNLOCKED!',
                 style: GoogleFonts.poppins(
                   color: const Color(0xFF4ADE80),
                   fontSize: 18,
@@ -259,7 +260,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                 textAlign: TextAlign.center,
               ),
 
-              if (cashBonus > 0) ...[
+              if (isGrand) ...[
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -279,14 +280,14 @@ class _RewardsScreenState extends State<RewardsScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.currency_rupee_rounded, color: Colors.white, size: 24),
+                      const Icon(Icons.bolt_rounded, color: Colors.white, size: 24),
                       const SizedBox(width: 6),
                       Text(
-                        '₹${cashBonus.toStringAsFixed(2)} Grand Cashout Bonus!',
+                        '1.50x Max Task Boost Active!',
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontWeight: FontWeight.w900,
-                          fontSize: 14,
+                          fontSize: 13.5,
                         ),
                       ),
                     ],
@@ -391,7 +392,7 @@ class _RewardsScreenState extends State<RewardsScreen>
             if (day == 7) ...[
               const SizedBox(height: 8),
               Text(
-                'Grand Prize: ₹25.00 Real Cash Bonus added to wallet!',
+                'Grand Prize: Epic 3D Treasure Chest with maximum earning rate!',
                 style: GoogleFonts.poppins(
                   color: const Color(0xFFFBBF24),
                   fontWeight: FontWeight.bold,
@@ -433,7 +434,7 @@ class _RewardsScreenState extends State<RewardsScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── 1. Top Jungle Canopy Hero with Strike Hub ─────────────────
+              // ── 1. Top Jungle Ancient Temple Hero with Strike Hub ──────────
               _buildTopJungleHero(topPadding, currentMultiplier),
               const SizedBox(height: 18),
 
@@ -444,7 +445,7 @@ class _RewardsScreenState extends State<RewardsScreen>
               ),
               const SizedBox(height: 28),
 
-              // ── 3. 3D Game Adventure Road Map (Winding 7-Day Trail) ────────
+              // ── 3. 3D Game Adventure Road Map Header ───────────────────────
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
@@ -535,18 +536,18 @@ class _RewardsScreenState extends State<RewardsScreen>
     );
   }
 
-  // ── 1. Top Jungle Canopy Hero ─────────────────────────────────────────────
+  // ── 1. Top Jungle Ancient Temple Hero ─────────────────────────────────────
   Widget _buildTopJungleHero(double topPadding, String currentMultiplier) {
     return SizedBox(
       width: double.infinity,
       child: Stack(
         children: [
-          // 1. Realistic 3D Jungle Canopy Background Image (Natural scale)
+          // 1. Distinct 3D Ancient Jungle Temple & Ruins Background Image
           Positioned.fill(
             child: Image.asset(
-              'assets/images/jungle_wallet_bg.jpg',
+              'assets/images/jungle_strike_bg.jpg',
               fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
+              alignment: Alignment.center,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
                   decoration: const BoxDecoration(
@@ -573,7 +574,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withValues(alpha: 0.45),
+                    Colors.black.withValues(alpha: 0.40),
                     Colors.transparent,
                     const Color(0xFF01140B).withValues(alpha: 0.50),
                     const Color(0xFF01140B),
@@ -965,7 +966,7 @@ class _RewardsScreenState extends State<RewardsScreen>
       _MilestoneConfig(day: 4, title: 'Day 4', reward: '+35 Pts', mult: '1.20x', xAlign: 0.55),
       _MilestoneConfig(day: 5, title: 'Day 5', reward: '+50 Pts', mult: '1.30x', xAlign: -0.60),
       _MilestoneConfig(day: 6, title: 'Day 6', reward: '+75 Pts', mult: '1.40x', xAlign: 0.60),
-      _MilestoneConfig(day: 7, title: 'Day 7', reward: '₹25 + 150 Pts', mult: '1.50x', xAlign: 0.0, isGrand: true),
+      _MilestoneConfig(day: 7, title: 'Day 7', reward: 'Epic Chest', mult: '1.50x', xAlign: 0.0, isGrand: true),
     ];
 
     const double mapHeight = 720.0;
@@ -998,12 +999,12 @@ class _RewardsScreenState extends State<RewardsScreen>
         borderRadius: BorderRadius.circular(26),
         child: Stack(
           children: [
-            // 1. Subtle Rainforest Texture Backdrop
+            // 1. Subtle Ancient Temple Backdrop
             Positioned.fill(
               child: Opacity(
-                opacity: 0.15,
+                opacity: 0.18,
                 child: Image.asset(
-                  'assets/images/jungle_wallet_bg.jpg',
+                  'assets/images/jungle_strike_bg.jpg',
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => const SizedBox(),
                 ),
@@ -1123,7 +1124,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                 ],
               ),
               child: Text(
-                'DAY 7 • GRAND PRIZE',
+                'DAY 7 • EPIC CHEST',
                 style: GoogleFonts.poppins(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
@@ -1245,9 +1246,9 @@ class _RewardsScreenState extends State<RewardsScreen>
         color: const Color(0xFF4ADE80),
       ),
       _PerkItem(
-        icon: Icons.savings_rounded,
-        title: 'Weekly Cashout',
-        desc: 'Guaranteed ₹25.00 extra real wallet cash every 7 days.',
+        icon: Icons.card_giftcard_rounded,
+        title: 'Epic Jungle Chest',
+        desc: 'Unlock legendary 3D treasure vaults on Day 7.',
         color: const Color(0xFFA78BFA),
       ),
     ];
