@@ -108,6 +108,14 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
         backgroundColor: const Color(0xFF01140B), // Deep Dark Jungle Emerald
         body: Stack(
           children: [
+            // ── 1. Dynamic Rainforest Rain in Background (Behind all cards & text) ──
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: _DynamicRainforestRainOverlay(),
+              ),
+            ),
+
+            // ── 2. Foreground Scrollable Content & Jungle Cards ───────────
             RefreshIndicator(
               color: const Color(0xFF22C55E),
               backgroundColor: const Color(0xFF032617),
@@ -209,13 +217,6 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                 ),
               ),
             ),
-
-            // ── Dynamic Rainforest Rain Weather Overlay (Randomly starts & stops) ──
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: _DynamicRainforestRainOverlay(),
-              ),
-            ),
           ],
         ),
       ),
@@ -299,63 +300,71 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'My ',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black.withValues(alpha: 0.8),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RichText(
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'My ',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w700,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black.withValues(alpha: 0.8),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              TextSpan(
-                                text: 'Wallet',
-                                style: GoogleFonts.poppins(
-                                  color: const Color(0xFF22C55E),
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                  shadows: [
-                                    Shadow(
-                                      color: Colors.black.withValues(alpha: 0.8),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
+                                TextSpan(
+                                  text: 'Wallet',
+                                  style: GoogleFonts.poppins(
+                                    color: const Color(0xFF22C55E),
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w900,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black.withValues(alpha: 0.8),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Available Earnings & Cashout',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.8),
-                                blurRadius: 6,
-                              ),
-                            ],
+                          const SizedBox(height: 2),
+                          Text(
+                            'Available Earnings & Cashout',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withValues(alpha: 0.8),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
 
                     // Right Actions: Audio Toggle + Eye Toggle + Notification Bell
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Jungle Ambient Audio Toggle (Mute/Unmute)
                         InkWell(
@@ -963,8 +972,8 @@ class _AnimatedJungleParrotBranchState extends State<_AnimatedJungleParrotBranch
 }
 
 /// Dynamic Rainforest Rain Overlay:
-/// - Randomly starts soft tropical drizzle and fades away into sunny jungle canopy
-/// - Shimmering animated rain streaks with subtle water mist reflection
+/// - Fine, delicate continuous tropical rain (barik barik boondein) in background
+/// - Translucent misty droplets (6px - 14px length, 0.75px thin stroke)
 class _DynamicRainforestRainOverlay extends StatefulWidget {
   const _DynamicRainforestRainOverlay();
 
@@ -980,34 +989,33 @@ class _DynamicRainforestRainOverlayState
   late final List<_RainDrop> _rainDrops;
   final math.Random _random = math.Random();
   Timer? _weatherTimer;
-  double _targetRainOpacity = 0.0;
+  double _targetRainOpacity = 0.75;
 
   @override
   void initState() {
     super.initState();
     _rainController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 750),
+      duration: const Duration(milliseconds: 900),
     )..repeat();
 
-    _rainDrops = List.generate(70, (_) => _RainDrop(_random));
-
-    // 50% random chance rain is already falling on load
-    _targetRainOpacity = _random.nextDouble() < 0.5 ? 0.75 : 0.0;
+    _rainDrops = List.generate(110, (_) => _RainDrop(_random));
 
     _scheduleWeatherTransition();
   }
 
   void _scheduleWeatherTransition() {
     _weatherTimer?.cancel();
-    final duration = Duration(seconds: 14 + _random.nextInt(20));
+    final duration = Duration(seconds: 18 + _random.nextInt(22));
     _weatherTimer = Timer(duration, () {
       if (!mounted) return;
       setState(() {
-        if (_targetRainOpacity > 0.1) {
-          _targetRainOpacity = 0.0; // Sun emerges, rain clears
+        if (_targetRainOpacity > 0.4) {
+          // Soft ambient mist drizzle
+          _targetRainOpacity = 0.35 + _random.nextDouble() * 0.25;
         } else {
-          _targetRainOpacity = 0.60 + _random.nextDouble() * 0.35; // Gentle tropical downpour
+          // Lush refreshing tropical rain
+          _targetRainOpacity = 0.70 + _random.nextDouble() * 0.25;
         }
       });
       _scheduleWeatherTransition();
@@ -1051,9 +1059,9 @@ class _RainDrop {
 
   _RainDrop(math.Random rand)
       : x = rand.nextDouble(),
-        speed = 0.85 + rand.nextDouble() * 0.75,
-        length = 18.0 + rand.nextDouble() * 22.0,
-        opacity = 0.22 + rand.nextDouble() * 0.45,
+        speed = 0.70 + rand.nextDouble() * 0.55,
+        length = 6.0 + rand.nextDouble() * 8.0, // Small fine droplets (6px - 14px)
+        opacity = 0.15 + rand.nextDouble() * 0.32,
         offset = rand.nextDouble();
 }
 
@@ -1069,7 +1077,7 @@ class _RainforestRainPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rainPaint = Paint()
-      ..strokeWidth = 1.3
+      ..strokeWidth = 0.75 // Fine and delicate
       ..strokeCap = StrokeCap.round;
 
     for (final drop in rainDrops) {
@@ -1078,9 +1086,9 @@ class _RainforestRainPainter extends CustomPainter {
           drop.length;
       final x = drop.x * size.width;
 
-      const slant = 4.0;
+      const slant = 2.0; // Gentle angle
       rainPaint.color =
-          const Color(0xFF67E8F9).withValues(alpha: drop.opacity);
+          const Color(0xFFBAE6FD).withValues(alpha: drop.opacity);
 
       canvas.drawLine(
         Offset(x, y),
