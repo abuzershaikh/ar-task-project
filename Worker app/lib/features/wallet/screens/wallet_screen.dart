@@ -1,3 +1,4 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,6 +13,7 @@ import 'transactions_history_screen.dart';
 /// - Standalone 3D CoinBar Lottie balance holder (all extra card boxes, 100% payout text, circles removed)
 /// - Live balance & privacy eye toggle accurately positioned inside the golden coin bar slot
 /// - Jungle-themed Quick Actions & Withdrawal Info with glowing fireflies & lush foliage
+/// - Low-volume soothing ambient jungle bird chirping sound effect matching theme
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
 
@@ -19,15 +21,49 @@ class WalletScreen extends StatefulWidget {
   State<WalletScreen> createState() => _WalletScreenState();
 }
 
-class _WalletScreenState extends State<WalletScreen> {
+class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver {
   bool _isBalanceVisible = true;
+  bool _isMuted = false;
+  AudioPlayer? _audioPlayer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TaskProvider>().fetchWalletData();
     });
+    _initJungleAudio();
+  }
+
+  Future<void> _initJungleAudio() async {
+    try {
+      _audioPlayer = AudioPlayer();
+      await _audioPlayer?.setVolume(0.18); // Low subtle volume matching theme
+      await _audioPlayer?.setReleaseMode(ReleaseMode.loop);
+      await _audioPlayer?.play(AssetSource('audio/jungle_bird_1.ogg'));
+    } catch (_) {
+      // Audio playback fails gracefully if unsupported
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _audioPlayer?.pause();
+    } else if (state == AppLifecycleState.resumed) {
+      if (!_isMuted) {
+        _audioPlayer?.resume();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _audioPlayer?.stop();
+    _audioPlayer?.dispose();
+    super.dispose();
   }
 
   @override
@@ -274,9 +310,47 @@ class _WalletScreenState extends State<WalletScreen> {
                       ],
                     ),
 
-                    // Right Actions: Eye Toggle + Notification Bell
+                    // Right Actions: Audio Toggle + Eye Toggle + Notification Bell
                     Row(
                       children: [
+                        // Jungle Ambient Audio Toggle (Mute/Unmute)
+                        InkWell(
+                          onTap: () async {
+                            setState(() {
+                              _isMuted = !_isMuted;
+                            });
+                            if (_isMuted) {
+                              await _audioPlayer?.setVolume(0.0);
+                            } else {
+                              await _audioPlayer?.setVolume(0.18);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(18),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF032617).withValues(alpha: 0.85),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF22C55E).withValues(alpha: 0.35),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              _isMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+                              color: _isMuted ? Colors.white38 : const Color(0xFF4ADE80),
+                              size: 15,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
                         // Show/Hide Privacy Eye Toggle
                         InkWell(
                           onTap: () {
@@ -286,7 +360,7 @@ class _WalletScreenState extends State<WalletScreen> {
                           },
                           borderRadius: BorderRadius.circular(18),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                             decoration: BoxDecoration(
                               color: const Color(0xFF032617).withValues(alpha: 0.85),
                               borderRadius: BorderRadius.circular(18),
@@ -308,14 +382,14 @@ class _WalletScreenState extends State<WalletScreen> {
                                       ? Icons.visibility_outlined
                                       : Icons.visibility_off_outlined,
                                   color: const Color(0xFF4ADE80),
-                                  size: 15,
+                                  size: 14,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   _isBalanceVisible ? 'Hide' : 'Show',
                                   style: GoogleFonts.poppins(
                                     color: Colors.white,
-                                    fontSize: 11,
+                                    fontSize: 10.5,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -327,8 +401,8 @@ class _WalletScreenState extends State<WalletScreen> {
 
                         // Notification Bell
                         Container(
-                          width: 36,
-                          height: 36,
+                          width: 32,
+                          height: 32,
                           decoration: BoxDecoration(
                             color: const Color(0xFF032617).withValues(alpha: 0.85),
                             shape: BoxShape.circle,
@@ -345,7 +419,7 @@ class _WalletScreenState extends State<WalletScreen> {
                           child: const Icon(
                             Icons.notifications_none_rounded,
                             color: Colors.white,
-                            size: 18,
+                            size: 16,
                           ),
                         ),
                       ],
