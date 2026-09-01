@@ -63,31 +63,46 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header: Icon + Title
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Custom Organic Comments',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF166534),
-                    ),
-                  ),
-                ],
-              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
+                child: const Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 18),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Custom Organic Comments',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF166534),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // 100% Unique Badge placed cleanly below Title
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCFCE7),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.shield_outlined, size: 12, color: Color(0xFF15803D)),
+                SizedBox(width: 4),
+                Text(
                   '100% Unique & Natural',
                   style: TextStyle(
                     color: Color(0xFF15803D),
@@ -95,13 +110,13 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           const Text(
             'Authentic, context-relevant comments crafted for individual workers to post naturally.',
-            style: TextStyle(fontSize: 11, color: Color(0xFF15803D)),
+            style: TextStyle(fontSize: 11, color: Color(0xFF15803D), height: 1.3),
           ),
           const Divider(color: Color(0xFFBBF7D0), height: 20),
 
