@@ -480,5 +480,31 @@ class ApiService {
       return false;
     }
   }
+
+  static Future<bool> deleteNotification(String id) async {
+    try {
+      final headers = await _headers();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/worker/notifications/$id'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 5));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> clearAllNotifications() async {
+    try {
+      final headers = await _headers();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/worker/notifications'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 5));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 

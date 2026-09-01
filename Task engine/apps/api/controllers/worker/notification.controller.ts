@@ -4,6 +4,7 @@ import {
     Patch,
     Post,
     Put,
+    Delete,
     Body,
     Param,
 } from '@nestjs/common';
@@ -82,6 +83,26 @@ export class WorkerNotificationController {
         return {
             success: true,
             message: 'Device token registered successfully',
+        };
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'Delete single notification' })
+    async deleteNotification(@Param('id') id: string) {
+        await this.notificationRepo.delete(id);
+        return {
+            success: true,
+            message: 'Notification deleted successfully',
+        };
+    }
+
+    @Delete()
+    @ApiOperation({ summary: 'Clear all notifications for worker' })
+    async clearAllNotifications(@CurrentUser() user: User) {
+        await this.notificationRepo.deleteAllForUser(user.id);
+        return {
+            success: true,
+            message: 'All notifications cleared successfully',
         };
     }
 }

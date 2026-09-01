@@ -50,6 +50,23 @@ export class NotificationRepository {
         );
     }
 
+    async delete(id: string): Promise<void> {
+        await this.repository.delete(id);
+    }
+
+    async deleteAllForUser(userId: string): Promise<void> {
+        await this.repository
+            .createQueryBuilder()
+            .delete()
+            .from(Notification)
+            .where('user_id = :userId OR user_id = :allWorkers OR user_id = :global', {
+                userId,
+                allWorkers: 'ALL_WORKERS',
+                global: 'GLOBAL',
+            })
+            .execute();
+    }
+
     async create(data: Partial<Notification>): Promise<Notification> {
         const notification = this.repository.create(data);
         return this.repository.save(notification);

@@ -66,6 +66,21 @@ class WorkerNotificationModel {
     if (diff.inDays < 7) return '${diff.inDays}d ago';
     return '${createdAt.day}/${createdAt.month}/${createdAt.year}';
   }
+
+  String get formattedDateTime {
+    final local = createdAt.toLocal();
+    final months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final monthStr = months[local.month - 1];
+    final dayStr = local.day.toString().padLeft(2, '0');
+    final hour = local.hour;
+    final minute = local.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final formattedHour = (hour % 12 == 0 ? 12 : hour % 12).toString().padLeft(2, '0');
+    return '$dayStr $monthStr ${local.year} • $formattedHour:$minute $period';
+  }
 }
 
 class UniqueKey {

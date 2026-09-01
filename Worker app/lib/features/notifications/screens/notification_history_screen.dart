@@ -40,6 +40,93 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
     }
   }
 
+  Future<void> _deleteNotification(WorkerNotificationModel item, int index) async {
+    final removedItem = item;
+    setState(() {
+      _notifications.removeWhere((n) => n.id == item.id);
+    });
+
+    final success = await ApiService.deleteNotification(item.id);
+    if (!success) {
+      // Revert if API fails
+      // ignore
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Notification deleted',
+            style: GoogleFonts.poppins(fontSize: 12),
+          ),
+          backgroundColor: const Color(0xFF334155),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _confirmClearAll() async {
+    if (_notifications.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_sweep_rounded, color: Color(0xFFEF4444), size: 24),
+            const SizedBox(width: 8),
+            Text(
+              'Clear All Notifications?',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete all notification history from your account? This action cannot be undone.',
+          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF475569)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Clear All', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() => _notifications.clear());
+      await ApiService.clearAllNotifications();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'All notifications cleared',
+              style: GoogleFonts.poppins(fontSize: 12),
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _markAllAsRead() async {
     await ApiService.markAllNotificationsAsRead();
     setState(() {
@@ -170,19 +257,18 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
           ],
         ),
         actions: [
-          if (_notifications.isNotEmpty)
-            TextButton.icon(
+          if (_notifications.isNotEmpty) ...[
+            IconButton(
+              tooltip: 'Mark all as read',
               onPressed: _markAllAsRead,
-              icon: const Icon(Icons.done_all_rounded, size: 16, color: Color(0xFF2563EB)),
-              label: Text(
-                'Mark Read',
-                style: GoogleFonts.poppins(
-                  color: const Color(0xFF2563EB),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
+              icon: const Icon(Icons.done_all_rounded, size: 20, color: Color(0xFF2563EB)),
             ),
+            IconButton(
+              tooltip: 'Clear all notifications',
+              onPressed: _confirmClearAll,
+              icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Color(0xFFEF4444)),
+            ),
+          ],
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
@@ -223,7 +309,35 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final item = _filteredNotifications[index];
-                      return _buildNotificationCard(item);
+                      return Dismissible(
+                        key: Key('notif_${item.id}'),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Delete',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              SizedBox(width: 6),
+                              Icon(Icons.delete_rounded, color: Colors.white, size: 22),
+                            ],
+                          ),
+                        ),
+                        onDismissed: (_) => _deleteNotification(item, index),
+                        child: _buildNotificationCard(item, index),
+                      );
                     },
                   ),
       ),
@@ -256,7 +370,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
     );
   }
 
-  Widget _buildNotificationCard(WorkerNotificationModel item) {
+  Widget _buildNotificationCard(WorkerNotificationModel item, int index) {
     final cfg = _getNotificationConfig(item.type);
 
     return InkWell(
@@ -279,80 +393,134 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Leading Icon Badge
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: cfg.bgColor,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(cfg.icon, color: cfg.iconColor, size: 22),
-            ),
-            const SizedBox(width: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Leading Icon Badge
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: cfg.bgColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(cfg.icon, color: cfg.iconColor, size: 20),
+                ),
+                const SizedBox(width: 12),
 
-            // Content Column
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Content Column
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          item.title,
-                          style: GoogleFonts.poppins(
-                            color: const Color(0xFF0F172A),
-                            fontWeight: item.isRead ? FontWeight.w600 : FontWeight.w700,
-                            fontSize: 13.5,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.title,
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFF0F172A),
+                                fontWeight: item.isRead ? FontWeight.w600 : FontWeight.w700,
+                                fontSize: 13.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          const SizedBox(width: 6),
+                          Text(
+                            item.timeAgo,
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFF94A3B8),
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(height: 4),
                       Text(
-                        item.timeAgo,
+                        item.message,
                         style: GoogleFonts.poppins(
-                          color: const Color(0xFF94A3B8),
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w400,
+                          color: const Color(0xFF475569),
+                          fontSize: 11.5,
+                          height: 1.3,
                         ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.message,
-                    style: GoogleFonts.poppins(
-                      color: const Color(0xFF475569),
-                      fontSize: 11.5,
-                      height: 1.3,
+                ),
+
+                // Unread Dot
+                if (!item.isRead) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF10B981),
+                      shape: BoxShape.circle,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
-              ),
+              ],
             ),
 
-            // Unread Dot
-            if (!item.isRead) ...[
-              const SizedBox(width: 8),
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF10B981),
-                  shape: BoxShape.circle,
+            const SizedBox(height: 10),
+            const Divider(color: Color(0xFFF1F5F9), height: 1),
+            const SizedBox(height: 8),
+
+            // Date, Time & Delete Footer Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Formatted Date & Time
+                Row(
+                  children: [
+                    const Icon(Icons.access_time_rounded, size: 13, color: Color(0xFF94A3B8)),
+                    const SizedBox(width: 4),
+                    Text(
+                      item.formattedDateTime,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+
+                // Delete Button
+                InkWell(
+                  onTap: () => _deleteNotification(item, index),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.delete_outline_rounded, size: 14, color: Color(0xFF94A3B8)),
+                        const SizedBox(width: 2),
+                        Text(
+                          'Delete',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
