@@ -149,17 +149,19 @@ export class TaskCommandService {
                 });
                 await manager.save(assignment);
 
-                // Dynamic deadline calculation from System Settings or task requirements
+                // Dynamic deadline calculation: Strictly prioritize Admin system setting
                 let executionHours = 2.0;
                 try {
                     const timeoutSetting = await manager.findOne(SystemSetting, { where: { key: 'worker_execution_timeout_hours' } });
-                    if (timeoutSetting?.value) {
+                    if (timeoutSetting && timeoutSetting.value !== null && timeoutSetting.value !== undefined) {
                         executionHours = Number(timeoutSetting.value);
+                    } else if (task.requirements?.timeToCompleteHours) {
+                        executionHours = Number(task.requirements.timeToCompleteHours);
                     }
-                } catch (_) {}
-
-                if (task.requirements?.timeToCompleteHours) {
-                    executionHours = Number(task.requirements.timeToCompleteHours);
+                } catch (_) {
+                    if (task.requirements?.timeToCompleteHours) {
+                        executionHours = Number(task.requirements.timeToCompleteHours);
+                    }
                 }
 
                 const now = new Date();
@@ -194,13 +196,15 @@ export class TaskCommandService {
             let executionHours = 2.0;
             try {
                 const timeoutSetting = await manager.findOne(SystemSetting, { where: { key: 'worker_execution_timeout_hours' } });
-                if (timeoutSetting?.value) {
+                if (timeoutSetting && timeoutSetting.value !== null && timeoutSetting.value !== undefined) {
                     executionHours = Number(timeoutSetting.value);
+                } else if (task.requirements?.timeToCompleteHours) {
+                    executionHours = Number(task.requirements.timeToCompleteHours);
                 }
-            } catch (_) {}
-
-            if (task.requirements?.timeToCompleteHours) {
-                executionHours = Number(task.requirements.timeToCompleteHours);
+            } catch (_) {
+                if (task.requirements?.timeToCompleteHours) {
+                    executionHours = Number(task.requirements.timeToCompleteHours);
+                }
             }
 
             const now = new Date();

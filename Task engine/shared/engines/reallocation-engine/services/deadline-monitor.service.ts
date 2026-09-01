@@ -86,8 +86,9 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
         // 1. Process Worker Acceptance Timeouts (Independent of campaign expiry)
         const timeoutResults = await this.processFullTimeouts(settings.workerExecutionTimeoutHours, settings.autoReassignOnExpiry);
 
-        // 2. Process Campaign Auto-Extensions (+10 hours if campaign incomplete at expiry date)
-        const extensionResults = await this.processCampaignAutoExtensions(campaignAutoExtensionHours);
+        // 2. Process Campaign Auto-Extensions & Unaccepted pool management using Admin configured setting
+        const extensionHours = settings.unacceptedTaskExpiryHours || campaignAutoExtensionHours || 24;
+        const extensionResults = await this.processCampaignAutoExtensions(extensionHours);
 
         return {
             evaluatedTasksCount: timeoutResults.evaluatedCount,
