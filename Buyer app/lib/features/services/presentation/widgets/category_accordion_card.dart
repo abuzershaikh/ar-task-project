@@ -161,121 +161,147 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
                 final price = service.pricing.buyerPrice;
 
                 return Container(
-                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
-                  child: Row(
-                    children: [
-                      // Sub-service icon badge
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Icon(
-                          _getServiceSubIcon(service.code),
-                          size: 18,
-                          color: widget.themeColor,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Service info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    service.name,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                  child: InkWell(
+                    onTap: () => widget.onSelectService(service),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top Row: Icon + Title + AI Badge
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(7),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
                                 ),
-                                if (isAi) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEEF2FF),
-                                      borderRadius: BorderRadius.circular(6),
+                                child: Icon(
+                                  _getServiceSubIcon(service.code),
+                                  size: 18,
+                                  color: widget.themeColor,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      service.name,
+                                      style: const TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF0F172A),
+                                      ),
                                     ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.auto_awesome,
-                                            size: 10, color: Color(0xFF4F46E5)),
-                                        SizedBox(width: 2),
-                                        Text(
-                                          'AI Content',
-                                          style: TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800,
-                                            color: Color(0xFF4F46E5),
-                                          ),
+                                    if (isAi) ...[
+                                      const SizedBox(height: 3),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFEEF2FF),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: const Color(0xFFC7D2FE)),
                                         ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 3),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.auto_awesome,
+                                                size: 10, color: Color(0xFF4F46E5)),
+                                            SizedBox(width: 3),
+                                            Text(
+                                              'DeepSeek AI Content',
+                                              style: TextStyle(
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.w800,
+                                                color: Color(0xFF4F46E5),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          if (service.description.isNotEmpty) ...[
+                            const SizedBox(height: 8),
                             Text(
                               service.description,
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 11.5,
                                 color: Color(0xFF64748B),
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              ServiceUnitHelper.getRateLabel(service.name, price),
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: widget.themeColor,
+                                height: 1.35,
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
 
-                      // Order / Select Button
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: widget.themeColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          const SizedBox(height: 10),
+                          const Divider(color: Color(0xFFE2E8F0), height: 1),
+                          const SizedBox(height: 8),
+
+                          // Bottom Row: Price Rate & Order Button
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Rate',
+                                    style: TextStyle(
+                                        fontSize: 9.5,
+                                        color: Color(0xFF94A3B8),
+                                        fontWeight: FontWeight.w500),
+                                  ),
+                                  Text(
+                                    ServiceUnitHelper.getRateLabel(service.name, price),
+                                    style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: widget.themeColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: widget.themeColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 7),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                onPressed: () => widget.onSelectService(service),
+                                icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+                                label: const Text(
+                                  'Order',
+                                  style: TextStyle(
+                                      fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
                           ),
-                          elevation: 0,
-                        ),
-                        onPressed: () => widget.onSelectService(service),
-                        child: const Text(
-                          'Order',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 );
               },

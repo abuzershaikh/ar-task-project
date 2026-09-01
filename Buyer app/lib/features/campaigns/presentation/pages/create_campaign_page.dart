@@ -361,48 +361,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         children: [
-          // Banner Card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 28),
-                SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'AI-Powered Micro Tasks',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Tap any category below to expand services and create campaigns with 100% verified workers.',
-                        style: TextStyle(color: Colors.white70, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Categories Accordion List
+          // Categories Accordion List (All collapsed by default)
           ...grouped.entries.map((entry) {
             final cat = entry.key;
             final services = entry.value;
@@ -416,7 +377,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               icon: meta['icon'] as IconData,
               themeColor: meta['color'] as Color,
               services: services,
-              initialExpanded: cat == 'YouTube', // Expand YouTube by default
+              initialExpanded: false, // All categories collapsed by default
               onSelectService: (service) => _selectService(service),
             );
           }),
