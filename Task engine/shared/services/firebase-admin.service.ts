@@ -107,7 +107,7 @@ export class FirebaseAdminService implements OnModuleInit {
         createdAt: new Date().toISOString(),
       };
 
-      // 1. Send to FCM Topic 'workers'
+      // 1. Send single broadcast to FCM Topic 'workers'
       const topicMessage: admin.messaging.Message = {
         topic: 'workers',
         notification: {
@@ -127,45 +127,21 @@ export class FirebaseAdminService implements OnModuleInit {
       };
 
       await this.messaging.send(topicMessage);
-      this.logger.log(`📢 [FCM BROADCAST] Push sent to topic 'workers': ${notificationTitle}`);
+      this.logger.log(`📢 [FCM BROADCAST] Push sent strictly once to topic 'workers': ${notificationTitle}`);
 
-      // 2. Also send to individual registered worker tokens from Firestore for maximum delivery
-      const workerDocs = await this.firestore
-        .collection('users')
-        .where('role', '==', 'WORKER')
-        .get();
-
-      const tokens: string[] = [];
-      workerDocs.forEach((doc) => {
-        const token = doc.data()?.fcmToken;
-        if (token && typeof token === 'string' && token.length > 20) {
-          tokens.push(token);
-        }
-      });
-
-      if (tokens.length > 0) {
-        const multicastMessage: admin.messaging.MulticastMessage = {
-          tokens,
-          notification: {
-            title: notificationTitle,
-            body: notificationBody,
-          },
+      // 2. Persist notification to Firestore for worker notification history
+      try {
+        await this.firestore.collection('notifications').add({
+          type: 'NEW_TASK',
+          target: 'ALL_WORKERS',
+          title: notificationTitle,
+          body: notificationBody,
           data: dataPayload,
-          android: {
-            priority: 'high',
-            notification: {
-              channelId: 'task_notifications',
-              priority: 'high',
-              sound: 'default',
-              clickAction: 'FLUTTER_NOTIFICATION_CLICK',
-            },
-          },
-        };
-
-        const response = await this.messaging.sendEachForMulticast(multicastMessage);
-        this.logger.log(
-          `📱 [FCM DIRECT MULTICAST] Sent to ${tokens.length} workers (${response.successCount} succeeded, ${response.failureCount} failed)`
-        );
+          isRead: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (storeErr) {
+        this.logger.warn(`Failed to store notification history: ${storeErr.message}`);
       }
     } catch (error) {
       this.logger.error('Failed to send task broadcast push notification', error);

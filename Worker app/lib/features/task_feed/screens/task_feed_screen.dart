@@ -10,6 +10,8 @@ import '../../task_detail/screens/task_detail_premium_screen.dart';
 import '../../profile/screens/day_streak_screen.dart';
 import '../../profile/screens/quality_score_screen.dart';
 import '../../wallet/screens/wallet_screen.dart';
+import '../../notifications/screens/notification_history_screen.dart';
+import '../../../core/services/api_service.dart';
 import '../widgets/task_feed_card.dart';
 
 /// Task Feed Screen with Multi-Slide Top Hero Banner:
@@ -28,6 +30,7 @@ class TaskFeedScreen extends StatefulWidget {
 class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObserver {
   String _selectedPlatform = 'All Tasks';
   Timer? _autoRefreshTimer;
+  int _unreadNotifCount = 0;
 
   // Banner Carousel controller and auto-scroll timer
   late final PageController _bannerController;
@@ -46,8 +49,16 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshFeed();
+      _loadUnreadNotifCount();
       _startAutoRefreshTimer();
     });
+  }
+
+  Future<void> _loadUnreadNotifCount() async {
+    try {
+      final count = await ApiService.getUnreadNotificationCount();
+      if (mounted) setState(() => _unreadNotifCount = count);
+    } catch (_) {}
   }
 
   void _startBannerAutoPlay() {
@@ -423,49 +434,61 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                     // Right Icons: Notification Bell + Wallet Pill
                     Row(
                       children: [
-                        // Notification Bell with badge '3'
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 6,
-                                  ),
-                                ],
+                        // Notification Bell with dynamic unread badge
+                        InkWell(
+                          onTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationHistoryScreen(),
                               ),
-                              child: const Icon(
-                                Icons.notifications_none_rounded,
-                                color: Color(0xFF1E293B),
-                                size: 20,
-                              ),
-                            ),
-                            Positioned(
-                              top: -2,
-                              right: -2,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFEF4444),
+                            );
+                            _loadUnreadNotifCount();
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
                                   shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.1),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
                                 ),
-                                child: Text(
-                                  '3',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                child: const Icon(
+                                  Icons.notifications_none_rounded,
+                                  color: Color(0xFF1E293B),
+                                  size: 20,
                                 ),
                               ),
-                            ),
-                          ],
+                              if (_unreadNotifCount > 0)
+                                Positioned(
+                                  top: -2,
+                                  right: -2,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFEF4444),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      _unreadNotifCount > 9 ? '9+' : '$_unreadNotifCount',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                         const SizedBox(width: 8),
 

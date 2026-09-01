@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../../core/providers/task_provider.dart';
 import 'withdrawal_screen.dart';
 import 'transactions_history_screen.dart';
+import '../../notifications/screens/notification_history_screen.dart';
 
 /// Jungle Themed Wallet Screen:
 /// - Edge-to-edge 3D tropical jungle canopy header with realistic monstera foliage & golden sunlight
@@ -446,26 +447,32 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                         const SizedBox(width: 8),
 
                         // Notification Bell
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF032617).withValues(alpha: 0.85),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFF22C55E).withValues(alpha: 0.35),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.4),
-                                blurRadius: 8,
-                              ),
-                            ],
+                        InkWell(
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const NotificationHistoryScreen()),
                           ),
-                          child: const Icon(
-                            Icons.notifications_none_rounded,
-                            color: Colors.white,
-                            size: 16,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF032617).withValues(alpha: 0.85),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF22C55E).withValues(alpha: 0.35),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.notifications_none_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
                           ),
                         ),
                       ],

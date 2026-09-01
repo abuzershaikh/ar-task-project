@@ -16,7 +16,11 @@ export class NotificationRepository {
 
     async findByUserId(userId: string, limit = 50): Promise<Notification[]> {
         return this.repository.find({
-            where: { userId },
+            where: [
+                { userId },
+                { userId: 'ALL_WORKERS' },
+                { userId: 'GLOBAL' },
+            ],
             order: { createdAt: 'DESC' },
             take: limit,
         });
@@ -24,7 +28,11 @@ export class NotificationRepository {
 
     async countUnread(userId: string): Promise<number> {
         return this.repository.count({
-            where: { userId, isRead: false },
+            where: [
+                { userId, isRead: false },
+                { userId: 'ALL_WORKERS', isRead: false },
+                { userId: 'GLOBAL', isRead: false },
+            ],
         });
     }
 

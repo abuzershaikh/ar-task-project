@@ -6,6 +6,7 @@ import '../../../services/domain/models/pricing_config.dart';
 import '../../../services/data/repositories/service_repository_impl.dart';
 import '../../../services/presentation/widgets/category_accordion_card.dart';
 import '../../../services/presentation/widgets/ai_comment_config_widget.dart';
+import '../../../../core/utils/service_unit_helper.dart';
 
 class CreateCampaignPage extends StatefulWidget {
   final String? serviceId;
@@ -206,7 +207,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Successfully created ${_selectedService!.name} campaign for $_selectedQuantity units.',
+                'Successfully created ${_selectedService!.name} campaign for ${ServiceUnitHelper.getUnitName(_selectedService!.name, count: _selectedQuantity, includeCount: true)}.',
                 style: const TextStyle(fontSize: 13, color: Color(0xFF334155)),
               ),
               const SizedBox(height: 12),
@@ -448,7 +449,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   color: Color(0xFF0F172A), fontSize: 16, fontWeight: FontWeight.bold),
             ),
             Text(
-              '₹${s.pricing.buyerPrice.toStringAsFixed(2)} / unit',
+              ServiceUnitHelper.getRateLabel(s.name, s.pricing.buyerPrice),
               style: const TextStyle(
                   color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.w600),
             ),
@@ -538,15 +539,15 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Order Quantity (Task Units)',
-                      style: TextStyle(
+                    Text(
+                      ServiceUnitHelper.getQuantityHeader(s.name),
+                      style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      '1 Unit = 1 Worker Task with Unique Content',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                    Text(
+                      ServiceUnitHelper.getUnitExplanation(s.name),
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                     ),
                     const SizedBox(height: 12),
 
@@ -605,7 +606,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                       children: [10, 25, 50, 100, 500, 1000].map((qty) {
                         final isSelected = _selectedQuantity == qty;
                         return ChoiceChip(
-                          label: Text('$qty Units'),
+                          label: Text(ServiceUnitHelper.getUnitName(s.name, count: qty, includeCount: true)),
                           selected: isSelected,
                           selectedColor: const Color(0xFF2563EB),
                           labelStyle: TextStyle(
@@ -640,7 +641,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Quantity:', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                        Text('$_selectedQuantity Units',
+                        Text(ServiceUnitHelper.getUnitName(s.name, count: _selectedQuantity, includeCount: true),
                             style: const TextStyle(
                                 color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                       ],
@@ -649,7 +650,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Unit Price:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                        Text('Rate per ${ServiceUnitHelper.getUnitName(s.name, count: 1)}:',
+                            style: const TextStyle(color: Colors.white70, fontSize: 13)),
                         Text('₹${s.pricing.buyerPrice.toStringAsFixed(2)}',
                             style: const TextStyle(
                                 color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),

@@ -4,6 +4,7 @@ import '../../domain/models/service_model.dart';
 import '../../domain/models/pricing_config.dart';
 import '../../domain/models/visibility_context.dart';
 import '../../domain/models/element_type.dart';
+import '../../../../core/utils/service_unit_helper.dart';
 
 class BuyerWorkerPreviewModal extends StatefulWidget {
   final ServiceModel service;
@@ -272,9 +273,9 @@ class _BuyerWorkerPreviewModalState extends State<BuyerWorkerPreviewModal> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Quantity / Count:',
-                              style: TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text('Rate: ₹${pricing.unitPrice}/unit',
+                          Text(ServiceUnitHelper.getQuantityHeader(widget.service.name),
+                              style: const TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                          Text(ServiceUnitHelper.getRateLabel(widget.service.name, pricing.unitPrice),
                               style: const TextStyle(color: Colors.white54, fontSize: 11)),
                         ],
                       ),
@@ -295,7 +296,7 @@ class _BuyerWorkerPreviewModalState extends State<BuyerWorkerPreviewModal> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                '$_selectedQuantity Units',
+                                ServiceUnitHelper.getUnitName(widget.service.name, count: _selectedQuantity, includeCount: true),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                               ),
@@ -570,7 +571,7 @@ class _BuyerWorkerPreviewModalState extends State<BuyerWorkerPreviewModal> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '$_selectedQuantity Units',
+                          ServiceUnitHelper.getUnitName(widget.service.name, count: _selectedQuantity, includeCount: true),
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                         ),

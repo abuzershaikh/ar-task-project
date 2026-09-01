@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/models/service_model.dart';
+import '../../../../core/utils/service_unit_helper.dart';
 
 class CategoryAccordionCard extends StatefulWidget {
   final String categoryName;
@@ -244,7 +245,7 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '₹${price.toStringAsFixed(2)} / unit',
+                              ServiceUnitHelper.getRateLabel(service.name, price),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,

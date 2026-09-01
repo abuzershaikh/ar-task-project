@@ -421,5 +421,64 @@ class ApiService {
     }
     throw Exception('Failed to load score (${response.statusCode})');
   }
+
+  // --- Notifications APIs ---
+  static Future<List<Map<String, dynamic>>> getNotifications() async {
+    try {
+      final headers = await _headers();
+      final response = await http.get(
+        Uri.parse('$baseUrl/worker/notifications'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['notifications'] is List) {
+          return List<Map<String, dynamic>>.from(data['notifications']);
+        }
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<int> getUnreadNotificationCount() async {
+    try {
+      final headers = await _headers();
+      final response = await http.get(
+        Uri.parse('$baseUrl/worker/notifications/unread-count'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return int.tryParse(data['unreadCount']?.toString() ?? '0') ?? 0;
+      }
+    } catch (_) {}
+    return 0;
+  }
+
+  static Future<bool> markNotificationAsRead(String id) async {
+    try {
+      final headers = await _headers();
+      final response = await http.patch(
+        Uri.parse('$baseUrl/worker/notifications/$id/read'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 5));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> markAllNotificationsAsRead() async {
+    try {
+      final headers = await _headers();
+      final response = await http.post(
+        Uri.parse('$baseUrl/worker/notifications/read-all'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 5));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 

@@ -158,14 +158,15 @@ export class OrderActivatedListener {
             }
 
             await this.jobRepo.updateProgress(job.id, count, TaskGenerationJobStatus.COMPLETED);
-            this.logger.log(`✅ ${count} order units and worker tasks generated in MySQL for Order '${payload.orderId}'.`);
+            const unitLabel = this.getGenericUnitName(payload.serviceCode, serviceCatalog?.name, count);
+            this.logger.log(`✅ ${count} ${unitLabel} and worker tasks generated in MySQL for Order '${payload.orderId}'.`);
 
             // 📢 Broadcast Instant Push Notification to Workers
             try {
                 const serviceTitle = serviceCatalog?.name || payload.serviceCode.replace(/_/g, ' ');
                 await this.firebaseAdmin.sendTaskBroadcastNotification({
                     title: `🎉 New Task Available! Earn ₹${rewardAmount}`,
-                    body: `${count} new slots for ${serviceTitle} available. Complete tasks and earn cash!`,
+                    body: `${count} new ${unitLabel} for ${serviceTitle} available. Complete tasks and earn cash!`,
                     orderId: payload.orderId,
                     reward: rewardAmount,
                     serviceCode: payload.serviceCode,
@@ -185,5 +186,42 @@ export class OrderActivatedListener {
                 await this.jobRepo.updateProgress(job.id, job.generatedTasksCount, TaskGenerationJobStatus.FAILED, error.message);
             }
         }
+    }
+
+    private getGenericUnitName(serviceCode: string, name?: string, count = 1): string {
+        const s = `${serviceCode} ${name || ''}`.toLowerCase();
+        let singular = 'Task';
+        let plural = 'Tasks';
+
+        if (s.includes('sub') || s.includes('subscriber')) {
+            singular = 'Subscriber';
+            plural = 'Subscribers';
+        } else if (s.includes('like')) {
+            singular = 'Like';
+            plural = 'Likes';
+        } else if (s.includes('comment')) {
+            singular = 'Comment';
+            plural = 'Comments';
+        } else if (s.includes('watch') || s.includes('view')) {
+            singular = 'View';
+            plural = 'Views';
+        } else if (s.includes('follow')) {
+            singular = 'Follower';
+            plural = 'Followers';
+        } else if (s.includes('install') || s.includes('download')) {
+            singular = 'Install';
+            plural = 'Installs';
+        } else if (s.includes('review') || s.includes('rating')) {
+            singular = 'Review';
+            plural = 'Reviews';
+        } else if (s.includes('share') || s.includes('repost')) {
+            singular = 'Share';
+            plural = 'Shares';
+        } else if (s.includes('combo') || s.includes('engagement')) {
+            singular = 'Engagement';
+            plural = 'Engagements';
+        }
+
+        return count === 1 ? singular : plural;
     }
 }
