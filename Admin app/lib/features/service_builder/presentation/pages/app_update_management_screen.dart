@@ -358,16 +358,61 @@ class _AppUpdateManagementScreenState extends State<AppUpdateManagementScreen> {
 
                   // ── Card 2: Release & Download Configuration ──
                   _buildSectionCard(
-                    icon: Icons.cloud_download_rounded,
+                    icon: Icons.open_in_browser_rounded,
                     iconColor: Colors.cyanAccent,
-                    title: '2. Latest Release Information & APK URL',
-                    badgeText: 'DOWNLOAD LINK',
+                    title: '2. Chrome Download Link & Release Config',
+                    badgeText: 'CHROME DOWNLOAD LINK',
                     badgeColor: Colors.cyanAccent,
                     subtitle:
-                        'The worker app will download the update directly from this APK link and prompt installation in the Downloads folder.',
+                        'When a worker clicks "Download Update", Google Chrome / browser will immediately open this link and download the APK.',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        const Text('APK Download URL (Opens in Chrome) *',
+                            style: TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 5),
+                        TextFormField(
+                          controller: _apkUrlController,
+                          style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                          decoration: InputDecoration(
+                            hintText: 'https://example.com/downloads/Worker_App.apk',
+                            prefixIcon: const Icon(Icons.link_rounded, color: Colors.cyanAccent, size: 20),
+                            suffixIcon: _apkUrlController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.open_in_new_rounded, color: Colors.cyanAccent, size: 18),
+                                    tooltip: 'Test Link in Browser',
+                                    onPressed: () async {
+                                      final url = Uri.tryParse(_apkUrlController.text.trim());
+                                      if (url != null) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Testing link: ${_apkUrlController.text}'),
+                                            backgroundColor: Colors.teal,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: const Color(0xFF0F172A),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: Colors.cyanAccent.withOpacity(0.3)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: Colors.cyanAccent, width: 1.5),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          '💡 Enter any direct APK URL, Google Drive link, GitHub Release link, or website download page.',
+                          style: TextStyle(color: Colors.white38, fontSize: 10.5),
+                        ),
+                        const SizedBox(height: 14),
+
                         const Text('Latest Release Version Name *',
                             style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 4),
@@ -377,25 +422,6 @@ class _AppUpdateManagementScreenState extends State<AppUpdateManagementScreen> {
                           decoration: InputDecoration(
                             hintText: 'e.g. 1.0.1 or 2.0.0',
                             prefixIcon: const Icon(Icons.verified_rounded, color: Colors.cyanAccent, size: 18),
-                            filled: true,
-                            fillColor: const Color(0xFF0F172A),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        const Text('Direct APK Download URL *',
-                            style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        TextFormField(
-                          controller: _apkUrlController,
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
-                          decoration: InputDecoration(
-                            hintText: 'https://.../Worker_App_Release.apk',
-                            prefixIcon: const Icon(Icons.link_rounded, color: Colors.cyanAccent, size: 18),
                             filled: true,
                             fillColor: const Color(0xFF0F172A),
                             border: OutlineInputBorder(

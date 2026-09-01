@@ -49,7 +49,42 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
     super.dispose();
   }
 
-  Future<void> _startDownload() async {
+  /// Open Download Link directly in Google Chrome / External Browser
+  Future<void> _openDownloadInChrome() async {
+    final link = widget.downloadUrl.trim();
+    if (link.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No download link configured by admin')),
+      );
+      return;
+    }
+
+    setState(() {
+      _statusText = 'Opening Chrome / Browser to download update...';
+    });
+
+    try {
+      final uri = Uri.parse(link);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      debugPrint('⚠️ Browser launch error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not open Chrome: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  /// Direct In-App Download into Downloads folder
+  Future<void> _startInAppDownload() async {
     setState(() {
       _isDownloading = true;
       _progress = 0.05;
@@ -58,7 +93,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
     });
 
     try {
-      final uri = Uri.parse(widget.downloadUrl);
+      final uri = Uri.parse(widget.downloadUrl.trim());
       final request = http.Request('GET', uri);
       final response = await http.Client().send(request);
 
@@ -67,7 +102,6 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
         int receivedBytes = 0;
         final List<int> bytes = [];
 
-        // Determine destination file in Downloads directory
         Directory? downloadDir;
         if (Platform.isAndroid) {
           final externalDir = Directory('/storage/emulated/0/Download');
@@ -90,12 +124,12 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
               _progress = p;
               final downloadedMb = (receivedBytes / (1024 * 1024)).toStringAsFixed(1);
               final totalMb = (contentLength / (1024 * 1024)).toStringAsFixed(1);
-              _statusText = 'Downloading update: $downloadedMb MB / $totalMb MB (${(p * 100).toInt()}%)';
+              _statusText = 'Downloading: $downloadedMb MB / $totalMb MB (${(p * 100).toInt()}%)';
             });
           } else {
             setState(() {
               final downloadedMb = (receivedBytes / (1024 * 1024)).toStringAsFixed(1);
-              _statusText = 'Downloading update: $downloadedMb MB...';
+              _statusText = 'Downloading: $downloadedMb MB...';
             });
           }
         }
@@ -110,29 +144,14 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
           _statusText = '✅ Download complete! Saved to Downloads.';
         });
 
-        // Trigger open/install APK automatically
         _installApk();
       } else {
-        // Fallback: Open in External Browser
-        await _fallbackToBrowser();
+        await _openDownloadInChrome();
       }
     } catch (e) {
-      debugPrint('⚠️ Download error: $e. Falling back to browser download.');
-      await _fallbackToBrowser();
+      debugPrint('⚠️ In-app download error: $e. Opening Chrome instead.');
+      await _openDownloadInChrome();
     }
-  }
-
-  Future<void> _fallbackToBrowser() async {
-    setState(() {
-      _isDownloading = false;
-      _statusText = 'Opening download link in browser...';
-    });
-    try {
-      final uri = Uri.parse(widget.downloadUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    } catch (_) {}
   }
 
   Future<void> _installApk() async {
@@ -142,11 +161,10 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
         debugPrint('🎯 Install intent result: ${result.type} - ${result.message}');
       } catch (e) {
         debugPrint('⚠️ Error launching installer: $e');
-        // Fallback to browser
-        await _fallbackToBrowser();
+        await _openDownloadInChrome();
       }
     } else {
-      await _fallbackToBrowser();
+      await _openDownloadInChrome();
     }
   }
 
@@ -179,7 +197,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
                 height: 220,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFFF59E0B).withOpacity(0.1),
+                  color: const Color(0xFF38BDF8).withOpacity(0.1),
                 ),
               ),
             ),
@@ -225,7 +243,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
                           );
                         },
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 22),
 
                       // ── Title ──
                       Text(
@@ -281,7 +299,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 18),
 
                       // ── Message Box ──
                       Text(
@@ -293,7 +311,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
                           height: 1.5,
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 18),
 
                       // ── Release Notes Card ──
                       Container(
@@ -333,9 +351,9 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
                           ],
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
 
-                      // ── Download Progress / Status ──
+                      // ── In-App Download Progress (if active) ──
                       if (_isDownloading || _downloadCompleted) ...[
                         Column(
                           children: [
@@ -358,57 +376,67 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 14),
                           ],
                         ),
                       ],
 
-                      // ── Action Buttons ──
-                      if (_downloadCompleted) ...[
+                      // ── Primary Button: Download via Chrome / Browser ──
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF22C55E),
+                            foregroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 6,
+                          ),
+                          icon: const Icon(Icons.open_in_browser_rounded, size: 22),
+                          label: Text(
+                            'Download Update (Chrome)',
+                            style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.bold),
+                          ),
+                          onPressed: _openDownloadInChrome,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // ── Secondary Action: In-App Download / Install ──
+                      if (_downloadCompleted)
                         SizedBox(
                           width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF22C55E),
-                              foregroundColor: Colors.black,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              elevation: 6,
+                          height: 46,
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF22C55E),
+                              side: const BorderSide(color: Color(0xFF22C55E)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
-                            icon: const Icon(Icons.install_mobile_rounded, size: 22),
+                            icon: const Icon(Icons.install_mobile_rounded, size: 18),
                             label: Text(
-                              'Install Update Now',
-                              style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.bold),
+                              'Install Downloaded APK',
+                              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold),
                             ),
                             onPressed: _installApk,
                           ),
-                        ),
-                      ] else ...[
+                        )
+                      else if (!_isDownloading)
                         SizedBox(
                           width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF22C55E),
-                              foregroundColor: Colors.black,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              elevation: 6,
+                          height: 44,
+                          child: TextButton.icon(
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(0xFF94A3B8),
                             ),
-                            icon: _isDownloading
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                                  )
-                                : const Icon(Icons.download_rounded, size: 22),
+                            icon: const Icon(Icons.download_rounded, size: 16),
                             label: Text(
-                              _isDownloading ? 'Downloading Update...' : 'Download Update',
-                              style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.bold),
+                              'Direct Download in Background',
+                              style: GoogleFonts.poppins(fontSize: 12),
                             ),
-                            onPressed: _isDownloading ? null : _startDownload,
+                            onPressed: _startInAppDownload,
                           ),
                         ),
-                      ],
                       const SizedBox(height: 16),
                     ],
                   ),
