@@ -259,18 +259,18 @@ class MyTaskCard extends StatelessWidget {
       fg = const Color(0xFF0284C7);
       label = norm.contains('progress') ? 'In Progress' : 'Accepted';
     } else if (norm.contains('submit')) {
-      bg = const Color(0xFFE6F4EA);
-      fg = const Color(0xFF00875A);
-      label = 'Submitted';
-    } else if (norm.contains('review')) {
       bg = const Color(0xFFFEF3C7);
       fg = const Color(0xFFD97706);
-      label = 'Review';
-    } else if (norm.contains('approve')) {
-      bg = const Color(0xFFE6F4EA);
-      fg = const Color(0xFF00875A);
-      label = 'Approved';
-    } else if (norm.contains('reject')) {
+      label = 'Submitted';
+    } else if (norm.contains('review')) {
+      bg = const Color(0xFFFFF7ED);
+      fg = const Color(0xFFEA580C);
+      label = 'In Review';
+    } else if (norm.contains('approve') || norm.contains('complete') || norm.contains('done')) {
+      bg = const Color(0xFFECFDF5);
+      fg = const Color(0xFF059669);
+      label = 'Approved ✓';
+    } else if (norm.contains('reject') || norm.contains('cancel') || norm.contains('fail')) {
       bg = const Color(0xFFFEE2E2);
       fg = const Color(0xFFDC2626);
       label = 'Rejected';

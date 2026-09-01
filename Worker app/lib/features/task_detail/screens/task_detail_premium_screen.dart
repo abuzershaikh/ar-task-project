@@ -70,8 +70,21 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
   }
 
   String _getTaskStatus() {
-    final s = (widget.task['status'] ?? widget.task['stage'] ?? 'AVAILABLE').toString().toUpperCase();
-    return s;
+    final raw = (widget.task['status'] ??
+            widget.task['stage'] ??
+            widget.task['currentTabStage'] ??
+            widget.task['submissionStatus'] ??
+            widget.task['state'] ??
+            'AVAILABLE')
+        .toString()
+        .trim()
+        .toUpperCase();
+    if (raw == 'DONE' || raw == 'SUCCESS' || raw == 'APPROVED' || raw == 'COMPLETED') return 'APPROVED';
+    if (raw == 'REJECTED' || raw == 'CANCELLED' || raw == 'FAILED') return 'REJECTED';
+    if (raw == 'UNDER_REVIEW' || raw == 'IN_REVIEW' || raw == 'REVIEW' || raw == 'PENDING_REVIEW') return 'UNDER_REVIEW';
+    if (raw == 'SUBMITTED') return 'SUBMITTED';
+    if (raw == 'ACCEPTED' || raw == 'ASSIGNED' || raw == 'IN_PROGRESS' || raw == 'CLAIMED') return 'ACCEPTED';
+    return raw;
   }
 
   void _startTimer() {
@@ -834,8 +847,8 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Status Banner (If completed / submitted / under review / approved) ──
-                if (status != 'AVAILABLE' && status != 'ASSIGNED' && status != 'IN_PROGRESS' && status != 'ACCEPTED') ...[
+                // ── Status Banner (For all non-available tasks: Accepted, Submitted, Review, Approved, Rejected) ──
+                if (status != 'AVAILABLE') ...[
                   _buildStatusHeaderCard(status),
                   const SizedBox(height: 14),
                 ],
@@ -846,8 +859,8 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
                   const SizedBox(height: 14),
                 ],
 
-                // ── 1. Hero Card (3D Character + Title + Trophy) ───────────
-                _buildHeroCard(title, description, badge),
+                // ── 1. Hero Card (3D Character + Title + Trophy + Stage Pill) ───
+                _buildHeroCard(title, description, badge, status),
                 const SizedBox(height: 14),
 
                 // ── 2. 4-Item Quick Stats Row ──────────────────────────────
@@ -992,24 +1005,36 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     );
   }
 
-  // ── Status Banner for Review / Approved / Rejected ─────────────────────────
+  // ── Status Banner for Accepted / Submitted / Review / Approved / Rejected ──
   Widget _buildStatusHeaderCard(String status) {
     Color cardColor;
     IconData icon;
     String text;
 
     switch (status) {
+      case 'ACCEPTED':
+      case 'ASSIGNED':
+      case 'IN_PROGRESS':
+        cardColor = const Color(0xFF0284C7);
+        icon = Icons.play_circle_fill_rounded;
+        text = 'Task Accepted — In Progress';
+        break;
       case 'SUBMITTED':
-      case 'UNDER_REVIEW':
         cardColor = const Color(0xFFD97706);
+        icon = Icons.send_rounded;
+        text = 'Task Submitted — Awaiting Verification';
+        break;
+      case 'UNDER_REVIEW':
+      case 'IN_REVIEW':
+        cardColor = const Color(0xFFEA580C);
         icon = Icons.hourglass_top_rounded;
-        text = 'Task Submitted — Under Review by Admin';
+        text = 'Task Under Review — Admin Verification';
         break;
       case 'APPROVED':
       case 'COMPLETED':
         cardColor = const Color(0xFF059669);
-        icon = Icons.check_circle_rounded;
-        text = 'Task Approved Successfully!';
+        icon = Icons.verified_rounded;
+        text = 'Task Approved & Reward Credited!';
         break;
       case 'REJECTED':
         cardColor = const Color(0xFFDC2626);
@@ -1046,6 +1071,66 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Stage Badge Pill Widget for Hero Card ─────────────────────────────────
+  Widget _buildStagePill(String status) {
+    Color bg;
+    Color fg;
+    String label;
+
+    switch (status) {
+      case 'ACCEPTED':
+      case 'ASSIGNED':
+      case 'IN_PROGRESS':
+        bg = const Color(0xFFE0F2FE);
+        fg = const Color(0xFF0284C7);
+        label = 'ACCEPTED';
+        break;
+      case 'SUBMITTED':
+        bg = const Color(0xFFFEF3C7);
+        fg = const Color(0xFFD97706);
+        label = 'SUBMITTED';
+        break;
+      case 'UNDER_REVIEW':
+      case 'IN_REVIEW':
+        bg = const Color(0xFFFFF7ED);
+        fg = const Color(0xFFEA580C);
+        label = 'UNDER REVIEW';
+        break;
+      case 'APPROVED':
+      case 'COMPLETED':
+        bg = const Color(0xFFECFDF5);
+        fg = const Color(0xFF059669);
+        label = 'APPROVED ✓';
+        break;
+      case 'REJECTED':
+        bg = const Color(0xFFFEE2E2);
+        fg = const Color(0xFFDC2626);
+        label = 'REJECTED';
+        break;
+      default:
+        bg = const Color(0xFFF1F5F9);
+        fg = const Color(0xFF64748B);
+        label = status;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: fg,
+          fontWeight: FontWeight.w800,
+          fontSize: 9.5,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
@@ -1125,7 +1210,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
   }
 
   // ── 1. Hero Card ───────────────────────────────────────────────────────────
-  Widget _buildHeroCard(String title, String description, String badge) {
+  Widget _buildHeroCard(String title, String description, String badge, String status) {
     final platform = _getPlatform();
 
     return Container(
@@ -1155,22 +1240,28 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Badge Pill
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEE2E2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    badge,
-                    style: const TextStyle(
-                      color: Color(0xFFDC2626),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 9.5,
-                      letterSpacing: 0.5,
+                // Badge Pill Row (Category + Stage)
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        badge,
+                        style: const TextStyle(
+                          color: Color(0xFF475569),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 9.5,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 6),
+                    _buildStagePill(status),
+                  ],
                 ),
                 const SizedBox(height: 6),
 

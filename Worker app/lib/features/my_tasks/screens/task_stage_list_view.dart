@@ -64,13 +64,19 @@ class TaskStageListView extends StatelessWidget {
         padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 28),
         itemCount: taskList.length,
         itemBuilder: (context, index) {
-          final task = taskList[index];
+          final rawTask = taskList[index];
+          final taskMap = rawTask is Map ? Map<String, dynamic>.from(rawTask) : <String, dynamic>{};
+          if (taskMap['status'] == null || taskMap['status'].toString().isEmpty) {
+            taskMap['status'] = stage;
+          }
+          taskMap['currentTabStage'] = stage;
+
           return MyTaskCard(
-            task: task,
+            task: taskMap,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => TaskDetailPremiumScreen(task: task),
+                  builder: (_) => TaskDetailPremiumScreen(task: taskMap),
                 ),
               );
             },
