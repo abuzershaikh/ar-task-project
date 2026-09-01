@@ -161,12 +161,12 @@ export class OrderActivatedListener {
             const unitLabel = this.getGenericUnitName(payload.serviceCode, serviceCatalog?.name, count);
             this.logger.log(`✅ ${count} ${unitLabel} and worker tasks generated in MySQL for Order '${payload.orderId}'.`);
 
-            // 📢 Broadcast Instant Push Notification to Workers
+            // 📢 Broadcast Instant Push Notification to Workers (without revealing buyer quantity)
             try {
                 const serviceTitle = serviceCatalog?.name || payload.serviceCode.replace(/_/g, ' ');
                 await this.firebaseAdmin.sendTaskBroadcastNotification({
                     title: `🎉 New Task Available! Earn ₹${rewardAmount}`,
-                    body: `${count} new ${unitLabel} for ${serviceTitle} available. Complete tasks and earn cash!`,
+                    body: `New ${serviceTitle} task is now available. Complete now to earn instant cash!`,
                     orderId: payload.orderId,
                     reward: rewardAmount,
                     serviceCode: payload.serviceCode,
