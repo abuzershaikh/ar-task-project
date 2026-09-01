@@ -113,11 +113,12 @@ class NotificationService {
     }
   }
 
+  final Set<String> _recentNotificationKeys = {};
+
   /// Subscribe worker to global and task topics
   Future<void> _subscribeToWorkerTopics() async {
     try {
       await _fcm.subscribeToTopic('workers');
-      await _fcm.subscribeToTopic('all_workers');
       debugPrint('🔔 [FCM TOPIC] Subscribed to topic: workers');
     } catch (e) {
       debugPrint('⚠️ [FCM TOPIC] Subscription error: $e');
@@ -199,6 +200,17 @@ class NotificationService {
     final title = notification?.title ?? message.data['title'] ?? '🎉 New Task Available!';
     final body = notification?.body ?? message.data['body'] ?? 'A new reward task is available for you.';
 
+    // Client-side Deduplication: Prevent duplicate popups within short timeframe
+    final dedupeKey = '${message.messageId}_${message.data['orderId']}_$title';
+    if (_recentNotificationKeys.contains(dedupeKey)) {
+      debugPrint('⚠️ [FCM DEDUPE] Suppressed duplicate local notification popup: $dedupeKey');
+      return;
+    }
+    _recentNotificationKeys.add(dedupeKey);
+    if (_recentNotificationKeys.length > 50) {
+      _recentNotificationKeys.remove(_recentNotificationKeys.first);
+    }
+
     final androidDetails = AndroidNotificationDetails(
       _channel.id,
       _channel.name,
@@ -213,7 +225,7 @@ class NotificationService {
 
     final notificationDetails = NotificationDetails(android: androidDetails);
 
-    final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final notificationId = dedupeKey.hashCode.abs();
     final payload = jsonEncode(message.data);
 
     await _localNotifications.show(
