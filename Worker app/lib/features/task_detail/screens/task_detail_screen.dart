@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers/task_provider.dart';
 import '../../../core/theme/app_theme.dart';
-import '../models/worker_task_model.dart';
 
 /// TaskDetailScreen (Server-Status-Driven Dynamic Task Execution Engine)
 class TaskDetailScreen extends StatefulWidget {

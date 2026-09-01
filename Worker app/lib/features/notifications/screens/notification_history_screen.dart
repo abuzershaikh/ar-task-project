@@ -48,9 +48,12 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
     });
 
     final success = await ApiService.deleteNotification(item.id);
-    if (!success) {
-      // Revert if API fails
-      // ignore
+    if (!success && mounted) {
+      // Rollback if API fails
+      setState(() {
+        _notifications.insert(index < _notifications.length ? index : _notifications.length, removedItem);
+      });
+      return;
     }
 
     if (mounted) {
@@ -315,7 +318,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     itemCount: _filteredNotifications.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, index) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final item = _filteredNotifications[index];
                       return Dismissible(

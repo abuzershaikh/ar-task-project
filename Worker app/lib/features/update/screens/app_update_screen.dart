@@ -74,12 +74,14 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> with SingleTickerProv
       }
     } catch (e) {
       debugPrint('⚠️ Browser launch error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not open Chrome: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open Chrome: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 

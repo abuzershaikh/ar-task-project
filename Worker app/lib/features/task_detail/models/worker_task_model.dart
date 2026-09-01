@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// WorkerTaskElement - Task instructions and media element model for Worker App
 class WorkerTaskElement {
   final String id;

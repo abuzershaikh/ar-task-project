@@ -78,7 +78,9 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const KycBankDetailsScreen()),
               ).then((_) {
-                context.read<ProfileProvider>().fetchProfile();
+                if (mounted) {
+                  context.read<ProfileProvider>().fetchProfile();
+                }
               });
             },
           ),
@@ -421,7 +423,9 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                             Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => const KycBankDetailsScreen()),
                             ).then((_) {
-                              context.read<ProfileProvider>().fetchProfile();
+                              if (mounted) {
+                                context.read<ProfileProvider>().fetchProfile();
+                              }
                             });
                           },
                           child: Text(

@@ -787,6 +787,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
       await taskProvider.fetchAvailableTasks();
     } catch (_) {}
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('🎉 Task Proof Submitted! It is now Under Review.'),
