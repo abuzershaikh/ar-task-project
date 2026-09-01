@@ -4,6 +4,7 @@ import '../bloc/service_builder_bloc.dart';
 import '../bloc/service_builder_event.dart';
 import '../bloc/service_builder_state.dart';
 import 'service_builder_screen.dart';
+import 'task_expiry_settings_screen.dart';
 
 class ServicesListScreen extends StatefulWidget {
   const ServicesListScreen({super.key});
@@ -263,6 +264,16 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
         ),
         backgroundColor: const Color(0xFF0F172A),
         actions: [
+          IconButton(
+            tooltip: 'Task Expiry & Timeout Settings',
+            icon: const Icon(Icons.timer_outlined, color: Colors.amberAccent, size: 22),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TaskExpirySettingsScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
             onPressed: () => context.read<ServiceBuilderBloc>().add(LoadServicesEvent()),

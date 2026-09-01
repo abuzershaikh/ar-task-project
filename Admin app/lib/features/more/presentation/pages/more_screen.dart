@@ -4,6 +4,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 import '../../../service_builder/presentation/pages/services_list_screen.dart';
+import '../../../service_builder/presentation/pages/task_expiry_settings_screen.dart';
+import 'system_settings_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -75,6 +77,17 @@ class MoreScreen extends StatelessWidget {
           // Engine & System
           const _SectionTitle(title: 'Engine & System'),
           _MenuItem(
+            icon: Icons.timer_outlined,
+            title: 'Task Expiration & Auto-Reassign',
+            subtitle: 'Configure worker completion & pool expiry timeouts',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TaskExpirySettingsScreen()),
+              );
+            },
+          ),
+          _MenuItem(
             icon: Icons.psychology_outlined,
             title: 'Matching Brain',
             subtitle: 'Configure scoring & matching engine',
@@ -94,8 +107,13 @@ class MoreScreen extends StatelessWidget {
           _MenuItem(
             icon: Icons.settings_outlined,
             title: 'System Settings',
-            subtitle: 'Platform configuration & limits',
-            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
+            subtitle: 'Platform configuration & financial rules',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SystemSettingsScreen()),
+              );
+            },
           ),
           const SizedBox(height: 16),
 

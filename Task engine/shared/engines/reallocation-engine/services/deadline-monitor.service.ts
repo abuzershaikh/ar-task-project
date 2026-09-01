@@ -1,36 +1,90 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { TaskRepository } from '../../../database/repositories/task.repository';
 import { OrderRepository } from '../../../database/repositories/order.repository';
+import { SystemSettingsRepository } from '../../../database/repositories/system-settings.repository';
 import { TaskReleaseService } from './task-release.service';
 import { ReassignmentService } from './reassignment.service';
 import { ReleaseReason, PostDeadlineEvaluation } from '../types/reallocation.types';
 
 @Injectable()
-export class DeadlineMonitorService {
+export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger(DeadlineMonitorService.name);
+    private monitorInterval: NodeJS.Timeout | null = null;
+    private isRunningCycle = false;
 
     constructor(
         private readonly taskRepo: TaskRepository,
         private readonly orderRepo: OrderRepository,
+        private readonly settingsRepo: SystemSettingsRepository,
         private readonly releaseService: TaskReleaseService,
         private readonly reassignmentService: ReassignmentService,
     ) { }
 
+    onModuleInit() {
+        this.logger.log('🕒 Initializing automated real-time Task Deadline & Expiry Monitor background service (interval: 60s)...');
+        // Initial delayed check (15s after startup)
+        setTimeout(() => {
+            this.monitorDeadlines().catch((err) =>
+                this.logger.warn(`Initial deadline monitor execution warning: ${err.message}`),
+            );
+        }, 15000);
+
+        // Continuous 60-second recurring background interval
+        this.monitorInterval = setInterval(async () => {
+            if (this.isRunningCycle) return;
+            try {
+                this.isRunningCycle = true;
+                await this.monitorDeadlines();
+            } catch (err) {
+                this.logger.error(`Automated deadline monitor cycle error: ${err.message}`);
+            } finally {
+                this.isRunningCycle = false;
+            }
+        }, 60000);
+    }
+
+    onModuleDestroy() {
+        if (this.monitorInterval) {
+            clearInterval(this.monitorInterval);
+            this.monitorInterval = null;
+        }
+    }
+
+    /**
+     * Retrieves dynamic system settings for task expiration
+     */
+    async getExpirySettings() {
+        try {
+            const workerTimeout = await this.settingsRepo.findByKey('worker_execution_timeout_hours');
+            const unacceptedExpiry = await this.settingsRepo.findByKey('unaccepted_task_expiry_hours');
+            const autoReassign = await this.settingsRepo.findByKey('auto_reassign_on_expiry');
+
+            return {
+                workerExecutionTimeoutHours: workerTimeout ? Number(workerTimeout.value) : 2.0,
+                unacceptedTaskExpiryHours: unacceptedExpiry ? Number(unacceptedExpiry.value) : 24.0,
+                autoReassignOnExpiry: autoReassign !== null && autoReassign !== undefined ? Boolean(autoReassign.value) : true,
+            };
+        } catch (_) {
+            return {
+                workerExecutionTimeoutHours: 2.0,
+                unacceptedTaskExpiryHours: 24.0,
+                autoReassignOnExpiry: true,
+            };
+        }
+    }
+
     /**
      * Executes the Post-Deadline Monitor cycle.
-     * Production Rules:
-     * 1. Task timeout processing is COMPLETELY INDEPENDENT of campaign expiry date.
-     *    Worker W03 timing out at 10 PM triggers WORKER_TIMEOUT, release, and W11 reassignment immediately.
-     * 2. processFullTimeouts MUST process ONLY ASSIGNED, ACCEPTED, or IN_PROGRESS tasks.
-     *    SUBMITTED, UNDER_REVIEW, APPROVED, COMPLETED tasks are STRICTLY UNTOUCHABLE.
-     * 3. campaign_worker_participation records are NEVER deleted or reused. Record existence = permanent exclusion from campaign.
-     * 4. When campaign expiry cutoff arrives with incomplete tasks, campaign auto-extends (+10 hours) and opens new allocation window.
+     * Evaluates:
+     * 1. Worker Full Timeouts: Releases expired workers who accepted but did not submit proof.
+     * 2. Campaign Auto-Extensions & Unaccepted task management.
      */
     async monitorDeadlines(campaignAutoExtensionHours: number = 10): Promise<PostDeadlineEvaluation> {
         this.logger.log('Starting Post-Deadline Monitor cycle...');
+        const settings = await this.getExpirySettings();
 
-        // 1. Process Full Timeouts (Independent of campaign expiry)
-        const timeoutResults = await this.processFullTimeouts();
+        // 1. Process Worker Acceptance Timeouts (Independent of campaign expiry)
+        const timeoutResults = await this.processFullTimeouts(settings.workerExecutionTimeoutHours, settings.autoReassignOnExpiry);
 
         // 2. Process Campaign Auto-Extensions (+10 hours if campaign incomplete at expiry date)
         const extensionResults = await this.processCampaignAutoExtensions(campaignAutoExtensionHours);
@@ -43,7 +97,10 @@ export class DeadlineMonitorService {
         };
     }
 
-    async processFullTimeouts(): Promise<{ evaluatedCount: number; expiredCount: number; reallocatedCount: number }> {
+    async processFullTimeouts(
+        defaultWorkerTimeoutHours: number = 2.0,
+        autoReassign: boolean = true,
+    ): Promise<{ evaluatedCount: number; expiredCount: number; reallocatedCount: number }> {
         const now = new Date();
         const activeAssignedTasks = await this.taskRepo.findAssignedTasks();
 
@@ -55,7 +112,7 @@ export class DeadlineMonitorService {
             const campaignId = task.campaignId || task.orderId;
             const assignedWorkerId = task.assignedTo;
 
-            if (!assignedWorkerId || !task.deadline) continue;
+            if (!assignedWorkerId) continue;
 
             evaluatedCount++;
 
@@ -66,11 +123,20 @@ export class DeadlineMonitorService {
                 continue;
             }
 
-            // Worker gets full task deadline! Worker timeout triggers immediately at task.deadline (independent of campaign expiry)
-            if (new Date(task.deadline) < now) {
-                this.logger.warn(`POST-DEADLINE TIMEOUT: Task '${task.id}' deadline passed for Worker '${assignedWorkerId}'.`);
+            // Determine deadline
+            let effectiveDeadline: Date | null = task.deadline ? new Date(task.deadline) : null;
+            if (!effectiveDeadline || isNaN(effectiveDeadline.getTime())) {
+                const acceptTime = task.acceptedAt || task.assignedAt || task.startedAt;
+                if (acceptTime) {
+                    effectiveDeadline = new Date(new Date(acceptTime).getTime() + defaultWorkerTimeoutHours * 3600 * 1000);
+                }
+            }
 
-                // 1. Release worker with reason WORKER_TIMEOUT (Locks participation in DB -> Worker permanently excluded from Campaign)
+            // Check if deadline passed
+            if (effectiveDeadline && effectiveDeadline < now) {
+                this.logger.warn(`POST-DEADLINE TIMEOUT: Task '${task.id}' deadline (${effectiveDeadline.toISOString()}) passed for Worker '${assignedWorkerId}'.`);
+
+                // 1. Release worker with reason WORKER_TIMEOUT (Locks participation in DB -> Worker excluded from this task)
                 const released = await this.releaseService.releaseWorkerFromTask({
                     taskId: task.id,
                     workerId: assignedWorkerId,
@@ -82,10 +148,15 @@ export class DeadlineMonitorService {
                 if (released) {
                     expiredCount++;
 
-                    // 2. Reassign task immediately to a NEW unused worker in the campaign (independent of campaign expiry)
-                    const newWorkerId = await this.reassignmentService.reassignTaskToNewWorker(task.id, campaignId);
-                    if (newWorkerId) {
-                        reallocatedCount++;
+                    // 2. If autoReassign is enabled, immediately reassign or release to pool for other workers
+                    if (autoReassign) {
+                        const newWorkerId = await this.reassignmentService.reassignTaskToNewWorker(task.id, campaignId);
+                        if (newWorkerId) {
+                            reallocatedCount++;
+                            this.logger.log(`✅ Auto-reassigned expired task '${task.id}' to new worker '${newWorkerId}'`);
+                        } else {
+                            this.logger.log(`📢 Task '${task.id}' released back to active pool for any eligible worker to accept.`);
+                        }
                     }
                 }
             }
@@ -101,7 +172,6 @@ export class DeadlineMonitorService {
         const activeOrders = await this.orderRepo.findActiveOrders();
         for (const order of activeOrders) {
             const currentExpiry = order.campaignExpiryDate;
-            const originalExpiry = order.campaignExpiryDateSnapshot || currentExpiry;
             
             if (currentExpiry && new Date(currentExpiry) < now && order.tasksCompleted < order.totalTasksRequired) {
                 const newExpiryDate = new Date(new Date(currentExpiry).getTime() + extensionHours * 3600 * 1000);

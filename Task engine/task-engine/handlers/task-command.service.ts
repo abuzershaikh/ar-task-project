@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { Task } from '../../shared/database/entities/task.entity';
 import { CampaignWorkerParticipation, ParticipationStatus } from '../../shared/database/entities/campaign-worker-participation.entity';
 import { TaskAssignment, TaskAssignmentStatus } from '../../shared/database/entities/task-assignment.entity';
+import { SystemSetting } from '../../shared/database/entities/system-settings.entity';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { CampaignWorkerParticipationRepository } from '../../shared/database/repositories/campaign-worker-participation.repository';
 import { TaskAssignmentRepository } from '../../shared/database/repositories/task-assignment.repository';
@@ -148,10 +149,27 @@ export class TaskCommandService {
                 });
                 await manager.save(assignment);
 
+                // Dynamic deadline calculation from System Settings or task requirements
+                let executionHours = 2.0;
+                try {
+                    const timeoutSetting = await manager.findOne(SystemSetting, { where: { key: 'worker_execution_timeout_hours' } });
+                    if (timeoutSetting?.value) {
+                        executionHours = Number(timeoutSetting.value);
+                    }
+                } catch (_) {}
+
+                if (task.requirements?.timeToCompleteHours) {
+                    executionHours = Number(task.requirements.timeToCompleteHours);
+                }
+
+                const now = new Date();
+                const deadline = new Date(now.getTime() + executionHours * 3600 * 1000);
+
                 task.status = TaskStatus.ACCEPTED;
-                task.acceptedAt = new Date();
-                task.assignedAt = new Date();
+                task.acceptedAt = now;
+                task.assignedAt = now;
                 task.assignedTo = command.workerId;
+                task.deadline = deadline;
                 return manager.save(task);
             }
 
@@ -172,9 +190,24 @@ export class TaskCommandService {
                 await manager.save(activeAssignment);
             }
 
+            // Dynamic deadline calculation for pre-assigned task acceptance
+            let executionHours = 2.0;
+            try {
+                const timeoutSetting = await manager.findOne(SystemSetting, { where: { key: 'worker_execution_timeout_hours' } });
+                if (timeoutSetting?.value) {
+                    executionHours = Number(timeoutSetting.value);
+                }
+            } catch (_) {}
+
+            if (task.requirements?.timeToCompleteHours) {
+                executionHours = Number(task.requirements.timeToCompleteHours);
+            }
+
+            const now = new Date();
             task.status = TaskStatus.ACCEPTED;
-            task.acceptedAt = new Date();
+            task.acceptedAt = now;
             task.assignedTo = command.workerId;
+            task.deadline = new Date(now.getTime() + executionHours * 3600 * 1000);
             return manager.save(task);
         });
     }
