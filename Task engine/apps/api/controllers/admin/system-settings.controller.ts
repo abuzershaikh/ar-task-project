@@ -107,6 +107,180 @@ export class AdminSystemSettingsController {
         };
     }
 
+    @Get('app-updates')
+    @ApiOperation({ summary: 'Get App Version Update List and Release configuration' })
+    async getAppUpdateSettings() {
+        const updateVersionsSetting = await this.settingsRepo.findByKey('worker_app_update_versions');
+        const latestVersionSetting = await this.settingsRepo.findByKey('latest_worker_app_version');
+        const apkUrlSetting = await this.settingsRepo.findByKey('latest_worker_apk_url');
+        const updateMsgSetting = await this.settingsRepo.findByKey('force_update_message');
+        const releaseNotesSetting = await this.settingsRepo.findByKey('worker_app_release_notes');
+
+        let updateList: string[] = [];
+        try {
+            if (updateVersionsSetting?.value) {
+                if (Array.isArray(updateVersionsSetting.value)) {
+                    updateList = updateVersionsSetting.value.map((v: any) => v.toString().trim());
+                } else if (typeof updateVersionsSetting.value === 'string') {
+                    updateList = JSON.parse(updateVersionsSetting.value).map((v: any) => v.toString().trim());
+                }
+            }
+        } catch (_) {
+            updateList = [];
+        }
+
+        return {
+            success: true,
+            settings: {
+                updateList,
+                latestVersion: (latestVersionSetting?.value || '1.0.1').toString(),
+                apkDownloadUrl: (apkUrlSetting?.value || 'https://raw.githubusercontent.com/abuzershaikh/ar-task-project/main/Worker_App_Release.apk').toString(),
+                updateMessage: (updateMsgSetting?.value || 'A new version of Task Reward Worker is available. Please update your app to continue.').toString(),
+                releaseNotes: (releaseNotesSetting?.value || '• New task execution engine\n• Real-time notification deep linking\n• Improved stability and security').toString(),
+            },
+        };
+    }
+
+    @Post('app-updates')
+    @ApiOperation({ summary: 'Update App Version Update List and Release configuration' })
+    async saveAppUpdateSettings(
+        @Body() body: {
+            updateList?: string[];
+            latestVersion?: string;
+            apkDownloadUrl?: string;
+            updateMessage?: string;
+            releaseNotes?: string;
+        },
+        @CurrentUser() user: User,
+    ) {
+        const userId = user ? user.id : 'admin';
+
+        if (body.updateList !== undefined) {
+            await this.settingsRepo.set(
+                'worker_app_update_versions',
+                body.updateList,
+                userId,
+                'List of app versions that must update',
+            );
+        }
+
+        if (body.latestVersion !== undefined) {
+            await this.settingsRepo.set(
+                'latest_worker_app_version',
+                body.latestVersion.trim(),
+                userId,
+                'Latest released version name',
+            );
+        }
+
+        if (body.apkDownloadUrl !== undefined) {
+            await this.settingsRepo.set(
+                'latest_worker_apk_url',
+                body.apkDownloadUrl.trim(),
+                userId,
+                'Direct APK download URL for updates',
+            );
+        }
+
+        if (body.updateMessage !== undefined) {
+            await this.settingsRepo.set(
+                'force_update_message',
+                body.updateMessage.trim(),
+                userId,
+                'Forced update prompt message',
+            );
+        }
+
+        if (body.releaseNotes !== undefined) {
+            await this.settingsRepo.set(
+                'worker_app_release_notes',
+                body.releaseNotes.trim(),
+                userId,
+                'Release notes and changelog',
+            );
+        }
+
+        await this.auditLogService.logAction({
+            userId,
+            action: 'UPDATE_APP_UPDATE_SETTINGS',
+            targetType: 'SYSTEM_SETTINGS',
+            targetId: 'APP_UPDATES',
+            newValue: body,
+        });
+
+        return {
+            success: true,
+            message: 'App version update settings saved successfully',
+        };
+    }
+
+    @Post('app-updates/add-version')
+    @ApiOperation({ summary: 'Add a single version string to the update list' })
+    async addVersionToUpdateList(
+        @Body() body: { version: string },
+        @CurrentUser() user: User,
+    ) {
+        const userId = user ? user.id : 'admin';
+        const vToAdd = (body.version || '').trim();
+        if (!vToAdd) {
+            throw new NotFoundException('Version string is required');
+        }
+
+        const updateVersionsSetting = await this.settingsRepo.findByKey('worker_app_update_versions');
+        let currentList: string[] = [];
+        try {
+            if (updateVersionsSetting?.value) {
+                if (Array.isArray(updateVersionsSetting.value)) {
+                    currentList = updateVersionsSetting.value.map((v: any) => v.toString().trim());
+                } else if (typeof updateVersionsSetting.value === 'string') {
+                    currentList = JSON.parse(updateVersionsSetting.value).map((v: any) => v.toString().trim());
+                }
+            }
+        } catch (_) {}
+
+        if (!currentList.includes(vToAdd)) {
+            currentList.push(vToAdd);
+            await this.settingsRepo.set('worker_app_update_versions', currentList, userId, 'List of app versions that must update');
+        }
+
+        return {
+            success: true,
+            message: `Version '${vToAdd}' added to update list`,
+            updateList: currentList,
+        };
+    }
+
+    @Delete('app-updates/remove-version/:version')
+    @ApiOperation({ summary: 'Remove a version string from the update list' })
+    async removeVersionFromUpdateList(
+        @Param('version') version: string,
+        @CurrentUser() user: User,
+    ) {
+        const userId = user ? user.id : 'admin';
+        const vToRemove = (version || '').trim();
+
+        const updateVersionsSetting = await this.settingsRepo.findByKey('worker_app_update_versions');
+        let currentList: string[] = [];
+        try {
+            if (updateVersionsSetting?.value) {
+                if (Array.isArray(updateVersionsSetting.value)) {
+                    currentList = updateVersionsSetting.value.map((v: any) => v.toString().trim());
+                } else if (typeof updateVersionsSetting.value === 'string') {
+                    currentList = JSON.parse(updateVersionsSetting.value).map((v: any) => v.toString().trim());
+                }
+            }
+        } catch (_) {}
+
+        currentList = currentList.filter((v) => v !== vToRemove && v !== `v${vToRemove}` && `v${v}` !== vToRemove);
+        await this.settingsRepo.set('worker_app_update_versions', currentList, userId, 'List of app versions that must update');
+
+        return {
+            success: true,
+            message: `Version '${vToRemove}' removed from update list`,
+            updateList: currentList,
+        };
+    }
+
     @Get()
     @ApiOperation({ summary: 'Get all database-backed system settings' })
     async getSettings() {

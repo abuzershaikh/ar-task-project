@@ -29,6 +29,7 @@ import { AuthController } from './controllers/auth/auth.controller';
 import { FileController } from './controllers/common/file.controller';
 import { WebhookController } from './controllers/webhooks/webhook.controller';
 import { HealthController } from './controllers/common/health.controller';
+import { AppUpdateController } from './controllers/common/app-update.controller';
 import { AppQueueModule } from '../../shared/queue/app-queue.module';
 
 // Worker Controllers
@@ -107,6 +108,7 @@ import { AdminWalletController } from './controllers/admin/wallet.controller';
     ],
     controllers: [
         HealthController,
+        AppUpdateController,
         AuthController,
         FileController,
         WebhookController,

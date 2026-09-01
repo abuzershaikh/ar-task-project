@@ -5,6 +5,7 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 import '../../../service_builder/presentation/pages/services_list_screen.dart';
 import '../../../service_builder/presentation/pages/task_expiry_settings_screen.dart';
+import '../../../service_builder/presentation/pages/app_update_management_screen.dart';
 import 'system_settings_screen.dart';
 
 class MoreScreen extends StatelessWidget {
@@ -76,6 +77,17 @@ class MoreScreen extends StatelessWidget {
 
           // Engine & System
           const _SectionTitle(title: 'Engine & System'),
+          _MenuItem(
+            icon: Icons.system_update_rounded,
+            title: 'App Version & Updates',
+            subtitle: 'Manage forced update list & APK download URLs',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AppUpdateManagementScreen()),
+              );
+            },
+          ),
           _MenuItem(
             icon: Icons.timer_outlined,
             title: 'Task Expiration & Auto-Reassign',
