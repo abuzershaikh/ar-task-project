@@ -47,8 +47,11 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final hasSamples = widget.sampleComments.isNotEmpty;
-    final remainingCount = (widget.selectedQuantity - widget.sampleComments.length).clamp(0, 99999);
+    final previewTargetCount = widget.selectedQuantity < 5 ? (widget.selectedQuantity > 0 ? widget.selectedQuantity : 1) : 5;
+    final displayedComments = widget.sampleComments.take(previewTargetCount).toList();
+    final hasSamples = displayedComments.isNotEmpty;
+    final remainingCount = (widget.selectedQuantity - displayedComments.length).clamp(0, 99999);
+    final countLabel = '$previewTargetCount Sample ${previewTargetCount == 1 ? "Comment" : "Comments"}';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -224,7 +227,7 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
               label: Text(
                 widget.isGeneratingPreview
                     ? 'Generating with DeepSeek AI...'
-                    : (hasSamples ? '🔄 Regenerate 5 Sample Comments' : '✨ Generate 5 AI Sample Comments'),
+                    : (hasSamples ? '🔄 Regenerate $countLabel' : '✨ Generate $countLabel'),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
               ),
             ),
@@ -247,7 +250,9 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Sample Preview (${widget.sampleComments.length} Comments)',
+                        widget.selectedQuantity < 5
+                            ? 'Generated Comments (${displayedComments.length} of ${widget.selectedQuantity})'
+                            : 'Sample Preview (${displayedComments.length} of ${widget.selectedQuantity} Comments)',
                         style: const TextStyle(
                           color: Color(0xFF166534),
                           fontWeight: FontWeight.bold,
@@ -259,7 +264,7 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                   ),
                   const SizedBox(height: 8),
 
-                  ...widget.sampleComments.asMap().entries.map((entry) {
+                  ...displayedComments.asMap().entries.map((entry) {
                     final index = entry.key + 1;
                     final comment = entry.value;
                     return Container(
@@ -316,8 +321,8 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                         Expanded(
                           child: Text(
                             widget.selectedQuantity > 5
-                                ? 'Showing 5 preview samples. The remaining $remainingCount unique comments will be generated via DeepSeek AI upon order placement. Every worker will receive their own unique comment.'
-                                : 'All ${widget.sampleComments.length} comments are ready. Each worker will receive their own unique comment.',
+                                ? 'Showing 5 sample preview comments. The remaining $remainingCount unique comments will be generated via DeepSeek AI upon order placement. Every worker will receive their own unique comment.'
+                                : 'All ${displayedComments.length} unique comments are ready. Each worker will receive their own unique comment.',
                             style: const TextStyle(
                               color: Color(0xFF1E40AF),
                               fontSize: 11,
