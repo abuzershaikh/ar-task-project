@@ -210,22 +210,22 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFEEF2FF),
+                                          color: const Color(0xFFF0FDF4),
                                           borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: const Color(0xFFC7D2FE)),
+                                          border: Border.all(color: const Color(0xFFBBF7D0)),
                                         ),
                                         child: const Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.auto_awesome,
-                                                size: 10, color: Color(0xFF4F46E5)),
+                                            Icon(Icons.verified_rounded,
+                                                size: 10, color: Color(0xFF16A34A)),
                                             SizedBox(width: 3),
                                             Text(
-                                              'DeepSeek AI Content',
+                                              'Unique Human Comments',
                                               style: TextStyle(
                                                 fontSize: 9.5,
-                                                fontWeight: FontWeight.w800,
-                                                color: Color(0xFF4F46E5),
+                                                fontWeight: FontWeight.w700,
+                                                color: Color(0xFF15803D),
                                               ),
                                             ),
                                           ],

@@ -329,7 +329,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   color: Color(0xFF0F172A), fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Text(
-              'Select a category to view fixed services & AI generation',
+              'Select a category to browse verified promotional services',
               style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
             ),
           ],
