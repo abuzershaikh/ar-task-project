@@ -592,7 +592,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
         Align(
           alignment: Alignment.centerLeft,
           child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.52,
+            width: MediaQuery.of(context).size.width * 0.54,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -600,45 +600,43 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                 Text(
                   'Complete Tasks',
                   style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14.5,
-                    letterSpacing: 0.1,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 1),
                 Text(
-                  'Earn Rewards',
+                  'Earn Daily Rewards',
                   style: GoogleFonts.poppins(
                     color: const Color(0xFF4ADE80),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 21,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                     height: 1.15,
-                    letterSpacing: 0.2,
                   ),
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 3),
                 Text(
-                  'Reviews, Comments & More on Your Favorite Platforms',
+                  'Complete social tasks & earn instant cash',
                   style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    fontSize: 10.5,
-                    height: 1.25,
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 9.5,
+                    height: 1.2,
                     fontWeight: FontWeight.w400,
                   ),
                   maxLines: 2,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
                       ),
                     ],
                   ),
@@ -649,15 +647,15 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                         'Start Earning',
                         style: GoogleFonts.poppins(
                           color: const Color(0xFF03351C),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10.5,
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 3),
                       const Icon(
                         Icons.arrow_forward_rounded,
                         color: Color(0xFF03351C),
-                        size: 14,
+                        size: 12,
                       ),
                     ],
                   ),
@@ -740,80 +738,58 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
         Align(
           alignment: Alignment.centerLeft,
           child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.52,
+            width: MediaQuery.of(context).size.width * 0.54,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFF59E0B)),
-                      ),
-                      child: Text(
-                        'BONUS STREAK',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFFFDE68A),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 8.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
                 Text(
                   'Daily Streak',
                   style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    letterSpacing: 0.1,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
                   ),
                 ),
+                const SizedBox(height: 1),
                 Text(
-                  'Get 2X Rewards',
+                  'Up to 2X Bonus',
                   style: GoogleFonts.poppins(
                     color: const Color(0xFFFBBF24),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                     height: 1.15,
-                    letterSpacing: 0.2,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
-                  'Complete tasks 7 days straight to unlock cash multipliers',
+                  '7-day active streak unlocks cash multiplier',
                   style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    fontSize: 10.5,
-                    height: 1.25,
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 9.5,
+                    height: 1.2,
                     fontWeight: FontWeight.w400,
                   ),
                   maxLines: 2,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 InkWell(
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const DayStreakScreen()),
                     );
                   },
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF59E0B),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
                         ),
                       ],
                     ),
@@ -824,15 +800,15 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                           'View Streak',
                           style: GoogleFonts.poppins(
                             color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10.5,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         const Icon(
-                          Icons.local_fire_department_rounded,
+                          Icons.arrow_forward_rounded,
                           color: Colors.white,
-                          size: 14,
+                          size: 12,
                         ),
                       ],
                     ),
@@ -851,15 +827,32 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
             alignment: Alignment.center,
             children: [
               Center(
-                child: SizedBox(
-                  width: 125,
-                  height: 125,
-                  child: Lottie.asset(
-                    'assets/animations/coin_bar.json',
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.local_fire_department_rounded, color: Color(0xFFF59E0B), size: 54);
-                    },
+                child: Container(
+                  width: 82,
+                  height: 82,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const RadialGradient(
+                      colors: [
+                        Color(0xFFFBBF24),
+                        Color(0xFFEA580C),
+                        Color(0xFF9A3412),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFEA580C).withValues(alpha: 0.5),
+                        blurRadius: 20,
+                        spreadRadius: 3,
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.local_fire_department_rounded,
+                      color: Colors.white,
+                      size: 46,
+                    ),
                   ),
                 ),
               ),
@@ -878,7 +871,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 20),
+                  child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 18),
                 ),
               ),
               Positioned(
@@ -891,13 +884,20 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: const Color(0xFFF59E0B)),
                   ),
-                  child: Text(
-                    '7 DAYS 🔥',
-                    style: GoogleFonts.poppins(
-                      color: const Color(0xFFFDE68A),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFBBF24), size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        '7-DAY STREAK',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFFFDE68A),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 9.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -917,80 +917,58 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
         Align(
           alignment: Alignment.centerLeft,
           child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.52,
+            width: MediaQuery.of(context).size.width * 0.54,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0284C7).withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFF38BDF8)),
-                      ),
-                      child: Text(
-                        '100% SECURE',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFFBAE6FD),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 8.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
                 Text(
                   'Instant Payouts',
                   style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    letterSpacing: 0.1,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
                   ),
                 ),
+                const SizedBox(height: 1),
                 Text(
-                  'Direct to Bank/UPI',
+                  'Direct to Bank / UPI',
                   style: GoogleFonts.poppins(
                     color: const Color(0xFF38BDF8),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                     height: 1.15,
-                    letterSpacing: 0.2,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
-                  'Withdraw earnings directly to Bank, UPI, or PayPal anytime',
+                  'Withdraw earnings to UPI, Bank & PayPal',
                   style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    fontSize: 10.5,
-                    height: 1.25,
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 9.5,
+                    height: 1.2,
                     fontWeight: FontWeight.w400,
                   ),
                   maxLines: 2,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 InkWell(
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const WalletScreen()),
                     );
                   },
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
                       color: const Color(0xFF0284C7),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF0284C7).withValues(alpha: 0.35),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
                         ),
                       ],
                     ),
@@ -1001,15 +979,15 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                           'Open Wallet',
                           style: GoogleFonts.poppins(
                             color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10.5,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         const Icon(
-                          Icons.account_balance_wallet_rounded,
+                          Icons.arrow_forward_rounded,
                           color: Colors.white,
-                          size: 14,
+                          size: 12,
                         ),
                       ],
                     ),
@@ -1094,80 +1072,58 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
         Align(
           alignment: Alignment.centerLeft,
           child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.52,
+            width: MediaQuery.of(context).size.width * 0.54,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF9333EA).withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFC084FC)),
-                      ),
-                      child: Text(
-                        'VIP WORKER',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFFE9D5FF),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 8.5,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 3),
                 Text(
                   'Quality Score',
                   style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    letterSpacing: 0.1,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
                   ),
                 ),
+                const SizedBox(height: 1),
                 Text(
-                  'High-Pay Tasks',
+                  'VIP Tasks Access',
                   style: GoogleFonts.poppins(
                     color: const Color(0xFFC084FC),
-                    fontWeight: FontWeight.w900,
-                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                     height: 1.15,
-                    letterSpacing: 0.2,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
-                  'Maintain 95%+ accuracy to receive high-paying VIP campaigns',
+                  'High accuracy score unlocks premium tasks',
                   style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    fontSize: 10.5,
-                    height: 1.25,
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 9.5,
+                    height: 1.2,
                     fontWeight: FontWeight.w400,
                   ),
                   maxLines: 2,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 InkWell(
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const QualityScoreScreen()),
                     );
                   },
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(
                       color: const Color(0xFF9333EA),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF9333EA).withValues(alpha: 0.35),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+                          color: const Color(0xFF9333EA).withValues(alpha: 0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
                         ),
                       ],
                     ),
@@ -1178,15 +1134,15 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                           'Check Score',
                           style: GoogleFonts.poppins(
                             color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10.5,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         const Icon(
-                          Icons.star_rounded,
+                          Icons.arrow_forward_rounded,
                           color: Colors.white,
-                          size: 14,
+                          size: 12,
                         ),
                       ],
                     ),
@@ -1205,15 +1161,32 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
             alignment: Alignment.center,
             children: [
               Center(
-                child: SizedBox(
-                  width: 120,
-                  height: 120,
-                  child: Lottie.asset(
-                    'assets/animations/coin_bar.json',
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.military_tech_rounded, color: Color(0xFFC084FC), size: 54);
-                    },
+                child: Container(
+                  width: 82,
+                  height: 82,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const RadialGradient(
+                      colors: [
+                        Color(0xFFD8B4FE),
+                        Color(0xFF9333EA),
+                        Color(0xFF581C87),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF9333EA).withValues(alpha: 0.5),
+                        blurRadius: 20,
+                        spreadRadius: 3,
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.workspace_premium_rounded,
+                      color: Colors.white,
+                      size: 46,
+                    ),
                   ),
                 ),
               ),
@@ -1245,13 +1218,20 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0xFFC084FC)),
                   ),
-                  child: Text(
-                    '98.5% SCORE ⭐',
-                    style: GoogleFonts.poppins(
-                      color: const Color(0xFFE9D5FF),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 9.5,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.verified_rounded, color: Color(0xFFD8B4FE), size: 12),
+                      const SizedBox(width: 4),
+                      Text(
+                        '98.5% QUALITY SCORE',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFFE9D5FF),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 9.0,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
