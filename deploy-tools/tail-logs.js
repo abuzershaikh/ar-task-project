@@ -3,13 +3,13 @@ const ssh = new NodeSSH();
 
 async function tailLogs() {
   await ssh.connect({
-    host: '95.179.178.6',
+    host: '65.20.77.112',
     username: 'root',
-    password: 'i_G72#y}(6gACDDU'
+    password: 'G8u$RW{5m46buXgw',
   });
   
   console.log('=== REAL TIME PM2 LOGS ===');
-  const res = await ssh.execCommand('pm2 logs task-engine --lines 30 --nostream');
+  const res = await ssh.execCommand('pm2 logs task-engine-api --lines 100 --nostream');
   console.log(res.stdout || res.stderr);
 
   ssh.dispose();

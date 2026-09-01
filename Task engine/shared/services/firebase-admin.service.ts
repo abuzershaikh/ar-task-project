@@ -107,29 +107,73 @@ export class FirebaseAdminService implements OnModuleInit {
         createdAt: new Date().toISOString(),
       };
 
-      // 1. Send single broadcast to FCM Topic 'workers'
-      const topicMessage: admin.messaging.Message = {
-        topic: 'workers',
-        notification: {
-          title: notificationTitle,
-          body: notificationBody,
-        },
-        data: dataPayload,
-        android: {
-          priority: 'high',
+      // 1. Send broadcast to FCM Topic 'workers' and 'all_workers'
+      try {
+        const topicMessage: admin.messaging.Message = {
+          topic: 'workers',
           notification: {
-            channelId: 'task_notifications',
-            priority: 'high',
-            sound: 'default',
-            clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+            title: notificationTitle,
+            body: notificationBody,
           },
-        },
-      };
+          data: dataPayload,
+          android: {
+            priority: 'high',
+            notification: {
+              channelId: 'task_notifications',
+              priority: 'high',
+              sound: 'default',
+              clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+            },
+          },
+        };
+        await this.messaging.send(topicMessage);
+        this.logger.log(`📢 [FCM BROADCAST] Push sent to topic 'workers': ${notificationTitle}`);
+      } catch (topicErr) {
+        this.logger.warn(`FCM Topic push warning: ${topicErr.message}`);
+      }
 
-      await this.messaging.send(topicMessage);
-      this.logger.log(`📢 [FCM BROADCAST] Push sent strictly once to topic 'workers': ${notificationTitle}`);
+      // 2. Also send direct push to all worker device tokens registered in Firestore
+      try {
+        const usersSnap = await this.firestore
+          .collection('users')
+          .get();
 
-      // 2. Persist notification to Firestore for worker notification history
+        const tokens: string[] = [];
+        usersSnap.forEach((doc) => {
+          const d = doc.data();
+          if (d.fcmToken && typeof d.fcmToken === 'string' && d.fcmToken.length > 20) {
+            tokens.push(d.fcmToken);
+          }
+        });
+
+        if (tokens.length > 0) {
+          const uniqueTokens = Array.from(new Set(tokens));
+          const multicastRes = await this.messaging.sendEachForMulticast({
+            tokens: uniqueTokens,
+            notification: {
+              title: notificationTitle,
+              body: notificationBody,
+            },
+            data: dataPayload,
+            android: {
+              priority: 'high',
+              notification: {
+                channelId: 'task_notifications',
+                priority: 'high',
+                sound: 'default',
+                clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+              },
+            },
+          });
+          this.logger.log(
+            `📱 [FCM DIRECT MULTICAST] Dispatched to ${uniqueTokens.length} registered worker devices (Success: ${multicastRes.successCount}, Failed: ${multicastRes.failureCount})`
+          );
+        }
+      } catch (directErr) {
+        this.logger.warn(`Direct worker multicast warning: ${directErr.message}`);
+      }
+
+      // 3. Persist notification to Firestore for worker notification history
       try {
         await this.firestore.collection('notifications').add({
           type: 'NEW_TASK',

@@ -3,10 +3,13 @@ import {
     Get,
     Patch,
     Post,
+    Put,
+    Body,
     Param,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationRepository } from '../../../../shared/database/repositories/notification.repository';
+import { UserRepository } from '../../../../shared/database/repositories/user.repository';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
@@ -16,7 +19,10 @@ import { UserRole, User } from '../../../../shared/database/entities/user.entity
 @ApiBearerAuth('bearer')
 @Controller('worker/notifications')
 export class WorkerNotificationController {
-    constructor(private readonly notificationRepo: NotificationRepository) { }
+    constructor(
+        private readonly notificationRepo: NotificationRepository,
+        private readonly userRepo: UserRepository,
+    ) { }
 
     @Get()
     @ApiOperation({ summary: 'Get worker notifications' })
@@ -56,6 +62,26 @@ export class WorkerNotificationController {
         return {
             success: true,
             message: 'All notifications marked as read',
+        };
+    }
+
+    @Put('device-token')
+    @ApiOperation({ summary: 'Update worker device FCM token' })
+    async updateDeviceToken(@CurrentUser() user: User, @Body() body: { deviceToken: string }) {
+        if (body?.deviceToken) {
+            const currentMetadata = user.metadata || {};
+            await this.userRepo.update(user.id, {
+                metadata: {
+                    ...currentMetadata,
+                    deviceToken: body.deviceToken,
+                    fcmToken: body.deviceToken,
+                    tokenUpdatedAt: new Date().toISOString(),
+                },
+            });
+        }
+        return {
+            success: true,
+            message: 'Device token registered successfully',
         };
     }
 }

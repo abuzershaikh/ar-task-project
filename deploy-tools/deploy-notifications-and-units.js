@@ -30,6 +30,10 @@ async function deploy() {
       local: path.join(basePath, 'apps/api/controllers/buyer/service-catalog.controller.ts'),
       remote: '/opt/task-engine/apps/api/controllers/buyer/service-catalog.controller.ts',
     },
+    {
+      local: path.join(basePath, 'apps/api/controllers/worker/notification.controller.ts'),
+      remote: '/opt/task-engine/apps/api/controllers/worker/notification.controller.ts',
+    },
   ];
 
   console.log('\n--- 2. Uploading Updated Backend Files ---');

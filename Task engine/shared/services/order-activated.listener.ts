@@ -9,6 +9,8 @@ import { TaskGenerationJobRepository } from '../database/repositories/task-gener
 import { TaskGenerationJobStatus } from '../database/entities/task-generation-job.entity';
 import { ServiceCatalogRepository } from '../database/repositories/service-catalog.repository';
 import { OrderUnitRepository } from '../database/repositories/order-unit.repository';
+import { NotificationRepository } from '../database/repositories/notification.repository';
+import { NotificationType } from '../database/entities/notification.entity';
 import { AiGeneratorService } from '../ai-generator/ai-generator.service';
 import { FirebaseAdminService } from './firebase-admin.service';
 
@@ -34,6 +36,7 @@ export class OrderActivatedListener {
         private readonly jobRepo: TaskGenerationJobRepository,
         private readonly serviceCatalogRepo: ServiceCatalogRepository,
         private readonly orderUnitRepo: OrderUnitRepository,
+        private readonly notificationRepo: NotificationRepository,
         private readonly aiGeneratorService: AiGeneratorService,
         private readonly firebaseAdmin: FirebaseAdminService,
         @InjectQueue('task') private readonly taskQueue: Queue,
@@ -202,12 +205,31 @@ export class OrderActivatedListener {
             // 📢 Broadcast Instant Push Notification to Workers (without revealing buyer quantity)
             try {
                 const serviceTitle = serviceCatalog?.name || payload.serviceCode.replace(/_/g, ' ');
+                const notificationTitle = `🎉 New Task Available! Earn ₹${rewardAmount}`;
+                const notificationBody = `New ${serviceTitle} task is now available. Complete now to earn instant cash!`;
+
                 await this.firebaseAdmin.sendTaskBroadcastNotification({
-                    title: `🎉 New Task Available! Earn ₹${rewardAmount}`,
-                    body: `New ${serviceTitle} task is now available. Complete now to earn instant cash!`,
+                    title: notificationTitle,
+                    body: notificationBody,
                     orderId: payload.orderId,
                     reward: rewardAmount,
                     serviceCode: payload.serviceCode,
+                });
+
+                // Persist in MySQL for worker in-app notification history
+                await this.notificationRepo.create({
+                    userId: 'ALL_WORKERS',
+                    type: NotificationType.TASK_ASSIGNED,
+                    title: notificationTitle,
+                    message: notificationBody,
+                    entityType: 'TASK',
+                    entityId: payload.orderId,
+                    data: {
+                        orderId: payload.orderId,
+                        reward: rewardAmount,
+                        serviceCode: payload.serviceCode,
+                        type: 'NEW_TASK',
+                    },
                 });
             } catch (pushErr) {
                 this.logger.warn(`Push notification dispatch warning: ${pushErr.message}`);
