@@ -817,12 +817,12 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     final videoTutorialUrl = _getVideoTutorialUrl();
     final platformName = _getPlatformDisplayName();
     final status = _getTaskStatus();
+    final bool isApprovedOrCompleted = status == 'APPROVED' || status == 'COMPLETED';
+    final bool isRejected = status == 'REJECTED';
     final bool isUnderReviewOrSubmitted = _isSubmitted ||
         status == 'SUBMITTED' ||
         status == 'UNDER_REVIEW' ||
-        status == 'IN_REVIEW' ||
-        status == 'APPROVED' ||
-        status == 'COMPLETED';
+        status == 'IN_REVIEW';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FB),
@@ -834,14 +834,14 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Status Banner (If completed / submitted / under review) ──
+                // ── Status Banner (If completed / submitted / under review / approved) ──
                 if (status != 'AVAILABLE' && status != 'ASSIGNED' && status != 'IN_PROGRESS' && status != 'ACCEPTED') ...[
                   _buildStatusHeaderCard(status),
                   const SizedBox(height: 14),
                 ],
 
                 // ── Live Execution Timer Banner (if task accepted and not yet submitted) ──
-                if (_isTaskAccepted && !isUnderReviewOrSubmitted) ...[
+                if (_isTaskAccepted && !isUnderReviewOrSubmitted && !isApprovedOrCompleted && !isRejected) ...[
                   _buildLiveTimerBanner(),
                   const SizedBox(height: 14),
                 ],
@@ -870,9 +870,15 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
                 _buildWhereToCommentSection(platformName, targetUrl),
                 const SizedBox(height: 16),
 
-                // ── 7. Submit Proof Section (When Accepted & NOT yet submitted) ──
-                if (_isTaskAccepted && !isUnderReviewOrSubmitted) ...[
+                // ── 7. Submit Proof / Status Section ───────────────────────
+                if (_isTaskAccepted && !isUnderReviewOrSubmitted && !isApprovedOrCompleted && !isRejected) ...[
                   _buildProofSubmissionCard(),
+                  const SizedBox(height: 16),
+                ] else if (isApprovedOrCompleted) ...[
+                  _buildApprovedSection(reward),
+                  const SizedBox(height: 16),
+                ] else if (isRejected) ...[
+                  _buildRejectedSection(),
                   const SizedBox(height: 16),
                 ] else if (isUnderReviewOrSubmitted) ...[
                   _buildUnderReviewSection(reward),
@@ -2336,6 +2342,208 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     );
   }
 
+  // ── Approved Section (Shown when task is approved & reward credited) ───────
+  Widget _buildApprovedSection(double reward) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10B981).withOpacity(0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                    ),
+                    child: const Icon(Icons.verified_rounded, color: Color(0xFF059669), size: 24),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Task Approved!',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Reward credited: ₹${reward.toStringAsFixed(2)}',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF059669), fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF059669)),
+                    SizedBox(width: 4),
+                    Text(
+                      'Approved',
+                      style: TextStyle(color: Color(0xFF059669), fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.account_balance_wallet_rounded, size: 18, color: Color(0xFF059669)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Great job! Your submission was verified and ₹${reward.toStringAsFixed(2)} has been credited to your wallet balance.',
+                    style: const TextStyle(color: Color(0xFF166534), fontSize: 12, height: 1.35, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Rejected Section (Shown when task proof is rejected) ───────────────────
+  Widget _buildRejectedSection() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFEF4444).withOpacity(0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: const Icon(Icons.cancel_rounded, color: Color(0xFFDC2626), size: 24),
+                  ),
+                  const SizedBox(width: 10),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Task Proof Rejected',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Verification failed',
+                        style: TextStyle(fontSize: 12, color: Color(0xFFDC2626), fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.close_rounded, size: 12, color: Color(0xFFDC2626)),
+                    SizedBox(width: 4),
+                    Text(
+                      'Rejected',
+                      style: TextStyle(color: Color(0xFFDC2626), fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF1F2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFECDD3)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFDC2626)),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'The proof submitted for this task did not meet the required instructions.',
+                    style: TextStyle(color: Color(0xFF9F1239), fontSize: 12, height: 1.35),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── 8. Remember / Guidelines Section ───────────────────────────────────────
   Widget _buildRememberSection() {
     return Container(
@@ -2382,12 +2590,63 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
 
   // ── Bottom Fixed Action Bar ────────────────────────────────────────────────
   Widget _buildBottomActionBar(String targetUrl, String platformName, String status) {
-    final bool isCompletedOrReview = _isSubmitted ||
+    final bool isApproved = status == 'APPROVED' || status == 'COMPLETED';
+    final bool isRejected = status == 'REJECTED';
+    final bool isUnderReview = _isSubmitted ||
         status == 'SUBMITTED' ||
         status == 'UNDER_REVIEW' ||
-        status == 'IN_REVIEW' ||
-        status == 'APPROVED' ||
-        status == 'COMPLETED';
+        status == 'IN_REVIEW';
+
+    if (isApproved || isRejected || isUnderReview) {
+      final Color btnColor = isApproved
+          ? const Color(0xFF059669)
+          : (isRejected ? const Color(0xFFDC2626) : const Color(0xFFD97706));
+      final IconData btnIcon = isApproved
+          ? Icons.check_circle_rounded
+          : (isRejected ? Icons.cancel_rounded : Icons.arrow_back_rounded);
+      final String btnLabel = isApproved
+          ? 'Back to Tasks (Approved ✓)'
+          : (isRejected ? 'Back to Tasks (Rejected)' : 'Back to Tasks (In Review)');
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: const Border(
+            top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    side: BorderSide(color: btnColor, width: 1.5),
+                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(btnIcon, color: btnColor, size: 18),
+                  label: Text(
+                    btnLabel,
+                    style: TextStyle(color: btnColor, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -2406,180 +2665,163 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: isCompletedOrReview
-            ? Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        side: const BorderSide(color: Color(0xFF00875A)),
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF00875A), size: 18),
-                      label: const Text('Back to Tasks (In Review)', style: TextStyle(color: Color(0xFF00875A), fontWeight: FontWeight.bold)),
-                    ),
+        child: Row(
+          children: [
+            // Left: Save Task Bookmark Button
+            InkWell(
+              onTap: () {
+                setState(() => _isSaved = !_isSaved);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(_isSaved ? 'Task saved to bookmarks!' : 'Task removed from bookmarks.'),
+                    duration: const Duration(seconds: 1),
                   ),
-                ],
-              )
-            : Row(
-                children: [
-                  // Left: Save Task Bookmark Button
-                  InkWell(
-                    onTap: () {
-                      setState(() => _isSaved = !_isSaved);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(_isSaved ? 'Task saved to bookmarks!' : 'Task removed from bookmarks.'),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: _isSaved ? const Color(0xFFEDE9FE) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _isSaved ? const Color(0xFF7C3AED) : const Color(0xFFE2E8F0),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _isSaved ? Icons.bookmark_added_rounded : Icons.bookmark_border_rounded,
-                            color: _isSaved ? const Color(0xFF7C3AED) : const Color(0xFF475569),
-                            size: 18,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _isSaved ? 'Saved' : 'Save Task',
-                            style: TextStyle(
-                              color: _isSaved ? const Color(0xFF7C3AED) : const Color(0xFF475569),
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _isSaved ? const Color(0xFFEDE9FE) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _isSaved ? const Color(0xFF7C3AED) : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _isSaved ? Icons.bookmark_added_rounded : Icons.bookmark_border_rounded,
+                      color: _isSaved ? const Color(0xFF7C3AED) : const Color(0xFF475569),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _isSaved ? 'Saved' : 'Save Task',
+                      style: TextStyle(
+                        color: _isSaved ? const Color(0xFF7C3AED) : const Color(0xFF475569),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-
-                  // Right: "Accept Task & Start" or "Submit Proof" Button
-                  Expanded(
-                    child: _isTaskAccepted
-                        ? InkWell(
-                            onTap: _onPressSubmit,
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF059669), Color(0xFF10B981)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF059669).withOpacity(0.35),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: _isSubmitting
-                                  ? const Center(
-                                      child: SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
-                                      ),
-                                    )
-                                  : const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 20),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'Submit Task Proof',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 14.5,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 0.3,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          )
-                        : InkWell(
-                            onTap: _isAccepting ? null : _onAcceptAndStart,
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF059669), Color(0xFF10B981)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF059669).withOpacity(0.35),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: _isAccepting
-                                  ? const Center(
-                                      child: SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
-                                      ),
-                                    )
-                                  : const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.verified_user_rounded, color: Colors.white, size: 20),
-                                        SizedBox(width: 8),
-                                        Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Accept Task & Start',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 14.5,
-                                                fontWeight: FontWeight.w900,
-                                                letterSpacing: 0.3,
-                                              ),
-                                            ),
-                                            Text(
-                                              'Task will be locked for you',
-                                              style: TextStyle(
-                                                color: Colors.white70,
-                                                fontSize: 9.5,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+            ),
+            const SizedBox(width: 10),
+
+            // Right: "Accept Task & Start" or "Submit Proof" Button
+            Expanded(
+              child: _isTaskAccepted
+                  ? InkWell(
+                      onTap: _onPressSubmit,
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF059669), Color(0xFF10B981)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF059669).withOpacity(0.35),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: _isSubmitting
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                                ),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Submit Task Proof',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    )
+                  : InkWell(
+                      onTap: _isAccepting ? null : _onAcceptAndStart,
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF059669), Color(0xFF10B981)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF059669).withOpacity(0.35),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: _isAccepting
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                                ),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.verified_user_rounded, color: Colors.white, size: 20),
+                                  SizedBox(width: 8),
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Accept Task & Start',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Task will be locked for you',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
