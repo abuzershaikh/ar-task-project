@@ -53,27 +53,67 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     super.dispose();
   }
 
+  bool _isCommentOrComboService(ServiceModel? s) {
+    if (s == null) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    final desc = s.description.toUpperCase();
+    final type = s.serviceType.toUpperCase();
+    return s.aiGeneratorEnabled ||
+        code.contains('COMMENT') ||
+        code.contains('COMBO') ||
+        code.contains('REVIEW') ||
+        name.contains('COMMENT') ||
+        name.contains('COMBO') ||
+        name.contains('REVIEW') ||
+        desc.contains('COMMENT') ||
+        type.contains('COMMENT') ||
+        type.contains('COMBO');
+  }
+
   Future<void> _generateSampleComments() async {
     setState(() => _isGeneratingPreview = true);
     try {
       if (_serviceRepository.dioClient != null) {
-        final res = await _serviceRepository.dioClient!.post(
-          '/buyer/orders/ai-preview-comments',
-          data: {
-            'topic': _topicController.text.trim(),
-            'language': _selectedLanguage,
-            'tone': _selectedTone,
-            'count': _selectedQuantity,
-            'serviceCode': _selectedService?.code,
-            'targetUrl': _targetUrlController.text.trim(),
-          },
-        );
-        if (res.statusCode == 200 && res.data != null && res.data['sampleComments'] != null) {
-          setState(() {
-            _sampleComments = List<String>.from(res.data['sampleComments']);
-          });
+        try {
+          final res = await _serviceRepository.dioClient!.post(
+            '/buyer/orders/ai-preview-comments',
+            data: {
+              'topic': _topicController.text.trim(),
+              'language': _selectedLanguage,
+              'tone': _selectedTone,
+              'count': _selectedQuantity,
+              'serviceCode': _selectedService?.code,
+              'targetUrl': _targetUrlController.text.trim(),
+            },
+          );
+          if (res.statusCode == 200 && res.data != null && res.data['sampleComments'] != null) {
+            final List comments = res.data['sampleComments'];
+            if (comments.isNotEmpty) {
+              setState(() {
+                _sampleComments = comments.map((c) => c.toString()).toList();
+              });
+              return;
+            }
+          }
+        } catch (apiErr) {
+          debugPrint('Preview API error, fallback: $apiErr');
         }
       }
+
+      // Instant Organic Fallback Generation
+      final topic = _topicController.text.trim();
+      final targetCount = _selectedQuantity < 5 ? (_selectedQuantity > 0 ? _selectedQuantity : 1) : 5;
+      final fallbacks = [
+        topic.isNotEmpty ? "Great insights regarding $topic! Really enjoyed the video." : "Very informative and well presented! Keep it up.",
+        topic.isNotEmpty ? "Super helpful content on $topic. Thanks for explaining so clearly!" : "Awesome content, learned a lot from this video.",
+        topic.isNotEmpty ? "The points made about $topic are spot on. Subscribed!" : "Clear, concise, and super helpful. Highly recommended!",
+        topic.isNotEmpty ? "Loved the practical tips shared for $topic." : "Quality explanation and great pacing. Thanks for sharing!",
+        topic.isNotEmpty ? "Fantastic video on $topic, looking forward to the next one!" : "Really well explained and easy to follow.",
+      ];
+      setState(() {
+        _sampleComments = fallbacks.take(targetCount).toList();
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -186,10 +226,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       return;
     }
 
-    final isCommentService = _selectedService!.aiGeneratorEnabled ||
-        _selectedService!.code.toUpperCase().contains('COMMENT') ||
-        _selectedService!.code.toUpperCase().contains('COMBO') ||
-        _selectedService!.code.toUpperCase().contains('REVIEW');
+    final isCommentService = _isCommentOrComboService(_selectedService);
 
     if (isCommentService && _sampleComments.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -442,10 +479,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   // ==================== VIEW 2: ORDER PLACEMENT VIEW ====================
   Widget _buildOrderFormView() {
     final s = _selectedService!;
-    final isAi = s.aiGeneratorEnabled ||
-        s.code.toUpperCase().contains('COMMENT') ||
-        s.code.toUpperCase().contains('COMBO') ||
-        s.code.toUpperCase().contains('REVIEW');
+    final isAi = _isCommentOrComboService(s);
     final totalCost = _calculateTotalCost();
 
     return Scaffold(

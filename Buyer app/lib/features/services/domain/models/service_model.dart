@@ -182,9 +182,21 @@ class ServiceModel {
       parsedAiConfig = Map<String, dynamic>.from(rawAiConfig);
     }
 
+    final String codeStr = (json['code'] ?? '').toString().toUpperCase();
+    final String nameStr = (json['name'] ?? json['title'] ?? '').toString().toUpperCase();
+    final String descStr = (json['description'] ?? '').toString().toUpperCase();
+    final String typeStr = (json['serviceType'] ?? json['service_type'] ?? '').toString().toUpperCase();
+
     final bool aiEnabled = (json['aiGeneratorEnabled'] ?? json['ai_generator_enabled']) as bool? ??
-        (json['code']?.toString().toUpperCase().contains('COMMENT') == true ||
-         json['code']?.toString().toUpperCase().contains('COMBO') == true);
+        (codeStr.contains('COMMENT') ||
+         codeStr.contains('COMBO') ||
+         codeStr.contains('REVIEW') ||
+         nameStr.contains('COMMENT') ||
+         nameStr.contains('COMBO') ||
+         nameStr.contains('REVIEW') ||
+         descStr.contains('COMMENT') ||
+         typeStr.contains('COMMENT') ||
+         typeStr.contains('COMBO'));
 
     String derivedCategory = json['category']?.toString() ?? 'YouTube';
     final codeUpper = (json['code'] ?? '').toString().toUpperCase();
