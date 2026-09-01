@@ -222,6 +222,29 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>?> getTaskDetails(String taskId) async {
+    final headers = await _headers();
+    final url = Uri.parse('$baseUrl/worker/tasks/$taskId');
+    debugPrint('[API] GET task details: $url');
+    try {
+      final response = await http.get(url, headers: headers).timeout(const Duration(seconds: 10));
+      debugPrint('[API] Task details status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          if (data.containsKey('task') && data['task'] is Map) {
+            return Map<String, dynamic>.from(data['task']);
+          }
+          return data;
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[API EXCEPTION getTaskDetails] $e');
+      return null;
+    }
+  }
+
   static Future<Map<String, dynamic>> acceptTask(String taskId) async {
     final headers = await _headers();
     final url = Uri.parse('$baseUrl/worker/tasks/$taskId/accept');

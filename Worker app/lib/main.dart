@@ -12,6 +12,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'core/services/crashlytics_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/navigation_service.dart';
 import 'firebase_options.dart';
 
 // Set to false to enable authentication screens
@@ -54,6 +55,7 @@ class TaskRewardApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
       ],
       child: MaterialApp(
+        navigatorKey: NavigationService.navigatorKey,
         title: 'Task Reward',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,

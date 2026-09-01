@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/navigation_service.dart';
 import '../data/models/notification_model.dart';
 import '../../wallet/screens/wallet_screen.dart';
 
@@ -181,11 +182,19 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
     }
 
     final type = item.type.toUpperCase();
-    if (type.contains('TASK') || type == 'NEW_TASK') {
-      Navigator.of(context).pop(); // Go back to feed to view and accept tasks
-    } else if (type.contains('EARNING') || type.contains('WITHDRAWAL') || type.contains('PAYOUT')) {
+    if (type.contains('EARNING') || type.contains('WITHDRAWAL') || type.contains('PAYOUT')) {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const WalletScreen()),
+      );
+    } else {
+      final taskId = (item.data?['taskId'] ??
+              item.data?['id'] ??
+              item.data?['orderId'] ??
+              item.entityId)
+          ?.toString();
+      await NavigationService.openTaskDetails(
+        taskId: taskId,
+        initialData: item.data,
       );
     }
   }

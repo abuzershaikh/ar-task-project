@@ -13,19 +13,21 @@ import 'package:flutter/services.dart';
 /// Main Navigation Shell with 5 bottom tabs:
 /// Feed (Leaf) | Tasks | Strike (Center Glowing Flame) | Wallet | Profile
 class MainNavScreen extends StatefulWidget {
-  const MainNavScreen({super.key});
+  final int initialIndex;
+  const MainNavScreen({super.key, this.initialIndex = 0});
 
   @override
   State<MainNavScreen> createState() => _MainNavScreenState();
 }
 
 class _MainNavScreenState extends State<MainNavScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
   DateTime? _lastBackPressTime;
 
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex;
     _pingPresence();
   }
 

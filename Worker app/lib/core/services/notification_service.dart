@@ -8,6 +8,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'api_service.dart';
 
+import 'navigation_service.dart';
+
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -237,13 +239,29 @@ class NotificationService {
     );
   }
 
-  /// Handle Notification Click Actions (Navigates to task feed / task details)
+  /// Handle Notification Click Actions (Navigates to task details or wallet)
   void _handleNotificationPayload(String? payloadStr) {
     if (payloadStr == null || payloadStr.isEmpty) return;
     try {
-      final Map<String, dynamic> data = jsonDecode(payloadStr);
-      debugPrint('🎯 [NOTIFICATION ACTION] Payload: $data');
-      // Navigation hooks can read 'taskId' or type 'NEW_TASK'
-    } catch (_) {}
+      final Map<String, dynamic> data = (payloadStr.startsWith('{'))
+          ? Map<String, dynamic>.from(jsonDecode(payloadStr))
+          : {'taskId': payloadStr};
+
+      debugPrint('🎯 [NOTIFICATION ACTION] Clicked data: $data');
+
+      final type = (data['type'] ?? '').toString().toUpperCase();
+      final taskId = (data['taskId'] ?? data['id'] ?? data['orderId'] ?? data['entityId'])?.toString();
+
+      if (type.contains('EARNING') || type.contains('WITHDRAWAL') || type.contains('PAYOUT')) {
+        NavigationService.openWallet();
+      } else {
+        NavigationService.openTaskDetails(
+          taskId: taskId,
+          initialData: data,
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ [NOTIFICATION ACTION ERROR]: $e');
+    }
   }
 }

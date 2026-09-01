@@ -208,9 +208,13 @@ export class OrderActivatedListener {
                 const notificationTitle = `🎉 New Task Available! Earn ₹${rewardAmount}`;
                 const notificationBody = `New ${serviceTitle} task is now available. Complete now to earn instant cash!`;
 
+                const allTasks = await this.taskRepo.findByOrderId(payload.orderId);
+                const targetTaskId = allTasks.length > 0 ? allTasks[0].id : payload.orderId;
+
                 await this.firebaseAdmin.sendTaskBroadcastNotification({
                     title: notificationTitle,
                     body: notificationBody,
+                    taskId: targetTaskId,
                     orderId: payload.orderId,
                     reward: rewardAmount,
                     serviceCode: payload.serviceCode,
@@ -223,8 +227,9 @@ export class OrderActivatedListener {
                     title: notificationTitle,
                     message: notificationBody,
                     entityType: 'TASK',
-                    entityId: payload.orderId,
+                    entityId: targetTaskId,
                     data: {
+                        taskId: targetTaskId,
                         orderId: payload.orderId,
                         reward: rewardAmount,
                         serviceCode: payload.serviceCode,
