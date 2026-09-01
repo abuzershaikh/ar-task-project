@@ -157,24 +157,48 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       return;
     }
 
+    final isCommentService = _selectedService!.aiGeneratorEnabled ||
+        _selectedService!.code.toUpperCase().contains('COMMENT') ||
+        _selectedService!.code.toUpperCase().contains('COMBO') ||
+        _selectedService!.code.toUpperCase().contains('REVIEW');
+
+    if (isCommentService && _sampleComments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '⚠️ Please generate sample comments first before placing the order!',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFD97706),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
-      final isAi = _selectedService!.aiGeneratorEnabled ||
-          _selectedService!.code.contains('COMMENT') ||
-          _selectedService!.code.contains('COMBO');
-
       final orderPayload = {
         'serviceCode': _selectedService!.code,
         'quantity': _selectedQuantity,
         'title': '${_selectedService!.name} Campaign ($_selectedQuantity tasks)',
-        'description': isAi ? 'AI Content campaign' : 'Direct promotional campaign',
+        'description': isCommentService ? 'Custom content campaign' : 'Direct promotional campaign',
         'requirements': {
           'targetUrl': _targetUrlController.text.trim(),
           'topic': _topicController.text.trim(),
           'language': _selectedLanguage,
           'tone': _selectedTone,
-          'aiGeneratorEnabled': isAi,
+          'aiGeneratorEnabled': isCommentService,
+          'sampleComments': _sampleComments,
         },
         'timeToAcceptHours': _selectedService!.minAcceptHours,
         'timeToCompleteHours': _selectedService!.maxCompleteHours > 48
@@ -389,7 +413,10 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   // ==================== VIEW 2: ORDER PLACEMENT VIEW ====================
   Widget _buildOrderFormView() {
     final s = _selectedService!;
-    final isAi = s.aiGeneratorEnabled || s.code.contains('COMMENT') || s.code.contains('COMBO');
+    final isAi = s.aiGeneratorEnabled ||
+        s.code.toUpperCase().contains('COMMENT') ||
+        s.code.toUpperCase().contains('COMBO') ||
+        s.code.toUpperCase().contains('REVIEW');
     final totalCost = _calculateTotalCost();
 
     return Scaffold(

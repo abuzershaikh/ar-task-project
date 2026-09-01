@@ -70,13 +70,17 @@ export class OrderActivatedListener {
 
             await this.jobRepo.updateProgress(job.id, job.generatedTasksCount, TaskGenerationJobStatus.PROCESSING);
 
-            const serviceIdentifier = payload.serviceCode || order?.serviceCode || order?.taskType;
-            const serviceCatalog = serviceIdentifier
-                ? (await this.serviceCatalogRepo.findByCode(serviceIdentifier) || await this.serviceCatalogRepo.findById(serviceIdentifier))
+            const rawIdentifier = payload.serviceCode || order?.serviceCode || order?.taskType || '';
+            const serviceIdentifier = rawIdentifier.toUpperCase();
+            const serviceCatalog = rawIdentifier
+                ? (await this.serviceCatalogRepo.findByCode(rawIdentifier) || await this.serviceCatalogRepo.findById(rawIdentifier))
                 : null;
 
-            const isAiGeneratorEnabled = serviceCatalog?.aiGeneratorEnabled || 
-                (serviceIdentifier.includes('COMMENT') || serviceIdentifier.includes('COMBO') || order?.requirements?.aiGeneratorEnabled);
+            const isCommentRequired = Boolean(serviceCatalog?.aiGeneratorEnabled) ||
+                serviceIdentifier.includes('COMMENT') ||
+                serviceIdentifier.includes('COMBO') ||
+                serviceIdentifier.includes('REVIEW') ||
+                Boolean(order?.requirements?.aiGeneratorEnabled);
 
             const count = payload.totalTasksRequired;
             const targetUrl = order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '';
@@ -84,16 +88,40 @@ export class OrderActivatedListener {
             const language = order?.requirements?.language || 'English';
             const tone = order?.requirements?.tone || 'natural';
 
-            // Generate AI Content Batch if AI generator is enabled for this service
+            // 1. Gather any buyer sample comments sent with the order
+            const rawSampleComments = order?.requirements?.sampleComments;
+            const sampleComments: string[] = Array.isArray(rawSampleComments) 
+                ? rawSampleComments.filter((c: any) => typeof c === 'string' && c.trim().length > 0) 
+                : [];
+
             let generatedComments: string[] = [];
-            if (isAiGeneratorEnabled) {
-                this.logger.log(`🤖 Triggering AI Generator for ${count} units (Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
-                generatedComments = await this.aiGeneratorService.generateContentBatch(
-                    'youtube_comment',
-                    count,
-                    { topic, language, tone, uniqueness: true },
-                );
+            if (isCommentRequired) {
+                if (sampleComments.length >= count) {
+                    generatedComments = sampleComments.slice(0, count);
+                } else {
+                    const remainingNeeded = count - sampleComments.length;
+                    this.logger.log(`🤖 Generating ${remainingNeeded} comments for Order '${payload.orderId}' (Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
+                    let newlyGenerated: string[] = [];
+                    try {
+                        newlyGenerated = await this.aiGeneratorService.generateContentBatch(
+                            'youtube_comment',
+                            remainingNeeded,
+                            { topic, language, tone, uniqueness: true },
+                        );
+                    } catch (genErr) {
+                        this.logger.error(`Error generating content batch: ${genErr.message}`);
+                    }
+                    generatedComments = [...sampleComments, ...newlyGenerated];
+                }
             }
+
+            const fallbackTemplates = [
+                topic ? `Really good points made on ${topic}, very informative!` : 'Great video, keep up the fantastic work!',
+                topic ? `Loved the breakdown about ${topic}. Very helpful!` : 'Awesome explanation, really enjoyed this video!',
+                topic ? `Super informative video regarding ${topic}. Thanks for sharing!` : 'Very helpful and well explained!',
+                topic ? `The explanation on ${topic} is so clear and precise.` : 'Thanks for sharing this, learned a lot!',
+                topic ? `Great insights on ${topic}. Subscribed for more!` : 'Nicely done! Looking forward to more content.',
+            ];
 
             const combinedRequirements = {
                 ...(order?.requirements || {}),
@@ -109,7 +137,7 @@ export class OrderActivatedListener {
                 actions: {
                     like: serviceIdentifier.includes('LIKE') || serviceIdentifier.includes('COMBO'),
                     subscribe: serviceIdentifier.includes('SUBSCRIBE') || serviceIdentifier.includes('COMBO'),
-                    comment: serviceIdentifier.includes('COMMENT') || serviceIdentifier.includes('COMBO'),
+                    comment: isCommentRequired || serviceIdentifier.includes('COMMENT') || serviceIdentifier.includes('COMBO'),
                 },
             };
 
@@ -124,12 +152,15 @@ export class OrderActivatedListener {
                 
                 const unitsToCreate = [];
                 for (let i = generatedCount; i < count; i++) {
-                    const assignedComment = generatedComments[i] || (topic ? `Great video regarding ${topic}!` : 'Awesome content, very helpful!');
+                    const assignedComment = (generatedComments[i] && generatedComments[i].trim().length > 0)
+                        ? generatedComments[i].trim()
+                        : fallbackTemplates[i % fallbackTemplates.length];
+
                     unitsToCreate.push({
                         orderId: payload.orderId,
                         unitNumber: i + 1,
                         targetUrl,
-                        generatedContent: isAiGeneratorEnabled ? assignedComment : (order?.requirements?.customText || null),
+                        generatedContent: isCommentRequired ? assignedComment : (order?.requirements?.customText || null),
                         status: 'PENDING',
                     });
                 }
@@ -138,11 +169,18 @@ export class OrderActivatedListener {
 
                 for (let i = 0; i < savedUnits.length; i++) {
                     const unit = savedUnits[i];
+                    const finalComment = isCommentRequired
+                        ? (unit.generatedContent || fallbackTemplates[i % fallbackTemplates.length])
+                        : (order?.requirements?.customText || '');
+
                     const taskReqs = {
                         ...combinedRequirements,
                         unitNumber: unit.unitNumber,
                         orderUnitId: unit.id,
-                        commentText: unit.generatedContent || '',
+                        commentText: finalComment,
+                        comment_text: finalComment,
+                        comment: finalComment,
+                        customText: finalComment,
                         sequenceIndex: generatedCount + i,
                         orderIdSequence: `${payload.orderId}_task_${generatedCount + i + 1}`,
                     };
