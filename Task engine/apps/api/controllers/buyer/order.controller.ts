@@ -59,10 +59,14 @@ export class BuyerOrderController {
         const requestedTotal = body.count || 10;
         const previewCount = Math.min(5, requestedTotal > 0 ? requestedTotal : 5);
 
+        const serviceCode = (body.serviceCode || '').toLowerCase();
+        const isPlayStore = serviceCode.includes('play') || serviceCode.includes('review') || serviceCode.includes('rating') || serviceCode.includes('app');
+        const generatorType = isPlayStore ? 'playstore_review' : 'youtube_comment';
+
         const sampleComments = await this.aiGeneratorService.generateContentBatch(
-            'youtube_comment',
+            generatorType,
             previewCount,
-            { topic, language, tone, uniqueness: true, videoTitle: body.targetUrl },
+            { topic, language, tone, uniqueness: true, videoTitle: body.targetUrl, isAppReview: isPlayStore, generatorType } as any,
         );
 
         return {

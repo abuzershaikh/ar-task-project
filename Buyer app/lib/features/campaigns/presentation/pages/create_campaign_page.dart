@@ -104,13 +104,27 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       // Instant Organic Fallback Generation
       final topic = _topicController.text.trim();
       final targetCount = _selectedQuantity < 5 ? (_selectedQuantity > 0 ? _selectedQuantity : 1) : 5;
-      final fallbacks = [
-        topic.isNotEmpty ? "Great insights regarding $topic! Really enjoyed the video." : "Very informative and well presented! Keep it up.",
-        topic.isNotEmpty ? "Super helpful content on $topic. Thanks for explaining so clearly!" : "Awesome content, learned a lot from this video.",
-        topic.isNotEmpty ? "The points made about $topic are spot on. Subscribed!" : "Clear, concise, and super helpful. Highly recommended!",
-        topic.isNotEmpty ? "Loved the practical tips shared for $topic." : "Quality explanation and great pacing. Thanks for sharing!",
-        topic.isNotEmpty ? "Fantastic video on $topic, looking forward to the next one!" : "Really well explained and easy to follow.",
-      ];
+      final isReview = _selectedService?.code.toUpperCase().contains('PLAY') == true ||
+          _selectedService?.code.toUpperCase().contains('REVIEW') == true ||
+          _selectedService?.category.toUpperCase().contains('PLAY') == true ||
+          _selectedService?.name.toUpperCase().contains('PLAY') == true ||
+          _selectedService?.name.toUpperCase().contains('REVIEW') == true;
+
+      final fallbacks = isReview
+          ? [
+              topic.isNotEmpty ? "Fantastic app, very smooth and intuitive with great features for $topic! 5 stars ⭐⭐⭐⭐⭐" : "Amazing application! Very smooth UI and easy to use. Highly recommended! ⭐⭐⭐⭐⭐",
+              topic.isNotEmpty ? "Really impressed with the $topic functionality. Works flawlessly!" : "Best app in this category. Clean interface and super fast. 5 stars ⭐⭐⭐⭐⭐",
+              topic.isNotEmpty ? "Top-notch performance and clean design for $topic. 5 stars!" : "Very helpful and reliable app. Great job by the developers!",
+              topic.isNotEmpty ? "Everything about $topic works effortlessly. Loved it!" : "One of the best Android apps I have used. Flawless experience! ⭐⭐⭐⭐⭐",
+              topic.isNotEmpty ? "Solid 5-star rating for excellent $topic support." : "Highly recommended to everyone! Deserves a full 5-star rating ⭐⭐⭐⭐⭐",
+            ]
+          : [
+              topic.isNotEmpty ? "Great insights regarding $topic! Really enjoyed the video." : "Very informative and well presented! Keep it up.",
+              topic.isNotEmpty ? "Super helpful content on $topic. Thanks for explaining so clearly!" : "Awesome content, learned a lot from this video.",
+              topic.isNotEmpty ? "The points made about $topic are spot on. Subscribed!" : "Clear, concise, and super helpful. Highly recommended!",
+              topic.isNotEmpty ? "Loved the practical tips shared for $topic." : "Quality explanation and great pacing. Thanks for sharing!",
+              topic.isNotEmpty ? "Fantastic video on $topic, looking forward to the next one!" : "Really well explained and easy to follow.",
+            ];
       setState(() {
         _sampleComments = fallbacks.take(targetCount).toList();
       });
@@ -373,8 +387,12 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     final Map<String, List<ServiceModel>> grouped = {};
     for (var s in _publishedServices) {
       String cat = s.category;
-      if (s.code.toUpperCase().contains('YOUTUBE') || s.code.toUpperCase().contains('YT')) {
+      if (s.category.isNotEmpty && s.category != 'General') {
+        cat = s.category;
+      } else if (s.code.toUpperCase().contains('YOUTUBE') || s.code.toUpperCase().contains('YT')) {
         cat = 'YouTube';
+      } else if (s.code.toUpperCase().contains('PLAY') || s.code.toUpperCase().contains('REVIEW') || s.code.toUpperCase().contains('RATING')) {
+        cat = 'Google Play Store';
       } else if (s.code.toUpperCase().contains('TELEGRAM') || s.code.toUpperCase().contains('TG')) {
         cat = 'Telegram';
       } else if (s.code.toUpperCase().contains('INSTA')) {
@@ -387,6 +405,14 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
 
     // Category visual themes
     final Map<String, Map<String, dynamic>> categoryMeta = {
+      'Google Play Store': {
+        'icon': Icons.star_rate_rounded,
+        'color': const Color(0xFF00875A),
+      },
+      'Play Store': {
+        'icon': Icons.star_rate_rounded,
+        'color': const Color(0xFF00875A),
+      },
       'YouTube': {
         'icon': Icons.play_circle_fill_rounded,
         'color': const Color(0xFFEF4444),
@@ -602,6 +628,11 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   selectedQuantity: _selectedQuantity,
                   sampleComments: _sampleComments,
                   isGeneratingPreview: _isGeneratingPreview,
+                  isAppReview: s.code.toUpperCase().contains('PLAY') ||
+                      s.code.toUpperCase().contains('REVIEW') ||
+                      s.category.toUpperCase().contains('PLAY') ||
+                      s.name.toUpperCase().contains('PLAY') ||
+                      s.name.toUpperCase().contains('REVIEW'),
                   onGeneratePreview: _generateSampleComments,
                   onLanguageChanged: (lang) => setState(() {
                     _selectedLanguage = lang;

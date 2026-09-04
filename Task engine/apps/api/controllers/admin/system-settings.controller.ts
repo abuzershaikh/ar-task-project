@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, NotFoundException, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, NotFoundException, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SystemSettingsRepository } from '../../../../shared/database/repositories/system-settings.repository';
 import { AuditLogService } from '../../../../shared/services/audit-log.service';

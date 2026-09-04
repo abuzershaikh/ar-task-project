@@ -102,6 +102,19 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                       children: [
                         ActionChip(
                           backgroundColor: const Color(0xFF0F172A),
+                          side: const BorderSide(color: Color(0xFF00875A)),
+                          label: const Text('Play Store Review', style: TextStyle(fontSize: 10, color: Colors.white)),
+                          avatar: const Icon(Icons.star_rate_rounded, color: Color(0xFF00875A), size: 12),
+                          onPressed: () {
+                            setModalState(() {
+                              nameCtrl.text = 'Play Store 5-Star Rating & Review';
+                              descCtrl.text =
+                                  'Download app, give 5-Star Rating and post custom authentic review on Google Play Store.';
+                            });
+                          },
+                        ),
+                        ActionChip(
+                          backgroundColor: const Color(0xFF0F172A),
                           side: const BorderSide(color: Colors.redAccent),
                           label: const Text('YouTube Subscribe', style: TextStyle(fontSize: 10, color: Colors.white)),
                           avatar: const Icon(Icons.play_circle_fill_rounded, color: Colors.redAccent, size: 12),
@@ -222,6 +235,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
 
   IconData _getServiceIcon(String name) {
     final lower = name.toLowerCase();
+    if (lower.contains('play') || lower.contains('review') || lower.contains('rating')) {
+      return Icons.star_rate_rounded;
+    }
     if (lower.contains('youtube') || lower.contains('video') || lower.contains('watch')) {
       return Icons.play_circle_fill_rounded;
     }
@@ -239,6 +255,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
 
   Color _getServiceColor(String name) {
     final lower = name.toLowerCase();
+    if (lower.contains('play') || lower.contains('review') || lower.contains('rating')) return const Color(0xFF00875A);
     if (lower.contains('youtube') || lower.contains('video')) return Colors.redAccent;
     if (lower.contains('telegram')) return Colors.lightBlueAccent;
     if (lower.contains('insta')) return Colors.pinkAccent;
@@ -312,6 +329,14 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                     s.name.toLowerCase().contains(q) ||
                     s.description.toLowerCase().contains(q);
                 if (_selectedFilter == 'All') return matchesQuery;
+                if (_selectedFilter == 'Play Store') {
+                  return matchesQuery &&
+                      (s.name.toLowerCase().contains('play') ||
+                          s.code.toLowerCase().contains('play') ||
+                          s.category.toLowerCase().contains('play') ||
+                          s.name.toLowerCase().contains('review') ||
+                          s.name.toLowerCase().contains('rating'));
+                }
                 if (_selectedFilter == 'YouTube') return matchesQuery && s.name.toLowerCase().contains('youtube');
                 if (_selectedFilter == 'Telegram') return matchesQuery && s.name.toLowerCase().contains('telegram');
                 if (_selectedFilter == 'Social') {
@@ -397,7 +422,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: Row(
-                      children: ['All', 'YouTube', 'Telegram', 'Social'].map((filter) {
+                      children: ['All', 'Play Store', 'YouTube', 'Telegram', 'Social'].map((filter) {
                         final isSelected = _selectedFilter == filter;
                         return Padding(
                           padding: const EdgeInsets.only(right: 6),

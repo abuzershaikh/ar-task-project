@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { IContentGenerator, GenerationOptions } from './generator.interface';
 import { YouTubeCommentGenerator } from './youtube-comment.generator';
+import { PlayStoreReviewGenerator } from './playstore-review.generator';
 import * as https from 'https';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
 
     constructor(
         private readonly templateFallbackGen: YouTubeCommentGenerator,
+        private readonly playStoreFallbackGen: PlayStoreReviewGenerator,
     ) { }
 
     async generateBatch(count: number, options?: GenerationOptions): Promise<string[]> {
@@ -18,15 +20,32 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
         const tone = options?.tone || 'natural';
         const videoTitle = options?.videoTitle || '';
 
-        this.logger.log(`🤖 Requesting DeepSeek AI for ${count} comments (Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
+        const isAppReview = (options as any)?.isAppReview || (options as any)?.generatorType?.includes('review') || (options as any)?.generatorType?.includes('play');
+        const contextType = isAppReview ? 'Google Play Store Android App (5-Star Rating & Review)' : 'social media / YouTube video';
+        const fallbackGen = isAppReview ? this.playStoreFallbackGen : this.templateFallbackGen;
+
+        this.logger.log(`🤖 Requesting DeepSeek AI for ${count} items (Type: ${contextType}, Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
 
         try {
             if (!this.apiKey) {
                 this.logger.warn('DEEPSEEK_API_KEY not configured, falling back to template generator');
-                return this.templateFallbackGen.generateBatch(count, options);
+                return fallbackGen.generateBatch(count, options);
             }
 
-            const prompt = `Generate exactly ${count} completely distinct, authentic, natural, human-like comments for a social media / YouTube video.
+            const prompt = isAppReview
+                ? `Generate exactly ${count} completely distinct, authentic, natural, human-like 5-star reviews for a Google Play Store Android app.
+- App Focus / Features: "${topic || 'Smooth performance, beautiful UI, reliable and useful'}"
+- Language: "${language}" (e.g. if Hindi/Hinglish, write naturally in Roman script or Devanagari based on common Play Store usage)
+- Tone: "${tone}" (e.g. enthusiastic, appreciative, authentic user)
+${videoTitle ? `- App Context / URL: "${videoTitle}"` : ''}
+
+Rules:
+1. Every review MUST be distinct in wording, structure, length (some short 1-2 lines, some 2-3 lines), and sentiment from all other reviews.
+2. Reviews must sound like genuine Android users praising the app, NOT robotic or repetitive.
+3. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
+Example format:
+["First 5-star review text here", "Second unique review text here"]`
+                : `Generate exactly ${count} completely distinct, authentic, natural, human-like comments for a social media / YouTube video.
 - Topic / Keywords: "${topic || 'Interesting and valuable video'}"
 - Language: "${language}" (e.g. if Hindi/Hinglish, write naturally in Roman script or Devanagari based on common YouTube usage)
 - Tone: "${tone}" (e.g. natural, enthusiastic, professional, or questioning)
@@ -67,14 +86,14 @@ Example format:
             } else if (parsedComments.length > 0) {
                 this.logger.log(`DeepSeek returned partial set (${parsedComments.length}/${count}), filling remainder with template generator`);
                 const remaining = count - parsedComments.length;
-                const fallbackItems = await this.templateFallbackGen.generateBatch(remaining, options);
+                const fallbackItems = await fallbackGen.generateBatch(remaining, options);
                 return [...parsedComments, ...fallbackItems].slice(0, count);
             } else {
                 throw new Error('Could not parse comments from DeepSeek response');
             }
         } catch (error: any) {
             this.logger.error(`DeepSeek API error: ${error.message}. Falling back to template generator.`, error.stack);
-            return this.templateFallbackGen.generateBatch(count, options);
+            return fallbackGen.generateBatch(count, options);
         }
     }
 

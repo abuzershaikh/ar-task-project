@@ -79,6 +79,12 @@ export class OrderActivatedListener {
                 ? (await this.serviceCatalogRepo.findByCode(rawIdentifier) || await this.serviceCatalogRepo.findById(rawIdentifier))
                 : null;
 
+            const isPlayStore = serviceIdentifier.includes('PLAY') ||
+                serviceIdentifier.includes('APP_REVIEW') ||
+                serviceIdentifier.includes('GOOGLE_PLAY') ||
+                (serviceCatalog?.category || '').toLowerCase().includes('play') ||
+                (serviceCatalog?.name || '').toLowerCase().includes('play store');
+
             const isCommentRequired = Boolean(serviceCatalog?.aiGeneratorEnabled) ||
                 serviceIdentifier.includes('COMMENT') ||
                 serviceIdentifier.includes('COMBO') ||
@@ -91,11 +97,13 @@ export class OrderActivatedListener {
             const language = order?.requirements?.language || 'English';
             const tone = order?.requirements?.tone || 'natural';
 
-            // 1. Gather any buyer sample comments sent with the order
+            // 1. Gather any buyer sample comments/reviews sent with the order
             const rawSampleComments = order?.requirements?.sampleComments;
             const sampleComments: string[] = Array.isArray(rawSampleComments) 
                 ? rawSampleComments.filter((c: any) => typeof c === 'string' && c.trim().length > 0) 
                 : [];
+
+            const generatorType = isPlayStore ? 'playstore_review' : 'youtube_comment';
 
             let generatedComments: string[] = [];
             if (isCommentRequired) {
@@ -103,13 +111,13 @@ export class OrderActivatedListener {
                     generatedComments = sampleComments.slice(0, count);
                 } else {
                     const remainingNeeded = count - sampleComments.length;
-                    this.logger.log(`🤖 Generating ${remainingNeeded} comments for Order '${payload.orderId}' (Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
+                    this.logger.log(`🤖 Generating ${remainingNeeded} ${isPlayStore ? 'Play Store reviews' : 'comments'} for Order '${payload.orderId}' (Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
                     let newlyGenerated: string[] = [];
                     try {
                         newlyGenerated = await this.aiGeneratorService.generateContentBatch(
-                            'youtube_comment',
+                            generatorType,
                             remainingNeeded,
-                            { topic, language, tone, uniqueness: true },
+                            { topic, language, tone, uniqueness: true, isAppReview: isPlayStore, generatorType } as any,
                         );
                     } catch (genErr) {
                         this.logger.error(`Error generating content batch: ${genErr.message}`);
@@ -118,18 +126,30 @@ export class OrderActivatedListener {
                 }
             }
 
-            const fallbackTemplates = [
-                topic ? `Really good points made on ${topic}, very informative!` : 'Great video, keep up the fantastic work!',
-                topic ? `Loved the breakdown about ${topic}. Very helpful!` : 'Awesome explanation, really enjoyed this video!',
-                topic ? `Super informative video regarding ${topic}. Thanks for sharing!` : 'Very helpful and well explained!',
-                topic ? `The explanation on ${topic} is so clear and precise.` : 'Thanks for sharing this, learned a lot!',
-                topic ? `Great insights on ${topic}. Subscribed for more!` : 'Nicely done! Looking forward to more content.',
-            ];
+            const fallbackTemplates = isPlayStore
+                ? [
+                    topic ? `Fantastic app, very smooth and intuitive with great features for ${topic}! 5 stars ⭐⭐⭐⭐⭐` : 'Amazing application! Very smooth UI and easy to use. Highly recommended! ⭐⭐⭐⭐⭐',
+                    topic ? `Really impressed with the ${topic} functionality. Works flawlessly!` : 'Best app in this category. Clean interface and super fast. 5 stars ⭐⭐⭐⭐⭐',
+                    topic ? `Top-notch performance and clean design for ${topic}. 5 stars!` : 'Very helpful and reliable app. Great job by the developers!',
+                    topic ? `Everything about ${topic} works effortlessly. Loved it!` : 'One of the best Android apps I have used. Flawless experience! ⭐⭐⭐⭐⭐',
+                    topic ? `Solid 5-star rating for excellent ${topic} support.` : 'Highly recommended to everyone! Deserves a full 5-star rating ⭐⭐⭐⭐⭐',
+                ]
+                : [
+                    topic ? `Really good points made on ${topic}, very informative!` : 'Great video, keep up the fantastic work!',
+                    topic ? `Loved the breakdown about ${topic}. Very helpful!` : 'Awesome explanation, really enjoyed this video!',
+                    topic ? `Super informative video regarding ${topic}. Thanks for sharing!` : 'Very helpful and well explained!',
+                    topic ? `The explanation on ${topic} is so clear and precise.` : 'Thanks for sharing this, learned a lot!',
+                    topic ? `Great insights on ${topic}. Subscribed for more!` : 'Nicely done! Looking forward to more content.',
+                ];
+
+            const detectedPlatform = isPlayStore
+                ? 'google'
+                : (serviceIdentifier.includes('INSTA') ? 'instagram' : (serviceIdentifier.includes('FACEBOOK') || serviceIdentifier.includes('FB') ? 'facebook' : (serviceIdentifier.includes('TELEGRAM') ? 'telegram' : 'youtube')));
 
             const combinedRequirements = {
                 ...(order?.requirements || {}),
-                platform: 'youtube',
-                serviceName: serviceCatalog?.name || order?.taskType || 'YouTube Task',
+                platform: detectedPlatform,
+                serviceName: serviceCatalog?.name || order?.taskType || (isPlayStore ? 'Play Store Review' : 'Task'),
                 serviceDescription: serviceCatalog?.description || '',
                 videoTutorialUrl: serviceCatalog?.videoTutorialUrl || order?.requirements?.videoTutorialUrl || '',
                 audioGuideUrl: serviceCatalog?.audioGuideUrl || order?.requirements?.audioGuideUrl || '',
@@ -138,6 +158,8 @@ export class OrderActivatedListener {
                 watchTimeSeconds: order?.requirements?.watchTimeSeconds || serviceCatalog?.watchtimeSeconds || 0,
                 proofType: order?.requirements?.proofType || 'SCREENSHOT',
                 actions: {
+                    rating5Star: isPlayStore || serviceIdentifier.includes('RATING') || serviceIdentifier.includes('REVIEW'),
+                    review: isPlayStore && isCommentRequired,
                     like: serviceIdentifier.includes('LIKE') || serviceIdentifier.includes('COMBO'),
                     subscribe: serviceIdentifier.includes('SUBSCRIBE') || serviceIdentifier.includes('COMBO'),
                     comment: isCommentRequired || serviceIdentifier.includes('COMMENT') || serviceIdentifier.includes('COMBO'),

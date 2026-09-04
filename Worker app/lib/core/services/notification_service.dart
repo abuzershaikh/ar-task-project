@@ -12,7 +12,9 @@ import 'navigation_service.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  debugPrint('🔔 [FCM BACKGROUND] Received message: ${message.messageId} | ${message.data}');
+  debugPrint(
+    '🔔 [FCM BACKGROUND] Received message: ${message.messageId} | ${message.data}',
+  );
 }
 
 class NotificationService {
@@ -22,11 +24,13 @@ class NotificationService {
   NotificationService._internal();
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   static const String channelId = 'task_notifications';
   static const String channelName = 'Task Alerts & New Tasks';
-  static const String channelDescription = 'Instant push notifications for newly available tasks and rewards';
+  static const String channelDescription =
+      'Instant push notifications for newly available tasks and rewards';
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     channelId,
@@ -53,7 +57,9 @@ class NotificationService {
       // 2. Initialize Local Notifications Plugin with high priority channel
       const AndroidInitializationSettings androidSettings =
           AndroidInitializationSettings('@mipmap/ic_launcher');
-      const InitializationSettings initSettings = InitializationSettings(android: androidSettings);
+      const InitializationSettings initSettings = InitializationSettings(
+        android: androidSettings,
+      );
 
       await _localNotifications.initialize(
         initSettings,
@@ -63,8 +69,10 @@ class NotificationService {
       );
 
       // 3. Create Android notification channel with max priority
-      final androidPlugin =
-          _localNotifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _localNotifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null) {
         await androidPlugin.createNotificationChannel(_channel);
       }
@@ -86,7 +94,9 @@ class NotificationService {
       _setupListeners();
 
       _initialized = true;
-      debugPrint('✅ [NOTIFICATION SERVICE] Worker Notification Engine initialized successfully');
+      debugPrint(
+        '✅ [NOTIFICATION SERVICE] Worker Notification Engine initialized successfully',
+      );
     } catch (e) {
       debugPrint('⚠️ [NOTIFICATION SERVICE] Init warning: $e');
     }
@@ -131,7 +141,9 @@ class NotificationService {
     try {
       _fcmToken = await _fcm.getToken();
       if (_fcmToken != null) {
-        debugPrint('🔑 [FCM TOKEN] Retrieved: ${_fcmToken!.substring(0, 15)}...');
+        debugPrint(
+          '🔑 [FCM TOKEN] Retrieved: ${_fcmToken!.substring(0, 15)}...',
+        );
       }
 
       // Listen to token refresh events
@@ -176,20 +188,26 @@ class NotificationService {
   void _setupListeners() {
     // 1. Foreground Message Handler (App is open and active)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('🔔 [FCM FOREGROUND] Title: ${message.notification?.title} | Body: ${message.notification?.body}');
+      debugPrint(
+        '🔔 [FCM FOREGROUND] Title: ${message.notification?.title} | Body: ${message.notification?.body}',
+      );
       _showLocalNotification(message);
     });
 
     // 2. Background Message Click Handler (User taps notification from system tray)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint('🔔 [FCM OPENED APP] User clicked notification: ${message.data}');
+      debugPrint(
+        '🔔 [FCM OPENED APP] User clicked notification: ${message.data}',
+      );
       _handleNotificationPayload(jsonEncode(message.data));
     });
 
     // 3. Terminated State Click Handler (App launched from cold start via notification)
     _fcm.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        debugPrint('🔔 [FCM COLD START] App opened from notification: ${message.data}');
+        debugPrint(
+          '🔔 [FCM COLD START] App opened from notification: ${message.data}',
+        );
         _handleNotificationPayload(jsonEncode(message.data));
       }
     });
@@ -198,13 +216,21 @@ class NotificationService {
   /// Display a heads-up floating notification banner with sound and vibration
   Future<void> _showLocalNotification(RemoteMessage message) async {
     final notification = message.notification;
-    final title = notification?.title ?? message.data['title'] ?? '🎉 New Task Available!';
-    final body = notification?.body ?? message.data['body'] ?? 'A new reward task is available for you.';
+    final title =
+        notification?.title ??
+        message.data['title'] ??
+        '🎉 New Task Available!';
+    final body =
+        notification?.body ??
+        message.data['body'] ??
+        'A new reward task is available for you.';
 
     // Client-side Deduplication: Prevent duplicate popups within short timeframe
     final dedupeKey = '${message.messageId}_${message.data['orderId']}_$title';
     if (_recentNotificationKeys.contains(dedupeKey)) {
-      debugPrint('⚠️ [FCM DEDUPE] Suppressed duplicate local notification popup: $dedupeKey');
+      debugPrint(
+        '⚠️ [FCM DEDUPE] Suppressed duplicate local notification popup: $dedupeKey',
+      );
       return;
     }
     _recentNotificationKeys.add(dedupeKey);
@@ -249,15 +275,16 @@ class NotificationService {
       debugPrint('🎯 [NOTIFICATION ACTION] Clicked data: $data');
 
       final type = (data['type'] ?? '').toString().toUpperCase();
-      final taskId = (data['taskId'] ?? data['id'] ?? data['orderId'] ?? data['entityId'])?.toString();
+      final taskId =
+          (data['taskId'] ?? data['id'] ?? data['orderId'] ?? data['entityId'])
+              ?.toString();
 
-      if (type.contains('EARNING') || type.contains('WITHDRAWAL') || type.contains('PAYOUT')) {
+      if (type.contains('EARNING') ||
+          type.contains('WITHDRAWAL') ||
+          type.contains('PAYOUT')) {
         NavigationService.openWallet();
       } else {
-        NavigationService.openTaskDetails(
-          taskId: taskId,
-          initialData: data,
-        );
+        NavigationService.openTaskDetails(taskId: taskId, initialData: data);
       }
     } catch (e) {
       debugPrint('⚠️ [NOTIFICATION ACTION ERROR]: $e');

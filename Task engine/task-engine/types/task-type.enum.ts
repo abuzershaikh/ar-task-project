@@ -23,6 +23,12 @@ export enum TaskType {
     FACEBOOK_COMMENT = 'facebook_comment',
     FACEBOOK_SHARE = 'facebook_share',
 
+    // Google Play / App Tasks
+    PLAYSTORE_REVIEW = 'playstore_review',
+    PLAYSTORE_RATING = 'playstore_rating',
+    GOOGLE_PLAY_REVIEW = 'google_play_review',
+    GOOGLE_PLAY_RATING = 'google_play_rating',
+
     // Generic Tasks
     SURVEY = 'survey',
     APP_INSTALL = 'app_install',
@@ -32,6 +38,8 @@ export enum TaskType {
 
 export enum TaskCategory {
     YOUTUBE = 'youtube',
+    GOOGLE_PLAY = 'google_play',
+    PLAYSTORE = 'playstore',
     INSTAGRAM = 'instagram',
     TWITTER = 'twitter',
     FACEBOOK = 'facebook',

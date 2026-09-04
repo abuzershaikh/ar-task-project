@@ -117,10 +117,11 @@ class TaskFeedCard extends StatelessWidget {
     final titleStr = (task['title'] ?? task['serviceTitle'] ?? '').toString().toLowerCase();
 
     final combined = '$type $reqStr $metaStr $titleStr';
+    if (combined.contains('play') || combined.contains('playstore') || combined.contains('app_review')) return 'playstore';
     if (combined.contains('youtube') || combined.contains('yt_')) return 'youtube';
     if (combined.contains('instagram') || combined.contains('insta')) return 'instagram';
     if (combined.contains('facebook') || combined.contains('fb')) return 'facebook';
-    if (combined.contains('google') || combined.contains('g_map') || combined.contains('maps') || combined.contains('playstore')) return 'google';
+    if (combined.contains('google') || combined.contains('g_map') || combined.contains('maps')) return 'google';
     if (combined.contains('twitter') || combined.contains(' x ') || combined.contains('x.com')) return 'x';
     if (combined.contains('telegram')) return 'telegram';
     return 'youtube';

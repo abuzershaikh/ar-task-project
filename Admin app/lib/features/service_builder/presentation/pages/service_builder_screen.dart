@@ -142,6 +142,41 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
       'watchtime': 60,
       'aiEnabled': true,
     },
+    // Google Play Store Presets
+    {
+      'category': 'Play Store',
+      'icon': Icons.star_rate_rounded,
+      'color': const Color(0xFF00875A),
+      'code': 'PLAYSTORE_REVIEW',
+      'name': 'Play Store 5-Star Rating & Review',
+      'desc': 'Download app, give authentic 5-Star Rating and post custom AI review on Google Play Store',
+      'buyerPrice': 8.0,
+      'margin': 2.5,
+      'workerReward': 5.5,
+      'linkLabel': 'Play Store App Link / Package ID',
+      'linkPlaceholder': 'https://play.google.com/store/apps/details?id=...',
+      'needText': true,
+      'textLabel': 'App Review Focus / Key Features',
+      'textPlaceholder': 'e.g. smooth UI, fast performance, highly recommended',
+      'watchtime': 30,
+      'aiEnabled': true,
+    },
+    {
+      'category': 'Play Store',
+      'icon': Icons.star_border_rounded,
+      'color': const Color(0xFF00875A),
+      'code': 'PLAYSTORE_RATING',
+      'name': 'Play Store 5-Star Rating (Only)',
+      'desc': 'Give genuine 5-Star Rating to the target app on Google Play Store',
+      'buyerPrice': 4.0,
+      'margin': 1.0,
+      'workerReward': 3.0,
+      'linkLabel': 'Play Store App Link / Package ID',
+      'linkPlaceholder': 'https://play.google.com/store/apps/details?id=...',
+      'needText': false,
+      'watchtime': 0,
+      'aiEnabled': false,
+    },
     {
       'category': 'Telegram',
       'icon': Icons.send_rounded,
@@ -374,14 +409,24 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
       UpdateServiceInfoEvent(
         name: _nameController.text.trim(),
         description: _descController.text.trim(),
-        category: _codeController.text.startsWith('YOUTUBE') ? 'YouTube' : 'General',
+        category: _codeController.text.startsWith('YOUTUBE')
+            ? 'YouTube'
+            : (_codeController.text.contains('PLAY') || _codeController.text.contains('REVIEW') || _codeController.text.contains('RATING')
+                ? 'Google Play Store'
+                : (_codeController.text.contains('INSTA')
+                    ? 'Instagram'
+                    : (_codeController.text.contains('TELEGRAM') ? 'Telegram' : 'General'))),
         serviceType: _codeController.text.contains('COMMENT')
             ? 'comment'
-            : (_codeController.text.contains('LIKE')
-                ? 'like'
-                : (_codeController.text.contains('SUBSCRIBE')
-                    ? 'subscribe'
-                    : (_codeController.text.contains('COMBO') ? 'combo' : 'custom'))),
+            : (_codeController.text.contains('REVIEW')
+                ? 'review'
+                : (_codeController.text.contains('RATING')
+                    ? 'rating'
+                    : (_codeController.text.contains('LIKE')
+                        ? 'like'
+                        : (_codeController.text.contains('SUBSCRIBE')
+                            ? 'subscribe'
+                            : (_codeController.text.contains('COMBO') ? 'combo' : 'custom'))))),
         aiGeneratorEnabled: _aiGeneratorEnabled,
         aiGeneratorConfig: {
           'language': _aiLanguage,

@@ -14,7 +14,9 @@ class PlatformLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final norm = platform.toLowerCase();
-    if (norm.contains('google')) {
+    if (norm.contains('play') || norm.contains('playstore') || norm.contains('app_review')) {
+      return _buildPlayStoreLogo(size);
+    } else if (norm.contains('google')) {
       return _buildGoogleLogo(size);
     } else if (norm.contains('youtube')) {
       return _buildYouTubeLogo(size);
@@ -27,6 +29,30 @@ class PlatformLogo extends StatelessWidget {
     }
 
     return Icon(Icons.apps_rounded, size: size, color: const Color(0xFF00875A));
+  }
+
+  static Widget _buildPlayStoreLogo(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(size * 0.28),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF00875A).withOpacity(0.18),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: CustomPaint(
+          size: Size(size * 0.58, size * 0.58),
+          painter: _PlayStorePainter(),
+        ),
+      ),
+    );
   }
 
   static Widget _buildGoogleLogo(double size) {
@@ -220,6 +246,59 @@ class _GoogleGPainter extends CustomPainter {
       ..lineTo(center.dx, center.dy + radius * 0.22)
       ..close();
     canvas.drawPath(armPath, bluePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PlayStorePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+
+    final pTop = Offset(w * 0.08, h * 0.04);
+    final pBottom = Offset(w * 0.08, h * 0.96);
+    final pRight = Offset(w * 0.94, h * 0.50);
+    final pCenter = Offset(w * 0.62, h * 0.50);
+
+    // Blue base triangle (left to right)
+    final bluePaint = Paint()..color = const Color(0xFF00C3FF);
+    final bluePath = Path()
+      ..moveTo(pTop.dx, pTop.dy)
+      ..lineTo(pBottom.dx, pBottom.dy)
+      ..lineTo(pCenter.dx, pCenter.dy)
+      ..close();
+    canvas.drawPath(bluePath, bluePaint);
+
+    // Green top triangle
+    final greenPaint = Paint()..color = const Color(0xFF00E676);
+    final greenPath = Path()
+      ..moveTo(pTop.dx, pTop.dy)
+      ..lineTo(pCenter.dx, pCenter.dy)
+      ..lineTo(pRight.dx, pRight.dy)
+      ..close();
+    canvas.drawPath(greenPath, greenPaint);
+
+    // Yellow / Orange bottom triangle
+    final yellowPaint = Paint()..color = const Color(0xFFFFD600);
+    final yellowPath = Path()
+      ..moveTo(pBottom.dx, pBottom.dy)
+      ..lineTo(pCenter.dx, pCenter.dy)
+      ..lineTo(pRight.dx, pRight.dy)
+      ..close();
+    canvas.drawPath(yellowPath, yellowPaint);
+
+    // Red right triangle
+    final redPaint = Paint()..color = const Color(0xFFFF334B);
+    final redPath = Path()
+      ..moveTo(pCenter.dx, pCenter.dy)
+      ..lineTo(w * 0.76, h * 0.32)
+      ..lineTo(pRight.dx, pRight.dy)
+      ..lineTo(w * 0.76, h * 0.68)
+      ..close();
+    canvas.drawPath(redPath, redPaint);
   }
 
   @override

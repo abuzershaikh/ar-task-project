@@ -314,10 +314,11 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
 
   IconData _getServiceSubIcon(String code) {
     final c = code.toUpperCase();
+    if (c.contains('REVIEW') || c.contains('RATING')) return Icons.star_rate_rounded;
     if (c.contains('COMMENT')) return Icons.chat_bubble_outline_rounded;
     if (c.contains('LIKE')) return Icons.thumb_up_alt_outlined;
     if (c.contains('SUBSCRIBE') || c.contains('SUB')) return Icons.notifications_active_outlined;
-    if (c.contains('COMBO')) return Icons.star_border_rounded;
+    if (c.contains('COMBO')) return Icons.auto_awesome_rounded;
     if (c.contains('INSTALL')) return Icons.get_app_rounded;
     if (c.contains('FOLLOW')) return Icons.person_add_alt_1_rounded;
     return Icons.check_circle_outline_rounded;

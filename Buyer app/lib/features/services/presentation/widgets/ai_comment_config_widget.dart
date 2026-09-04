@@ -10,6 +10,7 @@ class AiCommentConfigWidget extends StatefulWidget {
   final List<String> sampleComments;
   final bool isGeneratingPreview;
   final VoidCallback onGeneratePreview;
+  final bool isAppReview;
 
   const AiCommentConfigWidget({
     super.key,
@@ -22,6 +23,7 @@ class AiCommentConfigWidget extends StatefulWidget {
     this.sampleComments = const [],
     this.isGeneratingPreview = false,
     required this.onGeneratePreview,
+    this.isAppReview = false,
   });
 
   @override
@@ -51,7 +53,8 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
     final displayedComments = widget.sampleComments.take(previewTargetCount).toList();
     final hasSamples = displayedComments.isNotEmpty;
     final remainingCount = (widget.selectedQuantity - displayedComments.length).clamp(0, 99999);
-    final countLabel = '$previewTargetCount Sample ${previewTargetCount == 1 ? "Comment" : "Comments"}';
+    final unitType = widget.isAppReview ? (previewTargetCount == 1 ? "5-Star Review" : "5-Star Reviews") : (previewTargetCount == 1 ? "Comment" : "Comments");
+    final countLabel = '$previewTargetCount Sample $unitType';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -75,10 +78,10 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                 child: const Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 18),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Custom Organic Comments',
-                  style: TextStyle(
+                  widget.isAppReview ? 'Custom Organic 5-Star Reviews' : 'Custom Organic Comments',
+                  style: const TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF166534),
@@ -114,16 +117,18 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Authentic, context-relevant comments crafted for individual workers to post naturally.',
-            style: TextStyle(fontSize: 11, color: Color(0xFF15803D), height: 1.3),
+          Text(
+            widget.isAppReview
+                ? 'Authentic, genuine 5-star app reviews crafted for individual workers to post on Google Play Store.'
+                : 'Authentic, context-relevant comments crafted for individual workers to post naturally.',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF15803D), height: 1.3),
           ),
           const Divider(color: Color(0xFFBBF7D0), height: 20),
 
           // Topic / Keywords
-          const Text(
-            'Video Topic / Keywords (Optional):',
-            style: TextStyle(
+          Text(
+            widget.isAppReview ? 'App Review Focus / Key Features (Optional):' : 'Video Topic / Keywords (Optional):',
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: Color(0xFF1E293B),
@@ -134,7 +139,9 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
             controller: widget.topicController,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
-              hintText: 'e.g. Great trading strategy, helpful tutorial, tech vlog...',
+              hintText: widget.isAppReview
+                  ? 'e.g. Smooth UI, fast performance, highly recommended app...'
+                  : 'e.g. Great trading strategy, helpful tutorial, tech vlog...',
               hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
               prefixIcon: const Icon(Icons.tag_rounded, size: 18, color: Color(0xFF16A34A)),
               filled: true,
@@ -238,10 +245,10 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF16A34A)),
                     )
-                  : const Icon(Icons.mode_comment_outlined, size: 18),
+                  : Icon(widget.isAppReview ? Icons.star_rate_rounded : Icons.mode_comment_outlined, size: 18),
               label: Text(
                 widget.isGeneratingPreview
-                    ? 'Crafting sample comments...'
+                    ? (widget.isAppReview ? 'Crafting sample 5-star reviews...' : 'Crafting sample comments...')
                     : (hasSamples ? '🔄 Regenerate $countLabel' : '✨ Generate $countLabel'),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
               ),
@@ -265,9 +272,11 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        widget.selectedQuantity < 5
-                            ? 'Generated Comments (${displayedComments.length} of ${widget.selectedQuantity})'
-                            : 'Sample Preview (${displayedComments.length} of ${widget.selectedQuantity} Comments)',
+                        widget.isAppReview
+                            ? 'Sample 5-Star Reviews (${displayedComments.length} of ${widget.selectedQuantity})'
+                            : (widget.selectedQuantity < 5
+                                ? 'Generated Comments (${displayedComments.length} of ${widget.selectedQuantity})'
+                                : 'Sample Preview (${displayedComments.length} of ${widget.selectedQuantity} Comments)'),
                         style: const TextStyle(
                           color: Color(0xFF166534),
                           fontWeight: FontWeight.bold,
@@ -335,9 +344,13 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            widget.selectedQuantity > 5
-                                ? 'Showing 5 sample preview comments. The remaining $remainingCount unique comments will be automatically prepared upon placing the order. Every worker receives their own distinct comment to post.'
-                                : 'All ${displayedComments.length} unique comments are ready. Each worker will receive their own distinct comment to post.',
+                            widget.isAppReview
+                                ? (widget.selectedQuantity > 5
+                                    ? 'Showing 5 sample preview 5-star reviews. The remaining $remainingCount unique reviews will be automatically prepared upon placing the order. Every worker receives their own distinct review to post.'
+                                    : 'All ${displayedComments.length} unique 5-star reviews are ready. Each worker will receive their own distinct review to post.')
+                                : (widget.selectedQuantity > 5
+                                    ? 'Showing 5 sample preview comments. The remaining $remainingCount unique comments will be automatically prepared upon placing the order. Every worker receives their own distinct comment to post.'
+                                    : 'All ${displayedComments.length} unique comments are ready. Each worker will receive their own distinct comment to post.'),
                             style: const TextStyle(
                               color: Color(0xFF1E40AF),
                               fontSize: 11,
