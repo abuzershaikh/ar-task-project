@@ -60,7 +60,7 @@ export class YouTubeCommentGenerator implements IContentGenerator {
         'Great work, keep it going!',
         'Can you make a follow up video soon?',
         'Subscribed! Highly recommended.',
-        'Keep dropping these gems! 🔥',
+        'Keep dropping these gems!',
         'Subbed and notifications turned on!',
         'Thanks a lot, keep inspiring us!'
     ];
@@ -86,7 +86,7 @@ export class YouTubeCommentGenerator implements IContentGenerator {
         'Full support bhai, keep it up!',
         'Video like and subscribe dono kar diya!',
         'Aapki channel bohot aage jayegi!',
-        'Zabardast video, keep shining! 👍',
+        'Zabardast video, keep shining!',
         'Shaandar presentation, shukriya!'
     ];
 
@@ -124,7 +124,7 @@ export class YouTubeCommentGenerator implements IContentGenerator {
 
             // Adjust tone nuances
             if (tone === 'enthusiastic' && !comment.includes('!')) {
-                comment += ' 🔥💯';
+                comment += ' Really loved this!';
             } else if (tone === 'questioning' && roll > 0.6) {
                 comment += isHindi
                     ? ' Is topic par ek aur detailed part 2 bana sakte ho kya?'

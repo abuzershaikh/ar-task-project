@@ -1,21 +1,20 @@
 const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();
 
-async function checkEnv() {
-    await ssh.connect({
-      host: '95.179.178.6',
-      username: 'root',
-      password: 'i_G72#y}(6gACDDU'
-    });
-    
-    // Check .env
-    const envFile = await ssh.execCommand('cat /var/www/task-engine/.env');
-    console.log("ENV FILE:");
-    console.log(envFile.stdout);
-    
-    console.log("Restarting PM2 with update-env");
-    await ssh.execCommand('pm2 restart task-engine --update-env');
-    
-    ssh.dispose();
+const config = {
+  host: '65.20.77.112',
+  username: 'root',
+  password: 'G8u$RW{5m46buXgw',
+  readyTimeout: 60000,
+};
+
+async function check() {
+  await ssh.connect(config);
+  const r = await ssh.execCommand('cat /opt/task-engine/.env | grep -i DEEPSEEK');
+  console.log('DEEPSEEK line:', r.stdout);
+  const r2 = await ssh.execCommand('head -n 20 /opt/task-engine/.env');
+  console.log('Env head:\n', r2.stdout);
+  process.exit(0);
 }
-checkEnv();
+
+check();

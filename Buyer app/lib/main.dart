@@ -14,15 +14,26 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
   
-  // Initialize Firebase Crashlytics & Global Error Reporting
-  await CrashlyticsService.initialize();
+  // Safe Firebase Initialization
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+    // Initialize Firebase Crashlytics & Global Error Reporting
+    await CrashlyticsService.initialize();
+  } catch (e) {
+    debugPrint('⚠️ [FIREBASE] Core initialization warning: $e');
+  }
   
   // Initialize dependencies
-  await initializeDependencies();
+  try {
+    await initializeDependencies();
+  } catch (e) {
+    debugPrint('⚠️ [DI] Dependencies initialization warning: $e');
+  }
   
   // Set system UI
   SystemChrome.setSystemUIOverlayStyle(

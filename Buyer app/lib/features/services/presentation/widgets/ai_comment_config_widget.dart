@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class AiCommentConfigWidget extends StatefulWidget {
   final TextEditingController topicController;
+  final TextEditingController? appNameController;
   final ValueChanged<String> onLanguageChanged;
   final ValueChanged<String> onToneChanged;
   final String selectedLanguage;
@@ -16,6 +17,7 @@ class AiCommentConfigWidget extends StatefulWidget {
   const AiCommentConfigWidget({
     super.key,
     required this.topicController,
+    this.appNameController,
     required this.onLanguageChanged,
     required this.onToneChanged,
     required this.selectedLanguage,
@@ -157,9 +159,43 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
           ),
           const Divider(color: Color(0xFFBBF7D0), height: 20),
 
-          // Topic / Keywords
+          // App Name Input (User enters or edits app name)
+          if (widget.isAppReview && widget.appNameController != null) ...[
+            const Text(
+              'App Name:',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextFormField(
+              controller: widget.appNameController,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              decoration: InputDecoration(
+                hintText: 'e.g. Cashify, PhonePe, WhatsApp',
+                hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                prefixIcon: const Icon(Icons.apps_rounded, size: 18, color: Color(0xFF16A34A)),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Topic / Keywords / Custom Prompt (User enters review instructions)
           Text(
-            widget.isAppReview ? 'App Review Focus / Key Features (Optional):' : 'Video Topic / Keywords (Optional):',
+            widget.isAppReview ? 'Review Focus / Custom Prompt (Optional):' : 'Video Topic / Keywords (Optional):',
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -172,10 +208,10 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
               hintText: widget.isAppReview
-                  ? 'e.g. Smooth UI, fast performance, highly recommended app...'
+                  ? 'e.g. Fast pickup, quick payment, smooth delivery (or leave blank for natural praise)'
                   : 'e.g. Great trading strategy, helpful tutorial, tech vlog...',
               hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-              prefixIcon: const Icon(Icons.tag_rounded, size: 18, color: Color(0xFF16A34A)),
+              prefixIcon: const Icon(Icons.edit_note_rounded, size: 20, color: Color(0xFF16A34A)),
               filled: true,
               fillColor: Colors.white,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

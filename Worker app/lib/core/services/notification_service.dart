@@ -203,11 +203,13 @@ class NotificationService {
     });
 
     // 3. Terminated State Click Handler (App launched from cold start via notification)
-    _fcm.getInitialMessage().then((RemoteMessage? message) {
+    _fcm.getInitialMessage().then((RemoteMessage? message) async {
       if (message != null) {
         debugPrint(
           '🔔 [FCM COLD START] App opened from notification: ${message.data}',
         );
+        // Wait for widget tree and auth to initialize before navigating
+        await Future.delayed(const Duration(milliseconds: 1500));
         _handleNotificationPayload(jsonEncode(message.data));
       }
     });

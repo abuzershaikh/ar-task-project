@@ -18,21 +18,38 @@ class NavigationService {
   }) async {
     final nav = navigatorKey.currentState;
     if (nav == null) {
-      debugPrint('⚠️ [NAV SERVICE] Navigator state is null');
-      return;
+      debugPrint('⚠️ [NAV SERVICE] Navigator state is null, queuing for later');
+      // Delay and retry once after widget tree is built
+      await Future.delayed(const Duration(milliseconds: 800));
+      final retryNav = navigatorKey.currentState;
+      if (retryNav == null) {
+        debugPrint('⚠️ [NAV SERVICE] Navigator still null after retry, giving up');
+        return;
+      }
+      return _navigateToTask(retryNav, taskId, initialData);
     }
 
+    return _navigateToTask(nav, taskId, initialData);
+  }
+
+  static Future<void> _navigateToTask(
+    NavigatorState nav,
+    String? taskId,
+    Map<String, dynamic>? initialData,
+  ) async {
     final id = (taskId != null && taskId.trim().isNotEmpty)
         ? taskId.trim()
         : (initialData?['taskId'] ?? initialData?['id'] ?? initialData?['orderId'])?.toString();
+    final orderId = (initialData?['orderId'] ?? initialData?['order_id'])?.toString();
 
-    debugPrint('🚀 [NAV SERVICE] Opening task details for ID: $id');
+    debugPrint('🚀 [NAV SERVICE] Opening task details for taskId: $id, orderId: $orderId');
 
-    // 1. If we have taskId, fetch full task from API
+    // 1. Direct fetch by taskId from API
     if (id != null && id.isNotEmpty) {
       try {
         final task = await ApiService.getTaskDetails(id);
         if (task != null) {
+          debugPrint('✅ [NAV SERVICE] Direct task fetch succeeded for: $id');
           nav.push(
             MaterialPageRoute(
               builder: (_) => TaskDetailPremiumScreen(task: task),
@@ -41,48 +58,87 @@ class NavigationService {
           return;
         }
       } catch (e) {
-        debugPrint('⚠️ [NAV SERVICE] Error fetching task details: $e');
+        debugPrint('⚠️ [NAV SERVICE] Direct fetch failed for $id: $e');
       }
+    }
 
-      // 2. Try fetching from available tasks
+    // 2. Search available tasks — match by taskId OR orderId
+    try {
+      final available = await ApiService.getAvailableTasks();
+      final match = _findMatchingTask(available, id, orderId);
+      if (match != null) {
+        debugPrint('✅ [NAV SERVICE] Found matching available task');
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => TaskDetailPremiumScreen(task: match),
+          ),
+        );
+        return;
+      }
+    } catch (e) {
+      debugPrint('⚠️ [NAV SERVICE] Error checking available tasks: $e');
+    }
+
+    // 3. Search assigned/accepted tasks — match by taskId OR orderId
+    try {
+      final assigned = await ApiService.getMyTasks('assigned');
+      final match = _findMatchingTask(assigned, id, orderId);
+      if (match != null) {
+        debugPrint('✅ [NAV SERVICE] Found matching assigned task');
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => TaskDetailPremiumScreen(task: match),
+          ),
+        );
+        return;
+      }
+    } catch (e) {
+      debugPrint('⚠️ [NAV SERVICE] Error checking assigned tasks: $e');
+    }
+
+    // 4. If orderId differs from id, try direct fetch by orderId
+    if (orderId != null && orderId.isNotEmpty && orderId != id) {
       try {
-        final available = await ApiService.getAvailableTasks();
-        for (final t in available) {
-          if (t is Map) {
-            final tId = (t['id'] ?? t['_id'] ?? t['taskId'] ?? '').toString();
-            final oId = (t['orderId'] ?? t['order_id'] ?? '').toString();
-            if (tId == id || oId == id) {
-              nav.push(
-                MaterialPageRoute(
-                  builder: (_) => TaskDetailPremiumScreen(task: Map<String, dynamic>.from(t)),
-                ),
-              );
-              return;
-            }
-          }
+        final task = await ApiService.getTaskDetails(orderId);
+        if (task != null) {
+          debugPrint('✅ [NAV SERVICE] Direct fetch by orderId succeeded: $orderId');
+          nav.push(
+            MaterialPageRoute(
+              builder: (_) => TaskDetailPremiumScreen(task: task),
+            ),
+          );
+          return;
         }
       } catch (e) {
-        debugPrint('⚠️ [NAV SERVICE] Error checking available tasks: $e');
+        debugPrint('⚠️ [NAV SERVICE] Direct fetch by orderId failed: $e');
       }
     }
 
-    // 3. If initialData has requirements/title, synthesize task
-    if (initialData != null && initialData.isNotEmpty) {
-      final taskMap = Map<String, dynamic>.from(initialData);
-      if (id != null && id.isNotEmpty) taskMap['id'] = id;
-      nav.push(
-        MaterialPageRoute(
-          builder: (_) => TaskDetailPremiumScreen(task: taskMap),
-        ),
-      );
-      return;
-    }
-
-    // 4. Fallback: Open Main Task Feed
+    // 5. Fallback: Open Main Task Feed so the user can find the task
+    debugPrint('📋 [NAV SERVICE] No exact task found, opening task feed');
     nav.pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const MainNavScreen(initialIndex: 0)),
       (route) => false,
     );
+  }
+
+  /// Find a task in a list that matches by taskId or orderId
+  static Map<String, dynamic>? _findMatchingTask(
+    List<dynamic> tasks,
+    String? taskId,
+    String? orderId,
+  ) {
+    for (final t in tasks) {
+      if (t is Map) {
+        final tId = (t['id'] ?? t['_id'] ?? t['taskId'] ?? '').toString();
+        final oId = (t['orderId'] ?? t['order_id'] ?? '').toString();
+        if ((taskId != null && taskId.isNotEmpty && (tId == taskId || oId == taskId)) ||
+            (orderId != null && orderId.isNotEmpty && oId == orderId)) {
+          return Map<String, dynamic>.from(t);
+        }
+      }
+    }
+    return null;
   }
 
   /// Open Wallet Screen directly

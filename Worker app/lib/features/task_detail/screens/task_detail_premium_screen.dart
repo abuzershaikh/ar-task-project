@@ -306,6 +306,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
   }
 
   String _getCustomText() {
+    return _sanitizeWorkerReview(_getRawCustomText());
+  }
+
+  String _getRawCustomText() {
     final t = widget.task;
     if (t['commentText'] != null && t['commentText'].toString().trim().isNotEmpty) {
       return t['commentText'].toString().trim();
@@ -343,9 +347,22 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     }
     final p = _getPlatform();
     if (p == 'playstore') {
-      return 'Super smooth app with fantastic UI! Very fast and helpful. 5 stars ⭐⭐⭐⭐⭐';
+      return 'Super smooth app with fantastic UI! Very fast and helpful.';
     }
-    return 'Amazing video! Very useful information. Thanks for sharing 🙏';
+    return 'Amazing video! Very useful information. Thanks for sharing.';
+  }
+
+  String _sanitizeWorkerReview(String text) {
+    return text
+        .replaceAll(RegExp(r'[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1FA70}-\u{1FAFF}⭐★🌟✨🌠🎖️🏅🏆💯🔥👍👎]', unicode: true), '')
+        .replaceAll(RegExp(r'\b5\s*stars?\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b5\s*\/\s*5\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\bfive\s*stars?\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b5-star\s*(rating)?\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\bfull\s*5\s*stars?\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s+([.,!?])'), r'$1')
+        .replaceAll(RegExp(r'\s{2,}'), ' ')
+        .trim();
   }
 
   String _getTargetUrl() {

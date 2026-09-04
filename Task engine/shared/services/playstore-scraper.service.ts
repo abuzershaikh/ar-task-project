@@ -6,8 +6,6 @@ export interface PlayStoreAppInfo {
     packageId?: string;
     appName?: string;
     appIcon?: string;
-    shortDescription?: string;
-    description?: string;
     playStoreUrl?: string;
     error?: string;
 }
@@ -21,27 +19,34 @@ export class PlayStoreScraperService {
      */
     extractPackageId(input: string): string | null {
         if (!input) return null;
-        const trimmed = input.trim();
+        let clean = input.trim();
 
-        if (trimmed.includes('id=')) {
-            const match = trimmed.match(/id=([a-zA-Z0-9_.]+)/);
-            if (match) return match[1];
+        if (clean.includes('id=')) {
+            const match = clean.match(/[?&]id=([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+)/i) ||
+                          clean.match(/id=([a-zA-Z0-9_.]+)/i);
+            if (match) {
+                return match[1].replace(/\.+$/, '').split('&')[0];
+            }
         }
 
-        if (trimmed.startsWith('market://details?id=')) {
-            return trimmed.replace('market://details?id=', '').split('&')[0];
+        if (clean.startsWith('market://details?id=')) {
+            return clean.replace('market://details?id=', '').split('&')[0].replace(/\.+$/, '');
         }
 
-        if (/^[a-zA-Z0-9_]+(\.[a-zA-Z0-9_]+)+$/.test(trimmed)) {
-            return trimmed;
+        // Bare package ID like com.whatsapp or com.blinkit.storeob
+        const bareMatch = clean.match(/^([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+)$/);
+        if (bareMatch) {
+            return bareMatch[1];
         }
 
-        const urlMatch = trimmed.match(/([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+)/);
-        return urlMatch ? urlMatch[1] : trimmed;
+        const urlMatch = clean.match(/([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+)/);
+        return urlMatch ? urlMatch[1].replace(/\.+$/, '') : null;
     }
 
     /**
-     * Fetch app metadata (icon, title, description) directly from Google Play Store web page
+     * Fetch app icon and suggested title from Google Play Store.
+     * Note: Description extraction has been completely removed as reviews
+     * are guided solely by user prompt and app name.
      */
     async getAppMetadata(input: string): Promise<PlayStoreAppInfo> {
         const packageId = this.extractPackageId(input);
@@ -51,7 +56,7 @@ export class PlayStoreScraperService {
 
         return new Promise<PlayStoreAppInfo>((resolve) => {
             const url = `https://play.google.com/store/apps/details?id=${packageId}&hl=en&gl=US`;
-            this.logger.log(`Fetching Play Store app metadata for: ${packageId}`);
+            this.logger.log(`Fetching Play Store app icon and basic info for: ${packageId}`);
 
             const req = https.get(url, {
                 headers: {
@@ -66,43 +71,31 @@ export class PlayStoreScraperService {
                 res.on('end', () => {
                     if (res.statusCode && res.statusCode >= 200 && res.statusCode < 400) {
                         try {
-                            // 1. App Title
+                            // 1. App Title (suggested clean brand name)
                             const titleMatch = data.match(/<meta\s+property=["']og:title["']\s+content=["'](.*?)["']/i) ||
                                                data.match(/<title>(.*?)<\/title>/i);
                             let title = titleMatch ? titleMatch[1] : '';
-                            title = title.replace(/\s*-\s*Apps on Google Play.*/i, '').replace(/\s*-\s*Google Play.*/i, '').trim();
+                            title = title
+                                .replace(/\s*-\s*Apps on Google Play.*/i, '')
+                                .replace(/\s*-\s*Google Play.*/i, '')
+                                .split(/[:\-|–—]/)[0] // Take only brand name
+                                .replace(/&amp;/g, '&')
+                                .replace(/&#39;/g, "'")
+                                .replace(/&quot;/g, '"')
+                                .replace(/&lt;/g, '<')
+                                .replace(/&gt;/g, '>')
+                                .trim();
 
                             // 2. High-res App Icon
                             const iconMatch = data.match(/<meta\s+property=["']og:image["']\s+content=["'](.*?)["']/i) ||
                                               data.match(/<img[^>]+src=["'](https:\/\/play-lh\.googleusercontent\.com\/[^"']+)["'][^>]*alt=["']Icon image["']/i);
                             let iconUrl = iconMatch ? iconMatch[1] : '';
 
-                            // 3. Descriptions
-                            const fullBlock = data.match(/data-g-id=["']description["'][^>]*>([\s\S]*?)<\/div>/i) ||
-                                              data.match(/itemprop=["']description["'][^>]*>([\s\S]*?)<\/div>/i);
-                            const metaDescMatch = data.match(/<meta[^>]+content=["']([^"']*)["'][^>]+(?:name|property)=["'](?:og:)?description["']/i) ||
-                                                  data.match(/<meta[^>]+(?:name|property)=["'](?:og:)?description["'][^>]+content=["']([^"']*)["']/i);
-
-                            const rawDesc = (fullBlock && fullBlock[1]) ? fullBlock[1] : (metaDescMatch ? metaDescMatch[1] : '');
-                            const shortDesc = metaDescMatch ? metaDescMatch[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').trim() : '';
-                            const cleanDesc = rawDesc
-                                .replace(/<br\s*\/?>/gi, '\n')
-                                .replace(/<[^>]+>/g, ' ')
-                                .replace(/&amp;/g, '&')
-                                .replace(/&#39;/g, "'")
-                                .replace(/&quot;/g, '"')
-                                .replace(/&lt;/g, '<')
-                                .replace(/&gt;/g, '>')
-                                .replace(/\s+/g, ' ')
-                                .trim();
-
                             resolve({
                                 success: true,
                                 packageId,
                                 appName: title || packageId,
                                 appIcon: iconUrl,
-                                shortDescription: shortDesc || (cleanDesc.length > 200 ? cleanDesc.substring(0, 197) + '...' : cleanDesc),
-                                description: cleanDesc,
                                 playStoreUrl: `https://play.google.com/store/apps/details?id=${packageId}`,
                             });
                         } catch (err: any) {
@@ -112,8 +105,6 @@ export class PlayStoreScraperService {
                                 packageId,
                                 appName: packageId,
                                 appIcon: '',
-                                shortDescription: '',
-                                description: '',
                                 playStoreUrl: `https://play.google.com/store/apps/details?id=${packageId}`,
                             });
                         }

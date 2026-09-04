@@ -48,3 +48,8 @@ deploy-tools/fix-db.js
 deploy-tools/reset-mysql-user.js
 Task engine/.env.backup.
 
+
+# Build old artifacts
+build_old/
+**/build_old/
+

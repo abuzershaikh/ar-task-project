@@ -12,6 +12,7 @@ import { OrderUnitRepository } from '../database/repositories/order-unit.reposit
 import { NotificationRepository } from '../database/repositories/notification.repository';
 import { NotificationType } from '../database/entities/notification.entity';
 import { AiGeneratorService } from '../ai-generator/ai-generator.service';
+import { sanitizeReviewText } from '../ai-generator/review-sanitizer';
 import { FirebaseAdminService } from './firebase-admin.service';
 
 export interface OrderActivatedEventPayload {
@@ -97,7 +98,6 @@ export class OrderActivatedListener {
             const language = order?.requirements?.language || 'English';
             const tone = order?.requirements?.tone || 'natural';
             const appName = order?.requirements?.appName || '';
-            const appDescription = order?.requirements?.appDescription || '';
             const appIcon = order?.requirements?.appIcon || '';
             const packageId = order?.requirements?.packageId || '';
 
@@ -128,7 +128,6 @@ export class OrderActivatedListener {
                                 uniqueness: true,
                                 isAppReview: isPlayStore,
                                 appName,
-                                appDescription,
                                 videoTitle: targetUrl,
                                 generatorType,
                             } as any,
@@ -142,11 +141,16 @@ export class OrderActivatedListener {
 
             const fallbackTemplates = isPlayStore
                 ? [
-                    topic ? `Fantastic app, very smooth and intuitive with great features for ${topic}! 5 stars ⭐⭐⭐⭐⭐` : 'Amazing application! Very smooth UI and easy to use. Highly recommended! ⭐⭐⭐⭐⭐',
-                    topic ? `Really impressed with the ${topic} functionality. Works flawlessly!` : 'Best app in this category. Clean interface and super fast. 5 stars ⭐⭐⭐⭐⭐',
-                    topic ? `Top-notch performance and clean design for ${topic}. 5 stars!` : 'Very helpful and reliable app. Great job by the developers!',
-                    topic ? `Everything about ${topic} works effortlessly. Loved it!` : 'One of the best Android apps I have used. Flawless experience! ⭐⭐⭐⭐⭐',
-                    topic ? `Solid 5-star rating for excellent ${topic} support.` : 'Highly recommended to everyone! Deserves a full 5-star rating ⭐⭐⭐⭐⭐',
+                    'Very smooth and responsive app. Does exactly what it promises without clutter.',
+                    'Clean UI and great user experience. Everything works seamlessly right from the start.',
+                    'Super fast, lightweight and intuitive. Very happy with the overall performance.',
+                    'Simple, clean, and gets the job done quickly. Exactly what I was looking for.',
+                    'One of the best apps in this category. Works like a charm and saves so much time.',
+                    'Really impressed with how fast and reliable it is. Zero lags or crashes experienced.',
+                    'Top notch user experience! Everything is neat, intuitive, and works as advertised.',
+                    'Works effortlessly. Very stable and dependable on every device.',
+                    'Terrific app! Smooth performance, no bugs or glitches encountered so far.',
+                    'Clean design, fast loading speeds, and very intuitive navigation throughout.',
                 ]
                 : [
                     topic ? `Really good points made on ${topic}, very informative!` : 'Great video, keep up the fantastic work!',
@@ -191,9 +195,10 @@ export class OrderActivatedListener {
                 
                 const unitsToCreate = [];
                 for (let i = generatedCount; i < count; i++) {
-                    const assignedComment = (generatedComments[i] && generatedComments[i].trim().length > 0)
+                    const rawAssigned = (generatedComments[i] && generatedComments[i].trim().length > 0)
                         ? generatedComments[i].trim()
                         : fallbackTemplates[i % fallbackTemplates.length];
+                    const assignedComment = sanitizeReviewText(rawAssigned);
 
                     unitsToCreate.push({
                         orderId: payload.orderId,
@@ -209,7 +214,7 @@ export class OrderActivatedListener {
                 for (let i = 0; i < savedUnits.length; i++) {
                     const unit = savedUnits[i];
                     const finalComment = isCommentRequired
-                        ? (unit.generatedContent || fallbackTemplates[i % fallbackTemplates.length])
+                        ? sanitizeReviewText(unit.generatedContent || fallbackTemplates[i % fallbackTemplates.length])
                         : (order?.requirements?.customText || '');
 
                     const taskReqs = {
@@ -224,7 +229,6 @@ export class OrderActivatedListener {
                         orderIdSequence: `${payload.orderId}_task_${generatedCount + i + 1}`,
                         appIcon: appIcon || combinedRequirements?.appIcon,
                         appName: appName || combinedRequirements?.appName,
-                        appDescription: appDescription || combinedRequirements?.appDescription,
                         packageId: packageId || combinedRequirements?.packageId,
                     };
 

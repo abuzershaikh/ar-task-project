@@ -6,6 +6,8 @@ import {
     Body,
     NotFoundException,
     BadRequestException,
+    HttpCode,
+    HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrderRepository } from '../../../../shared/database/repositories/order.repository';
@@ -17,6 +19,7 @@ import { ProgressEngineService } from '../../../../progress-engine/progress.serv
 import { PricingEngine } from '../../../../shared/engines/pricing-engine/pricing.engine';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
+import { Public } from '../../../../shared/auth/decorators/public.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
 import { TimingPolicy } from '../../../../shared/policies/timing-policy';
 import { WalletService } from '../../../../shared/services/wallet.service';
@@ -43,7 +46,9 @@ export class BuyerOrderController {
         private readonly eventEmitter: EventEmitter2,
     ) { }
 
+    @Public()
     @Post('playstore-app-info')
+    @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Fetch app metadata (icon, title, description) from Google Play Store link' })
     async getPlayStoreAppInfo(
         @Body() body: { url?: string; link?: string; packageId?: string },
@@ -56,7 +61,9 @@ export class BuyerOrderController {
         return info;
     }
 
+    @Public()
     @Post('ai-preview-comments')
+    @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Generate 5 sample comments preview using DeepSeek AI' })
     async previewAiComments(
         @Body() body: {
@@ -90,7 +97,6 @@ export class BuyerOrderController {
                 uniqueness: true,
                 videoTitle: body.targetUrl,
                 appName: body.appName,
-                appDescription: body.appDescription,
                 isAppReview: isPlayStore,
                 generatorType,
             } as any,

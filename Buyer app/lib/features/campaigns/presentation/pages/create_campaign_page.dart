@@ -30,6 +30,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   // Order Form State
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _targetUrlController = TextEditingController();
+  final TextEditingController _appNameController = TextEditingController();
   final TextEditingController _topicController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController(text: '10');
   int _selectedQuantity = 10;
@@ -42,7 +43,6 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   // Play Store App Metadata State
   String? _appName;
   String? _appIcon;
-  String? _appDescription;
   String? _packageId;
   bool _isFetchingAppInfo = false;
   String? _appFetchError;
@@ -59,6 +59,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   void dispose() {
     _urlDebounceTimer?.cancel();
     _targetUrlController.dispose();
+    _appNameController.dispose();
     _topicController.dispose();
     _quantityController.dispose();
     super.dispose();
@@ -86,21 +87,31 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     if (trimmed.isEmpty) {
       setState(() {
         _appName = null;
+        _appNameController.clear();
         _appIcon = null;
-        _appDescription = null;
         _packageId = null;
         _appFetchError = null;
         _isFetchingAppInfo = false;
+        _sampleComments = [];
       });
       return;
     }
-    _urlDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+    // Clear error immediately when user starts typing again
+    if (_appFetchError != null) {
+      setState(() => _appFetchError = null);
+    }
+    // Only debounce fetch if input looks like a link or package name (e.g. has a dot or slash)
+    if (trimmed.length < 5 || (!trimmed.contains('.') && !trimmed.contains('/'))) {
+      return;
+    }
+    _urlDebounceTimer = Timer(const Duration(milliseconds: 700), () {
       _fetchPlayStoreAppInfo(trimmed);
     });
   }
 
   Future<void> _fetchPlayStoreAppInfo(String input) async {
-    if (input.trim().isEmpty || _serviceRepository.dioClient == null) return;
+    final trimmed = input.trim();
+    if (trimmed.isEmpty || _serviceRepository.dioClient == null) return;
     setState(() {
       _isFetchingAppInfo = true;
       _appFetchError = null;
@@ -109,29 +120,36 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     try {
       final res = await _serviceRepository.dioClient!.post(
         '/buyer/orders/playstore-app-info',
-        data: {'url': input.trim()},
+        data: {'url': trimmed},
       );
 
-      if (res.statusCode == 200 && res.data != null && res.data['success'] == true) {
+      final isSuccess = (res.statusCode == 200 || res.statusCode == 201) &&
+          res.data != null &&
+          res.data['success'] == true;
+
+      if (isSuccess) {
         final data = res.data;
         setState(() {
-          _appName = data['appName']?.toString();
           _appIcon = data['appIcon']?.toString();
-          _appDescription = data['description']?.toString() ?? data['shortDescription']?.toString();
           _packageId = data['packageId']?.toString();
-          _appFetchError = null;
-          if (_topicController.text.trim().isEmpty && _appName != null && _appName!.isNotEmpty) {
-            _topicController.text = _appName!;
+          final rawName = data['appName']?.toString();
+          if (rawName != null && rawName.isNotEmpty) {
+            final cleanName = rawName.split(RegExp(r'[:\-|–—•(]'))[0].trim();
+            _appName = cleanName;
+            if (_appNameController.text.trim().isEmpty) {
+              _appNameController.text = cleanName;
+            }
           }
+          _appFetchError = null;
+          // Reset sample comments so user generates explicitly via the "Generate" button
+          _sampleComments = [];
         });
-
-        // Automatically trigger fresh context-aware review preview
-        if (_isCommentOrComboService(_selectedService)) {
-          _generateSampleComments();
-        }
       } else {
+        final err = res.data?['error']?.toString();
         setState(() {
-          _appFetchError = res.data?['error']?.toString() ?? 'App metadata not found on Google Play Store';
+          _appFetchError = (err != null && err.isNotEmpty)
+              ? err
+              : 'App metadata not found on Google Play Store. Please check the link or package name.';
         });
       }
     } catch (err) {
@@ -166,27 +184,35 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
 
   Future<void> _generateSampleComments() async {
     setState(() => _isGeneratingPreview = true);
+    final userAppName = _appNameController.text.trim().isNotEmpty
+        ? _appNameController.text.trim()
+        : (_appName ?? '');
+    final cleanBrand = userAppName.split(RegExp(r'[:\-|–—•(]'))[0].trim();
+    final userPrompt = _topicController.text.trim();
+
     try {
       if (_serviceRepository.dioClient != null) {
         try {
           final res = await _serviceRepository.dioClient!.post(
             '/buyer/orders/ai-preview-comments',
             data: {
-              'topic': _topicController.text.trim(),
+              'topic': userPrompt,
               'language': _selectedLanguage,
               'tone': _selectedTone,
               'count': _selectedQuantity,
               'serviceCode': _selectedService?.code,
               'targetUrl': _targetUrlController.text.trim(),
-              'appName': _appName,
-              'appDescription': _appDescription,
+              'appName': cleanBrand,
             },
           );
-          if (res.statusCode == 200 && res.data != null && res.data['sampleComments'] != null) {
+          if ((res.statusCode == 200 || res.statusCode == 201) && res.data != null && res.data['sampleComments'] != null) {
             final List comments = res.data['sampleComments'];
             if (comments.isNotEmpty) {
               setState(() {
-                _sampleComments = comments.map((c) => c.toString()).toList();
+                _sampleComments = comments
+                    .map((c) => _sanitizeCommentText(c.toString()))
+                    .where((c) => c.isNotEmpty)
+                    .toList();
               });
               return;
             }
@@ -197,7 +223,6 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       }
 
       // Instant Organic Fallback Generation
-      final topic = _topicController.text.trim();
       final targetCount = _selectedQuantity < 5 ? (_selectedQuantity > 0 ? _selectedQuantity : 1) : 5;
       final isReview = _selectedService?.code.toUpperCase().contains('PLAY') == true ||
           _selectedService?.code.toUpperCase().contains('REVIEW') == true ||
@@ -205,23 +230,33 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           _selectedService?.name.toUpperCase().contains('PLAY') == true ||
           _selectedService?.name.toUpperCase().contains('REVIEW') == true;
 
+      final isHindi = _selectedLanguage.toLowerCase().contains('hindi') || _selectedLanguage.toLowerCase().contains('hinglish');
+
       final fallbacks = isReview
-          ? [
-              topic.isNotEmpty ? "Fantastic app, very smooth and intuitive with great features for $topic! 5 stars ⭐⭐⭐⭐⭐" : "Amazing application! Very smooth UI and easy to use. Highly recommended! ⭐⭐⭐⭐⭐",
-              topic.isNotEmpty ? "Really impressed with the $topic functionality. Works flawlessly!" : "Best app in this category. Clean interface and super fast. 5 stars ⭐⭐⭐⭐⭐",
-              topic.isNotEmpty ? "Top-notch performance and clean design for $topic. 5 stars!" : "Very helpful and reliable app. Great job by the developers!",
-              topic.isNotEmpty ? "Everything about $topic works effortlessly. Loved it!" : "One of the best Android apps I have used. Flawless experience! ⭐⭐⭐⭐⭐",
-              topic.isNotEmpty ? "Solid 5-star rating for excellent $topic support." : "Highly recommended to everyone! Deserves a full 5-star rating ⭐⭐⭐⭐⭐",
-            ]
+          ? (isHindi
+              ? [
+                  cleanBrand.isNotEmpty ? "$cleanBrand use karke maza aa gaya, UI ekdum smooth aur fast hai." : "Bohot hi smooth chal raha hai, UI ekdum clean aur fast hai.",
+                  "Kamaal ka application hai, use karna bohot aasan aur convenient hai.",
+                  cleanBrand.isNotEmpty ? "$cleanBrand ne kaam bohot aasan bana diya hai, sabhi features acche se chal rahe hain." : "Bohot accha user experience mila, bilkul lag nahi karta.",
+                  "Shaandar design aur super fast speed hai, daily use ke liye best app hai.",
+                  cleanBrand.isNotEmpty ? "Maine $cleanBrand use kiya aur experience kaafi badhiya raha. Highly recommended." : "Abhi tak ka sabse best app laga mujhe is category me. Bohot helpful hai.",
+                ]
+              : [
+                  cleanBrand.isNotEmpty ? "Using $cleanBrand has been a great experience. Very smooth and reliable." : "Very smooth and responsive app. Does exactly what it promises without clutter.",
+                  "Clean UI and great user experience. Everything works seamlessly right from the start.",
+                  cleanBrand.isNotEmpty ? "$cleanBrand makes everyday tasks so much easier and convenient." : "Super fast, lightweight and intuitive. Very happy with the overall performance.",
+                  "Simple, clean, and gets the job done quickly. Exactly what I was looking for.",
+                  cleanBrand.isNotEmpty ? "Really glad I installed $cleanBrand. Fast responses and zero lag." : "One of the best apps in this category. Works like a charm and saves me so much time.",
+                ])
           : [
-              topic.isNotEmpty ? "Great insights regarding $topic! Really enjoyed the video." : "Very informative and well presented! Keep it up.",
-              topic.isNotEmpty ? "Super helpful content on $topic. Thanks for explaining so clearly!" : "Awesome content, learned a lot from this video.",
-              topic.isNotEmpty ? "The points made about $topic are spot on. Subscribed!" : "Clear, concise, and super helpful. Highly recommended!",
-              topic.isNotEmpty ? "Loved the practical tips shared for $topic." : "Quality explanation and great pacing. Thanks for sharing!",
-              topic.isNotEmpty ? "Fantastic video on $topic, looking forward to the next one!" : "Really well explained and easy to follow.",
+              userPrompt.isNotEmpty ? "Great insights regarding $userPrompt! Really enjoyed the video." : "Very informative and well presented! Keep it up.",
+              userPrompt.isNotEmpty ? "Super helpful content on $userPrompt. Thanks for explaining so clearly!" : "Awesome content, learned a lot from this video.",
+              userPrompt.isNotEmpty ? "The points made about $userPrompt are spot on. Subscribed!" : "Clear, concise, and super helpful. Highly recommended!",
+              userPrompt.isNotEmpty ? "Loved the practical tips shared for $userPrompt." : "Quality explanation and great pacing. Thanks for sharing!",
+              userPrompt.isNotEmpty ? "Fantastic video on $userPrompt, looking forward to the next one!" : "Really well explained and easy to follow.",
             ];
       setState(() {
-        _sampleComments = fallbacks.take(targetCount).toList();
+        _sampleComments = fallbacks.map((f) => _sanitizeCommentText(f)).take(targetCount).toList();
       });
     } catch (e) {
       if (mounted) {
@@ -238,6 +273,19 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         setState(() => _isGeneratingPreview = false);
       }
     }
+  }
+
+  String _sanitizeCommentText(String text) {
+    return text
+        .replaceAll(RegExp(r'[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1FA70}-\u{1FAFF}⭐★🌟✨🌠🎖️🏅🏆💯🔥👍👎]', unicode: true), '')
+        .replaceAll(RegExp(r'\b5\s*stars?\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b5\s*\/\s*5\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\bfive\s*stars?\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b5-star\s*(rating)?\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\bfull\s*5\s*stars?\b', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s+([.,!?])'), r'$1')
+        .replaceAll(RegExp(r'\s{2,}'), ' ')
+        .trim();
   }
 
   Future<void> _loadWalletBalance() async {
@@ -280,11 +328,11 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       _selectedQuantity = 10;
       _quantityController.text = '10';
       _targetUrlController.clear();
+      _appNameController.clear();
       _topicController.clear();
       _sampleComments = [];
       _appName = null;
       _appIcon = null;
-      _appDescription = null;
       _packageId = null;
       _appFetchError = null;
       _isFetchingAppInfo = false;
@@ -384,9 +432,10 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           'tone': _selectedTone,
           'aiGeneratorEnabled': isCommentService,
           'sampleComments': _sampleComments,
-          'appName': _appName,
+          'appName': _appNameController.text.trim().isNotEmpty
+              ? _appNameController.text.trim()
+              : (_appName ?? ''),
           'appIcon': _appIcon,
-          'appDescription': _appDescription,
           'packageId': _packageId,
         },
         'timeToAcceptHours': _selectedService!.minAcceptHours,
@@ -680,33 +729,64 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                         hintText: s.linkFieldPlaceholder ?? 'https://www.youtube.com/watch?v=...',
                         hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                         prefixIcon: const Icon(Icons.link_rounded, color: Color(0xFF2563EB)),
-                        suffixIcon: InkWell(
-                          onTap: _pasteFromClipboard,
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFBFDBFE)),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.content_paste_rounded, size: 14, color: Color(0xFF2563EB)),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Paste',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2563EB),
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_isPlayStoreService(_selectedService) &&
+                                _targetUrlController.text.trim().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 2),
+                                child: InkWell(
+                                  onTap: _isFetchingAppInfo
+                                      ? null
+                                      : () => _fetchPlayStoreAppInfo(_targetUrlController.text.trim()),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                                    ),
+                                    child: _isFetchingAppInfo
+                                        ? const SizedBox(
+                                            width: 14,
+                                            height: 14,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2563EB)),
+                                          )
+                                        : const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF2563EB)),
                                   ),
                                 ),
-                              ],
+                              ),
+                            InkWell(
+                              onTap: _pasteFromClipboard,
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.content_paste_rounded, size: 14, color: Color(0xFF2563EB)),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Paste',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2563EB),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                         filled: true,
                         fillColor: const Color(0xFFF8FAFC),
@@ -860,19 +940,6 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                                           ),
                                         ),
                                       ],
-                                      if (_appDescription != null && _appDescription!.isNotEmpty) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          _appDescription!,
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Color(0xFF475569),
-                                            height: 1.25,
-                                          ),
-                                        ),
-                                      ],
                                     ],
                                   ),
                                 ),
@@ -919,13 +986,16 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               // AI Generator Options Widget (if AI is enabled)
               if (isAi) ...[
                 AiCommentConfigWidget(
+                  appNameController: _appNameController,
                   topicController: _topicController,
                   selectedLanguage: _selectedLanguage,
                   selectedTone: _selectedTone,
                   selectedQuantity: _selectedQuantity,
                   sampleComments: _sampleComments,
                   isGeneratingPreview: _isGeneratingPreview,
-                  appName: _appName,
+                  appName: _appNameController.text.trim().isNotEmpty
+                      ? _appNameController.text.trim()
+                      : _appName,
                   isAppReview: s.code.toUpperCase().contains('PLAY') ||
                       s.code.toUpperCase().contains('REVIEW') ||
                       s.category.toUpperCase().contains('PLAY') ||

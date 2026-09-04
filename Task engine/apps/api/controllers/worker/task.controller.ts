@@ -115,12 +115,31 @@ export class WorkerTaskController {
     @Get(':id')
     @ApiOperation({ summary: 'Get worker task details with ownership check' })
     async getTaskDetails(@Param('id') taskId: string, @CurrentUser() user: User) {
-        const task = await this.taskEngine.getTaskById(taskId);
+        // Try fetching by task ID first
+        let task = await this.taskEngine.getTaskById(taskId);
+
+        // If not found by taskId, try finding by orderId in available tasks
+        if (!task) {
+            try {
+                const available = await this.taskEngine.getAvailableTasks(user.id);
+                task = available.find((t: any) => 
+                    t.orderId === taskId || t.id === taskId
+                );
+            } catch (_) {}
+        }
+
         if (!task) {
             throw new NotFoundException('Task not found');
         }
 
-        if (task.assignedTo && task.assignedTo !== user.id) {
+        // Only block access if the task is assigned to a DIFFERENT worker
+        // Allow viewing if: unassigned, assigned to current user, or task is still active/available
+        const taskStatus = (task.status || '').toLowerCase();
+        const isUnassigned = !task.assignedTo || task.assignedTo === '';
+        const isAssignedToMe = task.assignedTo === user.id;
+        const isAvailable = taskStatus === 'active' || taskStatus === 'available' || taskStatus === 'pending';
+
+        if (!isUnassigned && !isAssignedToMe && !isAvailable) {
             throw new ForbiddenException('You do not have permission to view this task');
         }
 

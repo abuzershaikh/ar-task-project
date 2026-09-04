@@ -3,6 +3,7 @@ import { DeepSeekCommentGenerator } from './generators/deepseek-comment.generato
 import { YouTubeCommentGenerator } from './generators/youtube-comment.generator';
 import { PlayStoreReviewGenerator } from './generators/playstore-review.generator';
 import { GenerationOptions, IContentGenerator } from './generators/generator.interface';
+import { sanitizeReviewText } from './review-sanitizer';
 
 @Injectable()
 export class AiGeneratorService {
@@ -44,6 +45,9 @@ export class AiGeneratorService {
             allResults.push(...chunk);
         }
 
-        return allResults.slice(0, count);
+        return allResults
+            .map((text) => sanitizeReviewText(text))
+            .filter((text) => text.length > 3)
+            .slice(0, count);
     }
 }

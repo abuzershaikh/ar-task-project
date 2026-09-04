@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { IContentGenerator, GenerationOptions } from './generator.interface';
 import { YouTubeCommentGenerator } from './youtube-comment.generator';
 import { PlayStoreReviewGenerator } from './playstore-review.generator';
+import { sanitizeReviewText, cleanBrandName, cleanTopic } from '../review-sanitizer';
 import * as https from 'https';
 
 @Injectable()
@@ -15,16 +16,17 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
     ) { }
 
     async generateBatch(count: number, options?: GenerationOptions): Promise<string[]> {
-        const topic = options?.topic?.trim() || '';
+        const brand = cleanBrandName(options?.appName);
+        const userPrompt = cleanTopic(options?.topic, brand);
         const language = options?.language || 'English';
         const tone = options?.tone || 'natural';
         const videoTitle = options?.videoTitle || '';
 
         const isAppReview = (options as any)?.isAppReview || (options as any)?.generatorType?.includes('review') || (options as any)?.generatorType?.includes('play');
-        const contextType = isAppReview ? 'Google Play Store Android App (5-Star Rating & Review)' : 'social media / YouTube video';
+        const contextType = isAppReview ? 'Google Play Store Android App (Natural Human Review)' : 'social media / YouTube video';
         const fallbackGen = isAppReview ? this.playStoreFallbackGen : this.templateFallbackGen;
 
-        this.logger.log(`🤖 Requesting DeepSeek AI for ${count} items (Type: ${contextType}, Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
+        this.logger.log(`🤖 Requesting DeepSeek AI for ${count} items (Type: ${contextType}, Brand: "${brand}", Prompt: "${userPrompt}", Lang: ${language}, Tone: ${tone})`);
 
         try {
             if (!this.apiKey) {
@@ -32,28 +34,23 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
                 return fallbackGen.generateBatch(count, options);
             }
 
-            const appName = options?.appName?.trim() || '';
-            const appDescription = options?.appDescription?.trim() || '';
-            const descSummary = appDescription.length > 600 ? appDescription.substring(0, 600) + '...' : appDescription;
-
             const prompt = isAppReview
-                ? `Generate exactly ${count} completely distinct, authentic, natural, human-like 5-star reviews for this Google Play Store Android app.
-${appName ? `- App Name: "${appName}"` : ''}
-${descSummary ? `- App Overview & Features: "${descSummary}"` : ''}
-- Review Focus / Keywords: "${topic || 'Smooth performance, intuitive UI, very reliable and useful'}"
+                ? `Generate exactly ${count} completely distinct, authentic, natural, human-like reviews for this Android app.
+${brand ? `- App Name: "${brand}"` : ''}
+${userPrompt ? `- User's Review Instructions / Focus: "${userPrompt}"` : '- General focus: smooth performance, intuitive UI, everyday convenience'}
 - Language: "${language}" (e.g. if Hindi/Hinglish, write naturally in Roman script or Devanagari based on common Play Store usage)
-- Tone: "${tone}" (e.g. enthusiastic, appreciative, authentic user)
-${videoTitle ? `- App Context / URL: "${videoTitle}"` : ''}
+- Tone: "${tone}" (natural, casual, honest everyday user)
 
-Rules:
-1. Every review MUST be distinct in wording, structure, length (some short 1-2 lines, some 2-3 lines), and sentiment from all other reviews.
-2. Crucial: The reviews MUST specifically mention or reference the app's real functionality or purpose based on the App Name and App Overview (e.g. if music player mention songs/playlists/audio quality, if messenger mention chats/calls/privacy, if game mention gameplay/graphics, etc.).
-3. Reviews must sound like genuine Android users praising the app, NOT robotic or repetitive.
-4. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
+CRITICAL RULES:
+1. ABSOLUTELY NO star symbols (like ⭐, ★, 🌟, ✨), NO emojis, and NO rating numbers (e.g. do NOT write '5 stars', '5/5', '5-star rating'). Real users select stars on Google Play's rating dialog, they do NOT type stars in the review text!
+2. Tone MUST be 100% human, casual, and authentic. Write like a real person sharing their genuine 1-2 sentence experience. Avoid marketing jargon, slogans, or robotic praise.
+3. If an App Name is provided, mention it naturally or refer to it simply as "the app" or "this app". Do NOT repeat the name awkwardly in every sentence.
+4. Every review MUST be distinct in wording, sentence structure, and length.
+5. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
-["First 5-star review text here", "Second unique review text here"]`
+["The app is surprisingly smooth and makes navigation effortless.", "Really like how quickly it opens and handles tasks without lagging."]`
                 : `Generate exactly ${count} completely distinct, authentic, natural, human-like comments for a social media / YouTube video.
-- Topic / Keywords: "${topic || 'Interesting and valuable video'}"
+- Topic / Keywords: "${userPrompt || 'Interesting and valuable video'}"
 - Language: "${language}" (e.g. if Hindi/Hinglish, write naturally in Roman script or Devanagari based on common YouTube usage)
 - Tone: "${tone}" (e.g. natural, enthusiastic, professional, or questioning)
 ${videoTitle ? `- Video Context: "${videoTitle}"` : ''}
@@ -61,7 +58,8 @@ ${videoTitle ? `- Video Context: "${videoTitle}"` : ''}
 Rules:
 1. Every comment MUST be distinct in wording, structure, length, and sentiment from all other comments.
 2. Comments must sound like genuine human community members and active viewers, NOT robotic bots.
-3. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
+3. ABSOLUTELY NO star symbols or rating symbols.
+4. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
 ["First comment text here", "Second unique comment text here"]`;
 
@@ -70,7 +68,7 @@ Example format:
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are an expert social media community member and engagement writer. You generate genuine, human-like, unique comments and reviews. Always return ONLY a raw JSON array of strings.',
+                        content: 'You are an authentic everyday user writing genuine, natural, human feedback. You NEVER use star symbols (⭐, ★), emojis, or text star ratings. Your tone is 100% natural, human, and conversational. Always return ONLY a raw JSON array of strings.',
                     },
                     {
                         role: 'user',
@@ -159,7 +157,7 @@ Example format:
             const parsed = JSON.parse(cleanContent);
             if (Array.isArray(parsed)) {
                 return parsed
-                    .map((item) => (typeof item === 'string' ? item.trim() : String(item).trim()))
+                    .map((item) => sanitizeReviewText(typeof item === 'string' ? item : String(item)))
                     .filter((c) => c.length > 5);
             }
         } catch (_) {
@@ -169,7 +167,7 @@ Example format:
         // 2. Attempt line-by-line / numbered extraction
         const lines = cleanContent
             .split('\n')
-            .map((line) => line.replace(/^[\d+.\-•*\]\[\s"]+/, '').replace(/[",\s]+$/, '').trim())
+            .map((line) => sanitizeReviewText(line.replace(/^[\d+.\-•*\]\[\s"]+/, '').replace(/[",\s]+$/, '')))
             .filter((line) => line.length > 8);
 
         return lines;
