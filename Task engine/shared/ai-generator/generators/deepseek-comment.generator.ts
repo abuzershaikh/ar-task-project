@@ -32,17 +32,24 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
                 return fallbackGen.generateBatch(count, options);
             }
 
+            const appName = options?.appName?.trim() || '';
+            const appDescription = options?.appDescription?.trim() || '';
+            const descSummary = appDescription.length > 600 ? appDescription.substring(0, 600) + '...' : appDescription;
+
             const prompt = isAppReview
-                ? `Generate exactly ${count} completely distinct, authentic, natural, human-like 5-star reviews for a Google Play Store Android app.
-- App Focus / Features: "${topic || 'Smooth performance, beautiful UI, reliable and useful'}"
+                ? `Generate exactly ${count} completely distinct, authentic, natural, human-like 5-star reviews for this Google Play Store Android app.
+${appName ? `- App Name: "${appName}"` : ''}
+${descSummary ? `- App Overview & Features: "${descSummary}"` : ''}
+- Review Focus / Keywords: "${topic || 'Smooth performance, intuitive UI, very reliable and useful'}"
 - Language: "${language}" (e.g. if Hindi/Hinglish, write naturally in Roman script or Devanagari based on common Play Store usage)
 - Tone: "${tone}" (e.g. enthusiastic, appreciative, authentic user)
 ${videoTitle ? `- App Context / URL: "${videoTitle}"` : ''}
 
 Rules:
 1. Every review MUST be distinct in wording, structure, length (some short 1-2 lines, some 2-3 lines), and sentiment from all other reviews.
-2. Reviews must sound like genuine Android users praising the app, NOT robotic or repetitive.
-3. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
+2. Crucial: The reviews MUST specifically mention or reference the app's real functionality or purpose based on the App Name and App Overview (e.g. if music player mention songs/playlists/audio quality, if messenger mention chats/calls/privacy, if game mention gameplay/graphics, etc.).
+3. Reviews must sound like genuine Android users praising the app, NOT robotic or repetitive.
+4. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
 ["First 5-star review text here", "Second unique review text here"]`
                 : `Generate exactly ${count} completely distinct, authentic, natural, human-like comments for a social media / YouTube video.

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -38,6 +39,15 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   List<String> _sampleComments = [];
   bool _isGeneratingPreview = false;
 
+  // Play Store App Metadata State
+  String? _appName;
+  String? _appIcon;
+  String? _appDescription;
+  String? _packageId;
+  bool _isFetchingAppInfo = false;
+  String? _appFetchError;
+  Timer? _urlDebounceTimer;
+
   @override
   void initState() {
     super.initState();
@@ -47,10 +57,93 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
 
   @override
   void dispose() {
+    _urlDebounceTimer?.cancel();
     _targetUrlController.dispose();
     _topicController.dispose();
     _quantityController.dispose();
     super.dispose();
+  }
+
+  bool _isPlayStoreService(ServiceModel? s) {
+    if (s == null) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    final desc = s.description.toUpperCase();
+    final cat = s.category.toUpperCase();
+    return code.contains('PLAY') ||
+        code.contains('REVIEW') ||
+        code.contains('RATING') ||
+        cat.contains('PLAY') ||
+        name.contains('PLAY') ||
+        name.contains('REVIEW') ||
+        desc.contains('PLAY STORE');
+  }
+
+  void _onTargetUrlChanged(String val) {
+    if (!_isPlayStoreService(_selectedService)) return;
+    _urlDebounceTimer?.cancel();
+    final trimmed = val.trim();
+    if (trimmed.isEmpty) {
+      setState(() {
+        _appName = null;
+        _appIcon = null;
+        _appDescription = null;
+        _packageId = null;
+        _appFetchError = null;
+        _isFetchingAppInfo = false;
+      });
+      return;
+    }
+    _urlDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+      _fetchPlayStoreAppInfo(trimmed);
+    });
+  }
+
+  Future<void> _fetchPlayStoreAppInfo(String input) async {
+    if (input.trim().isEmpty || _serviceRepository.dioClient == null) return;
+    setState(() {
+      _isFetchingAppInfo = true;
+      _appFetchError = null;
+    });
+
+    try {
+      final res = await _serviceRepository.dioClient!.post(
+        '/buyer/orders/playstore-app-info',
+        data: {'url': input.trim()},
+      );
+
+      if (res.statusCode == 200 && res.data != null && res.data['success'] == true) {
+        final data = res.data;
+        setState(() {
+          _appName = data['appName']?.toString();
+          _appIcon = data['appIcon']?.toString();
+          _appDescription = data['description']?.toString() ?? data['shortDescription']?.toString();
+          _packageId = data['packageId']?.toString();
+          _appFetchError = null;
+          if (_topicController.text.trim().isEmpty && _appName != null && _appName!.isNotEmpty) {
+            _topicController.text = _appName!;
+          }
+        });
+
+        // Automatically trigger fresh context-aware review preview
+        if (_isCommentOrComboService(_selectedService)) {
+          _generateSampleComments();
+        }
+      } else {
+        setState(() {
+          _appFetchError = res.data?['error']?.toString() ?? 'App metadata not found on Google Play Store';
+        });
+      }
+    } catch (err) {
+      debugPrint('Error fetching Play Store metadata: $err');
+      setState(() {
+        _appFetchError = 'Could not fetch app info. You can still proceed normally.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isFetchingAppInfo = false);
+      }
+    }
   }
 
   bool _isCommentOrComboService(ServiceModel? s) {
@@ -85,6 +178,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               'count': _selectedQuantity,
               'serviceCode': _selectedService?.code,
               'targetUrl': _targetUrlController.text.trim(),
+              'appName': _appName,
+              'appDescription': _appDescription,
             },
           );
           if (res.statusCode == 200 && res.data != null && res.data['sampleComments'] != null) {
@@ -179,6 +274,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   }
 
   void _selectService(ServiceModel service) {
+    _urlDebounceTimer?.cancel();
     setState(() {
       _selectedService = service;
       _selectedQuantity = 10;
@@ -186,6 +282,12 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       _targetUrlController.clear();
       _topicController.clear();
       _sampleComments = [];
+      _appName = null;
+      _appIcon = null;
+      _appDescription = null;
+      _packageId = null;
+      _appFetchError = null;
+      _isFetchingAppInfo = false;
     });
   }
 
@@ -195,6 +297,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       setState(() {
         _targetUrlController.text = data.text!.trim();
       });
+      if (_isPlayStoreService(_selectedService)) {
+        _fetchPlayStoreAppInfo(_targetUrlController.text.trim());
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -279,6 +384,10 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           'tone': _selectedTone,
           'aiGeneratorEnabled': isCommentService,
           'sampleComments': _sampleComments,
+          'appName': _appName,
+          'appIcon': _appIcon,
+          'appDescription': _appDescription,
+          'packageId': _packageId,
         },
         'timeToAcceptHours': _selectedService!.minAcceptHours,
         'timeToCompleteHours': _selectedService!.maxCompleteHours > 48
@@ -560,6 +669,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                     TextFormField(
                       controller: _targetUrlController,
                       keyboardType: TextInputType.url,
+                      onChanged: _onTargetUrlChanged,
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) {
                           return 'Please provide target URL';
@@ -614,6 +724,193 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                         ),
                       ),
                     ),
+
+                    // Play Store Loading State
+                    if (_isFetchingAppInfo) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: const Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2563EB)),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Fetching app details from Google Play Store...',
+                                style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF), fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Play Store App Preview Card
+                    if (_appName != null && _appName!.isNotEmpty) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // App Icon
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.06),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(11),
+                                    child: (_appIcon != null && _appIcon!.isNotEmpty)
+                                        ? Image.network(
+                                            _appIcon!,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => const Icon(
+                                              Icons.shop_two_rounded,
+                                              color: Color(0xFF10B981),
+                                              size: 28,
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.shop_two_rounded,
+                                            color: Color(0xFF10B981),
+                                            size: 28,
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Title & Package
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              _appName!,
+                                              style: const TextStyle(
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF0F172A),
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFDCFCE7),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFF16A34A)),
+                                                SizedBox(width: 3),
+                                                Text(
+                                                  'Detected',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF16A34A),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      if (_packageId != null) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          _packageId!,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF64748B),
+                                            fontFamily: 'monospace',
+                                          ),
+                                        ),
+                                      ],
+                                      if (_appDescription != null && _appDescription!.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _appDescription!,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Color(0xFF475569),
+                                            height: 1.25,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0FDF4),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.auto_awesome, size: 12, color: Color(0xFF16A34A)),
+                                  SizedBox(width: 5),
+                                  Expanded(
+                                    child: Text(
+                                      'Reviews will be customized specifically matching this app\'s features',
+                                      style: TextStyle(fontSize: 10.5, color: Color(0xFF166534), fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Fetch Error Hint (non-blocking)
+                    if (_appFetchError != null && (_appName == null || _appName!.isEmpty)) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        '💡 ${_appFetchError!}',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFFD97706)),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -628,6 +925,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   selectedQuantity: _selectedQuantity,
                   sampleComments: _sampleComments,
                   isGeneratingPreview: _isGeneratingPreview,
+                  appName: _appName,
                   isAppReview: s.code.toUpperCase().contains('PLAY') ||
                       s.code.toUpperCase().contains('REVIEW') ||
                       s.category.toUpperCase().contains('PLAY') ||

@@ -134,9 +134,55 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     return 'youtube';
   }
 
+  String _getAppIcon() {
+    final t = widget.task;
+    if (t == null) return '';
+    if (t['appIcon'] != null && t['appIcon'].toString().trim().isNotEmpty) {
+      return t['appIcon'].toString().trim();
+    }
+    if (t['requirements'] is Map) {
+      final req = t['requirements'] as Map;
+      if (req['appIcon'] != null && req['appIcon'].toString().trim().isNotEmpty) {
+        return req['appIcon'].toString().trim();
+      }
+      if (req['icon'] != null && req['icon'].toString().trim().isNotEmpty) {
+        return req['icon'].toString().trim();
+      }
+    }
+    if (t['metadata'] is Map) {
+      final meta = t['metadata'] as Map;
+      if (meta['appIcon'] != null && meta['appIcon'].toString().trim().isNotEmpty) {
+        return meta['appIcon'].toString().trim();
+      }
+      if (meta['icon'] != null && meta['icon'].toString().trim().isNotEmpty) {
+        return meta['icon'].toString().trim();
+      }
+    }
+    return '';
+  }
+
+  String _getAppName() {
+    final t = widget.task;
+    if (t == null) return '';
+    if (t['appName'] != null && t['appName'].toString().trim().isNotEmpty) {
+      return t['appName'].toString().trim();
+    }
+    if (t['requirements'] is Map && t['requirements']['appName'] != null) {
+      return t['requirements']['appName'].toString().trim();
+    }
+    if (t['metadata'] is Map && t['metadata']['appName'] != null) {
+      return t['metadata']['appName'].toString().trim();
+    }
+    return '';
+  }
+
   String _formatTitle() {
     final t = widget.task;
     if (t == null) return 'Task Details';
+    final appName = _getAppName();
+    if (appName.isNotEmpty) {
+      return 'Rate & Review: $appName ⭐⭐⭐⭐⭐';
+    }
     if (t['title'] != null && t['title'].toString().trim().isNotEmpty) {
       return t['title'].toString().trim();
     }
@@ -1328,6 +1374,54 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
   }
 
   Widget _build3DPlatformAvatar(String platform) {
+    final appIcon = _getAppIcon();
+    if (appIcon.isNotEmpty) {
+      return Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                appIcon,
+                width: 58,
+                height: 58,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => PlatformLogo(platform: platform, size: 36),
+              ),
+            ),
+            Positioned(
+              right: 1,
+              bottom: 1,
+              child: Container(
+                padding: const EdgeInsets.all(2.5),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                ),
+                child: PlatformLogo(platform: platform, size: 14),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       width: 64,
       height: 64,

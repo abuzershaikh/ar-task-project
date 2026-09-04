@@ -5,6 +5,10 @@ export interface GenerationOptions {
     uniqueness?: boolean;
     videoTitle?: string;
     channelName?: string;
+    appName?: string;
+    appDescription?: string;
+    isAppReview?: boolean;
+    generatorType?: string;
 }
 
 export interface IContentGenerator {

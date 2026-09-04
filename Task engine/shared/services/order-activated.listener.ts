@@ -96,6 +96,10 @@ export class OrderActivatedListener {
             const topic = order?.requirements?.topic || order?.requirements?.customText || order?.requirements?.comment || '';
             const language = order?.requirements?.language || 'English';
             const tone = order?.requirements?.tone || 'natural';
+            const appName = order?.requirements?.appName || '';
+            const appDescription = order?.requirements?.appDescription || '';
+            const appIcon = order?.requirements?.appIcon || '';
+            const packageId = order?.requirements?.packageId || '';
 
             // 1. Gather any buyer sample comments/reviews sent with the order
             const rawSampleComments = order?.requirements?.sampleComments;
@@ -111,13 +115,23 @@ export class OrderActivatedListener {
                     generatedComments = sampleComments.slice(0, count);
                 } else {
                     const remainingNeeded = count - sampleComments.length;
-                    this.logger.log(`🤖 Generating ${remainingNeeded} ${isPlayStore ? 'Play Store reviews' : 'comments'} for Order '${payload.orderId}' (Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
+                    this.logger.log(`🤖 Generating ${remainingNeeded} ${isPlayStore ? 'Play Store reviews' : 'comments'} for Order '${payload.orderId}' (App: "${appName}", Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
                     let newlyGenerated: string[] = [];
                     try {
                         newlyGenerated = await this.aiGeneratorService.generateContentBatch(
                             generatorType,
                             remainingNeeded,
-                            { topic, language, tone, uniqueness: true, isAppReview: isPlayStore, generatorType } as any,
+                            {
+                                topic,
+                                language,
+                                tone,
+                                uniqueness: true,
+                                isAppReview: isPlayStore,
+                                appName,
+                                appDescription,
+                                videoTitle: targetUrl,
+                                generatorType,
+                            } as any,
                         );
                     } catch (genErr) {
                         this.logger.error(`Error generating content batch: ${genErr.message}`);
@@ -208,6 +222,10 @@ export class OrderActivatedListener {
                         customText: finalComment,
                         sequenceIndex: generatedCount + i,
                         orderIdSequence: `${payload.orderId}_task_${generatedCount + i + 1}`,
+                        appIcon: appIcon || combinedRequirements?.appIcon,
+                        appName: appName || combinedRequirements?.appName,
+                        appDescription: appDescription || combinedRequirements?.appDescription,
+                        packageId: packageId || combinedRequirements?.packageId,
                     };
 
                     await this.taskEngine.createTask({
@@ -215,6 +233,11 @@ export class OrderActivatedListener {
                         campaignId: payload.orderId,
                         taskType,
                         requirements: taskReqs,
+                        metadata: {
+                            appIcon: appIcon || combinedRequirements?.appIcon,
+                            appName: appName || combinedRequirements?.appName,
+                            packageId: packageId || combinedRequirements?.packageId,
+                        },
                         rewardAmount,
                     });
                 }

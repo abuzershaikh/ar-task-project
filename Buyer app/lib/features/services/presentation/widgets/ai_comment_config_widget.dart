@@ -11,6 +11,7 @@ class AiCommentConfigWidget extends StatefulWidget {
   final bool isGeneratingPreview;
   final VoidCallback onGeneratePreview;
   final bool isAppReview;
+  final String? appName;
 
   const AiCommentConfigWidget({
     super.key,
@@ -24,6 +25,7 @@ class AiCommentConfigWidget extends StatefulWidget {
     this.isGeneratingPreview = false,
     required this.onGeneratePreview,
     this.isAppReview = false,
+    this.appName,
   });
 
   @override
@@ -92,29 +94,59 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
           ),
           const SizedBox(height: 8),
 
-          // 100% Unique Badge placed cleanly below Title
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDCFCE7),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: const Color(0xFFBBF7D0)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.shield_outlined, size: 12, color: Color(0xFF15803D)),
-                SizedBox(width: 4),
-                Text(
-                  '100% Unique & Natural',
-                  style: TextStyle(
-                    color: Color(0xFF15803D),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+          // Badges Row
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCFCE7),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.shield_outlined, size: 12, color: Color(0xFF15803D)),
+                    SizedBox(width: 4),
+                    Text(
+                      '100% Unique & Natural',
+                      style: TextStyle(
+                        color: Color(0xFF15803D),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (widget.appName != null && widget.appName!.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, size: 12, color: Color(0xFFB45309)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Target: ${widget.appName}',
+                        style: const TextStyle(
+                          color: Color(0xFFB45309),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
           const SizedBox(height: 6),
           Text(

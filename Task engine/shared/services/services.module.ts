@@ -40,6 +40,7 @@ import { DeadlineMonitorService } from '../engines/reallocation-engine/services/
 import { ReallocationEngine } from '../engines/reallocation-engine/reallocation.engine';
 import { FirebaseAdminService } from './firebase-admin.service';
 import { UserSyncService } from './user-sync.service';
+import { PlayStoreScraperService } from './playstore-scraper.service';
 
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
@@ -71,6 +72,7 @@ const providers = [
     FirebaseAdminService,
     UserSyncService,
     WalletService,
+    PlayStoreScraperService,
 ];
 
 @Global()

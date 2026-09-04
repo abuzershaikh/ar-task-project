@@ -27,6 +27,9 @@ class MyTaskCard extends StatelessWidget {
     }
     if (task['requirements'] != null && task['requirements'] is Map) {
       final req = task['requirements'] as Map;
+      if (req['appName'] != null && req['appName'].toString().trim().isNotEmpty) {
+        return 'Rate & Review: ${req['appName']}';
+      }
       if (req['serviceName'] != null && req['serviceName'].toString().trim().isNotEmpty) {
         return req['serviceName'].toString().trim();
       }
@@ -132,6 +135,32 @@ class MyTaskCard extends StatelessWidget {
     }
   }
 
+  String? _getAppIcon(dynamic task) {
+    if (task == null) return null;
+    if (task['appIcon'] != null && task['appIcon'].toString().trim().isNotEmpty) {
+      return task['appIcon'].toString().trim();
+    }
+    if (task['requirements'] is Map) {
+      final req = task['requirements'] as Map;
+      if (req['appIcon'] != null && req['appIcon'].toString().trim().isNotEmpty) {
+        return req['appIcon'].toString().trim();
+      }
+      if (req['icon'] != null && req['icon'].toString().trim().isNotEmpty) {
+        return req['icon'].toString().trim();
+      }
+    }
+    if (task['metadata'] is Map) {
+      final meta = task['metadata'] as Map;
+      if (meta['appIcon'] != null && meta['appIcon'].toString().trim().isNotEmpty) {
+        return meta['appIcon'].toString().trim();
+      }
+      if (meta['icon'] != null && meta['icon'].toString().trim().isNotEmpty) {
+        return meta['icon'].toString().trim();
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = _formatTitle(task);
@@ -139,6 +168,7 @@ class MyTaskCard extends StatelessWidget {
     final platform = _getPlatform(task);
     final status = (task['status'] ?? 'Active').toString();
     final dateStr = _formatDate(task);
+    final appIcon = _getAppIcon(task);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -162,7 +192,7 @@ class MyTaskCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Left Platform Logo Box
+              // Left Platform Logo / Real App Icon Box
               Container(
                 width: 44,
                 height: 44,
@@ -172,7 +202,18 @@ class MyTaskCard extends StatelessWidget {
                   border: Border.all(color: const Color(0xFFEDF2F7)),
                 ),
                 child: Center(
-                  child: PlatformLogo(platform: platform, size: 26),
+                  child: (appIcon != null && appIcon.isNotEmpty)
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            appIcon,
+                            width: 38,
+                            height: 38,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => PlatformLogo(platform: platform, size: 26),
+                          ),
+                        )
+                      : PlatformLogo(platform: platform, size: 26),
                 ),
               ),
               const SizedBox(width: 10),

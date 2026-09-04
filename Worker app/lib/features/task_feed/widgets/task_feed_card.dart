@@ -26,6 +26,9 @@ class TaskFeedCard extends StatelessWidget {
     }
     if (task['requirements'] != null && task['requirements'] is Map) {
       final req = task['requirements'] as Map;
+      if (req['appName'] != null && req['appName'].toString().trim().isNotEmpty) {
+        return 'Rate & Review: ${req['appName']}';
+      }
       if (req['serviceName'] != null && req['serviceName'].toString().trim().isNotEmpty) {
         return req['serviceName'].toString().trim();
       }
@@ -45,6 +48,9 @@ class TaskFeedCard extends StatelessWidget {
     }
     if (task['metadata'] != null && task['metadata'] is Map) {
       final meta = task['metadata'] as Map;
+      if (meta['appName'] != null && meta['appName'].toString().trim().isNotEmpty) {
+        return 'Rate & Review: ${meta['appName']}';
+      }
       if (meta['serviceName'] != null && meta['serviceName'].toString().trim().isNotEmpty) {
         return meta['serviceName'].toString().trim();
       }
@@ -74,6 +80,12 @@ class TaskFeedCard extends StatelessWidget {
   }
 
   String _getSubtitle(dynamic task, String platform) {
+    if (task != null && task['requirements'] is Map && (task['requirements']['appName'] != null && task['requirements']['appName'].toString().trim().isNotEmpty)) {
+      return '5-Star Google Play Store Review';
+    }
+    if (task != null && task['metadata'] is Map && (task['metadata']['appName'] != null && task['metadata']['appName'].toString().trim().isNotEmpty)) {
+      return '5-Star Google Play Store Review';
+    }
     if (task != null && task['description'] != null && task['description'].toString().trim().isNotEmpty) {
       final desc = task['description'].toString().trim();
       if (desc.length <= 35) return desc;
@@ -84,7 +96,8 @@ class TaskFeedCard extends StatelessWidget {
     }
     switch (platform) {
       case 'google':
-        return 'Share your experience';
+      case 'playstore':
+        return '5-Star App Review & Rating';
       case 'youtube':
         return 'Engage with videos';
       case 'facebook':
@@ -98,8 +111,34 @@ class TaskFeedCard extends StatelessWidget {
     }
   }
 
+  String? _getAppIcon(dynamic task) {
+    if (task == null) return null;
+    if (task['appIcon'] != null && task['appIcon'].toString().trim().isNotEmpty) {
+      return task['appIcon'].toString().trim();
+    }
+    if (task['requirements'] is Map) {
+      final req = task['requirements'] as Map;
+      if (req['appIcon'] != null && req['appIcon'].toString().trim().isNotEmpty) {
+        return req['appIcon'].toString().trim();
+      }
+      if (req['icon'] != null && req['icon'].toString().trim().isNotEmpty) {
+        return req['icon'].toString().trim();
+      }
+    }
+    if (task['metadata'] is Map) {
+      final meta = task['metadata'] as Map;
+      if (meta['appIcon'] != null && meta['appIcon'].toString().trim().isNotEmpty) {
+        return meta['appIcon'].toString().trim();
+      }
+      if (meta['icon'] != null && meta['icon'].toString().trim().isNotEmpty) {
+        return meta['icon'].toString().trim();
+      }
+    }
+    return null;
+  }
+
   String _getDuration(dynamic task, String platform) {
-    if (platform == 'google') return '~ 2 Min';
+    if (platform == 'google' || platform == 'playstore') return '~ 2 Min';
     return '~ 1 Min';
   }
 
@@ -159,6 +198,7 @@ class TaskFeedCard extends StatelessWidget {
     final subtitle = _getSubtitle(task, platform);
     final duration = _getDuration(task, platform);
     final reward = _getReward(task);
+    final appIcon = _getAppIcon(task);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -184,7 +224,7 @@ class TaskFeedCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // ── Platform Logo on Left ──
+                // ── Platform Logo / Real App Icon on Left ──
                 Container(
                   width: 46,
                   height: 46,
@@ -194,7 +234,18 @@ class TaskFeedCard extends StatelessWidget {
                     border: Border.all(color: const Color(0xFFEDF2F7)),
                   ),
                   child: Center(
-                    child: PlatformLogo(platform: platform, size: 30),
+                    child: (appIcon != null && appIcon.isNotEmpty)
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              appIcon,
+                              width: 42,
+                              height: 42,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => PlatformLogo(platform: platform, size: 30),
+                            ),
+                          )
+                        : PlatformLogo(platform: platform, size: 30),
                   ),
                 ),
                 const SizedBox(width: 12),

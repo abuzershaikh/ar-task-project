@@ -57,9 +57,10 @@ export class PlayStoreReviewGenerator implements IContentGenerator {
         'Full 5-star rating! Zabardast work 👍',
         'Highly recommended, zaroor try karein!'
     ];
-
     async generateBatch(count: number, options?: GenerationOptions): Promise<string[]> {
-        const topic = options?.topic?.trim() || '';
+        const appName = options?.appName?.trim() || '';
+        const rawTopic = options?.topic?.trim() || '';
+        const topic = appName ? (rawTopic ? `${appName} - ${rawTopic}` : appName) : rawTopic;
         const language = (options?.language || 'English').toLowerCase();
         const isHindi = language.includes('hindi') || language.includes('hinglish');
 

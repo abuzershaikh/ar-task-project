@@ -21,6 +21,7 @@ import { UserRole, User } from '../../../../shared/database/entities/user.entity
 import { TimingPolicy } from '../../../../shared/policies/timing-policy';
 import { WalletService } from '../../../../shared/services/wallet.service';
 import { AiGeneratorService } from '../../../../shared/ai-generator/ai-generator.service';
+import { PlayStoreScraperService } from '../../../../shared/services/playstore-scraper.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @ApiTags('Buyer - Orders')
@@ -38,8 +39,22 @@ export class BuyerOrderController {
         private readonly pricingEngine: PricingEngine,
         private readonly walletService: WalletService,
         private readonly aiGeneratorService: AiGeneratorService,
+        private readonly playStoreScraper: PlayStoreScraperService,
         private readonly eventEmitter: EventEmitter2,
     ) { }
+
+    @Post('playstore-app-info')
+    @ApiOperation({ summary: 'Fetch app metadata (icon, title, description) from Google Play Store link' })
+    async getPlayStoreAppInfo(
+        @Body() body: { url?: string; link?: string; packageId?: string },
+    ) {
+        const input = body.url || body.link || body.packageId || '';
+        if (!input) {
+            throw new BadRequestException('URL or packageId is required');
+        }
+        const info = await this.playStoreScraper.getAppMetadata(input);
+        return info;
+    }
 
     @Post('ai-preview-comments')
     @ApiOperation({ summary: 'Generate 5 sample comments preview using DeepSeek AI' })
@@ -51,6 +66,8 @@ export class BuyerOrderController {
             count?: number;
             serviceCode?: string;
             targetUrl?: string;
+            appName?: string;
+            appDescription?: string;
         },
     ) {
         const topic = body.topic?.trim() || '';
@@ -66,7 +83,17 @@ export class BuyerOrderController {
         const sampleComments = await this.aiGeneratorService.generateContentBatch(
             generatorType,
             previewCount,
-            { topic, language, tone, uniqueness: true, videoTitle: body.targetUrl, isAppReview: isPlayStore, generatorType } as any,
+            {
+                topic,
+                language,
+                tone,
+                uniqueness: true,
+                videoTitle: body.targetUrl,
+                appName: body.appName,
+                appDescription: body.appDescription,
+                isAppReview: isPlayStore,
+                generatorType,
+            } as any,
         );
 
         return {
