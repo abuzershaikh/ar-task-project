@@ -16,6 +16,40 @@ class TaskProvider extends ChangeNotifier {
   Map<String, dynamic> get dashboardStats => _dashboardStats;
   String? get error => _error;
 
+  DateTime _extractDate(dynamic item, {bool includeUpdated = false}) {
+    if (item is! Map) return DateTime.fromMillisecondsSinceEpoch(0);
+    final raw = includeUpdated
+        ? (item['updatedAt'] ??
+            item['updated_at'] ??
+            item['submittedAt'] ??
+            item['submitted_at'] ??
+            item['completedAt'] ??
+            item['completed_at'] ??
+            item['acceptedAt'] ??
+            item['accepted_at'] ??
+            item['assignedAt'] ??
+            item['assigned_at'] ??
+            item['createdAt'] ??
+            item['created_at'])
+        : (item['createdAt'] ??
+            item['created_at'] ??
+            item['updatedAt'] ??
+            item['updated_at']);
+    if (raw == null) return DateTime.fromMillisecondsSinceEpoch(0);
+    if (raw is int) return DateTime.fromMillisecondsSinceEpoch(raw);
+    return DateTime.tryParse(raw.toString()) ?? DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  int _compareTasksDesc(dynamic a, dynamic b, {bool includeUpdated = false}) {
+    final dateA = _extractDate(a, includeUpdated: includeUpdated);
+    final dateB = _extractDate(b, includeUpdated: includeUpdated);
+    final comp = dateB.compareTo(dateA);
+    if (comp != 0) return comp;
+    final idA = (a is Map ? (a['id'] ?? '') : '').toString();
+    final idB = (b is Map ? (b['id'] ?? '') : '').toString();
+    return idB.compareTo(idA);
+  }
+
   Future<void> fetchAvailableTasks({bool silent = false}) async {
     if (!silent) {
       _isLoading = true;
@@ -38,9 +72,11 @@ class TaskProvider extends ChangeNotifier {
           uniqueTasks.add(t);
         }
       }
+      // Guarantee latest tasks are strictly at the top
+      uniqueTasks.sort((a, b) => _compareTasksDesc(a, b, includeUpdated: false));
       _availableTasks = uniqueTasks;
       _error = null;
-      debugPrint('[TaskProvider] Fetched ${_availableTasks.length} distinct available tasks successfully');
+      debugPrint('[TaskProvider] Fetched ${_availableTasks.length} distinct available tasks successfully (newest top)');
     } catch (e) {
       debugPrint('[TaskProvider ERROR] fetchAvailableTasks failed: $e');
       if (!silent) {
@@ -60,8 +96,11 @@ class TaskProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      _myTasks = await ApiService.getMyTasks(stage);
-      debugPrint('[TaskProvider] Fetched ${_myTasks.length} my tasks ($stage)');
+      final fetched = await ApiService.getMyTasks(stage);
+      // Guarantee latest tasks are strictly at the top
+      fetched.sort((a, b) => _compareTasksDesc(a, b, includeUpdated: true));
+      _myTasks = fetched;
+      debugPrint('[TaskProvider] Fetched ${_myTasks.length} my tasks ($stage, newest top)');
     } catch (e) {
       debugPrint('[TaskProvider ERROR] fetchMyTasks failed: $e');
       _error = e.toString().replaceAll('Exception: ', '');

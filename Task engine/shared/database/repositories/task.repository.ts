@@ -62,11 +62,17 @@ export class TaskRepository {
             ...statuses.map(s => s.toLowerCase()),
             ...statuses.map(s => s.toUpperCase())
         ]));
-        return this.repository.find({ where: { status: In(allVariations) } });
+        return this.repository.find({
+            where: { status: In(allVariations) },
+            order: { createdAt: 'DESC' },
+        });
     }
 
     async findByWorker(workerId: string): Promise<Task[]> {
-        return this.repository.find({ where: { assignedTo: workerId } });
+        return this.repository.find({
+            where: { assignedTo: workerId },
+            order: { createdAt: 'DESC' },
+        });
     }
 
     async findAvailableForAssignment(): Promise<Task[]> {
@@ -77,6 +83,7 @@ export class TaskRepository {
                 { status: TaskStatus.DRAFT, assignedTo: null },
                 { status: 'draft' as any, assignedTo: null },
             ],
+            order: { createdAt: 'DESC' },
         });
     }
 
@@ -89,6 +96,7 @@ export class TaskRepository {
         ]));
         return this.repository.find({
             where: { assignedTo: workerId, status: In(allVariations) },
+            order: { createdAt: 'DESC' },
         });
     }
 
@@ -117,7 +125,10 @@ export class TaskRepository {
     }
 
     async findByOrderId(orderId: string): Promise<Task[]> {
-        return this.repository.find({ where: { orderId } });
+        return this.repository.find({
+            where: { orderId },
+            order: { createdAt: 'DESC' },
+        });
     }
 
     async findAssignedTasks(): Promise<Task[]> {

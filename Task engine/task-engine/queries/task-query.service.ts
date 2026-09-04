@@ -92,14 +92,29 @@ export class TaskQueryService {
             }
         }
 
+        // Guarantee newest tasks are always at the top
+        distinctTasks.sort((a, b) => {
+            const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return timeB - timeA;
+        });
+
         return distinctTasks;
     }
 
     async getWorkerTasks(workerId: string, status?: string): Promise<Task[]> {
+        let tasks: Task[];
         if (status) {
-            return this.taskRepository.findByWorkerAndStatus(workerId, status);
+            tasks = await this.taskRepository.findByWorkerAndStatus(workerId, status);
+        } else {
+            tasks = await this.taskRepository.findByWorker(workerId);
         }
 
-        return this.taskRepository.findByWorker(workerId);
+        // Guarantee newest tasks appear on top
+        return tasks.sort((a, b) => {
+            const timeA = (a.updatedAt || a.createdAt) ? new Date(a.updatedAt || a.createdAt).getTime() : 0;
+            const timeB = (b.updatedAt || b.createdAt) ? new Date(b.updatedAt || b.createdAt).getTime() : 0;
+            return timeB - timeA;
+        });
     }
 }

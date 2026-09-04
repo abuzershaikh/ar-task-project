@@ -28,6 +28,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
     try {
       final rawList = await ApiService.getNotifications();
       final parsed = rawList.map((j) => WorkerNotificationModel.fromJson(j)).toList();
+      parsed.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       if (mounted) {
         setState(() {
           _notifications = parsed;
