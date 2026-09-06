@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Contact Us</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon/android-chrome-512x512.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --border: #1e1e2e;
+      --accent: #6c63ff;
+      --accent-glow: rgba(108, 99, 255, 0.25);
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --success: #22d3a5;
+      --error: #ff5f73;
+      --input-bg: #0e0e18;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background blobs */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px; left: -200px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -150px; right: -150px;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(34,211,165,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 540px;
+    }
+
+    /* Header */
+    .header {
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(108,99,255,0.12);
+      border: 1px solid rgba(108,99,255,0.3);
+      color: var(--accent);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 1.2rem;
+    }
+
+    .badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2rem, 5vw, 2.8rem);
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    h1 span {
+      color: var(--accent);
+      position: relative;
+    }
+
+    .subtitle {
+      margin-top: 0.7rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.6s 0.1s ease both;
+      box-shadow: 0 0 60px rgba(108,99,255,0.05);
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0.5;
+    }
+
+    /* Form Groups */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      resize: none;
+      appearance: none;
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: var(--muted);
+      opacity: 0.6;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    select option { background: #111118; }
+
+    textarea { height: 130px; line-height: 1.6; }
+
+    /* Submit Button */
+    .btn {
+      width: 100%;
+      padding: 1rem;
+      margin-top: 0.5rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(108,99,255,0.4);
+    }
+
+    .btn:active { transform: translateY(0); }
+
+    .btn .btn-text { transition: opacity 0.2s; }
+
+    /* Ripple */
+    .btn .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transform: scale(0);
+      animation: ripple-anim 0.5s linear;
+      pointer-events: none;
+    }
+    @keyframes ripple-anim {
+      to { transform: scale(4); opacity: 0; }
+    }
+
+    /* Success State */
+    .success-state {
+      display: none;
+      text-align: center;
+      padding: 2rem 1rem;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .success-icon {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: rgba(34, 211, 165, 0.12);
+      border: 2px solid var(--success);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.2rem;
+      font-size: 1.6rem;
+      animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    @keyframes scaleIn {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .success-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--success);
+      margin-bottom: 0.5rem;
+    }
+
+    .success-msg {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .reset-btn {
+      margin-top: 1.5rem;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 0.6rem 1.4rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .reset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Validation errors */
+    .err-msg {
+      font-size: 0.75rem;
+      color: var(--error);
+      margin-top: 5px;
+      display: none;
+    }
+    input.invalid, textarea.invalid, select.invalid {
+      border-color: var(--error);
+    }
+
+    @media (max-width: 480px) {
+      .form-row { grid-template-columns: 1fr; }
+      .card { padding: 1.8rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <div class="header">
+    <div class="badge">Get In Touch</div>
+    <h1>Let's <span>Connect</span></h1>
+    <p class="subtitle">We'd love to hear from you!</p>
+  </div>
+
+  <div class="card">
+
+    <!-- FORM -->
+    <form id="contactForm" novalidate>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="fname">First Name</label>
+          <input type="text" id="fname" placeholder="Adullha" autocomplete="off"/>
+          <div class="err-msg" id="fnameErr">Please enter your first name.</div>
+        </div>
+        <div class="form-group">
+          <label for="lname">Last Name</label>
+          <input type="text" id="lname" placeholder="Khan" autocomplete="off"/>
+          <div class="err-msg" id="lnameErr">Please enter your last name.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="off"/>
+        <div class="err-msg" id="emailErr">Enter a valid email address.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="subject">Subject</label>
+        <select id="subject">
+          <option value="" disabled selected>Select a topic...</option>
+          <option value="project">Project Inquiry</option>
+          <option value="collab">Report a bug</option>
+          <option value="support">Support</option>
+          <option value="other">Other</option>
+        </select>
+        <div class="err-msg" id="subjectErr">Please select a subject.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="message">Message</label>
+        <textarea id="message" placeholder="Tell us what's on your mind..."></textarea>
+        <div class="err-msg" id="messageErr">Please enter a message.</div>
+      </div>
+
+      <button type="submit" class="btn">
+        <span class="btn-text">Send Message →</span>
+      </button>
+
+    </form>
+
+    <!-- SUCCESS STATE (hidden by default) -->
+    <div class="success-state" id="successState">
+      <div class="success-icon">✓</div>
+      <div class="success-title">Message Sent!</div>
+      <p class="success-msg">Thanks for reaching out. We'll get back to you within 24 hours.</p>
+      <button class="reset-btn" id="resetBtn">Send Another →</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById('contactForm');       // grab the form element
+  const successState = document.getElementById('successState'); // grab success div
+  const resetBtn = document.getElementById('resetBtn');      // grab reset button
+
+  // --- Validation helpers ---
+  function showErr(id, errId) {
+    document.getElementById(id).classList.add('invalid');    // red border on invalid field
+    document.getElementById(errId).style.display = 'block';  // show error text
+  }
+
+  function clearErr(id, errId) {
+    document.getElementById(id).classList.remove('invalid'); // remove red border
+    document.getElementById(errId).style.display = 'none';   // hide error text
+  }
+
+  // Clear errors on typing/change
+  ['fname','lname','email','subject','message'].forEach(id => {
+    const el = document.getElementById(id);                  // get each input
+    el.addEventListener('input', () => clearErr(id, id + 'Err'));   // clear on type
+    el.addEventListener('change', () => clearErr(id, id + 'Err')); // clear on change (for select)
+  });
+
+  // --- Ripple effect on button click ---
+  document.querySelector('.btn').addEventListener('click', function(e) {
+    const ripple = document.createElement('span');           // create ripple span
+    ripple.className = 'ripple';                             // assign class
+    const rect = this.getBoundingClientRect();               // get button position
+    const size = Math.max(rect.width, rect.height);          // ripple size
+    ripple.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+    this.appendChild(ripple);                                // add ripple to button
+    setTimeout(() => ripple.remove(), 600);                  // remove after animation
+  });
+
+  // --- Form submit ---
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();                                       // stop page reload
+
+    let valid = true;                                         // track overall validity
+
+    const fname = document.getElementById('fname').value.trim();    // get first name
+    const lname = document.getElementById('lname').value.trim();    // get last name
+    const email = document.getElementById('email').value.trim();    // get email
+    const subject = document.getElementById('subject').value;       // get subject
+    const message = document.getElementById('message').value.trim(); // get message
+
+    // Validate each field
+    if (!fname) { showErr('fname','fnameErr'); valid = false; }
+    if (!lname) { showErr('lname','lnameErr'); valid = false; }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('email','emailErr'); valid = false; } // basic email regex
+    if (!subject) { showErr('subject','subjectErr'); valid = false; }
+    if (!message) { showErr('message','messageErr'); valid = false; }
+
+    if (!valid) return;                                       // stop if any field invalid
+
+    // Simulate submit (replace with fetch() to your Flask API later)
+    const btn = document.querySelector('.btn');
+    btn.disabled = true;                                      // disable to prevent double submit
+    btn.querySelector('.btn-text').textContent = 'Sending...'; // loading text
+
+    setTimeout(() => {
+      // Clear all fields
+      document.getElementById('fname').value = '';
+      document.getElementById('lname').value = '';
+      document.getElementById('email').value = '';
+      document.getElementById('subject').value = '';
+      document.getElementById('message').value = '';
+
+      // Show success, hide form
+      form.style.display = 'none';                           // hide the form
+      successState.style.display = 'block';                  // show success message
+
+      btn.disabled = false;                                   // re-enable for reset
+      btn.querySelector('.btn-text').textContent = 'Send Message →'; // restore text
+    }, 1200);                                                 // fake 1.2s delay (remove with real API)
+  });
+
+  // --- Reset button: show form again ---
+  resetBtn.addEventListener('click', () => {
+    successState.style.display = 'none';                     // hide success
+    form.style.display = 'block';                            // show form again
+  });
+</script>
+</body>
+</html>

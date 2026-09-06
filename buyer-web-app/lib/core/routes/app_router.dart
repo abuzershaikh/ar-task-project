@@ -24,12 +24,14 @@ import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/support/presentation/pages/support_page.dart';
 import '../../features/support/presentation/pages/help_center_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../shared/presentation/pages/splash_page.dart';
 import '../../shared/presentation/pages/main_navigation_page.dart';
 
 class AppRouter {
   // Route Names
   static const String splash = '/';
+  static const String landing = '/landing';
   static const String login = '/login';
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
@@ -81,6 +83,9 @@ class AppRouter {
     switch (routeSettings.name) {
       case splash:
         return MaterialPageRoute(builder: (_) => const SplashPage());
+      
+      case landing:
+        return MaterialPageRoute(builder: (_) => const ReviewsGatewayLandingPage());
       
       case login:
         return MaterialPageRoute(builder: (_) => const LoginPage());

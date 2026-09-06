@@ -123,9 +123,9 @@ class _SplashPageState extends State<SplashPage> {
       debugPrint('[SPLASH] Auth verification exception: $e');
     }
 
-    // 5. If no active session found, take user to login page
+    // 5. If no active session found, take user to landing page
     if (mounted) {
-      Navigator.pushReplacementNamed(context, AppRouter.login);
+      Navigator.pushReplacementNamed(context, AppRouter.landing);
     }
   }
 

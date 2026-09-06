@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8"> <!-- character encoding, always first -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- mobile responsive -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"> <!-- IE compatibility -->
+
+    <!-- ═══════════════════════════════════════════
+         PRIMARY SEO
+    ═══════════════════════════════════════════ -->
+    <title>ReviewsGateway | Build Trust & Grow with Authentic Reviews</title>
+    <meta name="description"
+        content="ReviewsGateway helps businesses collect authentic reviews, build online trust, and grow their reputation across Google, Trustpilot, Yelp & 50+ platforms.">
+    <meta name="keywords"
+        content="review management, online reputation, Google reviews, business reviews, reputation monitoring, customer feedback">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <!-- max-snippet & preview: better Google rich results -->
+    <meta name="author" content="Abdullah Shahid (iammafah) – Developer & Co-Founder of ReviewsGateway">
+    <meta name="creator" content="Abdullah Shahid – iammafah.site">
+    <link rel="author" href="https://iammafah.site/">
+    <link rel="canonical" href="https://www.reviewsgateway.in/"> <!-- prevents duplicate content penalty -->
+
+    <!-- ═══════════════════════════════════════════
+         OPEN GRAPH (Facebook, LinkedIn, WhatsApp)
+    ═══════════════════════════════════════════ -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ReviewsGateway">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:url" content="https://www.reviewsgateway.in/">
+    <meta property="og:title" content="ReviewsGateway | Build Trust & Grow with Authentic Reviews">
+    <meta property="og:description"
+        content="Build trust, collect authentic reviews and grow your online reputation with ReviewsGateway. Trusted by 1,000+ businesses.">
+    <meta property="og:image"
+        content="https://res.cloudinary.com/dytdjjw4r/image/upload/v1773758901/reviews_gate_ogimage_lfzxk6.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:alt" content="ReviewsGateway – Online Reputation Growth Platform">
+
+    <!-- ═══════════════════════════════════════════
+         TWITTER / X CARD
+    ═════════════════════════════════════���═════ -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@iammafah"> <!-- FIX: was missing, needed for Twitter attribution -->
+    <meta name="twitter:creator" content="@iammafah">
+    <meta name="twitter:title" content="ReviewsGateway – Grow Your Brand with Trust & Reviews">
+    <meta name="twitter:description"
+        content="Collect real reviews, build credibility and grow your business online with ReviewsGateway. Trusted by 1,000+ brands.">
+    <meta name="twitter:image"
+        content="https://res.cloudinary.com/dytdjjw4r/image/upload/v1773758901/reviews_gate_ogimage_lfzxk6.png">
+    <meta name="twitter:image:alt" content="ReviewsGateway – Online Reputation Platform">
+
+    <!-- ═══════════════════════════════════════════
+         PWA / MOBILE APP META
+    ═══════════════════════════════════════════ -->
+    <meta name="theme-color" content="#6366F1"> <!-- FIX: was #0B1A33, should match your brand primary -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ReviewsGateway"> <!-- FIX: was missing -->
+    <meta name="application-name" content="ReviewsGateway"> <!-- FIX: was missing, for Android -->
+
+    <!-- ═══════════════════════════════════════════
+         FAVICONS
+    ═══════════════════════════════════════════ -->
+    <link rel="icon" href="/favicon.ico" sizes="any"> <!-- FIX: added sizes="any" for better browser handling -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon/favicon-48x48.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon/favicon-96x96.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon/android-chrome-512x512.png">
+    <link rel="manifest" href="/site.webmanifest"> <!-- FIX: was missing — needed for PWA install prompt -->
+
+    <!-- ═══════════════════════════════════════════
+         PERFORMANCE — PRECONNECT & PRELOAD
+    ═══════════════════════════════════════════ -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://res.cloudinary.com">
+    <!-- FIX: preconnect to cloudinary for faster image load -->
+    <link rel="dns-prefetch" href="https://unpkg.com"> <!-- FIX: DNS prefetch for lucide CDN -->
+
+
+    <!-- ═══════════════════════════════════════════
+         FONTS
+    ═══════════════════════════════════════════ -->
+    <!-- FIX: added display=swap for better font loading performance (no FOIT) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- ═══════════════════════════════════════════
+         PRELOAD HERO IMAGE — critical for LCP score
+    ═══════════════════════════════════════════ -->
+    <link rel="preload" as="image"
+        href="https://res.cloudinary.com/dytdjjw4r/image/upload/v1773757511/ChatGPT_Image_Mar_17_2026_07_51_37_PM_ddqhl9.png"
+        fetchpriority="high"> <!-- FIX: preloading hero image improves Core Web Vitals LCP -->
+
+    <!-- ═══════════════════════════════════════════
+         STYLESHEET
+    ═══════════════════════════════════════════ -->
+    <link rel="stylesheet" href="./assetes/css/style.css">
+
+    <!-- ═══════════════════════════════════════════
+         SCHEMA — JSON-LD STRUCTURED DATA
+    ═══════════════════════════════════════════ -->
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+
+    {
+      "@type": "Organization",
+      "@id": "https://www.reviewsgateway.in/#organization",
+      "name": "ReviewsGateway",
+      "url": "https://www.reviewsgateway.in/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://www.reviewsgateway.in/favicon/android-chrome-192x192.png",
+        "width": 192,
+        "height": 192
+      },
+      "description": "ReviewsGateway helps businesses collect authentic reviews, build trust, and grow their online reputation across 50+ platforms.",
+      "foundingDate": "2026",
+      "numberOfEmployees": {
+        "@type": "QuantitativeValue",
+        "value": "2"
+      },
+      "areaServed": "Worldwide",
+      "founder": [
+        {
+          "@type": "Person",
+          "name": "Abdullah Shahid",
+          "url": "https://iammafah.site/"
+        },
+        {
+          "@type": "Person",
+          "name": "Sufiyan Shah"
+        }
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "url": "https://www.reviewsgateway.in/contact"
+      },
+      "sameAs": [
+        "https://github.com/iammafah",
+        "https://linkedin.com/in/iammafah",
+        "https://twitter.com/iammafah",
+        "https://www.facebook.com/iammafah",
+        "https://instagram.com/iammafah",
+        "https://www.youtube.com/@iammafah"
+      ]
+    },
+
+    {
+      "@type": "Person",
+      "@id": "https://iammafah.site/#developer",
+      "name": "Abdullah Shahid",
+      "alternateName": "iammafah",
+      "url": "https://iammafah.site/",
+      "jobTitle": ["Backend Developer", "Automation Engineer", "Web Developer", "Co-Founder"],
+      "worksFor": { "@id": "https://www.reviewsgateway.in/#organization" },
+      "sameAs": [
+        "https://github.com/iammafah",
+        "https://linkedin.com/in/iammafah",
+        "https://twitter.com/iammafah",
+        "https://www.facebook.com/iammafah",
+        "https://instagram.com/iammafah",
+        "https://www.youtube.com/@iammafah"
+      ]
+    },
+
+    {
+      "@type": "WebSite",
+      "@id": "https://www.reviewsgateway.in/#website",
+      "url": "https://www.reviewsgateway.in/",
+      "name": "ReviewsGateway",
+      "publisher": { "@id": "https://www.reviewsgateway.in/#organization" },
+      "creator": { "@id": "https://iammafah.site/#developer" },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://www.reviewsgateway.in/search?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    },
+
+    {
+      "@type": "WebPage",
+      "@id": "https://www.reviewsgateway.in/#homepage",
+      "url": "https://www.reviewsgateway.in/",
+      "name": "ReviewsGateway – Build Trust & Grow with Authentic Reviews",
+      "description": "ReviewsGateway helps businesses collect authentic reviews, build trust, and grow their online reputation.",
+      "isPartOf": { "@id": "https://www.reviewsgateway.in/#website" },
+      "about": { "@id": "https://www.reviewsgateway.in/#organization" },
+      "creator": { "@id": "https://iammafah.site/#developer" },
+      "breadcrumb": {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://www.reviewsgateway.in/"
+          }
+        ]
+      }
+    },
+
+    {
+      "@type": "ProfessionalService",
+      "@id": "https://www.reviewsgateway.in/#service",
+      "name": "ReviewsGateway",
+      "url": "https://www.reviewsgateway.in/",
+      "description": "Online reputation management and review growth service for businesses.",
+      "provider": { "@id": "https://www.reviewsgateway.in/#organization" },
+      "areaServed": "Worldwide",
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Reputation Services",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Free Growth Tools",
+              "url": "https://www.reviewsgateway.in/Free-tools/"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Google Reviews Growth",
+              "url": "https://www.reviewsgateway.in/services/google-reviews-growth/"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "App Install & Reviews",
+              "url": "https://www.reviewsgateway.in/services/app-install-reviews/"
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "Complete App Growth System",
+              "url": "https://www.reviewsgateway.in/services/reputation-monitoring/"
+            }
+          }
+        ]
+      }
+    },
+
+    {
+      "@type": "FAQPage",
+      "@id": "https://www.reviewsgateway.in/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Are the reviews and installs from real users?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes — 100%. All reviews come from real Google accounts and all installs come from real
+                            devices. We use natural drip delivery to keep everything safe and organic-looking."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I get started?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We offer three core services — Google Reviews Growth, App Install &amp; Reviews, and Complete
+                            App Growth System. We also provide free tools like App Performance Checker and Google
+                            Reviews Checker."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How long does delivery take?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Most orders are delivered within 7–14 days depending on the package. The Complete App Growth
+                            System takes 10–21 days. All services are dripped naturally — not delivered all at once."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is it safe for my Google Business Profile or Play Store app?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. We follow safe delivery practices — real accounts, natural timing, gradual drip. We
+                            never use bots or fake profiles. Your account and app are always protected."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need to share my password or account access?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. We only need your Google Business Profile link or Play Store app link. No password, no
+                            login, no account access required — ever."
+          }
+        }
+      ]
+    }
+
+  ]
+}
+</script>
+
+    <!-- Lucide icons loaded last in head so it doesn't block render -->
+    <script src="https://unpkg.com/lucide@latest" defer></script> <!-- FIX: added defer — was blocking render -->
+
+</head>
+
+<body>
+
+    <!-- ═══════════════════════════════════════════
+         HEADER (loaded via JS)
+    ═══════════════════════════════════════════ -->
+    <div id="header" role="banner"></div>
+
+    <!-- ═══════════════════════════════════════════
+         HERO SECTION
+    ═══════════════════════════════════════════ -->
+    <section class="hero" aria-label="Hero – Build Online Reputation">
+
+        <div class="hero-div">
+
+            <div class="hero-text">
+
+                <p class="trusted" aria-label="Social proof" style="--i:2">
+                    <svg class="star" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"
+                        focusable="false"> <!-- FIX: aria-hidden on decorative SVG -->
+                        <path d="M12 2l2.9 6.9L22 9.3l-5 4.8L18.2 22 12 18.3 5.8 22 7 14.1 2 9.3l7.1-.4L12 2z" />
+                    </svg>
+                    Trusted by 1,000+ Businesses
+                </p>
+
+
+                <h1 class="h1-hero" style="--i:1">
+                    We Build Online <span class="highlight">Reputation</span> &amp; Authority for Brands
+                </h1>
+
+                <p class="p-hero" style="--i:2">
+                    We help brands, coaches, businesses, and professionals earn trust,
+                    reviews, and visibility that drive growth.
+                </p>
+
+                <div class="hero-buttons" style="--i:3">
+                    <a href="/services/" class="navbar-btn" aria-label="Book a free audit with ReviewsGateway">
+
+                        Launch your campaign
+                        <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true" focusable="false">
+                            <path d="M5 12h14" />
+                            <path d="M13 5l7 7-7 7" />
+                        </svg>
+                    </a>
+                    <a href="/services/" class="secondary-btn" aria-label="View all our services">
+
+                        Our Services
+                    </a>
+                </div>
+
+            </div>
+
+            <div class="hero-image" aria-hidden="true"> <!-- FIX: added aria-hidden to decorative image -->
+
+                <img src="https://res.cloudinary.com/dytdjjw4r/image/upload/v1773757511/ChatGPT_Image_Mar_17_2026_07_51_37_PM_ddqhl9.png"
+                    alt="ReviewsGateway – Online reputation management illustration" width="600" height="500"
+                    loading="eager" fetchpriority="high" decoding="async">
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         TRUST MARQUEE
+    ═══════════════════════════════════════════ -->
+    <section class="trust" id="trust" aria-label="Trusted by brands">
+
+        <p class="trust-title">
+            Trusted by fast-moving brands &amp; agencies worldwide
+        </p>
+
+        <div class="trust-wrapper" role="marquee" aria-label="Scrolling list of partner brands">
+
+            <div class="trust-track" aria-hidden="true">
+                <span>WealthMize</span>
+                <span>iammafah</span>
+                <span>AutosaveContact</span>
+                <span>Chatpromo</span>
+                <span>Hostnet</span>
+                <!-- duplicated for infinite scroll effect -->
+                <span>AutosaveContact</span>
+                <span>Chatpromo</span>
+                <span>iammafah</span>
+                <span>WealthMize</span>
+                <span>Hostnet</span>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         FEATURES / SERVICES
+    ═══════════════════════════════════════════ -->
+    <section class="features" aria-labelledby="paid-services-heading">
+        <div class="features-container">
+            <p class="section-tag" aria-hidden="true">OUR SERVICES</p>
+            <h2 class="section-title" id="tools-heading">
+                Powerful Growth Solutions That Drive Real Results
+            </h2>
+
+
+            <div class="feature-grid" role="list">
+                <a href="/Free-tools/" class="feature-card" role="listitem" aria-label="Free growth tools">
+                    <div class="feature-icon" aria-hidden="true">
+                        <i data-lucide="gift"></i>
+                    </div>
+                    <h3>Free Growth Tools</h3>
+                    <p>Start instantly with powerful free tools to audit your app, analyze Google reviews, and uncover
+                        growth opportunities — no signup, no cost, just real insights.</p>
+                    <div class="feature-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 60 24" fill="none">
+                            <path d="M2 12H52" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                            <path d="M44 4L52 12L44 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                </a>
+
+                <!-- 1. Google Reviews Growth -->
+                <a href="/services/google-reviews-growth/" class="feature-card" role="listitem"
+                    aria-label="Google Reviews Growth service">
+                    <div class="feature-icon" aria-hidden="true">
+                        <i data-lucide="star"></i>
+                    </div>
+                    <h3>Google Reviews Growth</h3>
+                    <p>Boost trust and local rankings with authentic Google reviews. Turn more visitors into paying
+                        customers with stronger social proof and credibility.</p>
+                    <div class="feature-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 60 24" fill="none">
+                            <path d="M2 12H52" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                            <path d="M44 4L52 12L44 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                </a>
+
+                <!-- 2. App Install & Reviews -->
+                <a href="/services/app-install-reviews/" class="feature-card" role="listitem"
+                    aria-label="App Install and Reviews service">
+                    <div class="feature-icon" aria-hidden="true">
+                        <i data-lucide="smartphone"></i>
+                    </div>
+                    <h3>App Install &amp; Reviews</h3>
+                    <p>Scale your app with real users, higher rankings, and consistent installs. Designed to improve
+                        visibility, retention, and long-term growth.</p>
+                    <div class="feature-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 60 24" fill="none">
+                            <path d="M2 12H52" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                            <path d="M44 4L52 12L44 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                </a>
+
+                <!-- 3. Complete App Growth -->
+                <a href="/services/complete-app-growth/" class="feature-card" role="listitem"
+                    aria-label="Complete App Growth System service">
+                    <div class="feature-icon" aria-hidden="true">
+                        <i data-lucide="rocket"></i>
+                    </div>
+                    <h3>Complete App Growth System</h3>
+                    <p>All-in-one growth engine combining installs, reviews, and engagement strategies to maximize
+                        visibility, authority, and revenue.</p>
+                    <div class="feature-arrow" aria-hidden="true">
+                        <svg viewBox="0 0 60 24" fill="none">
+                            <path d="M2 12H52" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                            <path d="M44 4L52 12L44 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                </a>
+
+                <p class="faq-more">
+                    More services?
+                    <a href="/services/">View all →</a>
+                </p>
+
+            </div>
+
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         STATS SECTION
+    ═══════════════════════════════════════════ -->
+    <section class="stats" aria-label="Business statistics">
+
+        <div class="stats-container">
+
+            <div class="stat-box">
+                <h3>1K+</h3>
+                <p>Businesses Served</p>
+            </div>
+
+            <div class="stat-box">
+                <h3>50K+</h3>
+                <p>Reviews Generated</p>
+            </div>
+
+            <div class="stat-box">
+                <h3>4.8★</h3>
+                <p>Average Rating Improved</p>
+            </div>
+
+            <div class="stat-box">
+                <h3>10X</h3>
+                <p>Growth Achieved</p>
+            </div>
+
+        </div>
+
+
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         HOW IT WORKS
+    ═══════════════════════════════════════════ -->
+    <section class="how-it-works" aria-labelledby="hiw-heading">
+
+        <p class="section-tag" aria-hidden="true">HOW IT WORKS</p>
+
+        <h2 class="section-title" id="hiw-heading">
+            Launch Your Reviews Campaign in 4 Easy Steps
+        </h2>
+
+        <div class="steps-container" role="list">
+
+            <div class="step-box" role="listitem">
+                <div class="icon-box" aria-hidden="true">
+                    <span class="step-number">1</span>
+                    <i data-lucide="clipboard-list"></i>
+                </div>
+                <h3>Choose Your Plan</h3>
+                <p>Find the ideal review package that fits your business needs.</p>
+            </div>
+
+            <div class="step-box" role="listitem">
+                <div class="icon-box" aria-hidden="true">
+                    <span class="step-number">2</span>
+                    <i data-lucide="shopping-cart"></i>
+                </div>
+                <h3>Add to Cart</h3>
+                <p>Effortlessly add your plan — no hassle, just a fast click.</p>
+            </div>
+
+            <div class="step-box" role="listitem">
+                <div class="icon-box" aria-hidden="true">
+                    <span class="step-number">3</span>
+                    <i data-lucide="credit-card"></i>
+                </div>
+                <h3>Secure Checkout</h3>
+                <p>Complete your purchase with confidence using easy payment options.</p>
+            </div>
+
+            <div class="step-box" role="listitem">
+                <div class="icon-box" aria-hidden="true">
+                    <span class="step-number">4</span>
+                    <i data-lucide="rocket"></i>
+                </div>
+                <h3>Watch Reviews Grow</h3>
+                <p>Sit back as authentic reviews amplify trust and growth.</p>
+            </div>
+
+        </div>
+
+    </section>
+    <!-- faq section -->
+
+    <section class="faq-section" aria-labelledby="faq-heading">
+
+        <div class="faq-container">
+
+            <p class="section-tag" aria-hidden="true">FAQ</p>
+
+            <h2 class="section-title" id="faq-heading">
+                Frequently Asked Questions
+            </h2>
+
+            <div class="faq-list" role="list">
+
+                <!-- Item 1 -->
+                <div class="faq-item" role="listitem">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>What services do you offer?</span>
+                        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>We offer three core services — Google Reviews Growth, App Install &amp; Reviews, and Complete
+                            App Growth System. We also provide free tools like App Performance Checker and Google
+                            Reviews Checker.</p>
+                    </div>
+                </div>
+
+                <!-- Item 2 -->
+                <div class="faq-item" role="listitem">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>Are the reviews and installs from real users?</span>
+                        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes — 100%. All reviews come from real Google accounts and all installs come from real
+                            devices. We use natural drip delivery to keep everything safe and organic-looking.</p>
+                    </div>
+                </div>
+
+                <!-- Item 3 -->
+                <div class="faq-item" role="listitem">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>How long does delivery take?</span>
+                        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Most orders are delivered within 7–14 days depending on the package. The Complete App Growth
+                            System takes 10–21 days. All services are dripped naturally — not delivered all at once.</p>
+                    </div>
+                </div>
+
+                <!-- Item 4 -->
+                <div class="faq-item" role="listitem">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>Is it safe for my Google Business Profile or Play Store app?</span>
+                        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes. We follow safe delivery practices — real accounts, natural timing, gradual drip. We
+                            never use bots or fake profiles. Your account and app are always protected.</p>
+                    </div>
+                </div>
+
+                <!-- Item 5 -->
+                <div class="faq-item" role="listitem">
+                    <button class="faq-question" aria-expanded="false">
+                        <span>Do I need to share my password or account access?</span>
+                        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </button>
+                    <div class="faq-answer">
+                        <p>No. We only need your Google Business Profile link or Play Store app link. No password, no
+                            login, no account access required — ever.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- view all link -->
+            <p class="faq-more">
+                Have more questions?
+                <a href="/faq/">View all FAQs →</a>
+            </p>
+
+        </div>
+
+    </section>
+
+
+    <!-- ═══════════════════════════════════════════
+         ABOUT SECTION
+    ═══════════════════════════════════════════ -->
+    <section class="about" id="about" aria-labelledby="about-heading">
+
+        <div class="about-container">
+
+            <div class="about-text">
+
+                <span class="about-tag" aria-hidden="true">ABOUT US</span>
+
+                <h2 class="about-title" id="about-heading">
+                    Building Trust, Not Just Reviews
+                </h2>
+
+                <p>
+                    ReviewsGateway was founded with a simple belief: your online reputation is your most valuable
+                    business asset. In today's digital-first world, what people say about you online determines whether
+                    new customers choose you — or your competitor.
+                </p>
+
+                <p>
+                    Our team of reputation strategists, content creators, and digital marketers work together to help
+                    brands take control of their narrative across Google, Trustpilot, Yelp, and 50+ review platforms.
+                </p>
+
+                <p>
+                    From startups to established enterprises, we've helped over 1,000 businesses increase their star
+                    ratings, generate authentic reviews, and turn their online presence into a competitive advantage.
+                </p>
+
+            </div>
+
+            <div class="about-stats">
+
+                <div class="stat-card">
+                    <h3>5+</h3>
+                    <p>Years Experience</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3>98%</h3>
+                    <p>Client Retention</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3>24/7</h3>
+                    <p>Support System</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3>AI Powered</h3>
+                    <p>Review Strategy</p>
+                </div>
+
+            </div>
+
+            <div class="about-image">
+
+                <img src="https://res.cloudinary.com/dytdjjw4r/image/upload/v1774201838/review-gateway-main_udpawu.png"
+                    alt="ReviewsGateway team working on reputation strategies" width="500" height="420" loading="lazy"
+                    decoding="async">
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         TESTIMONIALS
+    ═══════════════════════════════════════════ -->
+    <section class="testimonials" aria-labelledby="testimonials-heading">
+
+        <span class="testimonial-tag" aria-hidden="true">TESTIMONIALS</span>
+
+        <h2 class="testimonial-title" id="testimonials-heading">What They Say About Us</h2>
+
+        <div class="testimonial-grid" role="list">
+
+            <div class="testimonial-card" role="listitem" itemscope itemtype="https://schema.org/Review">
+
+                <div class="stars" aria-label="5 out of 5 stars" role="img">
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                </div>
+                <meta itemprop="reviewRating" content="5">
+                <p class="testimonial-text" itemprop="reviewBody">
+                    "Our Google reviews increased significantly within a few weeks. The team handled everything
+                    professionally and helped our business build real trust online."
+                </p>
+                <div class="testimonial-user" itemprop="author" itemscope itemtype="https://schema.org/Person">
+                    <div class="avatar">
+                        <img src="https://res.cloudinary.com/dytdjjw4r/image/upload/v1778793422/young-bearded-man-with-striped-shirt_273609-5677_hhor86.avif" alt="Sufiyan Shah" width="50" class="testimonial-img"
+                            height="50" loading="lazy">
+                    </div>
+                    <div>
+                        <h4 itemprop="name">Raju Sharma</h4>
+                        <span>Agency Owner</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card" role="listitem" itemscope itemtype="https://schema.org/Review">
+                <div class="stars" aria-label="5 out of 5 stars" role="img">
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                </div>
+                <meta itemprop="reviewRating" content="5">
+                <p class="testimonial-text" itemprop="reviewBody">
+                    "They helped us improve our online reputation across multiple platforms. Our ratings improved and
+                    customers started trusting our brand more."
+                </p>
+                <div class="testimonial-user" itemprop="author" itemscope itemtype="https://schema.org/Person">
+                    <div class="avatar">
+                        <img src="https://res.cloudinary.com/dytdjjw4r/image/upload/q_auto/f_auto/v1776434064/istockphoto-1144909099-612x612_jmg6ve.jpg" alt="Priya Mehta" width="50" class="testimonial-img"
+                            height="50" loading="lazy">
+                    </div>
+                    <div>
+                        <h4 itemprop="name">Priya Mehta</h4>
+                        <span>Marketing Manager</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card" role="listitem" itemscope itemtype="https://schema.org/Review">
+                <div class="stars" aria-label="5 out of 5 stars" role="img">
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                </div>
+                <meta itemprop="reviewRating" content="5">
+                <p class="testimonial-text" itemprop="reviewBody">
+                    "The review strategy worked perfectly. We saw more positive feedback and better visibility on
+                    Google and Trustpilot."
+                </p>
+                <div class="testimonial-user" itemprop="author" itemscope itemtype="https://schema.org/Person">
+                    <div class="avatar">
+                        <img src="https://res.cloudinary.com/dytdjjw4r/image/upload/q_auto/f_auto/v1776434064/istockphoto-1304581885-612x612_ruwiff.jpg" alt="Simran Kaur" width="50" class="testimonial-img"
+                            height="50" loading="lazy">
+                    </div>
+                    <div>
+                        <h4 itemprop="name">Simran Kaur</h4>
+                        <span>eCommerce Founder</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card" role="listitem" itemscope itemtype="https://schema.org/Review">
+                <div class="stars" aria-label="5 out of 5 stars" role="img">
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                    <i data-lucide="star" aria-hidden="true"></i>
+                </div>
+                <meta itemprop="reviewRating" content="5">
+                <p class="testimonial-text" itemprop="reviewBody">
+                    "Our brand credibility improved a lot after working with this team. More reviews meant more
+                    customers and stronger local presence."
+                </p>
+                <div class="testimonial-user" itemprop="author" itemscope itemtype="https://schema.org/Person">
+                    <div class="avatar">
+                        <img src="https://res.cloudinary.com/dytdjjw4r/image/upload/q_auto/f_auto/v1776434064/istockphoto-1384357176-612x612_ewyxsn.jpg" alt="Rahul Sharma" width="50" class="testimonial-img"
+                            height="50" loading="lazy">
+                    </div>
+                    <div>
+                        <h4 itemprop="name">Rahul Sharma</h4>
+                        <span>Startup Founder</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         CTA SECTION
+    ═══════════════════════════════════════════ -->
+    <section class="cta" aria-labelledby="cta-heading">
+
+        <h2 id="cta-heading">Get Your Free Online Reputation Audit Today</h2>
+
+        <p>
+            Discover how your brand is perceived online and get actionable insights to boost trust, reviews, and
+            visibility.
+        </p>
+
+        <a href="/coming-soon/index.html" class="navbar-btn cta-btn"
+            aria-label="Book your free reputation audit with ReviewsGateway">
+
+            Book Free Audit
+            <svg class="btn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="M5 12h14" />
+                <path d="M13 5l7 7-7 7" />
+            </svg>
+        </a>
+
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         FOOTER (loaded via JS)
+    ═══════════════════════════════════════════ -->
+    <div id="footer" role="contentinfo"></div>
+
+    <!-- ═══════════════════════════════════════════
+         SCRIPTS — at bottom for performance
+    ═══════════════════════════════════════════ -->
+
+    <script src="./assetes/js/main.js" defer></script>
+    <script defer> <!-- FIX: defer so lucide runs after DOM is ready -->
+        document.addEventListener('DOMContentLoaded', function () {
+            lucide.createIcons();
+        });
+        
+    </script>
+
+</body>
+
+</html>
