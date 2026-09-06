@@ -11,8 +11,8 @@ async function issueSSL() {
     });
     console.log('Connected!');
 
-    console.log('\nIssuing Free Let\'s Encrypt SSL Certificate for swiftcommerce.in...');
-    const cmd = 'certbot --nginx -d swiftcommerce.in -d www.swiftcommerce.in --non-interactive --agree-tos -m admin@swiftcommerce.in --redirect';
+    console.log('\nIssuing Free Let\'s Encrypt SSL Certificate for reviewsgateway.in and www.reviewsgateway.in...');
+    const cmd = 'certbot --nginx -d reviewsgateway.in -d www.reviewsgateway.in --non-interactive --agree-tos -m admin@reviewsgateway.in --redirect';
     console.log(`> ${cmd}`);
     const res = await ssh.execCommand(cmd);
     console.log(res.stdout);
@@ -22,7 +22,7 @@ async function issueSSL() {
       console.log('\n🎉 SSL Certificate Successfully Installed!');
       console.log('Enabling automatic renewal timer...');
       await ssh.execCommand('systemctl enable --now certbot-renew.timer || true');
-      console.log('Your website is now secure: https://swiftcommerce.in');
+      console.log('Your website is now secure: https://reviewsgateway.in');
     } else {
       console.log('\n⚠️ SSL Issuance not ready yet. Please wait for global DNS propagation to complete and re-run.');
     }
