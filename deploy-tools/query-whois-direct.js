@@ -30,10 +30,10 @@ async function run() {
   const servers = ['whois.registry.in', 'whois.nixi.in'];
   for (const s of servers) {
     console.log(`\n========================================`);
-    console.log(`Querying ${s} for swiftcommerce.in`);
+    console.log(`Querying ${s} for reviewsgateway.in`);
     console.log(`========================================`);
     try {
-      const res = await queryWhois(s, 'swiftcommerce.in');
+      const res = await queryWhois(s, 'reviewsgateway.in');
       console.log(res);
     } catch (e) {
       console.log('Error:', e.message);

@@ -5,15 +5,12 @@ async function inspect() {
   await ssh.connect({
     host: '65.20.77.112',
     username: 'root',
-    password: 'G8u{5m46buXgw',
+    password: 'G8u$RW{5m46buXgw',
   });
   console.log('Connected to VPS!');
   const commands = [
-    'nginx -t || true',
-    'ls -la /var/www/',
-    'ls -la /etc/nginx/conf.d/ || true',
-    'cat /etc/nginx/conf.d/*.conf || true',
-    'cat /etc/nginx/nginx.conf || true',
+    'ls -la /var/www/buyer-web',
+    'head -n 25 /var/www/buyer-web/index.html',
   ];
   for (const cmd of commands) {
     console.log('=== ' + cmd + ' ===');

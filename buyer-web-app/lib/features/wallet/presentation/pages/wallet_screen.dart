@@ -97,114 +97,116 @@ class _WalletScreenState extends State<WalletScreen>
               onRefresh: () async {
                 context.read<WalletBloc>().add(const RefreshWalletEvent());
               },
-              child: CustomScrollView(
-                controller: _scrollController,
-                slivers: [
-                  // Balance Card
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: BalanceCard(
-                        balance: loadedState.balance,
-                        onAddBalance: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AddBalanceScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-
-                  // Transactions Header
-                  SliverToBoxAdapter(
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                      child: const Text(
-                        'Transactions',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Transaction Tabs
-                  SliverToBoxAdapter(
-                    child: TabBar(
-                      controller: _tabController,
-                      isScrollable: true,
-                      labelColor: Theme.of(context).primaryColor,
-                      unselectedLabelColor: Colors.grey,
-                      indicatorColor: Theme.of(context).primaryColor,
-                      onTap: (index) {
-                        final type = _getTransactionType(index);
-                        context.read<WalletBloc>().add(
-                              GetTransactionsEvent(type: type),
-                            );
-                      },
-                      tabs: const [
-                        Tab(text: 'All'),
-                        Tab(text: 'Credits'),
-                        Tab(text: 'Debits'),
-                        Tab(text: 'Reserved'),
-                      ],
-                    ),
-                  ),
-
-                  // Transaction List
-                  if (loadedState.transactions.isEmpty)
-                    const SliverFillRemaining(
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.receipt_long_outlined,
-                              size: 64,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'No transactions yet',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.all(16),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            if (index < loadedState.transactions.length) {
-                              return TransactionListItem(
-                                transaction: loadedState.transactions[index],
-                              );
-                            } else if (loadedState.hasMore) {
-                              return const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: CircularProgressIndicator(),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: CustomScrollView(
+                    controller: _scrollController,
+                    slivers: [
+                      // Balance Card
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: BalanceCard(
+                            balance: loadedState.balance,
+                            onAddBalance: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const AddBalanceScreen(),
                                 ),
                               );
-                            }
-                            return const SizedBox.shrink();
-                          },
-                          childCount: loadedState.transactions.length +
-                              (loadedState.hasMore ? 1 : 0),
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                ],
+
+                      // Tabs for transaction types
+                      SliverToBoxAdapter(
+                        child: Container(
+                          color: Colors.white,
+                          child: TabBar(
+                            controller: _tabController,
+                            isScrollable: true,
+                            labelColor: Theme.of(context).primaryColor,
+                            unselectedLabelColor: Colors.grey,
+                            indicatorColor: Theme.of(context).primaryColor,
+                            onTap: (index) {
+                              context.read<WalletBloc>().add(
+                                    GetTransactionsEvent(
+                                      type: _getTransactionType(index),
+                                    ),
+                                  );
+                            },
+                            tabs: const [
+                              Tab(text: 'All'),
+                              Tab(text: 'Credits'),
+                              Tab(text: 'Debits'),
+                              Tab(text: 'Reserved'),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Transactions List Header
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+                          child: Text(
+                            'Recent Transactions',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Transactions List
+                      if (loadedState.transactions.isEmpty)
+                        const SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Text(
+                                'No transactions yet',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                if (index < loadedState.transactions.length) {
+                                  return TransactionListItem(
+                                    transaction: loadedState.transactions[index],
+                                  );
+                                } else if (loadedState.hasMore) {
+                                  return const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                              childCount: loadedState.transactions.length +
+                                  (loadedState.hasMore ? 1 : 0),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             );
           }

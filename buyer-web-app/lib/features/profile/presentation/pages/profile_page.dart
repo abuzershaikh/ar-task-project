@@ -115,10 +115,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 onRefresh: () async {
                   context.read<ProfileBloc>().add(RefreshProfileEvent());
                 },
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                  padding: EdgeInsets.zero,
-                  children: [
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1100),
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                      padding: EdgeInsets.zero,
+                      children: [
                     // Top Safe Area Header
                     SafeArea(
                       bottom: false,
@@ -289,7 +292,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 120),
                   ],
                 ),
-              );
+              ),
+            ),
+          );
             },
           ),
         ],

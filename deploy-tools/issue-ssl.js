@@ -11,7 +11,7 @@ async function issueSSL() {
     });
     console.log('Connected!');
 
-    const cmd = 'certbot --nginx -d reviewsgateway.in --non-interactive --agree-tos -m admin@reviewsgateway.in --redirect';
+    const cmd = 'certbot --nginx -d reviewsgateway.in -d www.reviewsgateway.in --expand --non-interactive --agree-tos -m admin@reviewsgateway.in --redirect';
     console.log(`> ${cmd}`);
     const res = await ssh.execCommand(cmd);
     console.log(res.stdout);

@@ -119,13 +119,18 @@ class _CampaignsViewState extends State<_CampaignsView> with SingleTickerProvide
                 final status = _statuses[_tabController.index];
                 context.read<CampaignsListBloc>().add(RefreshCampaignsListEvent(status: status));
               },
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: state.campaigns.length,
-                itemBuilder: (context, index) {
-                  final campaign = state.campaigns[index];
-                  return _buildCampaignCard(context, campaign);
-                },
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1200),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: state.campaigns.length,
+                    itemBuilder: (context, index) {
+                      final campaign = state.campaigns[index];
+                      return _buildCampaignCard(context, campaign);
+                    },
+                  ),
+                ),
               ),
             );
           }

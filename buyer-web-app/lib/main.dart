@@ -60,7 +60,7 @@ class MarketingProApp extends StatelessWidget {
         BlocProvider(create: (_) => getIt<ProfileBloc>()..add(LoadProfileEvent())),
       ],
       child: MaterialApp(
-        title: 'Marketing Pro',
+        title: 'ReviewsGateway | Buyer Portal',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,

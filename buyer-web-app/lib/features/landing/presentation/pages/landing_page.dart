@@ -418,6 +418,25 @@ class _ReviewsGatewayLandingPageState extends State<ReviewsGatewayLandingPage> {
                   ),
                 ),
               ] else ...[
+                // Direct Dashboard Button
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(AppRouter.mainNavigation);
+                  },
+                  icon: const Icon(Icons.dashboard_outlined, size: 16),
+                  label: const Text('Buyer Dashboard →'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: brandDark,
+                    side: const BorderSide(color: brandBorder, width: 1.5),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isDesktop ? 18 : 12,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
                 // Google Sign In CTA
                 ElevatedButton.icon(
                   onPressed: _isSigningIn ? null : _handleGoogleSignIn,
@@ -610,6 +629,22 @@ class _ReviewsGatewayLandingPageState extends State<ReviewsGatewayLandingPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 elevation: 3,
                 shadowColor: brandPrimary.withOpacity(0.5),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushNamed(AppRouter.mainNavigation);
+              },
+              icon: const Icon(Icons.dashboard_rounded, size: 18),
+              label: const Text(
+                'Open Buyer Dashboard',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
             OutlinedButton(

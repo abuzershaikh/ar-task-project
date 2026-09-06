@@ -279,39 +279,44 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   onRefresh: () async {
                     context.read<DashboardBloc>().add(LoadDashboardDataEvent());
                   },
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                    padding: EdgeInsets.zero,
-                    children: [
-                      // Header
-                      _buildTopHeader(context, d),
-                      const SizedBox(height: 16),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1240),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                        padding: EdgeInsets.zero,
+                        children: [
+                          // Header
+                          _buildTopHeader(context, d),
+                          const SizedBox(height: 16),
 
-                      // 3D Multi-Slide Carousel ("caroon")
-                      _build3DCarouselSection(),
-                      const SizedBox(height: 14),
+                          // 3D Multi-Slide Carousel ("caroon")
+                          _build3DCarouselSection(),
+                          const SizedBox(height: 14),
 
-                      // 3D Investment & Performance Overview Card
-                      _build3DInvestmentCard(context, d),
-                      const SizedBox(height: 24),
+                          // 3D Investment & Performance Overview Card
+                          _build3DInvestmentCard(context, d),
+                          const SizedBox(height: 24),
 
-                      // 3D Services Catalog Section (with clear explanations & beautiful transparent 3D icons)
-                      _buildServicesExplorerSection(context),
-                      const SizedBox(height: 24),
+                          // 3D Services Catalog Section (with clear explanations & beautiful transparent 3D icons)
+                          _buildServicesExplorerSection(context),
+                          const SizedBox(height: 24),
 
-                      // Live Active Campaigns Monitor
-                      if (d.recentCampaigns.isNotEmpty) ...[
-                        _buildRecentCampaignsSection(context, d.recentCampaigns),
-                        const SizedBox(height: 24),
-                      ],
+                          // Live Active Campaigns Monitor
+                          if (d.recentCampaigns.isNotEmpty) ...[
+                            _buildRecentCampaignsSection(context, d.recentCampaigns),
+                            const SizedBox(height: 24),
+                          ],
 
-                      // 3D Trust & Assurance Pillars
-                      _buildTrustAssuranceGrid(),
-                      const SizedBox(height: 36),
+                          // 3D Trust & Assurance Pillars
+                          _buildTrustAssuranceGrid(),
+                          const SizedBox(height: 36),
 
-                      // Bottom safe area padding
-                      SizedBox(height: MediaQuery.of(context).padding.bottom + 80),
-                    ],
+                          // Bottom safe area padding
+                          SizedBox(height: MediaQuery.of(context).padding.bottom + 80),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -560,10 +565,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // 3. 3D HERO CAROUSEL ("caroon") WITH AUTO-SLIDER & GLOW
   // ─────────────────────────────────────────────────────────────────────────────
   Widget _build3DCarouselSection() {
+    final isDesktop = MediaQuery.of(context).size.width >= 960;
+
     return Column(
       children: [
         SizedBox(
-          height: 195,
+          height: isDesktop ? 230 : 195,
           child: PageView.builder(
             controller: _carouselController,
             itemCount: _carouselSlides.length,
@@ -572,7 +579,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             },
             itemBuilder: (context, index) {
               final slide = _carouselSlides[index];
-              return _buildCarouselCard(slide);
+              return _buildCarouselCard(slide, isDesktop: isDesktop);
             },
           ),
         ),
@@ -609,7 +616,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildCarouselCard(Map<String, dynamic> slide) {
+  Widget _buildCarouselCard(Map<String, dynamic> slide, {bool isDesktop = false}) {
     final List<Color> gradientColors = slide['gradientColors'];
     final Color accentColor = slide['accentColor'];
 
@@ -650,14 +657,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
             // 3D Floating Platform Icon Illustration (Transparent Depth)
             Positioned(
-              right: 14,
-              bottom: 14,
+              right: isDesktop ? 28 : 14,
+              bottom: isDesktop ? 20 : 14,
               child: _build3DPlatformIllustration(slide['platform'], accentColor),
             ),
 
             // Content
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 16, 110, 16),
+              padding: EdgeInsets.fromLTRB(
+                isDesktop ? 28 : 18,
+                isDesktop ? 22 : 16,
+                isDesktop ? 180 : 110,
+                isDesktop ? 22 : 16,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -674,7 +686,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       slide['badge'],
                       style: GoogleFonts.outfit(
                         color: accentColor,
-                        fontSize: 9.5,
+                        fontSize: isDesktop ? 10.5 : 9.5,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.4,
                       ),
@@ -689,7 +701,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         slide['title'],
                         style: GoogleFonts.outfit(
                           color: Colors.white,
-                          fontSize: 16,
+                          fontSize: isDesktop ? 20 : 16,
                           fontWeight: FontWeight.w800,
                           height: 1.2,
                         ),
@@ -699,7 +711,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         slide['highlight'],
                         style: GoogleFonts.outfit(
                           color: accentColor,
-                          fontSize: 12,
+                          fontSize: isDesktop ? 13.5 : 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -710,7 +722,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.outfit(
                           color: Colors.white70,
-                          fontSize: 10,
+                          fontSize: isDesktop ? 12 : 10,
                           height: 1.3,
                         ),
                       ),
@@ -723,7 +735,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       Navigator.pushNamed(context, slide['route'] as String);
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isDesktop ? 18 : 14,
+                        vertical: isDesktop ? 9 : 7,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
@@ -740,7 +755,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         style: GoogleFonts.outfit(
                           color: const Color(0xFF0F172A),
                           fontWeight: FontWeight.w800,
-                          fontSize: 11,
+                          fontSize: isDesktop ? 12 : 11,
                         ),
                       ),
                     ),
@@ -1206,10 +1221,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         // Service Cards List
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: Column(
-            children: filteredServices.map((service) {
-              return _build3DServiceCard(context, service);
-            }).toList(),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isMultiCol = constraints.maxWidth >= 720;
+              if (isMultiCol) {
+                final cardWidth = (constraints.maxWidth - 16) / 2;
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 0,
+                  children: filteredServices.map((service) {
+                    return SizedBox(
+                      width: cardWidth,
+                      child: _build3DServiceCard(context, service),
+                    );
+                  }).toList(),
+                );
+              }
+              return Column(
+                children: filteredServices.map((service) {
+                  return _build3DServiceCard(context, service);
+                }).toList(),
+              );
+            },
           ),
         ),
       ],
@@ -1848,41 +1881,83 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 14),
 
-          // 2x2 Trust Grid
-          Row(
-            children: [
-              _buildTrustCard(
-                iconAsset: 'assets/icons/review.png',
-                title: 'Screenshot Audits',
-                desc: 'Every single task submitted with high-res photo proof',
-                color: const Color(0xFF38BDF8),
-              ),
-              const SizedBox(width: 10),
-              _buildTrustCard(
-                iconAsset: 'assets/icons/star.png',
-                title: 'Escrow Protected',
-                desc: '100% money back if tasks are not approved by you',
-                color: const Color(0xFF10B981),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _buildTrustCard(
-                iconAsset: 'assets/icons/marketing.png',
-                title: '60s Instant Dispatch',
-                desc: 'Automated queue sends orders to active micro-workers',
-                color: const Color(0xFFF59E0B),
-              ),
-              const SizedBox(width: 10),
-              _buildTrustCard(
-                iconAsset: 'assets/icons/mobile-chatting.png',
-                title: '24/7 VIP Support',
-                desc: 'Direct dedicated support for large enterprise campaigns',
-                color: const Color(0xFFA855F7),
-              ),
-            ],
+          // Responsive Trust Grid (4 columns on Desktop, 2x2 on Mobile)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isMultiCol = constraints.maxWidth >= 720;
+              if (isMultiCol) {
+                return Row(
+                  children: [
+                    _buildTrustCard(
+                      iconAsset: 'assets/icons/review.png',
+                      title: 'Screenshot Audits',
+                      desc: 'Every single task submitted with high-res photo proof',
+                      color: const Color(0xFF38BDF8),
+                    ),
+                    const SizedBox(width: 12),
+                    _buildTrustCard(
+                      iconAsset: 'assets/icons/star.png',
+                      title: 'Escrow Protected',
+                      desc: '100% money back if tasks are not approved by you',
+                      color: const Color(0xFF10B981),
+                    ),
+                    const SizedBox(width: 12),
+                    _buildTrustCard(
+                      iconAsset: 'assets/icons/marketing.png',
+                      title: '60s Instant Dispatch',
+                      desc: 'Automated queue sends orders to active micro-workers',
+                      color: const Color(0xFFF59E0B),
+                    ),
+                    const SizedBox(width: 12),
+                    _buildTrustCard(
+                      iconAsset: 'assets/icons/mobile-chatting.png',
+                      title: '24/7 VIP Support',
+                      desc: 'Direct dedicated support for large enterprise campaigns',
+                      color: const Color(0xFFA855F7),
+                    ),
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      _buildTrustCard(
+                        iconAsset: 'assets/icons/review.png',
+                        title: 'Screenshot Audits',
+                        desc: 'Every single task submitted with high-res photo proof',
+                        color: const Color(0xFF38BDF8),
+                      ),
+                      const SizedBox(width: 10),
+                      _buildTrustCard(
+                        iconAsset: 'assets/icons/star.png',
+                        title: 'Escrow Protected',
+                        desc: '100% money back if tasks are not approved by you',
+                        color: const Color(0xFF10B981),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildTrustCard(
+                        iconAsset: 'assets/icons/marketing.png',
+                        title: '60s Instant Dispatch',
+                        desc: 'Automated queue sends orders to active micro-workers',
+                        color: const Color(0xFFF59E0B),
+                      ),
+                      const SizedBox(width: 10),
+                      _buildTrustCard(
+                        iconAsset: 'assets/icons/mobile-chatting.png',
+                        title: '24/7 VIP Support',
+                        desc: 'Direct dedicated support for large enterprise campaigns',
+                        color: const Color(0xFFA855F7),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

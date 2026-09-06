@@ -650,28 +650,33 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        children: [
-          // Categories Accordion List
-          ...grouped.entries.map((entry) {
-            final cat = entry.key;
-            final services = entry.value;
-            final meta = categoryMeta[cat] ?? {
-              'icon': Icons.stars_rounded,
-              'color': const Color(0xFF6366F1),
-            };
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            children: [
+              // Categories Accordion List
+              ...grouped.entries.map((entry) {
+                final cat = entry.key;
+                final services = entry.value;
+                final meta = categoryMeta[cat] ?? {
+                  'icon': Icons.stars_rounded,
+                  'color': const Color(0xFF6366F1),
+                };
 
-            return CategoryAccordionCard(
-              categoryName: cat,
-              icon: meta['icon'] as IconData,
-              themeColor: meta['color'] as Color,
-              services: services,
-              initialExpanded: false, // All categories collapsed by default
-              onSelectService: (service) => _selectService(service),
-            );
-          }),
-        ],
+                return CategoryAccordionCard(
+                  categoryName: cat,
+                  icon: meta['icon'] as IconData,
+                  themeColor: meta['color'] as Color,
+                  services: services,
+                  initialExpanded: false, // All categories collapsed by default
+                  onSelectService: (service) => _selectService(service),
+                );
+              }),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -760,13 +765,16 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               // Target URL Card
               Container(
                 padding: const EdgeInsets.all(16),
@@ -1260,6 +1268,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }
