@@ -45,6 +45,22 @@ class _ReviewsGatewayLandingPageState extends State<ReviewsGatewayLandingPage> {
     FirebaseAuth.instance.authStateChanges().listen((user) {
       if (mounted) setState(() => _currentUser = user);
     });
+
+    if (kIsWeb) {
+      _checkRedirectResult();
+    }
+  }
+
+  Future<void> _checkRedirectResult() async {
+    try {
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.getRedirectResult();
+      if (userCredential.user != null) {
+        await _processSuccessfulAuth(userCredential.user!);
+      }
+    } catch (e) {
+      debugPrint('[REDIRECT RESULT] $e');
+    }
   }
 
   @override
@@ -64,6 +80,62 @@ class _ReviewsGatewayLandingPageState extends State<ReviewsGatewayLandingPage> {
     }
   }
 
+  Future<void> _processSuccessfulAuth(User firebaseUser) async {
+    final token = await firebaseUser.getIdToken();
+    final storage = getIt<SecureStorageService>();
+    final localStorage = getIt<LocalStorageService>();
+
+    if (token != null) {
+      await storage.saveAccessToken(token);
+      await localStorage.saveAccessToken(token);
+    }
+
+    final email = firebaseUser.email ?? '';
+    final name = firebaseUser.displayName ?? '';
+    final photo = firebaseUser.photoURL ?? '';
+
+    await storage.saveUserEmail(email);
+    await localStorage.saveUserEmail(email);
+    await storage.saveUserName(name);
+    await localStorage.saveUserName(name);
+    await storage.saveUserId(firebaseUser.uid);
+    await localStorage.saveUserId(firebaseUser.uid);
+
+    if (photo.isNotEmpty) {
+      await storage.saveUserPhoto(photo);
+      await localStorage.saveUserPhoto(photo);
+    }
+    await localStorage.saveIsLoggedIn(true);
+
+    // Sync with Firestore profile
+    final userData = await FirestoreService.syncUserProfile(
+      uid: firebaseUser.uid,
+      email: email,
+      displayName: name,
+      role: 'BUYER',
+    );
+
+    final String phone = userData['phone'] ?? '';
+    if (mounted) {
+      if (phone.isEmpty) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => UserProfileFormScreen(
+              uid: firebaseUser.uid,
+              initialName: userData['name'] ?? name,
+              email: email,
+              nextScreen: const MainNavigationPage(),
+            ),
+          ),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainNavigationPage()),
+        );
+      }
+    }
+  }
+
   Future<void> _handleGoogleSignIn() async {
     if (_currentUser != null) {
       Navigator.of(context).pushReplacement(
@@ -75,84 +147,39 @@ class _ReviewsGatewayLandingPageState extends State<ReviewsGatewayLandingPage> {
     setState(() => _isSigningIn = true);
 
     try {
+      final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+      googleProvider.addScope('email');
+      googleProvider.addScope('profile');
+      googleProvider.setCustomParameters({'prompt': 'select_account'});
+
       User? firebaseUser;
 
       if (kIsWeb) {
-        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-        googleProvider.addScope('email');
-        googleProvider.addScope('profile');
-        final UserCredential userCredential =
-            await FirebaseAuth.instance.signInWithPopup(googleProvider);
-        firebaseUser = userCredential.user;
+        try {
+          final UserCredential userCredential =
+              await FirebaseAuth.instance.signInWithPopup(googleProvider);
+          firebaseUser = userCredential.user;
+        } catch (popupError) {
+          debugPrint('[POPUP BLOCKED OR FAILED] Falling back to redirect: $popupError');
+          // If popup is blocked by browser or closed, fallback to full redirect flow
+          await FirebaseAuth.instance.signInWithRedirect(googleProvider);
+          return;
+        }
       } else {
-        // Fallback for non-web environments
-        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
         final UserCredential userCredential =
             await FirebaseAuth.instance.signInWithProvider(googleProvider);
         firebaseUser = userCredential.user;
       }
 
       if (firebaseUser != null) {
-        final token = await firebaseUser.getIdToken();
-        final storage = getIt<SecureStorageService>();
-        final localStorage = getIt<LocalStorageService>();
-
-        if (token != null) {
-          await storage.saveAccessToken(token);
-          await localStorage.saveAccessToken(token);
-        }
-
-        final email = firebaseUser.email ?? '';
-        final name = firebaseUser.displayName ?? '';
-        final photo = firebaseUser.photoURL ?? '';
-
-        await storage.saveUserEmail(email);
-        await localStorage.saveUserEmail(email);
-        await storage.saveUserName(name);
-        await localStorage.saveUserName(name);
-        await storage.saveUserId(firebaseUser.uid);
-        await localStorage.saveUserId(firebaseUser.uid);
-
-        if (photo.isNotEmpty) {
-          await storage.saveUserPhoto(photo);
-          await localStorage.saveUserPhoto(photo);
-        }
-        await localStorage.saveIsLoggedIn(true);
-
-        // Sync with Firestore profile
-        final userData = await FirestoreService.syncUserProfile(
-          uid: firebaseUser.uid,
-          email: email,
-          displayName: name,
-          role: 'BUYER',
-        );
-
-        final String phone = userData['phone'] ?? '';
-        if (mounted) {
-          if (phone.isEmpty) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) => UserProfileFormScreen(
-                  uid: firebaseUser!.uid,
-                  initialName: userData['name'] ?? name,
-                  email: email,
-                  nextScreen: const MainNavigationPage(),
-                ),
-              ),
-            );
-          } else {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const MainNavigationPage()),
-            );
-          }
-        }
+        await _processSuccessfulAuth(firebaseUser);
       }
     } catch (e) {
       debugPrint('[GOOGLE SIGN IN ERROR] $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Sign-in failed: ${e.toString()}'),
+            content: Text('Sign-in: ${e.toString()}'),
             backgroundColor: Colors.redAccent,
           ),
         );
