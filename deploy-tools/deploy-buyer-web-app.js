@@ -39,63 +39,6 @@ async function deploy() {
     await ssh.execCommand(`chown -R nginx:nginx ${remoteDir} || chown -R www-data:www-data ${remoteDir} || true`);
     await ssh.execCommand(`chmod -R 755 ${remoteDir}`);
 
-    // 4. Update Nginx configuration
-    const nginxConf = `server {
-    listen 80;
-    server_name reviewsgateway.in www.reviewsgateway.in;
-
-    root /var/www/buyer-web;
-    index index.html;
-
-    client_max_body_size 50M;
-
-    gzip on;
-    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    location /api/v1/ {
-        proxy_pass http://127.0.0.1:3000/api/v1/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_read_timeout 60;
-    }
-}
-
-server {
-    listen 3001;
-    server_name _;
-
-    root /var/www/buyer-web;
-    index index.html;
-
-    client_max_body_size 50M;
-
-    gzip on;
-    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    location /api/v1/ {
-        proxy_pass http://127.0.0.1:3000/api/v1/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_read_timeout 60;
-    }
-}
-`;
-
-    console.log('Writing Nginx config to /etc/nginx/conf.d/reviewsgateway.conf...');
-    await ssh.execCommand(`cat << 'EOF' > /etc/nginx/conf.d/reviewsgateway.conf\n${nginxConf}\nEOF`);
-
     console.log('Testing Nginx configuration...');
     const testNginx = await ssh.execCommand('nginx -t');
     console.log(testNginx.stdout || testNginx.stderr);

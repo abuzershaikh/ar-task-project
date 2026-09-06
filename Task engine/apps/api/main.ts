@@ -29,24 +29,24 @@ async function bootstrap() {
     app.use((req, res, next) => loggingMiddleware.use(req, res, next));
     // Rate limiting is handled by Nginx in production to support multi-process PM2
 
-    const allowedOrigins = process.env.CORS_ORIGINS 
-        ? process.env.CORS_ORIGINS.split(',') 
-        : [
-            'http://localhost:3000', 
-            'http://localhost:5173', // Vite default
-            'http://localhost:8080'
-          ]; // Default fallback for local dev if env not set
-
     app.enableCors({
         origin: (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-                callback(null, true);
-            } else {
-                callback(new Error('Not allowed by CORS'));
-            }
+            // Allow all origins (reflection for credentials support)
+            callback(null, true);
         },
         credentials: true,
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'X-Request-Id',
+            'x-user-email',
+            'x-user-id',
+            'x-user-role',
+            'Accept',
+            'Origin',
+            'X-Requested-With',
+        ],
         exposedHeaders: ['X-Request-Id'],
     });
 

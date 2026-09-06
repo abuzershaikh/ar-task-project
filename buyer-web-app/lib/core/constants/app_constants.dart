@@ -1,9 +1,19 @@
+import 'package:flutter/foundation.dart';
+
 class AppConstants {
   // API Configuration
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://65.20.77.112:3000/api/v1',
-  );
+  static String get baseUrl {
+    const envUrl = String.fromEnvironment('API_BASE_URL');
+    if (envUrl.isNotEmpty) return envUrl;
+    if (kIsWeb) {
+      final origin = Uri.base.origin;
+      // In web browser, use current origin so calls go through Nginx reverse proxy (/api/v1/)
+      if (origin.isNotEmpty && !origin.contains('localhost:')) {
+        return '$origin/api/v1';
+      }
+    }
+    return 'http://65.20.77.112:3000/api/v1';
+  }
   static const String apiVersion = 'v1';
   static const int connectTimeout = 30000;
   static const int receiveTimeout = 30000;

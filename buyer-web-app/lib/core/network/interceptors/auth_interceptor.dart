@@ -20,6 +20,7 @@ class AuthInterceptor extends Interceptor {
         options.headers['x-user-email'] = currentUser.email;
       }
       options.headers['x-user-id'] = currentUser.uid;
+      options.headers['x-user-role'] = 'BUYER';
       final token = await currentUser.getIdToken();
       if (token != null) {
         options.headers['Authorization'] = 'Bearer $token';
@@ -30,6 +31,7 @@ class AuthInterceptor extends Interceptor {
       final userId = await _secureStorage.getUserId() ?? localStorage.getUserId();
       final userEmail = await _secureStorage.getUserEmail() ?? localStorage.getUserEmail();
 
+      options.headers['x-user-role'] = 'BUYER';
       if (userId != null && userId.isNotEmpty) {
         options.headers['x-user-id'] = userId;
       }

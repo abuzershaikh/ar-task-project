@@ -11,8 +11,7 @@ async function issueSSL() {
     });
     console.log('Connected!');
 
-    console.log('\nIssuing Free Let\'s Encrypt SSL Certificate for reviewsgateway.in and www.reviewsgateway.in...');
-    const cmd = 'certbot --nginx -d reviewsgateway.in -d www.reviewsgateway.in --non-interactive --agree-tos -m admin@reviewsgateway.in --redirect';
+    const cmd = 'certbot --nginx -d reviewsgateway.in --non-interactive --agree-tos -m admin@reviewsgateway.in --redirect';
     console.log(`> ${cmd}`);
     const res = await ssh.execCommand(cmd);
     console.log(res.stdout);
