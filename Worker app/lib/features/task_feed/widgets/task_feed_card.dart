@@ -65,8 +65,13 @@ class TaskFeedCard extends StatelessWidget {
     final plat = _getPlatform(task);
     if (plat == 'google') return 'Write a review on Google';
     if (plat == 'youtube') return 'Like & Comment on YouTube';
-    if (plat == 'facebook') return 'Follow on Facebook Page';
-    if (plat == 'instagram') return 'Follow on Instagram';
+    if (plat == 'instagram') {
+      final rtLower = rawType.toLowerCase();
+      if (rtLower.contains('combo')) return 'Instagram Engagement Combo';
+      if (rtLower.contains('like')) return 'Like Instagram Post / Reel';
+      if (rtLower.contains('comment')) return 'Comment on Instagram Post';
+      return 'Follow on Instagram';
+    }
     if (plat == 'x') return 'Follow & Repost on X';
 
     if (rawType.toUpperCase().startsWith('SERVICE_') || rawType.toUpperCase().startsWith('SRV_')) {

@@ -150,6 +150,30 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                             });
                           },
                         ),
+                        ActionChip(
+                          backgroundColor: const Color(0xFF0F172A),
+                          side: const BorderSide(color: Color(0xFFEC4899)),
+                          label: const Text('Instagram Comments', style: TextStyle(fontSize: 10, color: Colors.white)),
+                          avatar: const Icon(Icons.mode_comment_rounded, color: Color(0xFFEC4899), size: 12),
+                          onPressed: () {
+                            setModalState(() {
+                              nameCtrl.text = 'Instagram Relevant Comments';
+                              descCtrl.text = 'Post relevant organic comments and submit screenshot.';
+                            });
+                          },
+                        ),
+                        ActionChip(
+                          backgroundColor: const Color(0xFF0F172A),
+                          side: const BorderSide(color: Color(0xFFF43F5E)),
+                          label: const Text('Instagram All-in-One Combo', style: TextStyle(fontSize: 10, color: Colors.white)),
+                          avatar: const Icon(Icons.stars_rounded, color: Color(0xFFF43F5E), size: 12),
+                          onPressed: () {
+                            setModalState(() {
+                              nameCtrl.text = 'Instagram All-in-One Growth Combo';
+                              descCtrl.text = 'Follow profile, like post/reel, write comment and submit proof.';
+                            });
+                          },
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),

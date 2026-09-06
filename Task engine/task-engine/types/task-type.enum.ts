@@ -11,6 +11,7 @@ export enum TaskType {
     INSTAGRAM_LIKE = 'instagram_like',
     INSTAGRAM_COMMENT = 'instagram_comment',
     INSTAGRAM_SHARE = 'instagram_share',
+    INSTAGRAM_COMBO = 'instagram_combo',
 
     // Twitter Tasks
     TWITTER_FOLLOW = 'twitter_follow',

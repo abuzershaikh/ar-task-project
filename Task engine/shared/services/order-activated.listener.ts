@@ -107,7 +107,8 @@ export class OrderActivatedListener {
                 ? rawSampleComments.filter((c: any) => typeof c === 'string' && c.trim().length > 0) 
                 : [];
 
-            const generatorType = isPlayStore ? 'playstore_review' : 'youtube_comment';
+            const isInstagram = serviceIdentifier.includes('INSTA') || serviceIdentifier.includes('IG');
+            const generatorType = isPlayStore ? 'playstore_review' : (isInstagram ? 'instagram_comment' : 'youtube_comment');
 
             let generatedComments: string[] = [];
             if (isCommentRequired) {
@@ -115,7 +116,7 @@ export class OrderActivatedListener {
                     generatedComments = sampleComments.slice(0, count);
                 } else {
                     const remainingNeeded = count - sampleComments.length;
-                    this.logger.log(`🤖 Generating ${remainingNeeded} ${isPlayStore ? 'Play Store reviews' : 'comments'} for Order '${payload.orderId}' (App: "${appName}", Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
+                    this.logger.log(`🤖 Generating ${remainingNeeded} ${isPlayStore ? 'Play Store reviews' : (isInstagram ? 'Instagram comments' : 'comments')} for Order '${payload.orderId}' (App: "${appName}", Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
                     let newlyGenerated: string[] = [];
                     try {
                         newlyGenerated = await this.aiGeneratorService.generateContentBatch(
@@ -152,17 +153,28 @@ export class OrderActivatedListener {
                     'Terrific app! Smooth performance, no bugs or glitches encountered so far.',
                     'Clean design, fast loading speeds, and very intuitive navigation throughout.',
                 ]
-                : [
-                    topic ? `Really good points made on ${topic}, very informative!` : 'Great video, keep up the fantastic work!',
-                    topic ? `Loved the breakdown about ${topic}. Very helpful!` : 'Awesome explanation, really enjoyed this video!',
-                    topic ? `Super informative video regarding ${topic}. Thanks for sharing!` : 'Very helpful and well explained!',
-                    topic ? `The explanation on ${topic} is so clear and precise.` : 'Thanks for sharing this, learned a lot!',
-                    topic ? `Great insights on ${topic}. Subscribed for more!` : 'Nicely done! Looking forward to more content.',
-                ];
+                : (isInstagram
+                    ? [
+                        topic ? `Loving the aesthetic and vibe of ${topic}! 🔥` : 'Love the aesthetic and vibe of this post! 🔥',
+                        topic ? `Such valuable points on ${topic}. Definitely saving this! 🙌` : 'Such valuable content! Definitely saving this. 🙌',
+                        topic ? `Top quality post regarding ${topic}. Keep up the great work! ✨` : 'Top quality content! Keep inspiring. ✨',
+                        topic ? `The details about ${topic} are spot on. Really well done!` : 'Pure gold! Really well done! 👏',
+                        topic ? `Great insights on ${topic}. Following for more!` : 'Amazing post! Following for more updates. 💯',
+                        'Incredible visual style and great caption! ❤️',
+                        'This deserves so much more reach! Great work. 🚀',
+                        'Super helpful and inspiring post! Thanks for sharing. 🙌',
+                    ]
+                    : [
+                        topic ? `Really good points made on ${topic}, very informative!` : 'Great video, keep up the fantastic work!',
+                        topic ? `Loved the breakdown about ${topic}. Very helpful!` : 'Awesome explanation, really enjoyed this video!',
+                        topic ? `Super informative video regarding ${topic}. Thanks for sharing!` : 'Very helpful and well explained!',
+                        topic ? `The explanation on ${topic} is so clear and precise.` : 'Thanks for sharing this, learned a lot!',
+                        topic ? `Great insights on ${topic}. Subscribed for more!` : 'Nicely done! Looking forward to more content.',
+                    ]);
 
             const detectedPlatform = isPlayStore
                 ? 'google'
-                : (serviceIdentifier.includes('INSTA') ? 'instagram' : (serviceIdentifier.includes('FACEBOOK') || serviceIdentifier.includes('FB') ? 'facebook' : (serviceIdentifier.includes('TELEGRAM') ? 'telegram' : 'youtube')));
+                : (isInstagram ? 'instagram' : (serviceIdentifier.includes('FACEBOOK') || serviceIdentifier.includes('FB') ? 'facebook' : (serviceIdentifier.includes('TELEGRAM') ? 'telegram' : 'youtube')));
 
             const combinedRequirements = {
                 ...(order?.requirements || {}),
@@ -179,7 +191,7 @@ export class OrderActivatedListener {
                     rating5Star: isPlayStore || serviceIdentifier.includes('RATING') || serviceIdentifier.includes('REVIEW'),
                     review: isPlayStore && isCommentRequired,
                     like: serviceIdentifier.includes('LIKE') || serviceIdentifier.includes('COMBO'),
-                    subscribe: serviceIdentifier.includes('SUBSCRIBE') || serviceIdentifier.includes('COMBO'),
+                    subscribe: serviceIdentifier.includes('SUBSCRIBE') || serviceIdentifier.includes('FOLLOW') || serviceIdentifier.includes('COMBO'),
                     comment: isCommentRequired || serviceIdentifier.includes('COMMENT') || serviceIdentifier.includes('COMBO'),
                 },
             };

@@ -77,6 +77,42 @@ export async function seedAdminAndServices(dataSource: DataSource) {
       marginValue: 30.00, // 30% margin
       workerReward: 7.00,
     },
+    {
+      code: 'INSTAGRAM_FOLLOW',
+      name: 'Instagram Profile Followers',
+      description: 'Permanent real organic followers from verified active profiles',
+      buyerUnitPrice: 2.00,
+      marginType: MarginType.FIXED,
+      marginValue: 0.40,
+      workerReward: 1.60,
+    },
+    {
+      code: 'INSTAGRAM_LIKE',
+      name: 'Instagram Post & Reel Likes',
+      description: 'Instant genuine likes on posts and reels from real users',
+      buyerUnitPrice: 0.80,
+      marginType: MarginType.FIXED,
+      marginValue: 0.16,
+      workerReward: 0.64,
+    },
+    {
+      code: 'INSTAGRAM_COMMENT',
+      name: 'Instagram AI Relevant Comments',
+      description: 'Contextual human-like AI comments on your Instagram posts and reels',
+      buyerUnitPrice: 2.50,
+      marginType: MarginType.FIXED,
+      marginValue: 0.50,
+      workerReward: 2.00,
+    },
+    {
+      code: 'INSTAGRAM_COMBO',
+      name: 'Instagram All-in-One Growth Combo',
+      description: 'Follow profile + Like post/reel + post relevant AI comment bundle',
+      buyerUnitPrice: 4.50,
+      marginType: MarginType.FIXED,
+      marginValue: 0.90,
+      workerReward: 3.60,
+    },
   ];
 
   for (const item of defaultServices) {

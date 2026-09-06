@@ -10,8 +10,10 @@ async function check() {
     });
     const pm2 = await ssh.execCommand('pm2 status');
     console.log('PM2 Status:\n', pm2.stdout);
-    const ps = await ssh.execCommand('ps aux | grep -E "npm|node|nest"');
-    console.log('Running node/npm processes:\n', ps.stdout);
+    const fw = await ssh.execCommand('firewall-cmd --list-all');
+    console.log('Firewall:\n', fw.stdout);
+    const ports = await ssh.execCommand('ss -tulpn');
+    console.log('Listening ports:\n', ports.stdout);
   } catch (e) {
     console.error('Error:', e.message);
   } finally {

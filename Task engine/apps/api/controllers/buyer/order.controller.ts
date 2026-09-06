@@ -84,8 +84,9 @@ export class BuyerOrderController {
         const previewCount = Math.min(5, requestedTotal > 0 ? requestedTotal : 5);
 
         const serviceCode = (body.serviceCode || '').toLowerCase();
-        const isPlayStore = serviceCode.includes('play') || serviceCode.includes('review') || serviceCode.includes('rating') || serviceCode.includes('app');
-        const generatorType = isPlayStore ? 'playstore_review' : 'youtube_comment';
+        const isPlayStore = serviceCode.includes('play') || serviceCode.includes('review') || serviceCode.includes('rating') || (serviceCode.includes('app') && !serviceCode.includes('insta'));
+        const isInstagram = serviceCode.includes('insta') || serviceCode.includes('ig');
+        const generatorType = isPlayStore ? 'playstore_review' : isInstagram ? 'instagram_comment' : 'youtube_comment';
 
         const sampleComments = await this.aiGeneratorService.generateContentBatch(
             generatorType,

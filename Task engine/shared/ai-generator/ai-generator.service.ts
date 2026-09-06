@@ -17,6 +17,8 @@ export class AiGeneratorService {
     ) {
         this.generators.set('youtube_comment', this.deepSeekGen);
         this.generators.set('youtube_combo', this.deepSeekGen);
+        this.generators.set('instagram_comment', this.deepSeekGen);
+        this.generators.set('instagram_combo', this.deepSeekGen);
         this.generators.set('social_comment', this.deepSeekGen);
         this.generators.set('playstore_review', this.deepSeekGen);
         this.generators.set('google_play_review', this.deepSeekGen);

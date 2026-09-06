@@ -209,6 +209,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     if (p == 'playstore') {
       return '5-Star Rating & App Review on Play Store ⭐⭐⭐⭐⭐';
     }
+    if (p == 'instagram') {
+      return 'Instagram Engagement Task (Follow, Like or Comment)';
+    }
     return 'Comment on ${p[0].toUpperCase()}${p.substring(1)} Video';
   }
 
@@ -222,6 +225,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     if (p == 'playstore' || type.contains('PLAYSTORE') || type.contains('GOOGLE_PLAY') || type.contains('APP_REVIEW') || type.contains('RATING')) {
       return 'PLAY STORE REVIEW';
     }
+    if (type.contains('COMBO')) return '$p COMBO'.toUpperCase();
     if (type.contains('COMMENT')) return '$p COMMENT'.toUpperCase();
     if (type.contains('LIKE')) return '$p LIKE'.toUpperCase();
     if (type.contains('SUBSCRIBE') || type.contains('FOLLOW')) return '$p FOLLOW'.toUpperCase();

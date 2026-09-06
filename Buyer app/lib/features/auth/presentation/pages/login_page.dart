@@ -6,6 +6,7 @@ import '../../../../core/services/crashlytics_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/storage/secure_storage_service.dart';
+import '../../../../core/storage/local_storage_service.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../shared/presentation/pages/main_navigation_page.dart';
 import '../../screens/user_profile_form.dart';
@@ -20,6 +21,26 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _checkExistingSession();
+  }
+
+  Future<void> _checkExistingSession() async {
+    final localStorage = getIt<LocalStorageService>();
+    final secureStorage = getIt<SecureStorageService>();
+    final isLoggedIn = localStorage.isLoggedIn();
+    final uid = localStorage.getUserId() ?? await secureStorage.getUserId();
+    if (isLoggedIn && uid != null && uid.isNotEmpty) {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainNavigationPage()),
+        );
+      }
+    }
+  }
+
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
     try {
@@ -28,9 +49,6 @@ class _LoginPageState extends State<LoginPage> {
         scopes: const ['email'],
         serverClientId: '311090572825-jve8b44v1m0p7smmudr6hnhe5ib5qcuc.apps.googleusercontent.com',
       );
-      try {
-        await googleSignIn.signOut();
-      } catch (_) {}
 
       final account = await googleSignIn.signIn();
       debugPrint('[GOOGLE SIGN IN] Account result: $account');
@@ -49,10 +67,27 @@ class _LoginPageState extends State<LoginPage> {
         if (firebaseUser != null) {
           final token = await firebaseUser.getIdToken();
           final storage = getIt<SecureStorageService>();
-          if (token != null) await storage.saveAccessToken(token);
-          await storage.saveUserEmail(firebaseUser.email ?? account.email);
-          await storage.saveUserName(firebaseUser.displayName ?? account.displayName ?? '');
+          final localStorage = getIt<LocalStorageService>();
+
+          if (token != null) {
+            await storage.saveAccessToken(token);
+            await localStorage.saveAccessToken(token);
+          }
+          final email = firebaseUser.email ?? account.email;
+          final name = firebaseUser.displayName ?? account.displayName ?? '';
+          final photo = firebaseUser.photoURL ?? account.photoUrl ?? '';
+
+          await storage.saveUserEmail(email);
+          await localStorage.saveUserEmail(email);
+          await storage.saveUserName(name);
+          await localStorage.saveUserName(name);
           await storage.saveUserId(firebaseUser.uid);
+          await localStorage.saveUserId(firebaseUser.uid);
+          if (photo.isNotEmpty) {
+            await storage.saveUserPhoto(photo);
+            await localStorage.saveUserPhoto(photo);
+          }
+          await localStorage.saveIsLoggedIn(true);
 
           // Link user to Crashlytics reports
           await CrashlyticsService.setUser(
