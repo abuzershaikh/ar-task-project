@@ -198,7 +198,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
     _carouselController = PageController(viewportFraction: 0.94);
     _startCarouselTimer();
-    context.read<DashboardBloc>().add(LoadDashboardDataEvent());
+    final hasUser = FirebaseAuth.instance.currentUser != null;
+    final hasToken = getIt<LocalStorageService>().getAccessToken() != null;
+    if (hasUser || hasToken) {
+      context.read<DashboardBloc>().add(LoadDashboardDataEvent());
+    }
     _fadeController.forward();
   }
 
@@ -253,10 +257,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 );
               }
 
-              if (state is DashboardError) {
-                return _buildErrorView(state.message);
-              }
-
+              // Gracefully fallback to guest dashboard metrics so carousel,
+              // services, and all marketing catalog items are 100% visible
               final d = state is DashboardLoaded
                   ? state.dashboardData
                   : const DashboardData(
