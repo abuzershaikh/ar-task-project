@@ -42,8 +42,9 @@ export class AssignmentService {
                     // Check capacity at the very last moment to reduce race window
                     const activeCounts = await this.taskRepo.getWorkerActiveTaskCounts([pair.workerId]);
                     const currentActive = activeCounts.get(pair.workerId) || 0;
-                    if (currentActive >= 5) { // MAX_CONCURRENT_TASKS
-                        console.warn(`Worker ${pair.workerId} reached maximum capacity. Aborting assignment for task ${pair.taskId}`);
+                    const maxConcurrent = Number(task.requirements?.maxConcurrentTasks || 5);
+                    if (currentActive >= maxConcurrent) { // MAX_CONCURRENT_TASKS
+                        console.warn(`Worker ${pair.workerId} reached maximum capacity (${currentActive}/${maxConcurrent}). Aborting assignment for task ${pair.taskId}`);
                         failedCount++;
                         continue;
                     }

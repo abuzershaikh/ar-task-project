@@ -27,12 +27,21 @@ export class AdminSystemSettingsController {
         const unacceptedExpirySetting = await this.settingsRepo.findByKey('unaccepted_task_expiry_hours');
         const autoReassignSetting = await this.settingsRepo.findByKey('auto_reassign_on_expiry');
 
+        const parseBool = (val: any, defaultVal = true): boolean => {
+            if (val === null || val === undefined) return defaultVal;
+            if (typeof val === 'boolean') return val;
+            const s = String(val).trim().toLowerCase();
+            if (s === 'false' || s === '0' || s === 'no') return false;
+            if (s === 'true' || s === '1' || s === 'yes') return true;
+            return defaultVal;
+        };
+
         return {
             success: true,
             settings: {
                 workerExecutionTimeoutHours: workerTimeoutSetting ? Number(workerTimeoutSetting.value) : 2.0,
                 unacceptedTaskExpiryHours: unacceptedExpirySetting ? Number(unacceptedExpirySetting.value) : 24.0,
-                autoReassignOnExpiry: autoReassignSetting !== null && autoReassignSetting !== undefined ? Boolean(autoReassignSetting.value) : true,
+                autoReassignOnExpiry: parseBool(autoReassignSetting?.value, true),
             },
         };
     }

@@ -19,6 +19,7 @@ import { CurrentUser } from '../../../../shared/auth/decorators/current-user.dec
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
 import { WorkerRepository } from '../../../../shared/database/repositories/worker.repository';
+import { OrderRepository } from '../../../../shared/database/repositories/order.repository';
 
 @ApiTags('Worker - Tasks')
 @Roles(UserRole.WORKER)
@@ -32,6 +33,7 @@ export class WorkerTaskController {
         private readonly reviewEngine: ReviewEngineService,
         private readonly executionEngine: ExecutionEngineService,
         private readonly workerRepo: WorkerRepository,
+        private readonly orderRepo: OrderRepository,
     ) { }
 
     @Get()
@@ -135,14 +137,14 @@ export class WorkerTaskController {
         }
 
         // Only block access if the task is assigned to a DIFFERENT worker
-        // Allow viewing if: unassigned, assigned to current user, or task is still active/available
+        // Allow viewing if: unassigned and active/available, or assigned to current user
         const taskStatus = (task.status || '').toLowerCase();
         const isUnassigned = !task.assignedTo || task.assignedTo === '';
         const worker = await this.workerRepo.findWorker(user.id);
         const isAssignedToMe = task.assignedTo === user.id || (worker && task.assignedTo === worker.id);
-        const isAvailable = taskStatus === 'active' || taskStatus === 'available' || taskStatus === 'pending';
+        const isAvailable = isUnassigned && (taskStatus === 'active' || taskStatus === 'available' || taskStatus === 'pending');
 
-        if (!isUnassigned && !isAssignedToMe && !isAvailable) {
+        if (!isAssignedToMe && !isAvailable) {
             throw new ForbiddenException('You do not have permission to view this task');
         }
 
@@ -162,13 +164,36 @@ export class WorkerTaskController {
             throw new NotFoundException('Task not found');
         }
 
+        const timeline: Array<{ status: string; timestamp: Date | string }> = [];
+
+        if (task.createdAt) {
+            timeline.push({ status: 'CREATED', timestamp: task.createdAt });
+        }
+        if (task.assignedAt) {
+            timeline.push({ status: 'ASSIGNED', timestamp: task.assignedAt });
+        }
+        if (task.acceptedAt) {
+            timeline.push({ status: 'ACCEPTED', timestamp: task.acceptedAt });
+        }
+        if (task.startedAt) {
+            timeline.push({ status: 'IN_PROGRESS', timestamp: task.startedAt });
+        }
+        if (task.submittedAt) {
+            timeline.push({ status: 'SUBMITTED', timestamp: task.submittedAt });
+        }
+        if (task.completedAt) {
+            const finalStatus = (task.status || 'COMPLETED').toUpperCase();
+            timeline.push({ status: finalStatus, timestamp: task.completedAt });
+        } else if (task.status && !['created', 'assigned', 'accepted', 'in_progress', 'submitted'].includes(task.status.toLowerCase())) {
+            timeline.push({ status: task.status.toUpperCase(), timestamp: task.updatedAt || new Date() });
+        }
+
+        timeline.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
         return {
             success: true,
             taskId,
-            timeline: [
-                { status: 'CREATED', timestamp: task.createdAt },
-                { status: task.status, timestamp: task.updatedAt },
-            ],
+            timeline,
         };
     }
 
@@ -237,7 +262,21 @@ export class WorkerTaskController {
             throw new NotFoundException(`Task ${taskId} not found`);
         }
 
-        // 3. Verify task availability / ownership
+        // 3. Verify parent order is active (block accepting tasks from paused, cancelled, or completed campaigns)
+        if (task.orderId) {
+            const order = await this.orderRepo.findById(task.orderId);
+            if (order) {
+                const orderStatus = (order.status || '').toUpperCase();
+                if (orderStatus === 'PAUSED') {
+                    throw new BadRequestException('This order campaign is currently paused and cannot accept new workers');
+                }
+                if (orderStatus === 'CANCELLED' || orderStatus === 'COMPLETED' || orderStatus === 'EXPIRED') {
+                    throw new BadRequestException(`This order campaign is ${orderStatus.toLowerCase()} and is no longer accepting tasks`);
+                }
+            }
+        }
+
+        // 4. Verify task availability / ownership
         if (task.assignedTo && task.assignedTo !== user.id && task.assignedTo !== worker.id) {
             throw new BadRequestException('Task is already assigned to another worker');
         }

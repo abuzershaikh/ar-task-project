@@ -10,7 +10,11 @@ export class CapacityFilterService {
     constructor(private readonly taskRepo: TaskRepository) { }
 
     async apply(workerIds: string[], context: MatchingContext, activeCountsMap?: Map<string, number>): Promise<string[]> {
-        const MAX_CONCURRENT_TASKS = 5; // Worker can handle max 5 tasks at once
+        const MAX_CONCURRENT_TASKS = Number(
+            context.requirements?.maxConcurrentTasks || 
+            context.order?.requirements?.maxConcurrentTasks || 
+            5
+        );
 
         if (!workerIds || workerIds.length === 0) return [];
 

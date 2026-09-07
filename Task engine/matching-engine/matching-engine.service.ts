@@ -62,27 +62,36 @@ export class MatchingEngineService {
         // 2. Preload active task counts once
         const preloadedActiveCountsMap = await this.taskRepo.getWorkerActiveTaskCounts(activeWorkerIds);
 
-        // 3. For duplicate filter, we need campaign/order context. 
-        // Assuming all tasks in a batch belong to the same campaign/order.
-        // We can fetch the first task to get the context.
-        const firstTask = await this.taskRepo.findById(taskIds[0]);
-        const campaignId = firstTask?.campaignId || firstTask?.orderId;
-        const orderId = firstTask?.orderId;
+        // 3. Preload all tasks in batch to isolate campaign/order context per task
+        const tasks = await Promise.all(taskIds.map(id => this.taskRepo.findById(id)));
+        const taskMap = new Map<string, any>();
+        const campaignUsedWorkersMap = new Map<string, string[]>();
+        const campaignParticipationMaps = new Map<string, Map<string, boolean>>();
 
-        let preloadedUsedWorkerIdsInCampaign: string[] = [];
-        if (campaignId) {
-            preloadedUsedWorkerIdsInCampaign = await this.participationRepo.findUsedWorkerIdsByCampaign(campaignId);
+        for (const t of tasks) {
+            if (!t) continue;
+            taskMap.set(t.id, t);
+            const campaignId = t.campaignId || t.orderId;
+            if (campaignId && !campaignUsedWorkersMap.has(campaignId)) {
+                const used = await this.participationRepo.findUsedWorkerIdsByCampaign(campaignId);
+                campaignUsedWorkersMap.set(campaignId, used);
+                const partMap = await this.taskRepo.getWorkerCampaignParticipationMap(
+                    activeWorkerIds,
+                    campaignId,
+                    t.orderId,
+                );
+                campaignParticipationMaps.set(campaignId, partMap);
+            }
         }
-
-        const preloadedTaskParticipationMap = await this.taskRepo.getWorkerCampaignParticipationMap(
-            activeWorkerIds,
-            campaignId,
-            orderId,
-        );
 
         console.log(`✅ Bulk data preloaded. Proceeding to evaluate each task in-memory.`);
 
         for (const taskId of taskIds) {
+            const t = taskMap.get(taskId);
+            const campaignId = t?.campaignId || t?.orderId;
+            const preloadedUsedWorkerIdsInCampaign = campaignId ? (campaignUsedWorkersMap.get(campaignId) || []) : [];
+            const preloadedTaskParticipationMap = campaignId ? campaignParticipationMaps.get(campaignId) : undefined;
+
             const result = await this.matchWorkersForTask(
                 { taskId },
                 preloadedWorkers,

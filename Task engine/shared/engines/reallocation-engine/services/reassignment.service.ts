@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { TaskRepository } from '../../../database/repositories/task.repository';
 import { CampaignWorkerParticipationRepository } from '../../../database/repositories/campaign-worker-participation.repository';
 import { TaskAssignmentRepository } from '../../../database/repositories/task-assignment.repository';
-import { ParticipationStatus } from '../../../database/entities/campaign-worker-participation.entity';
 import { MatchingEngineService } from '../../../../matching-engine/matching-engine.service';
+import { TaskEngineService } from '../../../../task-engine/task-engine.service';
 
 @Injectable()
 export class ReassignmentService {
@@ -14,6 +14,8 @@ export class ReassignmentService {
         private readonly participationRepo: CampaignWorkerParticipationRepository,
         private readonly assignmentRepo: TaskAssignmentRepository,
         private readonly matchingEngine: MatchingEngineService,
+        @Inject(forwardRef(() => TaskEngineService))
+        private readonly taskEngine: TaskEngineService,
     ) { }
 
     async reassignTaskToNewWorker(taskId: string, campaignId: string): Promise<string | null> {
@@ -35,25 +37,11 @@ export class ReassignmentService {
                 return null;
             }
 
-            // Assign new worker to task
-            await this.taskRepo.update(taskId, {
-                assignedTo: selectedWorkerId,
-                assignedAt: new Date(),
-                status: 'assigned',
-            });
-
-            // Record Campaign Participation for new worker
-            await this.participationRepo.recordParticipation(
-                campaignId,
-                selectedWorkerId,
-                ParticipationStatus.ASSIGNED,
-            );
-
-            // Record Task Assignment History
-            await this.assignmentRepo.createAssignment({
+            // Assign new worker to task via TaskEngineService (ensures transactional consistency, pessimistic locks, state machine, and participation history)
+            await this.taskEngine.assignTask({
                 taskId,
-                campaignId,
                 workerId: selectedWorkerId,
+                actorId: 'system',
             });
 
             this.logger.log(`Task '${taskId}' successfully REASSIGNED to new unused Worker '${selectedWorkerId}'.`);

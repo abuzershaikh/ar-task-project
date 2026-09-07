@@ -9,16 +9,18 @@ export class CampaignProgressService {
     constructor(private readonly taskRepo: TaskRepository) { }
 
     async getProgress(campaignId: string) {
-        // TODO: Campaign entity create karna hai
-        // Abhi ke liye simple implementation
+        const tasks = await this.taskRepo.findByOrderId(campaignId);
+        const completedTasks = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'completed')).length;
+        const uniqueWorkers = new Set(tasks.map(t => t.assignedTo).filter(Boolean));
+        const totalReward = tasks.reduce((sum, t) => sum + (Number(t.rewardAmount) || 0), 0);
 
         return {
             campaignId,
-            totalOrders: 0,
-            totalTasks: 0,
-            completedTasks: 0,
-            activeWorkers: 0,
-            revenue: 0,
+            totalOrders: 1,
+            totalTasks: tasks.length,
+            completedTasks,
+            activeWorkers: uniqueWorkers.size,
+            revenue: totalReward,
         };
     }
 }

@@ -21,7 +21,12 @@ export class CategoryFilterService {
 
         const matchingWorkers = workers.filter(worker => {
             const workerCategories: string[] = worker.profile?.categories || [];
-            return workerCategories.some(cat => String(cat).trim().toLowerCase().includes(normalizedRequired));
+            return workerCategories.some(cat => {
+                const normCat = String(cat).trim().toLowerCase();
+                if (normCat === normalizedRequired) return true;
+                const tokens = normCat.split(/[,/|]+/).map(t => t.trim());
+                return tokens.includes(normalizedRequired);
+            });
         });
 
         return matchingWorkers.map(w => w.id);

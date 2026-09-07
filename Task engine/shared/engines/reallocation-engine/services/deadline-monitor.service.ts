@@ -59,10 +59,19 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
             const unacceptedExpiry = await this.settingsRepo.findByKey('unaccepted_task_expiry_hours');
             const autoReassign = await this.settingsRepo.findByKey('auto_reassign_on_expiry');
 
+            const parseBool = (val: any, defaultVal = true): boolean => {
+                if (val === null || val === undefined) return defaultVal;
+                if (typeof val === 'boolean') return val;
+                const s = String(val).trim().toLowerCase();
+                if (s === 'false' || s === '0' || s === 'no') return false;
+                if (s === 'true' || s === '1' || s === 'yes') return true;
+                return defaultVal;
+            };
+
             return {
                 workerExecutionTimeoutHours: workerTimeout ? Number(workerTimeout.value) : 2.0,
                 unacceptedTaskExpiryHours: unacceptedExpiry ? Number(unacceptedExpiry.value) : 24.0,
-                autoReassignOnExpiry: autoReassign !== null && autoReassign !== undefined ? Boolean(autoReassign.value) : true,
+                autoReassignOnExpiry: parseBool(autoReassign?.value, true),
             };
         } catch (_) {
             return {
@@ -84,11 +93,14 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
         const settings = await this.getExpirySettings();
 
         // 1. Process Worker Acceptance Timeouts (Independent of campaign expiry)
-        const timeoutResults = await this.processFullTimeouts(settings.workerExecutionTimeoutHours, settings.autoReassignOnExpiry);
+        const timeoutResults = await this.processFullTimeouts(
+            settings.workerExecutionTimeoutHours,
+            settings.unacceptedTaskExpiryHours,
+            settings.autoReassignOnExpiry,
+        );
 
-        // 2. Process Campaign Auto-Extensions & Unaccepted pool management using Admin configured setting
-        const extensionHours = settings.unacceptedTaskExpiryHours || campaignAutoExtensionHours || 24;
-        const extensionResults = await this.processCampaignAutoExtensions(extensionHours);
+        // 2. Process Campaign Auto-Extensions using designated campaign extension setting (not unaccepted task expiry)
+        const extensionResults = await this.processCampaignAutoExtensions(campaignAutoExtensionHours || 10);
 
         return {
             evaluatedTasksCount: timeoutResults.evaluatedCount,
@@ -100,6 +112,7 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
 
     async processFullTimeouts(
         defaultWorkerTimeoutHours: number = 2.0,
+        unacceptedTaskExpiryHours: number = 24.0,
         autoReassign: boolean = true,
     ): Promise<{ evaluatedCount: number; expiredCount: number; reallocatedCount: number }> {
         const now = new Date();
@@ -124,12 +137,22 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
                 continue;
             }
 
-            // Determine deadline
+            // Determine deadline based on state (unaccepted assigned vs accepted/in_progress)
             let effectiveDeadline: Date | null = task.deadline ? new Date(task.deadline) : null;
             if (!effectiveDeadline || isNaN(effectiveDeadline.getTime())) {
-                const acceptTime = task.acceptedAt || task.assignedAt || task.startedAt;
-                if (acceptTime) {
-                    effectiveDeadline = new Date(new Date(acceptTime).getTime() + defaultWorkerTimeoutHours * 3600 * 1000);
+                const normStatus = (task.status || '').toLowerCase();
+                const isAcceptedOrStarted = normStatus === 'accepted' || normStatus === 'in_progress' || Boolean(task.acceptedAt || task.startedAt);
+
+                if (isAcceptedOrStarted) {
+                    const executionStartTime = task.acceptedAt || task.startedAt || task.assignedAt;
+                    if (executionStartTime) {
+                        effectiveDeadline = new Date(new Date(executionStartTime).getTime() + defaultWorkerTimeoutHours * 3600 * 1000);
+                    }
+                } else {
+                    const assignTime = task.assignedAt || task.createdAt;
+                    if (assignTime) {
+                        effectiveDeadline = new Date(new Date(assignTime).getTime() + unacceptedTaskExpiryHours * 3600 * 1000);
+                    }
                 }
             }
 
@@ -169,12 +192,19 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
     async processCampaignAutoExtensions(extensionHours: number = 10): Promise<{ extendedCampaignsCount: number }> {
         const now = new Date();
         let extendedCampaignsCount = 0;
+        const MAX_CAMPAIGN_EXTENSIONS = 5;
 
         const activeOrders = await this.orderRepo.findActiveOrders();
         for (const order of activeOrders) {
             const currentExpiry = order.campaignExpiryDate;
-            
+            const currentExtensionCount = Number(order.extensionCount || 0);
+
             if (currentExpiry && new Date(currentExpiry) < now && order.tasksCompleted < order.totalTasksRequired) {
+                if (currentExtensionCount >= MAX_CAMPAIGN_EXTENSIONS) {
+                    this.logger.warn(`CAMPAIGN_MAX_EXTENSIONS_REACHED: Order '${order.id}' reached maximum auto-extension limit (${MAX_CAMPAIGN_EXTENSIONS}). No further auto-extensions.`);
+                    continue;
+                }
+
                 const newExpiryDate = new Date(new Date(currentExpiry).getTime() + extensionHours * 3600 * 1000);
                 
                 const extensionHistory = order.extensionHistory || [];
@@ -187,13 +217,13 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
 
                 await this.orderRepo.update(order.id, {
                     campaignExpiryDate: newExpiryDate,
-                    extensionCount: (order.extensionCount || 0) + 1,
+                    extensionCount: currentExtensionCount + 1,
                     extensionHistory,
                 });
                 
                 extendedCampaignsCount++;
                 this.logger.log(
-                    `CAMPAIGN_AUTO_EXTENDED_NEW_ALLOCATION_WINDOW_OPEN: Order '${order.id}' extended by +${extensionHours} hours to ${newExpiryDate.toISOString()} for remaining ${order.totalTasksRequired - order.tasksCompleted} tasks. Candidate recruitment reopened.`,
+                    `CAMPAIGN_AUTO_EXTENDED_NEW_ALLOCATION_WINDOW_OPEN: Order '${order.id}' extended (${currentExtensionCount + 1}/${MAX_CAMPAIGN_EXTENSIONS}) by +${extensionHours} hours to ${newExpiryDate.toISOString()} for remaining ${order.totalTasksRequired - order.tasksCompleted} tasks. Candidate recruitment reopened.`,
                 );
             }
         }

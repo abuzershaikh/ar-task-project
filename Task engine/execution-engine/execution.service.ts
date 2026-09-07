@@ -43,8 +43,8 @@ export class ExecutionEngineService {
             throw new BadRequestException('Task not found');
         }
 
-        // Anti-fraud execution time check
-        const executionStartedAt = task.metadata?.executionStartedAt;
+        // Anti-fraud execution time check (inspect start, accept, or assign timestamp)
+        const executionStartedAt = task.metadata?.executionStartedAt || task.startedAt || task.acceptedAt || task.assignedAt;
         if (executionStartedAt) {
             const startedAt = new Date(executionStartedAt).getTime();
             const now = Date.now();
@@ -101,6 +101,16 @@ export class ExecutionEngineService {
         let submission = await this.submissionRepo.findByTaskId(taskId);
         if (!submission || submission.workerId !== workerId) {
             throw new NotFoundException('Previous submission not found');
+        }
+
+        // Anti-bot check on resubmission
+        const task = await this.taskRepo.findById(taskId);
+        const resubmitRefTime = submission.reviewedAt || submission.updatedAt || task?.startedAt;
+        if (resubmitRefTime) {
+            const durationMs = Date.now() - new Date(resubmitRefTime).getTime();
+            if (durationMs < 5000) {
+                throw new BadRequestException('Submission rejected: Task resubmitted suspiciously fast (bot detected).');
+            }
         }
 
         await this.taskEngine.submitTask({

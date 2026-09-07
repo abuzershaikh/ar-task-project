@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Task } from '../entities/task.entity';
+import { Worker } from '../entities/worker.entity';
 import { TaskStatus } from '../../../task-engine/types/task-status.enum';
 
 @Injectable()
@@ -76,13 +77,16 @@ export class TaskRepository {
     }
 
     async findAvailableForAssignment(): Promise<Task[]> {
-        return this.repository.find({
-            where: [
-                { status: TaskStatus.ACTIVE, assignedTo: null },
-                { status: 'active' as any, assignedTo: null },
-            ],
-            order: { createdAt: 'DESC' },
-        });
+        return this.repository
+            .createQueryBuilder('task')
+            .leftJoin('orders', 'order', 'order.id = task.order_id')
+            .where('task.status IN (:...statuses)', { statuses: [TaskStatus.ACTIVE, 'active'] })
+            .andWhere('(task.assigned_to IS NULL OR task.assigned_to = :empty)', { empty: '' })
+            .andWhere('(order.id IS NULL OR order.status IN (:...orderStatuses))', {
+                orderStatuses: ['ACTIVE', 'active', 'IN_PROGRESS', 'in_progress'],
+            })
+            .orderBy('task.created_at', 'DESC')
+            .getMany();
     }
 
     async findByWorkerAndStatus(workerId: string, status: string): Promise<Task[]> {
@@ -143,9 +147,32 @@ export class TaskRepository {
         const counts = new Map<string, number>();
         if (!workerIds || workerIds.length === 0) return counts;
 
+        // Resolve dual IDs: workers.id <-> workers.userId
+        let allSearchIds = [...workerIds];
+        const idToRelatedIds = new Map<string, string[]>();
+
+        try {
+            const workers = await this.repository.manager.find(Worker, {
+                where: [
+                    { id: In(workerIds) },
+                    { userId: In(workerIds) },
+                ],
+                select: ['id', 'userId'],
+            });
+
+            for (const w of workers) {
+                const pair = [w.id, w.userId].filter(Boolean);
+                idToRelatedIds.set(w.id, pair);
+                idToRelatedIds.set(w.userId, pair);
+                allSearchIds.push(w.id, w.userId);
+            }
+        } catch (_) {}
+
+        allSearchIds = Array.from(new Set(allSearchIds));
+
         const tasks = await this.repository.find({
             where: {
-                assignedTo: In(workerIds),
+                assignedTo: In(allSearchIds),
                 status: In(['assigned', 'accepted', 'in_progress', TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.IN_PROGRESS]),
             },
             select: ['assignedTo'],
@@ -153,7 +180,10 @@ export class TaskRepository {
 
         for (const task of tasks) {
             if (task.assignedTo) {
-                counts.set(task.assignedTo, (counts.get(task.assignedTo) || 0) + 1);
+                const targetIds = idToRelatedIds.get(task.assignedTo) || [task.assignedTo];
+                for (const tid of targetIds) {
+                    counts.set(tid, (counts.get(tid) || 0) + 1);
+                }
             }
         }
         return counts;
@@ -167,12 +197,35 @@ export class TaskRepository {
         const participationMap = new Map<string, boolean>();
         if (!workerIds || workerIds.length === 0 || (!campaignId && !orderId)) return participationMap;
 
+        // Resolve dual IDs: workers.id <-> workers.userId
+        let allSearchIds = [...workerIds];
+        const idToRelatedIds = new Map<string, string[]>();
+
+        try {
+            const workers = await this.repository.manager.find(Worker, {
+                where: [
+                    { id: In(workerIds) },
+                    { userId: In(workerIds) },
+                ],
+                select: ['id', 'userId'],
+            });
+
+            for (const w of workers) {
+                const pair = [w.id, w.userId].filter(Boolean);
+                idToRelatedIds.set(w.id, pair);
+                idToRelatedIds.set(w.userId, pair);
+                allSearchIds.push(w.id, w.userId);
+            }
+        } catch (_) {}
+
+        allSearchIds = Array.from(new Set(allSearchIds));
+
         const whereConditions: any[] = [];
         if (campaignId) {
-            whereConditions.push({ assignedTo: In(workerIds), campaignId });
+            whereConditions.push({ assignedTo: In(allSearchIds), campaignId });
         }
         if (orderId) {
-            whereConditions.push({ assignedTo: In(workerIds), orderId });
+            whereConditions.push({ assignedTo: In(allSearchIds), orderId });
         }
 
         const tasks = await this.repository.find({
@@ -182,7 +235,10 @@ export class TaskRepository {
 
         for (const task of tasks) {
             if (task.assignedTo && task.status !== 'cancelled' && task.status !== TaskStatus.CANCELLED) {
-                participationMap.set(task.assignedTo, true);
+                const targetIds = idToRelatedIds.get(task.assignedTo) || [task.assignedTo];
+                for (const tid of targetIds) {
+                    participationMap.set(tid, true);
+                }
             }
         }
         return participationMap;

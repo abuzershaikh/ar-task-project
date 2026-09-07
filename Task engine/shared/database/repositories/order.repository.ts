@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindManyOptions } from 'typeorm';
+import { Repository, FindManyOptions, In } from 'typeorm';
 import { Order } from '../entities/order.entity';
 
 @Injectable()
@@ -30,6 +30,7 @@ export class OrderRepository {
 
     async findActiveOrders(): Promise<Order[]> {
         return this.repository.find({
+            where: { status: In(['ACTIVE', 'active', 'IN_PROGRESS', 'in_progress']) },
             order: { createdAt: 'DESC' },
         });
     }

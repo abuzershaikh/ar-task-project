@@ -24,6 +24,20 @@ export class TaskReleaseService {
             `Releasing Worker '${request.workerId}' from Task '${request.taskId}' in Campaign '${request.campaignId}'. Reason: ${request.reason}.`,
         );
 
+        const task = await this.taskRepo.findById(request.taskId);
+        if (!task) {
+            this.logger.warn(`Task '${request.taskId}' not found for release.`);
+            return false;
+        }
+
+        // Verify task is currently assigned to the releasing worker to prevent wiping newly reassigned workers
+        if (task.assignedTo && task.assignedTo !== request.workerId) {
+            this.logger.warn(
+                `Task '${request.taskId}' current assignee is '${task.assignedTo}', ignoring release request for Worker '${request.workerId}'.`
+            );
+            return false;
+        }
+
         // 1. Update Participation Status to EXPIRED (Participation record REMAINS locked in DB for Exclusion!)
         await this.participationRepo.updateStatus(
             request.campaignId,

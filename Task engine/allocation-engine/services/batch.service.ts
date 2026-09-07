@@ -19,9 +19,9 @@ export class BatchService {
         orderId: string,
         batchSize: number,
     ): Promise<AllocationResult[]> {
-        // Get all pending tasks for this order
+        // Get all pending tasks for this order (strictly unassigned and non-draft)
         const tasks = await this.taskRepo.findByOrderId(orderId);
-        const pendingTasks = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'pending'));
+        const pendingTasks = tasks.filter(t => !t.assignedTo && t.status !== 'draft' && this.taskRepo.matchesStatus(t.status, 'pending'));
 
         console.log(`📦 Processing ${pendingTasks.length} tasks in batches of ${batchSize}`);
 
@@ -38,18 +38,24 @@ export class BatchService {
             const taskIds = batch.map(t => t.id);
             const matchingResults = await this.matchingEngine.matchWorkersForBatch(taskIds);
 
-            // Build explicit pairs for tasks with matched workers
+            // Build explicit pairs ensuring UNIQUE worker distribution across batch
             const pairs: Array<{ taskId: string; workerId: string }> = [];
             const matchedTaskIds: string[] = [];
+            const assignedWorkerIdsInBatch = new Set<string>();
 
             for (const taskId of taskIds) {
                 const match = matchingResults.get(taskId);
-                if (match && match.matchedWorkers.length > 0) {
+                const availableCandidate = match?.matchedWorkers?.find(
+                    w => !assignedWorkerIdsInBatch.has(w.workerId)
+                );
+
+                if (availableCandidate) {
                     pairs.push({
                         taskId,
-                        workerId: match.matchedWorkers[0].workerId,
+                        workerId: availableCandidate.workerId,
                     });
                     matchedTaskIds.push(taskId);
+                    assignedWorkerIdsInBatch.add(availableCandidate.workerId);
                 } else {
                     // Update task retry metadata for unmatched task
                     const currentMetadata = batch.find(t => t.id === taskId)?.metadata || {};
