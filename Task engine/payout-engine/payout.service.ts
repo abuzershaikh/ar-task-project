@@ -33,4 +33,16 @@ export class PayoutEngineService {
     setMinWithdrawalLimit(limit: number): void {
         this.configService.setGlobalMinWithdrawalLimit(limit);
     }
+
+    async markProcessing(withdrawalId: string) {
+        return this.withdrawalService.markProcessing(withdrawalId);
+    }
+
+    async markAsPaid(withdrawalId: string, details?: { transactionId?: string; providerReference?: string }) {
+        return this.withdrawalService.markAsPaid(withdrawalId, details);
+    }
+
+    async reject(withdrawalId: string, reason?: string) {
+        return this.withdrawalService.reject(withdrawalId, reason);
+    }
 }

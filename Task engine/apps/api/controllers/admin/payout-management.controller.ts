@@ -62,16 +62,7 @@ export class AdminPayoutManagementController {
     @Post(':withdrawalId/process')
     @ApiOperation({ summary: 'Mark withdrawal as PROCESSING' })
     async processPayout(@Param('withdrawalId') withdrawalId: string) {
-        const withdrawal = await this.withdrawalRepo.findById(withdrawalId);
-        if (!withdrawal) {
-            throw new NotFoundException('Withdrawal not found');
-        }
-
-        const updated = await this.withdrawalRepo.update(withdrawalId, {
-            status: WithdrawalStatus.PROCESSING,
-            processedAt: new Date(),
-        });
-
+        const updated = await this.payoutEngine.markProcessing(withdrawalId);
         return {
             success: true,
             withdrawal: updated,
@@ -85,18 +76,7 @@ export class AdminPayoutManagementController {
         @Param('withdrawalId') withdrawalId: string,
         @Body() body: { transactionId?: string; providerReference?: string },
     ) {
-        const withdrawal = await this.withdrawalRepo.findById(withdrawalId);
-        if (!withdrawal) {
-            throw new NotFoundException('Withdrawal not found');
-        }
-
-        const updated = await this.withdrawalRepo.update(withdrawalId, {
-            status: WithdrawalStatus.PAID,
-            paidAt: new Date(),
-            transactionId: body.transactionId,
-            providerReference: body.providerReference,
-        });
-
+        const updated = await this.payoutEngine.markAsPaid(withdrawalId, body);
         return {
             success: true,
             withdrawal: updated,
@@ -110,20 +90,11 @@ export class AdminPayoutManagementController {
         @Param('withdrawalId') withdrawalId: string,
         @Body() body: { reason: string },
     ) {
-        const withdrawal = await this.withdrawalRepo.findById(withdrawalId);
-        if (!withdrawal) {
-            throw new NotFoundException('Withdrawal not found');
-        }
-
-        const updated = await this.withdrawalRepo.update(withdrawalId, {
-            status: WithdrawalStatus.REJECTED,
-            rejectionReason: body.reason || 'Admin rejected payout',
-        });
-
+        const updated = await this.payoutEngine.reject(withdrawalId, body?.reason);
         return {
             success: true,
             withdrawal: updated,
-            message: 'Withdrawal rejected and balance released',
+            message: 'Withdrawal rejected and balance released/refunded',
         };
     }
 }

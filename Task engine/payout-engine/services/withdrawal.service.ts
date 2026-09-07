@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { EarningRepository } from '../../shared/database/repositories/earning.repository';
 import { WithdrawalRepository } from '../../shared/database/repositories/withdrawal.repository';
@@ -155,5 +155,171 @@ export class WithdrawalService {
         ]);
 
         return Math.max(0, totalEarned - totalDeducted);
+    }
+
+    async markProcessing(withdrawalId: string): Promise<Withdrawal> {
+        const withdrawal = await this.withdrawalRepo.findById(withdrawalId);
+        if (!withdrawal) {
+            throw new NotFoundException(`Withdrawal ${withdrawalId} not found`);
+        }
+        if (withdrawal.status === WithdrawalStatus.PAID) {
+            throw new BadRequestException('Withdrawal is already marked as paid');
+        }
+        if (withdrawal.status === WithdrawalStatus.REJECTED) {
+            throw new BadRequestException('Cannot process a rejected withdrawal');
+        }
+
+        const updated = await this.withdrawalRepo.update(withdrawalId, {
+            status: WithdrawalStatus.PROCESSING,
+            processedAt: new Date(),
+        });
+        return updated;
+    }
+
+    async markAsPaid(
+        withdrawalId: string,
+        details?: { transactionId?: string; providerReference?: string },
+    ): Promise<Withdrawal> {
+        return this.dataSource.transaction(async (manager) => {
+            const withdrawal = await manager.findOne(Withdrawal, {
+                where: { id: withdrawalId },
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (!withdrawal) {
+                throw new NotFoundException(`Withdrawal ${withdrawalId} not found`);
+            }
+
+            if (withdrawal.status === WithdrawalStatus.PAID) {
+                return withdrawal; // Idempotent
+            }
+
+            if (withdrawal.status === WithdrawalStatus.REJECTED) {
+                throw new BadRequestException('Cannot mark a rejected withdrawal as paid');
+            }
+
+            withdrawal.status = WithdrawalStatus.PAID;
+            withdrawal.paidAt = new Date();
+            if (details?.transactionId) withdrawal.transactionId = details.transactionId;
+            if (details?.providerReference) withdrawal.providerReference = details.providerReference;
+
+            const savedWithdrawal = await manager.save(withdrawal);
+
+            // Locate worker to get userId
+            const worker = await manager.findOne(Worker, {
+                where: [{ id: withdrawal.workerId }, { userId: withdrawal.workerId }],
+            });
+            const walletUserId = worker?.userId || withdrawal.workerId;
+
+            // Update wallets table: release the reserved balance
+            const wallet = await manager.findOne(Wallet, {
+                where: [{ userId: walletUserId }, { userId: withdrawal.workerId }],
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (wallet) {
+                const currentReserved = Number(wallet.reservedBalance || 0);
+                const amount = Number(withdrawal.amount);
+                wallet.reservedBalance = Math.max(0, currentReserved - amount);
+                await manager.save(wallet);
+
+                // Update pending wallet transaction to COMPLETED
+                const tx = await manager.findOne(WalletTransaction, {
+                    where: { referenceId: withdrawal.id, type: 'DEBIT' },
+                });
+                if (tx) {
+                    tx.status = 'COMPLETED';
+                    await manager.save(tx);
+                }
+            }
+
+            // Send notification
+            await this.notificationEngine.sendNotification(
+                withdrawal.workerId,
+                `Payout of ₹${Number(withdrawal.amount).toFixed(2)} has been successfully transferred to your bank account!${details?.transactionId ? ` (Ref: ${details.transactionId})` : ''}`,
+                'PAYOUT_COMPLETED',
+                { withdrawalId: withdrawal.id, amount: withdrawal.amount, transactionId: details?.transactionId }
+            );
+
+            console.log(`✅ Withdrawal ${withdrawal.id} marked as PAID. Reserved balance released for user ${walletUserId}.`);
+            return savedWithdrawal;
+        });
+    }
+
+    async reject(withdrawalId: string, reason?: string): Promise<Withdrawal> {
+        return this.dataSource.transaction(async (manager) => {
+            const withdrawal = await manager.findOne(Withdrawal, {
+                where: { id: withdrawalId },
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (!withdrawal) {
+                throw new NotFoundException(`Withdrawal ${withdrawalId} not found`);
+            }
+
+            if (withdrawal.status === WithdrawalStatus.REJECTED) {
+                return withdrawal; // Idempotent
+            }
+
+            if (withdrawal.status === WithdrawalStatus.PAID) {
+                throw new BadRequestException('Cannot reject an already paid withdrawal');
+            }
+
+            withdrawal.status = WithdrawalStatus.REJECTED;
+            withdrawal.rejectionReason = reason || 'Admin rejected payout';
+
+            const savedWithdrawal = await manager.save(withdrawal);
+
+            // Locate worker to get userId
+            const worker = await manager.findOne(Worker, {
+                where: [{ id: withdrawal.workerId }, { userId: withdrawal.workerId }],
+            });
+            const walletUserId = worker?.userId || withdrawal.workerId;
+
+            // Restore balance in wallets table: reservedBalance -= amount, availableBalance += amount
+            const wallet = await manager.findOne(Wallet, {
+                where: [{ userId: walletUserId }, { userId: withdrawal.workerId }],
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (wallet) {
+                const currentReserved = Number(wallet.reservedBalance || 0);
+                const currentAvail = Number(wallet.availableBalance || 0);
+                const amount = Number(withdrawal.amount);
+
+                wallet.reservedBalance = Math.max(0, currentReserved - amount);
+                wallet.availableBalance = currentAvail + amount;
+                await manager.save(wallet);
+
+                // Update original debit transaction to CANCELLED
+                const originalTx = await manager.findOne(WalletTransaction, {
+                    where: { referenceId: withdrawal.id, type: 'DEBIT' },
+                });
+                if (originalTx) {
+                    originalTx.status = 'CANCELLED';
+                    await manager.save(originalTx);
+                }
+
+                // Record a refund CREDIT transaction
+                const refundTx = manager.create(WalletTransaction, {
+                    walletId: wallet.id,
+                    type: 'CREDIT',
+                    amount,
+                    balanceAfter: wallet.availableBalance,
+                    description: `Refund: Withdrawal rejected (#${withdrawal.id.slice(0, 8)}) - ${reason || 'Admin rejected'}`,
+                    status: 'COMPLETED',
+                    referenceId: withdrawal.id,
+                    referenceType: 'WITHDRAWAL_REFUND',
+                });
+                await manager.save(refundTx);
+            }
+
+            // Send notification to worker
+            await this.notificationEngine.sendNotification(
+                withdrawal.workerId,
+                `Withdrawal request for ₹${Number(withdrawal.amount).toFixed(2)} was rejected. Reason: ${reason || 'Admin rejected'}. Funds have been refunded to your wallet.`,
+                'PAYOUT_REJECTED',
+                { withdrawalId: withdrawal.id, amount: withdrawal.amount, reason }
+            );
+
+            console.log(`↩️ Withdrawal ${withdrawal.id} REJECTED. ₹${withdrawal.amount} refunded to user ${walletUserId}.`);
+            return savedWithdrawal;
+        });
     }
 }
