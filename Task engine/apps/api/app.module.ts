@@ -43,6 +43,7 @@ import { WorkerPaymentMethodController } from './controllers/worker/payment-meth
 import { WorkerNotificationController } from './controllers/worker/notification.controller';
 import { WorkerScoreController } from './controllers/worker/score.controller';
 import { WorkerAvailabilityController } from './controllers/worker/availability.controller';
+import { WorkerHeartbeatController } from './controllers/worker/heartbeat.controller';
 
 // Buyer Controllers
 import { BuyerOrderController } from './controllers/buyer/order.controller';
@@ -125,6 +126,7 @@ import { AdminWalletController } from './controllers/admin/wallet.controller';
         WorkerNotificationController,
         WorkerScoreController,
         WorkerAvailabilityController,
+        WorkerHeartbeatController,
 
         // Buyer
         BuyerOrderController,

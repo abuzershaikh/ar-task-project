@@ -41,6 +41,15 @@ export class Worker {
     @Column({ name: 'total_earnings', type: 'decimal', precision: 10, scale: 2, default: 0 })
     totalEarnings: number;
 
+    @Column({ name: 'last_active_at', type: 'timestamp', nullable: true })
+    lastActiveAt: Date;
+
+    @Column({ name: 'performance_points', type: 'int', default: 0 })
+    performancePoints: number;
+
+    @Column({ name: 'task_cooldown_until', type: 'timestamp', nullable: true })
+    taskCooldownUntil: Date;
+
     @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 

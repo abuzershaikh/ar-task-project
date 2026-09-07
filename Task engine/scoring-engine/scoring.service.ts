@@ -7,6 +7,9 @@ import { WorkerRepository } from '../shared/database/repositories/worker.reposit
 /**
  * Scoring Engine
  * Worker ka performance score calculate karta hai aur DB (worker_scores) me persist karta hai
+ * 
+ * New Formula: Completion 35%, Quality 25%, Reliability 20%, Rating 10%, Experience 10%
+ * Score always clamped 0-100. Activity is NOT part of score.
  */
 @Injectable()
 export class ScoringEngineService {
@@ -29,18 +32,16 @@ export class ScoringEngineService {
             return {
                 workerId: idOrUserId,
                 totalScore: 0,
-                qualityScore: 0,
                 completionScore: 0,
+                qualityScore: 0,
                 reliabilityScore: 0,
                 ratingScore: 0,
-                recentPerformanceScore: 0,
                 experienceScore: 0,
                 breakdown: {
-                    quality: 0,
                     completion: 0,
+                    quality: 0,
                     reliability: 0,
                     rating: 0,
-                    recent: 0,
                     experience: 0,
                 },
             };
@@ -52,11 +53,12 @@ export class ScoringEngineService {
         try {
             await this.scoreRepo.upsert(worker.id, {
                 totalScore: score.totalScore,
-                qualityScore: score.qualityScore,
                 completionScore: score.completionScore,
+                qualityScore: score.qualityScore,
                 reliabilityScore: score.reliabilityScore,
                 ratingScore: score.ratingScore,
-                recentPerformanceScore: score.recentPerformanceScore,
+                // recentPerformanceScore removed from formula — set to 0 for backward compat
+                recentPerformanceScore: 0,
                 experienceScore: score.experienceScore,
                 breakdown: score.breakdown,
             });
@@ -84,11 +86,11 @@ export class ScoringEngineService {
                     const canonicalId = worker?.id || workerId;
                     await this.scoreRepo.upsert(canonicalId, {
                         totalScore: score.totalScore,
-                        qualityScore: score.qualityScore,
                         completionScore: score.completionScore,
+                        qualityScore: score.qualityScore,
                         reliabilityScore: score.reliabilityScore,
                         ratingScore: score.ratingScore,
-                        recentPerformanceScore: score.recentPerformanceScore,
+                        recentPerformanceScore: 0,
                         experienceScore: score.experienceScore,
                         breakdown: score.breakdown,
                     }).catch(err => {

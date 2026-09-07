@@ -1,13 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ScoringEngineService } from '../../scoring-engine/scoring.service';
 import { RankingEngineService } from '../../ranking-engine/ranking.service';
 import { CandidateWorker, MatchingContext, MatchingResult } from '../types';
+import { MIN_SCORE_THRESHOLD } from '../../scoring-engine/types/worker-score';
 
 /**
  * Final matching decision leta hai scoring aur ranking ke basis pe
+ * 
+ * NEW RULES:
+ * - Score < 40 wale workers ko filter out karo (minimum threshold)
+ * - 5-tier priority system se rank karo
+ * - Activity deprioritization ranking me apply hota hai
  */
 @Injectable()
 export class MatchingDecisionService {
+    private readonly logger = new Logger(MatchingDecisionService.name);
+
     constructor(
         private readonly scoringEngine: ScoringEngineService,
         private readonly rankingEngine: RankingEngineService,
@@ -41,20 +49,44 @@ export class MatchingDecisionService {
             freshScoresMap.set(candidate.workerId, totalScore);
         });
 
-        // Step 3: Rank candidates using fresh scores
-        const ranked = await this.rankingEngine.rankWorkers(workerIds, context.taskId, freshScoresMap);
+        // Step 3: MINIMUM SCORE FILTER — Score < 40 = no automatic task distribution
+        const beforeFilterCount = candidates.length;
+        candidates = candidates.filter(c => c.score >= MIN_SCORE_THRESHOLD);
+        const filteredOut = beforeFilterCount - candidates.length;
 
-        // Step 4: Assign ranks
+        if (filteredOut > 0) {
+            this.logger.log(`🚫 Filtered out ${filteredOut} workers with score < ${MIN_SCORE_THRESHOLD} (minimum threshold)`);
+        }
+
+        if (candidates.length === 0) {
+            this.logger.warn(`⚠️ All candidates filtered out by minimum score threshold (${MIN_SCORE_THRESHOLD})`);
+            return {
+                taskId: context.taskId,
+                matchedWorkers: [],
+                totalCandidates: 0,
+                filters: (context.filters || []).map(f => ({ filterName: f, passed: 0, failed: 0, duration: 0 })),
+                timestamp: new Date(),
+            };
+        }
+
+        // Step 4: Rank remaining candidates using fresh scores (5-tier priority)
+        const rankedWorkerIds = candidates.map(c => c.workerId);
+        const rankedScoresMap = new Map<string, number>();
+        candidates.forEach(c => rankedScoresMap.set(c.workerId, c.score));
+
+        const ranked = await this.rankingEngine.rankWorkers(rankedWorkerIds, context.taskId, rankedScoresMap);
+
+        // Step 5: Assign ranks
         candidates.forEach(candidate => {
             const rankedWorker = ranked.find(r => r.workerId === candidate.workerId);
             candidate.rank = rankedWorker ? rankedWorker.rank : 999;
         });
 
-        // Step 5: Sort by rank
+        // Step 6: Sort by rank
         candidates.sort((a, b) => a.rank - b.rank);
 
-        console.log(`🎯 Matching complete: ${candidates.length} candidates`);
-        console.log(`🏆 Top 3: ${candidates.slice(0, 3).map(c => `${c.workerId}(${c.score})`).join(', ')}`);
+        this.logger.log(`🎯 Matching complete: ${candidates.length} candidates (${filteredOut} filtered by min score)`);
+        this.logger.log(`🏆 Top 3: ${candidates.slice(0, 3).map(c => `${c.workerId}(score:${c.score})`).join(', ')}`);
 
         return {
             taskId: context.taskId,
