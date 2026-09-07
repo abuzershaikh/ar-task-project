@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/providers/profile_provider.dart';
 
-/// Professional Worker Quality Score & Performance Rating Screen:
-/// - Connected live to ApiService & ProfileProvider.
-/// - Clean, modern SaaS performance analytics and metrics breakdown.
-/// - Vector badges and progress bars (no arcade emojis).
+/// 🌿 Professional Worker Quality Score & Performance Rating Screen:
+/// - Mayan Emerald & Gold aesthetic
+/// - Connected live to ApiService & ProfileProvider
+/// - Rich glassmorphic score card with 3D stars and glowing emerald metrics
 class QualityScoreScreen extends StatefulWidget {
   const QualityScoreScreen({super.key});
 
@@ -17,6 +18,17 @@ class QualityScoreScreen extends StatefulWidget {
 class _QualityScoreScreenState extends State<QualityScoreScreen> {
   bool _isLoading = true;
   Map<String, dynamic> _scoreData = {};
+
+  // ── Palette Tokens ────────────────────────────────────────────────────────
+  static const Color _bgDark = Color(0xFF04140F);
+  static const Color _cardDark = Color(0xFF09291E);
+  static const Color _cardBorder = Color(0xFF10B981);
+  static const Color _goldPrimary = Color(0xFFF59E0B);
+  static const Color _goldLight = Color(0xFFFDE68A);
+  static const Color _emeraldBright = Color(0xFF10B981);
+  static const Color _emeraldLight = Color(0xFF34D399);
+  static const Color _textWhite = Color(0xFFF8FAFC);
+  static const Color _textMuted = Color(0xFF94A3B8);
 
   @override
   void initState() {
@@ -46,244 +58,284 @@ class _QualityScoreScreenState extends State<QualityScoreScreen> {
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
     final profile = profileProvider.profileData;
-    final scoreObj = (_scoreData['score'] is Map ? _scoreData['score'] : null) ?? 
-                     (profile['score'] is Map ? profile['score'] : {});
+    final scoreObj = (_scoreData['score'] is Map ? _scoreData['score'] : null) ??
+        (profile['score'] is Map ? profile['score'] : {});
     final breakdownObj = (scoreObj['breakdown'] is Map) ? scoreObj['breakdown'] : {};
 
-    final double rating = double.tryParse(breakdownObj['rating']?.toString() ?? '') ?? 
-                          double.tryParse(profile['averageRating']?.toString() ?? '') ?? 
-                          4.9;
-    final double accuracyRate = double.tryParse(breakdownObj['quality']?.toString() ?? '') ?? 
-                                double.tryParse(profile['successRate']?.toString() ?? '') ?? 
-                                98.5;
+    final double rating = double.tryParse(breakdownObj['rating']?.toString() ?? '') ??
+        double.tryParse(profile['averageRating']?.toString() ?? '') ??
+        4.9;
+    final double accuracyRate = double.tryParse(breakdownObj['quality']?.toString() ?? '') ??
+        double.tryParse(profile['successRate']?.toString() ?? '') ??
+        98.5;
     final double onTimeRate = double.tryParse(breakdownObj['reliability']?.toString() ?? '') ?? 99.2;
-    final int totalApproved = int.tryParse(profile['totalTasksCompleted']?.toString() ?? '') ?? 0;
+    final int totalApproved = int.tryParse(profile['totalTasksCompleted']?.toString() ?? '') ?? 1;
     final double rejectionRate = (100.0 - accuracyRate).clamp(0.0, 100.0);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: _bgDark,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _cardDark,
+              border: Border.all(color: _cardBorder.withValues(alpha: 0.3)),
+            ),
+            child: const Icon(Icons.arrow_back_rounded, color: _textWhite, size: 18),
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
+        title: Text(
           'Quality Score & Rating',
-          style: TextStyle(
-            color: Color(0xFF0F172A),
-            fontWeight: FontWeight.bold,
+          style: GoogleFonts.poppins(
+            color: _textWhite,
+            fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
         ),
-        centerTitle: false,
+        centerTitle: true,
       ),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFF00875A)))
-            : SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── 1. Top Score Banner Card ─────────────────────────────
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF04140F),
+              Color(0xFF07241A),
+              Color(0xFF03160F),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: _emeraldBright))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── 1. Top Score Banner Card ─────────────────────────────
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0A3A29), Color(0xFF042016)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(
-                              5,
-                              (index) => const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 2),
-                                child: Icon(
-                                  Icons.star_rounded,
-                                  size: 26,
-                                  color: Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: _cardBorder.withValues(alpha: 0.4)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _emeraldBright.withValues(alpha: 0.2),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: List.generate(
+                                5,
+                                (index) => const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 3),
+                                  child: Icon(
+                                    Icons.star_rounded,
+                                    size: 28,
+                                    color: _goldPrimary,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            '${rating.toStringAsFixed(1)} / 5.0 Rating',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
+                            const SizedBox(height: 12),
+                            Text(
+                              '${rating.toStringAsFixed(1)} / 5.0 Rating',
+                              style: GoogleFonts.poppins(
+                                color: _textWhite,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF00875A).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: const Color(0xFF00875A).withOpacity(0.5)),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: _emeraldBright.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: _emeraldBright.withValues(alpha: 0.45)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.verified_rounded, size: 15, color: _emeraldLight),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Quality Score: ${accuracyRate.toStringAsFixed(1)}%',
+                                    style: GoogleFonts.poppins(
+                                      color: _emeraldLight,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // ── 2. Performance Breakdown Section ─────────────────────
+                      _buildSectionHeader('Performance Breakdown', Icons.analytics_rounded),
+                      const SizedBox(height: 12),
+
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: _cardDark,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: _cardBorder.withValues(alpha: 0.25)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            _buildMetricRow(
+                              'Task Approval Rate',
+                              '${accuracyRate.toStringAsFixed(1)}%',
+                              Icons.task_alt_rounded,
+                              _emeraldBright,
+                              accuracyRate / 100.0,
+                            ),
+                            _buildDivider(),
+                            _buildMetricRow(
+                              'Rejection Rate',
+                              '${rejectionRate.toStringAsFixed(1)}%',
+                              Icons.cancel_outlined,
+                              const Color(0xFFEF4444),
+                              rejectionRate / 100.0,
+                            ),
+                            _buildDivider(),
+                            _buildMetricRow(
+                              'On-Time Submission',
+                              '${onTimeRate.toStringAsFixed(1)}%',
+                              Icons.access_time_filled_rounded,
+                              const Color(0xFF38BDF8),
+                              onTimeRate / 100.0,
+                            ),
+                            _buildDivider(),
+                            _buildMetricRow(
+                              'Total Approved Tasks',
+                              '$totalApproved Tasks',
+                              Icons.military_tech_rounded,
+                              _goldPrimary,
+                              1.0,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // ── 3. Verified Badges & Standing ─────────────────────────
+                      _buildSectionHeader('Verified Badges', Icons.workspace_premium_rounded),
+                      const SizedBox(height: 12),
+
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 2.1,
+                        children: [
+                          _buildBadgeCard('Top Performer', 'Consistent 4.8+ Rating', Icons.star_rounded, _goldPrimary),
+                          _buildBadgeCard('Speed Submissions', 'Fast task turnaround', Icons.bolt_rounded, const Color(0xFF38BDF8)),
+                          _buildBadgeCard('High Accuracy', 'Low rejection history', Icons.check_circle_outline_rounded, _emeraldLight),
+                          _buildBadgeCard('Verified Partner', 'Identity & KYC confirmed', Icons.shield_outlined, const Color(0xFFA78BFA)),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // ── 4. Quality Standards Tips ────────────────────────────
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF07241A),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: _cardBorder.withValues(alpha: 0.2)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF34D399)),
-                                const SizedBox(width: 5),
+                                const Icon(Icons.info_outline_rounded, size: 16, color: _goldLight),
+                                const SizedBox(width: 8),
                                 Text(
-                                  'Quality Score: ${accuracyRate.toStringAsFixed(1)}%',
-                                  style: const TextStyle(
-                                    color: Color(0xFF34D399),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
+                                  'How to Maintain 95%+ Quality Score',
+                                  style: GoogleFonts.poppins(
+                                    color: _goldLight,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── 2. Performance Breakdown Section ─────────────────────
-                    const Text(
-                      'Performance Breakdown',
-                      style: TextStyle(
-                        color: Color(0xFF0F172A),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Column(
-                        children: [
-                          _buildMetricRow(
-                            'Task Approval Rate',
-                            '${accuracyRate.toStringAsFixed(1)}%',
-                            Icons.task_alt_rounded,
-                            const Color(0xFF00875A),
-                            accuracyRate / 100.0,
-                          ),
-                          const Divider(height: 24, color: Color(0xFFF1F5F9)),
-                          _buildMetricRow(
-                            'Rejection Rate',
-                            '${rejectionRate.toStringAsFixed(1)}%',
-                            Icons.cancel_outlined,
-                            const Color(0xFFDC2626),
-                            rejectionRate / 100.0,
-                          ),
-                          const Divider(height: 24, color: Color(0xFFF1F5F9)),
-                          _buildMetricRow(
-                            'On-Time Submission',
-                            '${onTimeRate.toStringAsFixed(1)}%',
-                            Icons.access_time_filled_rounded,
-                            const Color(0xFF0284C7),
-                            onTimeRate / 100.0,
-                          ),
-                          const Divider(height: 24, color: Color(0xFFF1F5F9)),
-                          _buildMetricRow(
-                            'Total Approved Tasks',
-                            '$totalApproved Tasks',
-                            Icons.verified_rounded,
-                            const Color(0xFFD97706),
-                            1.0,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── 3. Verified Badges & Standing ─────────────────────────
-                    const Text(
-                      'Verified Badges',
-                      style: TextStyle(
-                        color: Color(0xFF0F172A),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 2.1,
-                      children: [
-                        _buildBadgeCard('Top Performer', 'Consistent 4.8+ Rating', Icons.star_rounded, const Color(0xFFFEF3C7), const Color(0xFFB45309)),
-                        _buildBadgeCard('Speed Submissions', 'Fast task turnaround', Icons.bolt_rounded, const Color(0xFFE0F2FE), const Color(0xFF0369A1)),
-                        _buildBadgeCard('High Accuracy', 'Low rejection history', Icons.check_circle_outline_rounded, const Color(0xFFDCFCE7), const Color(0xFF15803D)),
-                        _buildBadgeCard('Verified Partner', 'Identity & KYC confirmed', Icons.shield_outlined, const Color(0xFFF1F5F9), const Color(0xFF475569)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── 4. Quality Standards Tips ────────────────────────────
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF64748B)),
-                              SizedBox(width: 6),
-                              Text(
-                                'How to Maintain 95%+ Quality Score',
-                                style: TextStyle(
-                                  color: Color(0xFF334155),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12.5,
-                                ),
+                            const SizedBox(height: 10),
+                            Text(
+                              '• Upload clear, genuine screenshot proofs of completed tasks.\n• Submit tasks within the required timeframe to maintain reliability.\n• Avoid duplicate submissions or fake screenshot attachments.',
+                              style: GoogleFonts.poppins(
+                                color: _textMuted,
+                                fontSize: 12,
+                                height: 1.5,
                               ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            '• Upload clear, genuine screenshot proofs of completed tasks.\n• Submit tasks within the required timeframe to maintain reliability.\n• Avoid duplicate submissions or fake screenshot attachments.',
-                            style: TextStyle(
-                              color: Color(0xFF64748B),
-                              fontSize: 11.5,
-                              height: 1.5,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 17, color: _emeraldBright),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            color: _goldLight,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      height: 1,
+      margin: const EdgeInsets.symmetric(vertical: 14),
+      color: Colors.white.withValues(alpha: 0.07),
     );
   }
 
@@ -294,18 +346,19 @@ class _QualityScoreScreenState extends State<QualityScoreScreen> {
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color.withValues(alpha: 0.25)),
               ),
               child: Icon(icon, color: color, size: 16),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Text(
               label,
-              style: const TextStyle(
-                color: Color(0xFF334155),
+              style: GoogleFonts.poppins(
+                color: _textWhite,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -313,40 +366,66 @@ class _QualityScoreScreenState extends State<QualityScoreScreen> {
             const Spacer(),
             Text(
               value,
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 color: color,
                 fontSize: 13.5,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
         ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: progress.clamp(0.0, 1.0),
-            minHeight: 4,
-            backgroundColor: const Color(0xFFF1F5F9),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            height: 5,
+            color: Colors.black.withValues(alpha: 0.4),
+            child: Stack(
+              children: [
+                FractionallySizedBox(
+                  widthFactor: progress.clamp(0.0, 1.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildBadgeCard(String title, String subtitle, IconData icon, Color bgColor, Color textColor) {
+  Widget _buildBadgeCard(String title, String subtitle, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: textColor.withOpacity(0.2)),
+        color: _cardDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: textColor),
-          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withValues(alpha: 0.15),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,17 +433,17 @@ class _QualityScoreScreenState extends State<QualityScoreScreen> {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.bold,
+                  style: GoogleFonts.poppins(
+                    color: _textWhite,
+                    fontWeight: FontWeight.w700,
                     fontSize: 11.5,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    color: textColor.withOpacity(0.8),
+                  style: GoogleFonts.poppins(
+                    color: _textMuted,
                     fontSize: 9.5,
                     fontWeight: FontWeight.w500,
                   ),

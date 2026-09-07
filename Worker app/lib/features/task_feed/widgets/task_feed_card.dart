@@ -148,27 +148,38 @@ class TaskFeedCard extends StatelessWidget {
   }
 
   String _getPlatform(dynamic task) {
-    if (task == null) return 'youtube';
-    if (task['platform'] != null && task['platform'].toString().trim().isNotEmpty) {
-      return task['platform'].toString().toLowerCase().trim();
-    }
+    if (task == null) return 'general';
     final type = (task['taskType'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toLowerCase();
     String reqStr = '';
     if (task['requirements'] is Map) {
       reqStr = task['requirements'].toString().toLowerCase();
     }
-    final metaStr = (task['metadata'] != null) ? task['metadata'].toString().toLowerCase() : '';
-    final titleStr = (task['title'] ?? task['serviceTitle'] ?? '').toString().toLowerCase();
+    final titleStr = (task['title'] ?? task['serviceTitle'] ?? task['serviceName'] ?? '').toString().toLowerCase();
+    final combined = '$type $reqStr $titleStr';
 
-    final combined = '$type $reqStr $metaStr $titleStr';
-    if (combined.contains('play') || combined.contains('playstore') || combined.contains('app_review')) return 'playstore';
-    if (combined.contains('youtube') || combined.contains('yt_')) return 'youtube';
-    if (combined.contains('instagram') || combined.contains('insta')) return 'instagram';
-    if (combined.contains('facebook') || combined.contains('fb')) return 'facebook';
-    if (combined.contains('google') || combined.contains('g_map') || combined.contains('maps')) return 'google';
-    if (combined.contains('twitter') || combined.contains(' x ') || combined.contains('x.com')) return 'x';
-    if (combined.contains('telegram')) return 'telegram';
-    return 'youtube';
+    // 1. App Install & Play Store takes priority over raw platform tag
+    if (type.contains('app_install') || combined.contains('install & open') || combined.contains('app install') || combined.contains('playstore') || combined.contains('play.google')) {
+      return 'playstore';
+    }
+    // 2. YouTube
+    if (type.contains('youtube') || combined.contains('youtube') || type.contains('yt_')) {
+      return 'youtube';
+    }
+    // 3. Instagram
+    if (type.contains('instagram') || combined.contains('instagram') || combined.contains('insta')) {
+      return 'instagram';
+    }
+    // 4. Google
+    if (type.contains('google') || combined.contains('google maps') || combined.contains('g_map')) {
+      return 'google';
+    }
+
+    if (task['platform'] != null && task['platform'].toString().trim().isNotEmpty) {
+      final p = task['platform'].toString().toLowerCase().trim();
+      if (p != 'general') return p;
+    }
+
+    return 'playstore';
   }
 
   String _getReward(dynamic task) {
@@ -247,7 +258,7 @@ class TaskFeedCard extends StatelessWidget {
                               width: 42,
                               height: 42,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => PlatformLogo(platform: platform, size: 30),
+                              errorBuilder: (context, error, stackTrace) => PlatformLogo(platform: platform, size: 30),
                             ),
                           )
                         : PlatformLogo(platform: platform, size: 30),

@@ -151,7 +151,7 @@ class PricingConfig {
 
     final rawChips = json['chips'] as List<dynamic>?;
     final parsedChips = rawChips != null
-        ? rawChips.map((c) => PriceChipModel.fromJson(c as Map<String, dynamic>)).toList()
+        ? rawChips.map((c) => PriceChipModel.fromJson(Map<String, dynamic>.from(c as Map))).toList()
         : <PriceChipModel>[];
 
     return PricingConfig(

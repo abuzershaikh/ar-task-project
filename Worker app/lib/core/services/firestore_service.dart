@@ -10,6 +10,7 @@ class FirestoreService {
     required String email,
     String? displayName,
     required String role,
+    String? photoUrl,
   }) async {
     try {
       final userDocRef = _db.collection('users').doc(uid);
@@ -26,6 +27,7 @@ class FirestoreService {
           'email': email,
           'phone': '',
           'role': role,
+          'photoUrl': photoUrl ?? '',
           'isOnline': true,
           'lastLogin': FieldValue.serverTimestamp(),
           'createdAt': FieldValue.serverTimestamp(),
@@ -41,6 +43,10 @@ class FirestoreService {
           'lastLogin': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         };
+
+        if (photoUrl != null && photoUrl.isNotEmpty) {
+          updateData['photoUrl'] = photoUrl;
+        }
 
         // If name wasn't set earlier, update it
         if ((existingData['name'] == null || (existingData['name'] as String).isEmpty) && finalName.isNotEmpty) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Renders authentic vector-style platform logos (Google, YouTube, Instagram, Facebook, X)
+/// Renders authentic high-resolution platform and category icons
+/// Uses official PNG asset icons copied from Buyer app
 class PlatformLogo extends StatelessWidget {
   final String platform;
   final double size;
@@ -13,294 +14,55 @@ class PlatformLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final norm = platform.toLowerCase();
-    if (norm.contains('play') || norm.contains('playstore') || norm.contains('app_review')) {
-      return _buildPlayStoreLogo(size);
-    } else if (norm.contains('google')) {
-      return _buildGoogleLogo(size);
-    } else if (norm.contains('youtube')) {
-      return _buildYouTubeLogo(size);
-    } else if (norm.contains('instagram')) {
-      return _buildInstagramLogo(size);
-    } else if (norm.contains('facebook')) {
-      return _buildFacebookLogo(size);
-    } else if (norm.contains('x') || norm.contains('twitter')) {
-      return _buildXLogo(size);
+    final norm = platform.toLowerCase().trim();
+
+    String? assetPath;
+
+    if (norm.contains('app_install') || norm.contains('install') || norm.contains('smartphone')) {
+      assetPath = 'assets/icons/smartphone.png';
+    } else if (norm.contains('play') || norm.contains('playstore') || norm.contains('app_review')) {
+      assetPath = 'assets/icons/google-play.png';
+    } else if (norm.contains('youtube') || norm.contains('yt_')) {
+      assetPath = 'assets/icons/youtube.png';
+    } else if (norm.contains('instagram') || norm.contains('insta') || norm.contains('ig_')) {
+      assetPath = 'assets/icons/instagram.png';
+    } else if (norm.contains('rating') || norm.contains('star')) {
+      assetPath = 'assets/icons/rating.png';
+    } else if (norm.contains('review')) {
+      assetPath = 'assets/icons/review.png';
+    } else if (norm.contains('comment')) {
+      assetPath = 'assets/icons/comment.png';
+    } else if (norm.contains('sub')) {
+      assetPath = 'assets/icons/subscribe.png';
+    } else if (norm.contains('like')) {
+      assetPath = 'assets/icons/like.png';
+    } else if (norm.contains('google') || norm.contains('g_map') || norm.contains('maps')) {
+      assetPath = 'assets/icons/google-play.png';
     }
 
+    if (assetPath != null) {
+      return Image.asset(
+        assetPath,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => _fallbackIcon(norm),
+      );
+    }
+
+    return _fallbackIcon(norm);
+  }
+
+  Widget _fallbackIcon(String norm) {
+    if (norm.contains('youtube')) {
+      return Icon(Icons.play_circle_fill_rounded, color: const Color(0xFFFF0000), size: size);
+    }
+    if (norm.contains('play') || norm.contains('install')) {
+      return Icon(Icons.play_arrow_rounded, color: const Color(0xFF00875A), size: size);
+    }
+    if (norm.contains('instagram')) {
+      return Icon(Icons.camera_alt_rounded, color: const Color(0xFFE1306C), size: size);
+    }
     return Icon(Icons.apps_rounded, size: size, color: const Color(0xFF00875A));
   }
-
-  static Widget _buildPlayStoreLogo(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(size * 0.28),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF00875A).withOpacity(0.18),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: CustomPaint(
-          size: Size(size * 0.58, size * 0.58),
-          painter: _PlayStorePainter(),
-        ),
-      ),
-    );
-  }
-
-  static Widget _buildGoogleLogo(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: CustomPaint(
-          size: Size(size * 0.65, size * 0.65),
-          painter: _GoogleGPainter(),
-        ),
-      ),
-    );
-  }
-
-  static Widget _buildYouTubeLogo(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFF0000),
-        borderRadius: BorderRadius.circular(size * 0.28),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF0000).withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Icon(
-          Icons.play_arrow_rounded,
-          color: Colors.white,
-          size: size * 0.65,
-        ),
-      ),
-    );
-  }
-
-  static Widget _buildInstagramLogo(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size * 0.28),
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF833AB4), // Purple
-            Color(0xFFFD1D1D), // Red
-            Color(0xFFF77737), // Orange
-            Color(0xFFFFDC80), // Yellow
-          ],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFE1306C).withOpacity(0.35),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Container(
-          width: size * 0.52,
-          height: size * 0.52,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.white, width: 2.2),
-            borderRadius: BorderRadius.circular(size * 0.16),
-          ),
-          child: Center(
-            child: Container(
-              width: size * 0.2,
-              height: size * 0.2,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white, width: 2),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  static Widget _buildFacebookLogo(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1877F2),
-        borderRadius: BorderRadius.circular(size * 0.28),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1877F2).withOpacity(0.35),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          'f',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: size * 0.65,
-            fontFamily: 'sans-serif',
-            height: 1.1,
-          ),
-        ),
-      ),
-    );
-  }
-
-  static Widget _buildXLogo(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(size * 0.28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          '𝕏',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: size * 0.55,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GoogleGPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    final center = Offset(w / 2, h / 2);
-    final radius = w / 2;
-
-    final redPaint = Paint()..color = const Color(0xFFEA4335);
-    final yellowPaint = Paint()..color = const Color(0xFFFBBC05);
-    final greenPaint = Paint()..color = const Color(0xFF34A853);
-    final bluePaint = Paint()..color = const Color(0xFF4285F4);
-
-    final rect = Rect.fromCircle(center: center, radius: radius);
-
-    // Top Red arc
-    canvas.drawArc(rect, -2.35, 1.25, true, redPaint);
-    // Bottom Yellow arc
-    canvas.drawArc(rect, 2.35, 0.8, true, yellowPaint);
-    // Bottom Green arc
-    canvas.drawArc(rect, 0.5, 1.85, true, greenPaint);
-    // Blue bar & arc
-    canvas.drawArc(rect, -1.1, 1.6, true, bluePaint);
-
-    // Inner cutout
-    final innerPaint = Paint()..color = Colors.white;
-    canvas.drawCircle(center, radius * 0.55, innerPaint);
-
-    // Blue horizontal arm
-    final armPath = Path()
-      ..moveTo(center.dx, center.dy - radius * 0.22)
-      ..lineTo(center.dx + radius, center.dy - radius * 0.22)
-      ..lineTo(center.dx + radius, center.dy + radius * 0.22)
-      ..lineTo(center.dx, center.dy + radius * 0.22)
-      ..close();
-    canvas.drawPath(armPath, bluePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _PlayStorePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-
-    final pTop = Offset(w * 0.08, h * 0.04);
-    final pBottom = Offset(w * 0.08, h * 0.96);
-    final pRight = Offset(w * 0.94, h * 0.50);
-    final pCenter = Offset(w * 0.62, h * 0.50);
-
-    // Blue base triangle (left to right)
-    final bluePaint = Paint()..color = const Color(0xFF00C3FF);
-    final bluePath = Path()
-      ..moveTo(pTop.dx, pTop.dy)
-      ..lineTo(pBottom.dx, pBottom.dy)
-      ..lineTo(pCenter.dx, pCenter.dy)
-      ..close();
-    canvas.drawPath(bluePath, bluePaint);
-
-    // Green top triangle
-    final greenPaint = Paint()..color = const Color(0xFF00E676);
-    final greenPath = Path()
-      ..moveTo(pTop.dx, pTop.dy)
-      ..lineTo(pCenter.dx, pCenter.dy)
-      ..lineTo(pRight.dx, pRight.dy)
-      ..close();
-    canvas.drawPath(greenPath, greenPaint);
-
-    // Yellow / Orange bottom triangle
-    final yellowPaint = Paint()..color = const Color(0xFFFFD600);
-    final yellowPath = Path()
-      ..moveTo(pBottom.dx, pBottom.dy)
-      ..lineTo(pCenter.dx, pCenter.dy)
-      ..lineTo(pRight.dx, pRight.dy)
-      ..close();
-    canvas.drawPath(yellowPath, yellowPaint);
-
-    // Red right triangle
-    final redPaint = Paint()..color = const Color(0xFFFF334B);
-    final redPath = Path()
-      ..moveTo(pCenter.dx, pCenter.dy)
-      ..lineTo(w * 0.76, h * 0.32)
-      ..lineTo(pRight.dx, pRight.dy)
-      ..lineTo(w * 0.76, h * 0.68)
-      ..close();
-    canvas.drawPath(redPath, redPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

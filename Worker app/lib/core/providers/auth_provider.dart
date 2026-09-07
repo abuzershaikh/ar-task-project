@@ -32,13 +32,15 @@ class AuthProvider extends ChangeNotifier {
         final email = firebaseUser.email ?? 'worker@taskpost.com';
         final uid = firebaseUser.uid;
         final name = firebaseUser.displayName ?? 'Worker';
+        final photoUrl = firebaseUser.photoURL;
         _user = {
           'uid': uid,
           'email': email,
           'name': name,
           'role': 'WORKER',
+          'photoUrl': photoUrl,
         };
-        await ApiService.saveUserData(email: email, uid: uid, name: name);
+        await ApiService.saveUserData(email: email, uid: uid, name: name, photoUrl: photoUrl);
         notifyListeners();
       }
     });
@@ -50,6 +52,7 @@ class AuthProvider extends ChangeNotifier {
       final savedUid = prefs.getString('user_id');
       final savedEmail = prefs.getString('user_email');
       final savedName = prefs.getString('user_name');
+      final savedPhoto = prefs.getString('user_photo_url');
 
       final firebaseUser = FirebaseAuth.instance.currentUser;
       if (firebaseUser != null) {
@@ -57,13 +60,21 @@ class AuthProvider extends ChangeNotifier {
         final email = firebaseUser.email ?? savedEmail ?? 'worker@taskpost.com';
         final uid = firebaseUser.uid;
         final name = firebaseUser.displayName ?? savedName ?? 'Worker';
+        final photoUrl = firebaseUser.photoURL ?? savedPhoto;
         _user = {
           'uid': uid,
           'email': email,
           'name': name,
           'role': 'WORKER',
+          'photoUrl': photoUrl,
         };
-        await ApiService.saveUserData(email: email, uid: uid, name: name);
+        await ApiService.saveUserData(email: email, uid: uid, name: name, photoUrl: photoUrl);
+        try {
+          final idToken = await firebaseUser.getIdToken();
+          if (idToken != null && idToken.isNotEmpty) {
+            await ApiService.saveToken(idToken);
+          }
+        } catch (_) {}
         NotificationService.instance.syncUserToken(uid);
       } else if (savedUid != null && savedUid.isNotEmpty && savedEmail != null && savedEmail.isNotEmpty) {
         // Persistent session from local SharedPreferences
@@ -73,6 +84,7 @@ class AuthProvider extends ChangeNotifier {
           'email': savedEmail,
           'name': savedName ?? 'Worker',
           'role': 'WORKER',
+          'photoUrl': savedPhoto,
         };
         NotificationService.instance.syncUserToken(savedUid);
       }
@@ -86,16 +98,28 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> setFirebaseUser(User firebaseUser, Map<String, dynamic> userData) async {
     _isAuthenticated = true;
-    _user = userData;
     final email = firebaseUser.email ?? userData['email'] ?? 'worker@taskpost.com';
     final uid = firebaseUser.uid;
     final name = userData['name'] ?? firebaseUser.displayName ?? 'Worker';
+    final photoUrl = firebaseUser.photoURL ?? userData['photoUrl'] ?? userData['photoURL'];
+    
+    _user = {
+      ...userData,
+      'photoUrl': photoUrl,
+    };
 
     await ApiService.saveUserData(
       email: email,
       uid: uid,
       name: name,
+      photoUrl: photoUrl,
     );
+    try {
+      final idToken = await firebaseUser.getIdToken();
+      if (idToken != null && idToken.isNotEmpty) {
+        await ApiService.saveToken(idToken);
+      }
+    } catch (_) {}
     await CrashlyticsService.setUser(
       id: uid,
       email: email,

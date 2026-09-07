@@ -71,6 +71,12 @@ export class WorkerTaskController {
         };
     }
 
+    @Get('accepted')
+    @ApiOperation({ summary: 'Get tasks accepted/assigned to worker' })
+    async getAcceptedTasks(@CurrentUser() user: User) {
+        return this.getAssignedTasks(user);
+    }
+
     @Get('submitted')
     @ApiOperation({ summary: 'Get worker submitted tasks' })
     async getSubmittedTasks(@CurrentUser() user: User) {

@@ -3,6 +3,7 @@ import 'campaign_summary.dart';
 
 class DashboardData extends Equatable {
   final double totalSpend;
+  final double walletBalance;
   final int totalCampaigns;
   final int activeCampaigns;
   final int completedCampaigns;
@@ -14,6 +15,7 @@ class DashboardData extends Equatable {
 
   const DashboardData({
     required this.totalSpend,
+    this.walletBalance = 0.0,
     required this.totalCampaigns,
     required this.activeCampaigns,
     required this.completedCampaigns,
@@ -27,6 +29,7 @@ class DashboardData extends Equatable {
   @override
   List<Object?> get props => [
     totalSpend,
+    walletBalance,
     totalCampaigns,
     activeCampaigns,
     completedCampaigns,

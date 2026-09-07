@@ -4,6 +4,7 @@ import 'campaign_summary_model.dart';
 class DashboardDataModel extends DashboardData {
   const DashboardDataModel({
     required super.totalSpend,
+    super.walletBalance = 0.0,
     required super.totalCampaigns,
     required super.activeCampaigns,
     required super.completedCampaigns,
@@ -29,6 +30,7 @@ class DashboardDataModel extends DashboardData {
     }
 
     final spend = parseD(json['totalSpent'] ?? json['totalSpend'], 0.0);
+    final walletBal = parseD(json['walletBalance'] ?? json['availableBalance'], 0.0);
     final totalCmp = parseI(json['totalOrdersCount'] ?? json['totalCampaigns'], 0);
     final activeCmp = parseI(json['activeOrdersCount'] ?? json['activeCampaigns'], 0);
     final compCmp = parseI(json['completedOrdersCount'] ?? json['completedCampaigns'], 0);
@@ -47,6 +49,7 @@ class DashboardDataModel extends DashboardData {
 
     return DashboardDataModel(
       totalSpend: spend,
+      walletBalance: walletBal,
       totalCampaigns: totalCmp,
       activeCampaigns: activeCmp,
       completedCampaigns: compCmp,

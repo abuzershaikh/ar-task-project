@@ -168,7 +168,7 @@ class ServiceModel {
 
     final rawElements = json['elements'] as List<dynamic>?;
     final parsedElements = rawElements != null
-        ? rawElements.map((e) => TemplateElement.fromJson(e as Map<String, dynamic>)).toList()
+        ? rawElements.map((e) => TemplateElement.fromJson(Map<String, dynamic>.from(e as Map))).toList()
         : <TemplateElement>[];
 
     final double buyerUnitPrice = parseD(
@@ -198,16 +198,26 @@ class ServiceModel {
          typeStr.contains('COMMENT') ||
          typeStr.contains('COMBO'));
 
-    String derivedCategory = json['category']?.toString() ?? 'YouTube';
     final codeUpper = (json['code'] ?? '').toString().toUpperCase();
-    if (codeUpper.startsWith('YOUTUBE') || codeUpper.startsWith('YT')) {
-      derivedCategory = 'YouTube';
-    } else if (codeUpper.startsWith('TELEGRAM') || codeUpper.startsWith('TG')) {
-      derivedCategory = 'Telegram';
-    } else if (codeUpper.startsWith('INSTA')) {
-      derivedCategory = 'Instagram';
-    } else if (codeUpper.startsWith('APP')) {
-      derivedCategory = 'App Install & Review';
+    final nameUpper = (json['name'] ?? json['title'] ?? '').toString().toUpperCase();
+    String derivedCategory = (json['category'] ?? '').toString().trim();
+
+    if (derivedCategory.isEmpty || derivedCategory == 'General' || (derivedCategory == 'YouTube' && (codeUpper.startsWith('APP') || codeUpper.startsWith('PLAY')))) {
+      if (codeUpper.startsWith('PLAY') || codeUpper.contains('REVIEW') || codeUpper.contains('RATING') || nameUpper.contains('PLAY STORE')) {
+        derivedCategory = 'Google Play Store';
+      } else if (codeUpper.startsWith('APP') || codeUpper.contains('INSTALL') || nameUpper.contains('INSTALL')) {
+        derivedCategory = 'App Install & Review';
+      } else if (codeUpper.startsWith('YOUTUBE') || codeUpper.startsWith('YT') || nameUpper.contains('YOUTUBE')) {
+        derivedCategory = 'YouTube';
+      } else if (codeUpper.startsWith('TELEGRAM') || codeUpper.startsWith('TG') || nameUpper.contains('TELEGRAM')) {
+        derivedCategory = 'Telegram';
+      } else if (codeUpper.startsWith('INSTA') || nameUpper.contains('INSTAGRAM')) {
+        derivedCategory = 'Instagram';
+      } else if (codeUpper.startsWith('WEB') || codeUpper.contains('TRAFFIC') || nameUpper.contains('WEBSITE')) {
+        derivedCategory = 'Website Traffic';
+      } else {
+        derivedCategory = 'General';
+      }
     }
 
     return ServiceModel(
@@ -239,7 +249,7 @@ class ServiceModel {
       textFieldLabel: json['textFieldLabel']?.toString() ?? json['text_field_label']?.toString() ?? 'Custom Text / Instructions',
       textFieldPlaceholder: json['textFieldPlaceholder']?.toString() ?? json['text_field_placeholder']?.toString() ?? 'Enter comments, text, or instructions...',
       watchTimeOptions: (json['watchTimeOptions'] ?? json['watch_time_options']) is List
-          ? (json['watchTimeOptions'] ?? json['watch_time_options'] as List).map((e) => parseI(e, 0)).toList()
+          ? ((json['watchTimeOptions'] ?? json['watch_time_options']) as List).map<int>((e) => parseI(e, 0)).toList()
           : null,
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'].toString()) ?? DateTime.now()

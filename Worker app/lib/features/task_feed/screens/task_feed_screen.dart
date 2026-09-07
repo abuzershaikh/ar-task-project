@@ -113,26 +113,109 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     taskProvider.fetchWalletData();
   }
 
-  String _detectPlatform(dynamic task) {
-    if (task == null) return 'general';
-    if (task['platform'] != null && task['platform'].toString().trim().isNotEmpty) {
-      return task['platform'].toString().toLowerCase().trim();
-    }
-    final type = (task['taskType'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toLowerCase();
-    String reqStr = '';
+  String _detectCategory(dynamic task) {
+    if (task == null) return 'other';
+
+    final type = (task['taskType'] ?? task['type'] ?? '').toString().toUpperCase();
+    final serviceCode = (task['serviceCode'] ?? '').toString().toUpperCase();
+    final title = (task['title'] ?? task['serviceTitle'] ?? task['serviceName'] ?? '').toString().toLowerCase();
+
+    Map<String, dynamic> req = {};
     if (task['requirements'] is Map) {
-      reqStr = task['requirements'].toString().toLowerCase();
+      req = Map<String, dynamic>.from(task['requirements'] as Map);
     }
-    final metaStr = (task['metadata'] != null) ? task['metadata'].toString().toLowerCase() : '';
-    final title = (task['title'] ?? '').toString().toLowerCase();
-    final combined = '$type $reqStr $metaStr $title';
-    if (combined.contains('instagram') || combined.contains('insta')) return 'instagram';
-    if (combined.contains('google') || combined.contains('maps') || combined.contains('playstore') || combined.contains('play.google') || combined.contains('install') || combined.contains('app')) return 'google';
-    if (combined.contains('youtube') || combined.contains('yt_')) return 'youtube';
-    if (combined.contains('facebook') || combined.contains('fb')) return 'facebook';
-    if (combined.contains('twitter') || combined.contains(' x ') || combined.contains('x.com')) return 'x';
-    if (combined.contains('telegram')) return 'telegram';
-    return 'google';
+    final reqServiceName = (req['serviceName'] ?? '').toString().toLowerCase();
+    final reqCategory = (req['category'] ?? '').toString().toLowerCase();
+    final reqPlatform = (req['platform'] ?? '').toString().toLowerCase();
+    final targetUrl = (req['targetUrl'] ?? req['url'] ?? '').toString().toLowerCase();
+
+    // 1. App Install (Highest Precedence - NEVER match with YouTube)
+    if (type == 'APP_INSTALL' ||
+        serviceCode.contains('APP_INSTALL') ||
+        title.contains('install & open') ||
+        title.contains('app install') ||
+        title.contains('install app') ||
+        reqServiceName.contains('install & open') ||
+        reqServiceName.contains('app install') ||
+        reqCategory.contains('app install')) {
+      return 'app_install';
+    }
+
+    // 2. Play Store Review & Rating
+    if (type.contains('PLAYSTORE') ||
+        serviceCode.contains('PLAYSTORE') ||
+        title.contains('play store') ||
+        reqServiceName.contains('play store') ||
+        reqCategory.contains('play store') ||
+        reqPlatform == 'playstore' ||
+        targetUrl.contains('play.google.com')) {
+      return 'playstore';
+    }
+
+    // 3. YouTube (Only if NOT an App Install!)
+    if (type.startsWith('YOUTUBE') ||
+        serviceCode.startsWith('YOUTUBE') ||
+        serviceCode.startsWith('YT_') ||
+        title.contains('youtube') ||
+        reqServiceName.contains('youtube') ||
+        reqCategory.contains('youtube') ||
+        targetUrl.contains('youtube.com') ||
+        targetUrl.contains('youtu.be')) {
+      return 'youtube';
+    }
+
+    // 4. Instagram
+    if (type.startsWith('INSTAGRAM') ||
+        serviceCode.startsWith('INSTAGRAM') ||
+        serviceCode.startsWith('IG_') ||
+        title.contains('instagram') ||
+        reqServiceName.contains('instagram') ||
+        reqCategory.contains('instagram') ||
+        targetUrl.contains('instagram.com')) {
+      return 'instagram';
+    }
+
+    // 5. Google (Maps / Local Reviews)
+    if (type.startsWith('GOOGLE') ||
+        serviceCode.startsWith('GOOGLE') ||
+        title.contains('google maps') ||
+        title.contains('google review') ||
+        reqServiceName.contains('google maps') ||
+        reqServiceName.contains('google review') ||
+        reqCategory.contains('google')) {
+      return 'google';
+    }
+
+    // Fallback: check raw platform tag safely
+    final rawPlatform = (task['platform'] ?? reqPlatform).toString().toLowerCase().trim();
+    if (rawPlatform == 'playstore') return 'playstore';
+    if (rawPlatform == 'youtube' && !title.contains('install') && type != 'APP_INSTALL') return 'youtube';
+    if (rawPlatform == 'instagram' && !title.contains('install') && type != 'APP_INSTALL') return 'instagram';
+    if (rawPlatform == 'google') return 'google';
+
+    return 'other';
+  }
+
+  bool _matchesFilter(dynamic task, String filterKey) {
+    if (filterKey == 'All Tasks') return true;
+
+    final cat = _detectCategory(task);
+
+    if (filterKey == 'playstore') {
+      // Play Store category shows both App Installs and Play Store Reviews
+      return cat == 'playstore' || cat == 'app_install';
+    }
+    if (filterKey == 'app_install') {
+      return cat == 'app_install';
+    }
+    if (filterKey == 'youtube') {
+      return cat == 'youtube';
+    }
+    if (filterKey == 'instagram') {
+      return cat == 'instagram';
+    }
+
+    return cat == filterKey;
   }
 
   @override
@@ -151,13 +234,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
       walletBalance = double.tryParse(rawBal.toString()) ?? 0.0;
     }
 
-    final filteredTasks = _selectedPlatform == 'All Tasks'
-        ? tasksToDisplay
-        : tasksToDisplay.where((t) {
-            final p = _detectPlatform(t);
-            final sel = _selectedPlatform.toLowerCase();
-            return p.contains(sel) || t.toString().toLowerCase().contains(sel);
-          }).toList();
+    final filteredTasks = tasksToDisplay.where((t) => _matchesFilter(t, _selectedPlatform)).toList();
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -281,7 +358,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                             Text(
                               _selectedPlatform == 'All Tasks'
                                   ? 'No Tasks Available Right Now'
-                                  : 'No Tasks Found for $_selectedPlatform',
+                                  : 'No Tasks Found for ${_getSelectedCategoryLabel()}',
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15.5,
@@ -1317,15 +1394,29 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     );
   }
 
+  String _getSelectedCategoryLabel() {
+    switch (_selectedPlatform) {
+      case 'playstore':
+        return 'Play Store';
+      case 'app_install':
+        return 'App Install';
+      case 'youtube':
+        return 'YouTube';
+      case 'instagram':
+        return 'Instagram';
+      default:
+        return _selectedPlatform;
+    }
+  }
+
   // ── Platform Filter Horizontal Chips ───────────────────────────────────────
   Widget _buildPlatformChips() {
     final chips = [
       {'label': 'All Tasks', 'icon': Icons.grid_view_rounded, 'key': 'All Tasks'},
-      {'label': 'Google', 'logo': 'google', 'key': 'Google'},
-      {'label': 'YouTube', 'logo': 'youtube', 'key': 'YouTube'},
-      {'label': 'Facebook', 'logo': 'facebook', 'key': 'Facebook'},
-      {'label': 'Instagram', 'logo': 'instagram', 'key': 'Instagram'},
-      {'label': 'More', 'icon': Icons.more_horiz_rounded, 'key': 'More'},
+      {'label': 'Play Store', 'asset': 'assets/icons/google-play.png', 'key': 'playstore'},
+      {'label': 'App Install', 'asset': 'assets/icons/smartphone.png', 'key': 'app_install'},
+      {'label': 'YouTube', 'asset': 'assets/icons/youtube.png', 'key': 'youtube'},
+      {'label': 'Instagram', 'asset': 'assets/icons/instagram.png', 'key': 'instagram'},
     ];
 
     return SingleChildScrollView(
@@ -1367,7 +1458,16 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                 ),
                 child: Row(
                   children: [
-                    if (c['icon'] != null)
+                    if (c['asset'] != null)
+                      Image.asset(
+                        c['asset'] as String,
+                        width: 17,
+                        height: 17,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Icon(Icons.apps_rounded, size: 16, color: isSelected ? Colors.white : const Color(0xFF00875A)),
+                      )
+                    else if (c['icon'] != null)
                       Icon(
                         c['icon'] as IconData,
                         size: 16,
@@ -1375,7 +1475,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                       )
                     else if (c['logo'] != null)
                       PlatformLogo(platform: c['logo'] as String, size: 17),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 7),
                     Text(
                       c['label'] as String,
                       style: GoogleFonts.poppins(

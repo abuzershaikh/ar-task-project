@@ -25,28 +25,19 @@ class ServiceRepositoryImpl implements ServiceRepository {
         // Backend API request to fetch published services
         final response = await dioClient!.get('/buyer/services');
         if (response.statusCode == 200 && response.data != null) {
-          final List list = response.data['services'] ?? response.data['data'] ?? response.data;
-          final remoteServices = list.map((json) => ServiceModel.fromJson(Map<String, dynamic>.from(json as Map))).toList();
-
-          final Map<String, ServiceModel> merged = {
-            for (var s in fallback) s.code: s,
-          };
-          for (var s in remoteServices) {
-            merged[s.code] = s;
+          final List list = response.data['services'] ?? response.data['data'] ?? [];
+          final remoteServices = <ServiceModel>[];
+          for (var item in list) {
+            try {
+              if (item is Map) {
+                remoteServices.add(ServiceModel.fromJson(Map<String, dynamic>.from(item)));
+              }
+            } catch (err) {
+              // Log item failure without aborting other services
+            }
           }
-          return merged.values.toList();
-        }
-      } catch (e) {
-        try {
-          // Fallback to /admin/services if /buyer/services is not present
-          final response = await dioClient!.get('/admin/services');
-          if (response.statusCode == 200 && response.data != null) {
-            final List list = response.data['services'] ?? response.data['data'] ?? [];
-            final remoteServices = list.map((json) {
-              final Map<String, dynamic> item = Map<String, dynamic>.from(json['service'] ?? json);
-              return ServiceModel.fromJson(item);
-            }).toList();
 
+          if (remoteServices.isNotEmpty) {
             final Map<String, ServiceModel> merged = {
               for (var s in fallback) s.code: s,
             };
@@ -55,7 +46,9 @@ class ServiceRepositoryImpl implements ServiceRepository {
             }
             return merged.values.toList();
           }
-        } catch (_) {}
+        }
+      } catch (_) {
+        // Fallback gracefully on network error
       }
     }
 
@@ -349,14 +342,18 @@ class ServiceRepositoryImpl implements ServiceRepository {
         id: 'srv_web_visits',
         code: 'WEBSITE_VISITS',
         name: 'Website Targeted Traffic & Visits',
+        category: 'Website Traffic',
         description: 'Drive high-quality direct visitors to your blog or website landing page.',
         isActive: true,
         currentVersion: 1,
         pricing: const PricingConfig(
-          modelType: PricingModelType.fixed,
-          buyerPrice: 299.0,
-          adminMarginPercent: 15.0,
-          workerReward: 254.15,
+          modelType: PricingModelType.countBased,
+          buyerPrice: 1.20,
+          unitPrice: 1.20,
+          minQuantity: 10,
+          maxQuantity: 10000,
+          adminMarginPercent: 20.0,
+          workerReward: 0.96,
         ),
         elements: const [
           TemplateElement(
@@ -379,6 +376,110 @@ class ServiceRepositoryImpl implements ServiceRepository {
             isRequired: true,
           ),
         ],
+        updatedAt: DateTime.now(),
+      ),
+      // ── GOOGLE PLAY STORE SERVICES ──
+      ServiceModel(
+        id: 'srv_play_rating',
+        code: 'PLAYSTORE_RATING',
+        name: 'Play Store 5-Star Rating (Only)',
+        description: 'Download app and give authentic 5-Star Rating on Google Play Store.',
+        category: 'Google Play Store',
+        serviceType: 'rating',
+        isActive: true,
+        currentVersion: 1,
+        linkFieldLabel: 'Play Store App Link / Package ID',
+        linkFieldPlaceholder: 'https://play.google.com/store/apps/details?id=...',
+        pricing: const PricingConfig(
+          modelType: PricingModelType.countBased,
+          buyerPrice: 4.0,
+          unitPrice: 4.0,
+          minQuantity: 5,
+          maxQuantity: 5000,
+          adminMarginPercent: 20.0,
+          workerReward: 3.20,
+        ),
+        elements: const [],
+        updatedAt: DateTime.now(),
+      ),
+      ServiceModel(
+        id: 'srv_play_review',
+        code: 'PLAYSTORE_REVIEW',
+        name: 'Play Store 5-Star Rating & Review',
+        description: 'Download app, give authentic 5-Star Rating and post custom AI review on Google Play Store.',
+        category: 'Google Play Store',
+        serviceType: 'review',
+        isActive: true,
+        aiGeneratorEnabled: true,
+        aiGeneratorConfig: const {
+          'enabled': true,
+          'generator_type': 'playstore_review',
+          'language': 'English',
+          'tone': 'natural',
+        },
+        currentVersion: 1,
+        linkFieldLabel: 'Play Store App Link / Package ID',
+        linkFieldPlaceholder: 'https://play.google.com/store/apps/details?id=...',
+        textFieldLabel: 'App Review Focus / Key Features',
+        textFieldPlaceholder: 'e.g. smooth UI, fast performance, highly recommended',
+        pricing: const PricingConfig(
+          modelType: PricingModelType.countBased,
+          buyerPrice: 8.0,
+          unitPrice: 8.0,
+          minQuantity: 5,
+          maxQuantity: 5000,
+          adminMarginPercent: 20.0,
+          workerReward: 6.40,
+        ),
+        elements: const [],
+        updatedAt: DateTime.now(),
+      ),
+      // ── APP INSTALL & REVIEW SERVICES ──
+      ServiceModel(
+        id: 'srv_app_install',
+        code: 'APP_INSTALL',
+        name: 'Android App Install & Open',
+        description: 'Download Android App from Google Play Store, install and test open for 60s.',
+        category: 'App Install & Review',
+        serviceType: 'install',
+        isActive: true,
+        currentVersion: 1,
+        linkFieldLabel: 'Play Store App Link / Package ID',
+        linkFieldPlaceholder: 'https://play.google.com/store/apps/details?id=...',
+        pricing: const PricingConfig(
+          modelType: PricingModelType.countBased,
+          buyerPrice: 10.0,
+          unitPrice: 10.0,
+          minQuantity: 5,
+          maxQuantity: 5000,
+          adminMarginPercent: 20.0,
+          workerReward: 8.0,
+        ),
+        elements: const [],
+        updatedAt: DateTime.now(),
+      ),
+      // ── TELEGRAM SERVICES ──
+      ServiceModel(
+        id: 'srv_tg_join',
+        code: 'TELEGRAM_JOIN',
+        name: 'Telegram Channel & Group Members',
+        description: 'Active, verified Telegram members to expand community size and group engagement.',
+        category: 'Telegram',
+        serviceType: 'join',
+        isActive: true,
+        currentVersion: 1,
+        linkFieldLabel: 'Telegram Channel or Group Link',
+        linkFieldPlaceholder: 'https://t.me/your_channel',
+        pricing: const PricingConfig(
+          modelType: PricingModelType.countBased,
+          buyerPrice: 1.50,
+          unitPrice: 1.50,
+          minQuantity: 10,
+          maxQuantity: 10000,
+          adminMarginPercent: 20.0,
+          workerReward: 1.20,
+        ),
+        elements: const [],
         updatedAt: DateTime.now(),
       ),
     ];

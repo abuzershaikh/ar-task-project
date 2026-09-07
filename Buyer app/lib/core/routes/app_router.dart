@@ -18,6 +18,7 @@ import '../../features/payments/presentation/pages/checkout_page.dart';
 import '../../features/invoices/presentation/pages/invoices_page.dart';
 import '../../features/invoices/presentation/pages/invoice_detail_page.dart';
 import '../../features/notifications/presentation/pages/notifications_page.dart';
+import '../../features/wallet/presentation/pages/wallet_screen.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/business_profile_page.dart';
 import '../../features/profile/presentation/pages/edit_profile_page.dart';
@@ -53,8 +54,9 @@ class AppRouter {
   static const String analytics = '/analytics';
   static const String campaignAnalytics = '/campaign-analytics';
   
-  // Payments
+  // Payments & Wallet
   static const String payments = '/payments';
+  static const String wallet = '/wallet';
   static const String paymentDetail = '/payment-detail';
   static const String checkout = '/checkout';
   
@@ -146,6 +148,9 @@ class AppRouter {
       // Payments
       case payments:
         return MaterialPageRoute(builder: (_) => const PaymentsPage());
+
+      case wallet:
+        return MaterialPageRoute(builder: (_) => const WalletScreen());
       
       case paymentDetail:
         final paymentId = routeSettings.arguments as String;

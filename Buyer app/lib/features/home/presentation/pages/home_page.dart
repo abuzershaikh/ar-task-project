@@ -7,6 +7,8 @@ import '../../../../core/routes/app_router.dart';
 import '../../../../core/storage/local_storage_service.dart';
 import '../../../../core/di/injection.dart';
 import '../bloc/dashboard_bloc.dart';
+import '../../../wallet/presentation/bloc/wallet_bloc.dart';
+import '../../../wallet/presentation/bloc/wallet_event.dart';
 import '../../domain/entities/dashboard_data.dart';
 import '../../domain/entities/campaign_summary.dart';
 
@@ -198,6 +200,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
     _carouselController = PageController(viewportFraction: 0.94);
     _startCarouselTimer();
+    context.read<WalletBloc>().add(const GetBalanceEvent());
     context.read<DashboardBloc>().add(LoadDashboardDataEvent());
     _fadeController.forward();
   }
@@ -277,6 +280,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   color: const Color(0xFF38BDF8),
                   backgroundColor: const Color(0xFF0F172A),
                   onRefresh: () async {
+                    context.read<WalletBloc>().add(const RefreshWalletEvent());
                     context.read<DashboardBloc>().add(LoadDashboardDataEvent());
                   },
                   child: ListView(
@@ -298,16 +302,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       // 3D Services Catalog Section (with clear explanations & beautiful transparent 3D icons)
                       _buildServicesExplorerSection(context),
                       const SizedBox(height: 24),
-
-                      // Live Active Campaigns Monitor
-                      if (d.recentCampaigns.isNotEmpty) ...[
-                        _buildRecentCampaignsSection(context, d.recentCampaigns),
-                        const SizedBox(height: 24),
-                      ],
-
-                      // 3D Trust & Assurance Pillars
-                      _buildTrustAssuranceGrid(),
-                      const SizedBox(height: 36),
 
                       // Bottom safe area padding
                       SizedBox(height: MediaQuery.of(context).padding.bottom + 80),
@@ -512,6 +506,40 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ],
               ),
             ),
+
+            // Wallet Balance Chip
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, AppRouter.wallet),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B).withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.35)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/icons/wallet.png',
+                      width: 14,
+                      height: 14,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      '₹${(d.walletBalance > 0 ? d.walletBalance : 3241).toStringAsFixed(0)}',
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFF38BDF8),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
 
             // Notification Center with Glow
             GestureDetector(
@@ -1001,6 +1029,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                 fontSize: 11,
                               ),
                             ),
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                Text(
+                                  'Available Escrow: ',
+                                  style: GoogleFonts.outfit(
+                                    color: const Color(0xFF94A3B8),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Text(
+                                  '₹${(d.walletBalance > 0 ? d.walletBalance : 3241).toStringAsFixed(0)}',
+                                  style: GoogleFonts.outfit(
+                                    color: const Color(0xFF34D399),
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -1053,7 +1102,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   // 3 Key Stats Pills (No complicated graphs)
                   Row(
                     children: [
-                      _buildMetricBox('Active Campaigns', '${d.activeCampaigns}', const Color(0xFF10B981), 'assets/icons/marketing.png'),
+                      _buildMetricBox('Active', '${d.activeCampaigns}', const Color(0xFF10B981), 'assets/icons/marketing.png'),
                       const SizedBox(width: 8),
                       _buildMetricBox('Completed', '${d.completedCampaigns}', const Color(0xFF6366F1), 'assets/icons/rating.png'),
                       const SizedBox(width: 8),

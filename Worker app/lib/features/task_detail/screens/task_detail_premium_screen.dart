@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -433,13 +434,44 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
 
   String _getVideoTutorialUrl() {
     final t = widget.task;
+    if (t['instructionVideoUrl'] != null && t['instructionVideoUrl'].toString().trim().isNotEmpty) {
+      return t['instructionVideoUrl'].toString().trim();
+    }
+    if (t['instruction_video_url'] != null && t['instruction_video_url'].toString().trim().isNotEmpty) {
+      return t['instruction_video_url'].toString().trim();
+    }
     if (t['videoTutorialUrl'] != null && t['videoTutorialUrl'].toString().trim().isNotEmpty) {
       return t['videoTutorialUrl'].toString().trim();
     }
-    if (t['requirements'] is Map && t['requirements']['videoTutorialUrl'] != null) {
-      return t['requirements']['videoTutorialUrl'].toString().trim();
+    if (t['video_tutorial_url'] != null && t['video_tutorial_url'].toString().trim().isNotEmpty) {
+      return t['video_tutorial_url'].toString().trim();
+    }
+    if (t['requirements'] is Map) {
+      final req = t['requirements'] as Map;
+      if (req['instructionVideoUrl'] != null && req['instructionVideoUrl'].toString().trim().isNotEmpty) {
+        return req['instructionVideoUrl'].toString().trim();
+      }
+      if (req['instruction_video_url'] != null && req['instruction_video_url'].toString().trim().isNotEmpty) {
+        return req['instruction_video_url'].toString().trim();
+      }
+      if (req['videoTutorialUrl'] != null && req['videoTutorialUrl'].toString().trim().isNotEmpty) {
+        return req['videoTutorialUrl'].toString().trim();
+      }
+      if (req['video_tutorial_url'] != null && req['video_tutorial_url'].toString().trim().isNotEmpty) {
+        return req['video_tutorial_url'].toString().trim();
+      }
     }
     return '';
+  }
+
+  String? _extractYouTubeId(String url) {
+    if (url.isEmpty) return null;
+    final regExp = RegExp(
+      r'^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})',
+      caseSensitive: false,
+    );
+    final match = regExp.firstMatch(url);
+    return match?.group(1);
   }
 
   Future<void> _launchURL(String urlString) async {
@@ -1659,213 +1691,222 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     );
   }
 
-  // ── 3. Video Cards (01 Tutorial & 02 Instructions) ─────────────────────────
+  // ── 3. Instructions Video Card ─────────────────────────────────────────────
   Widget _buildVideoCardsSection(String videoTutorialUrl) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildSingleVideoCard(
-            stepNum: '01',
-            stepColor: const Color(0xFF7C3AED),
-            title: 'Tutorial Video',
-            subtitle: 'Step by step guide',
-            duration: '03:15',
-            gradientColors: const [Color(0xFF2E1065), Color(0xFF581C87)],
-            buttonColor: const Color(0xFF7C3AED),
-            buttonText: 'Watch Tutorial',
-            illustration: '💻',
-            onTap: () {
-              if (videoTutorialUrl.isNotEmpty) {
-                _launchURL(videoTutorialUrl);
-              } else {
-                _launchURL('https://youtube.com');
-              }
-            },
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildSingleVideoCard(
-            stepNum: '02',
-            stepColor: const Color(0xFF2563EB),
-            title: 'Instructions Video',
-            subtitle: 'Important guidelines',
-            duration: '01:45',
-            gradientColors: const [Color(0xFF1E3A8A), Color(0xFF1D4ED8)],
-            buttonColor: const Color(0xFF2563EB),
-            buttonText: 'Watch Instructions',
-            illustration: '💡',
-            onTap: () {
-              if (videoTutorialUrl.isNotEmpty) {
-                _launchURL(videoTutorialUrl);
-              } else {
-                _launchURL('https://youtube.com');
-              }
-            },
-          ),
-        ),
-      ],
-    );
-  }
+    final ytId = _extractYouTubeId(videoTutorialUrl);
 
-  Widget _buildSingleVideoCard({
-    required String stepNum,
-    required Color stepColor,
-    required String title,
-    required String subtitle,
-    required String duration,
-    required List<Color> gradientColors,
-    required Color buttonColor,
-    required String buttonText,
-    required String illustration,
-    required VoidCallback onTap,
-  }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header: Icon + Title + Subtitle + Badge
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: stepColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(6),
+                  color: const Color(0xFF2563EB).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(
-                  stepNum,
-                  style: TextStyle(
-                    color: stepColor,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 10,
-                  ),
+                child: const Icon(
+                  Icons.play_circle_fill_rounded,
+                  color: Color(0xFF2563EB),
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title,
-                      style: const TextStyle(
-                        color: Color(0xFF0F172A),
+                      'Instructions Video',
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFF0F172A),
                         fontWeight: FontWeight.bold,
-                        fontSize: 11.5,
+                        fontSize: 14.5,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 9,
+                      'Watch step-by-step instructions before starting',
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFF64748B),
+                        fontSize: 11,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00875A).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFF00875A).withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  'Guide',
+                  style: GoogleFonts.poppins(
+                    color: const Color(0xFF00875A),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10.5,
+                  ),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
-          Container(
-            height: 90,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: gradientColors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: gradientColors.first.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
+          // Video Preview Container
+          InkWell(
+            onTap: () {
+              if (videoTutorialUrl.isNotEmpty) {
+                _launchURL(videoTutorialUrl);
+              } else {
+                _launchURL('https://youtube.com');
+              }
+            },
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              height: 145,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF1D4ED8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ],
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Center(
-                  child: Text(illustration, style: const TextStyle(fontSize: 32)),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    shape: BoxShape.circle,
+                image: ytId != null
+                    ? DecorationImage(
+                        image: NetworkImage('https://img.youtube.com/vi/$ytId/hqdefault.jpg'),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF1D4ED8).withOpacity(0.22),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                  child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 22),
-                ),
-                Positioned(
-                  right: 6,
-                  bottom: 6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(4),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (ytId != null)
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        color: Colors.black.withOpacity(0.35),
+                      ),
                     ),
-                    child: Text(
-                      duration,
-                      style: const TextStyle(
+                  // Glowing Center Play Button
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF2563EB),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2563EB).withOpacity(0.55),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.play_arrow_rounded,
                         color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
+                        size: 34,
                       ),
                     ),
                   ),
-                ),
-              ],
+                  // Duration / badge
+                  Positioned(
+                    right: 10,
+                    bottom: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.75),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.timer_outlined, color: Colors.white, size: 12),
+                          const SizedBox(width: 4),
+                          Text(
+                            '01:45',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
+          // Action Button
           InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(10),
+            onTap: () {
+              if (videoTutorialUrl.isNotEmpty) {
+                _launchURL(videoTutorialUrl);
+              } else {
+                _launchURL('https://youtube.com');
+              }
+            },
+            borderRadius: BorderRadius.circular(12),
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 11),
               decoration: BoxDecoration(
-                color: buttonColor,
-                borderRadius: BorderRadius.circular(10),
+                color: const Color(0xFF2563EB),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2563EB).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.play_circle_filled_rounded, color: Colors.white, size: 13),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      buttonText,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  const Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Watch Instructions Video',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],

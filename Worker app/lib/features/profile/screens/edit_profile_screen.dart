@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/profile_provider.dart';
 
-/// Separate Edit Profile Screen:
+/// 🌿 Emerald Jungle Themed Edit Profile Screen:
 /// - Editable: Name, Mobile Number, Age.
 /// - Autofetched & Readonly: Email.
-/// - Styled with Warm Amber/Gold & Slate theme tokens.
+/// - Mayan Emerald & Gold Palette with glowing inputs and glass cards.
 class EditProfileScreen extends StatefulWidget {
   final String initialName;
   final String initialMobile;
@@ -14,10 +15,10 @@ class EditProfileScreen extends StatefulWidget {
 
   const EditProfileScreen({
     super.key,
-    this.initialName = 'Alex Morgan',
-    this.initialMobile = '+91 98765 43210',
+    this.initialName = 'Worker Pro',
+    this.initialMobile = '+91 ••••• •••••',
     this.initialAge = '24',
-    this.initialEmail = 'alex.worker@taskreward.com',
+    this.initialEmail = 'worker@taskpost.com',
   });
 
   @override
@@ -29,6 +30,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _mobileController;
   late TextEditingController _ageController;
   late TextEditingController _emailController;
+  bool _isSaving = false;
+
+  // ── Palette Tokens ────────────────────────────────────────────────────────
+  static const Color _bgDark = Color(0xFF04140F);
+  static const Color _cardDark = Color(0xFF09291E);
+  static const Color _cardBorder = Color(0xFF10B981);
+  static const Color _goldPrimary = Color(0xFFF59E0B);
+  static const Color _goldLight = Color(0xFFFDE68A);
+  static const Color _emeraldBright = Color(0xFF10B981);
+  static const Color _emeraldLight = Color(0xFF34D399);
+  static const Color _textWhite = Color(0xFFF8FAFC);
+  static const Color _textMuted = Color(0xFF94A3B8);
 
   @override
   void initState() {
@@ -49,28 +62,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _saveProfile() async {
+    setState(() => _isSaving = true);
     final provider = context.read<ProfileProvider>();
     final success = await provider.updateProfile({
-      'name': _nameController.text,
-      'mobile': _mobileController.text,
-      'age': int.tryParse(_ageController.text) ?? 0,
+      'name': _nameController.text.trim(),
+      'mobile': _mobileController.text.trim(),
+      'age': int.tryParse(_ageController.text.trim()) ?? 0,
     });
 
     if (!mounted) return;
+    setState(() => _isSaving = false);
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile details updated successfully!'),
-          backgroundColor: Color(0xFFD97706),
+        SnackBar(
+          content: Text(
+            'Profile updated successfully!',
+            style: GoogleFonts.poppins(color: _bgDark, fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: _emeraldBright,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
       Navigator.of(context).pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to update profile. Please try again.'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Text(
+            'Failed to update profile. Please try again.',
+            style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500),
+          ),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
@@ -79,224 +104,289 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: _bgDark,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _cardDark,
+              border: Border.all(color: _cardBorder.withValues(alpha: 0.3)),
+            ),
+            child: const Icon(Icons.arrow_back_rounded, color: _textWhite, size: 18),
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Edit Profile Data',
-          style: TextStyle(
-            color: Color(0xFF0F172A),
-            fontWeight: FontWeight.bold,
+        title: Text(
+          'Edit Profile Details',
+          style: GoogleFonts.poppins(
+            color: _textWhite,
+            fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
         ),
-        centerTitle: false,
+        centerTitle: true,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Avatar with Camera Badge
-              Center(
-                child: Stack(
-                  children: [
-                    Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFFFEF3C7),
-                        border: Border.all(color: const Color(0xFFF59E0B), width: 2),
-                      ),
-                      child: const Icon(
-                        Icons.person_rounded,
-                        size: 52,
-                        color: Color(0xFFD97706),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF04140F),
+              Color(0xFF07241A),
+              Color(0xFF03160F),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Glowing Avatar Header
+                Center(
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 96,
+                        height: 96,
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFD97706),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt_rounded,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Form Container
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Field 1: Name (Editable)
-                    _buildFieldLabel('Full Name'),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _nameController,
-                      style: const TextStyle(
-                        color: Color(0xFF0F172A),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      decoration: _inputDecoration(
-                        hint: 'Enter your full name',
-                        icon: Icons.person_outline_rounded,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Field 2: Mobile Number (Editable)
-                    _buildFieldLabel('Mobile Number'),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _mobileController,
-                      keyboardType: TextInputType.phone,
-                      style: const TextStyle(
-                        color: Color(0xFF0F172A),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      decoration: _inputDecoration(
-                        hint: 'Enter mobile number',
-                        icon: Icons.phone_android_rounded,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Field 3: Age (Editable)
-                    _buildFieldLabel('Age'),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _ageController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                        color: Color(0xFF0F172A),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      decoration: _inputDecoration(
-                        hint: 'Enter your age',
-                        icon: Icons.cake_outlined,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Field 4: Email (Autofetched & Readonly)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildFieldLabel('Email Address'),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEF3C7),
-                            borderRadius: BorderRadius.circular(6),
+                          gradient: const LinearGradient(
+                            colors: [_emeraldBright, _goldPrimary],
                           ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.lock_outline_rounded,
-                                  size: 11, color: Color(0xFFD97706)),
-                              SizedBox(width: 3),
-                              Text(
-                                'Autofetched',
-                                style: TextStyle(
-                                  color: Color(0xFFD97706),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _emailController,
-                      readOnly: true,
-                      enabled: false,
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                      decoration: _inputDecoration(
-                        hint: 'Autofetched Email',
-                        icon: Icons.email_outlined,
-                        isReadOnly: true,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Save CTA Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: _saveProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFD97706),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.check_circle_outline_rounded,
-                                size: 18, color: Colors.white),
-                            SizedBox(width: 8),
-                            Text(
-                              'Save Profile Changes',
-                              style: TextStyle(
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _emeraldBright.withValues(alpha: 0.35),
+                              blurRadius: 18,
+                              spreadRadius: 2,
                             ),
                           ],
                         ),
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFF062016),
+                          ),
+                          child: const Icon(
+                            Icons.person_rounded,
+                            size: 54,
+                            color: _goldLight,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      Positioned(
+                        bottom: 2,
+                        right: 2,
+                        child: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: _goldPrimary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: _bgDark, width: 2.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _goldPrimary.withValues(alpha: 0.4),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt_rounded,
+                            size: 14,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 28),
+
+                // Form Card
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    color: _cardDark,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: _cardBorder.withValues(alpha: 0.3),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Field 1: Full Name
+                      _buildFieldLabel('Full Name'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _nameController,
+                        style: GoogleFonts.poppins(
+                          color: _textWhite,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                        decoration: _inputDecoration(
+                          hint: 'Enter your full name',
+                          icon: Icons.person_outline_rounded,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Field 2: Mobile Number
+                      _buildFieldLabel('Mobile Number'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _mobileController,
+                        keyboardType: TextInputType.phone,
+                        style: GoogleFonts.poppins(
+                          color: _textWhite,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                        decoration: _inputDecoration(
+                          hint: 'Enter mobile number',
+                          icon: Icons.phone_android_rounded,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Field 3: Age
+                      _buildFieldLabel('Age'),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _ageController,
+                        keyboardType: TextInputType.number,
+                        style: GoogleFonts.poppins(
+                          color: _textWhite,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                        decoration: _inputDecoration(
+                          hint: 'Enter your age',
+                          icon: Icons.cake_outlined,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Field 4: Email (Readonly)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildFieldLabel('Email Address'),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _cardBorder.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: _cardBorder.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.lock_outline_rounded, size: 11, color: _emeraldLight),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Google Linked',
+                                  style: GoogleFonts.poppins(
+                                    color: _emeraldLight,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _emailController,
+                        readOnly: true,
+                        enabled: false,
+                        style: GoogleFonts.poppins(
+                          color: _textMuted,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                        decoration: _inputDecoration(
+                          hint: 'Autofetched Email',
+                          icon: Icons.email_outlined,
+                          isReadOnly: true,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // Save CTA Button
+                      Container(
+                        width: double.infinity,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: const LinearGradient(
+                            colors: [_emeraldBright, Color(0xFF059669)],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: _emeraldBright.withValues(alpha: 0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _isSaving ? null : _saveProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: _isSaving
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Save Profile Changes',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -306,9 +396,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget _buildFieldLabel(String label) {
     return Text(
       label,
-      style: const TextStyle(
-        color: Color(0xFF475569),
-        fontSize: 12,
+      style: GoogleFonts.poppins(
+        color: _goldLight,
+        fontSize: 12.5,
         fontWeight: FontWeight.w600,
       ),
     );
@@ -321,25 +411,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }) {
     return InputDecoration(
       hintText: hint,
+      hintStyle: GoogleFonts.poppins(color: _textMuted.withValues(alpha: 0.6), fontSize: 13),
       prefixIcon: Icon(
         icon,
-        size: 18,
-        color: isReadOnly ? const Color(0xFF94A3B8) : const Color(0xFFD97706),
+        size: 19,
+        color: isReadOnly ? _textMuted : _emeraldLight,
       ),
       filled: true,
-      fillColor: isReadOnly ? const Color(0xFFF1F5F9) : const Color(0xFFF8FAFC),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      fillColor: isReadOnly ? const Color(0xFF061E16) : const Color(0xFF0C3829),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: _cardBorder.withValues(alpha: 0.2)),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: _cardBorder.withValues(alpha: 0.25)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFD97706), width: 1.5),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: _emeraldBright, width: 1.5),
       ),
     );
   }

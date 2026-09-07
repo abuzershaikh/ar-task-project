@@ -58,15 +58,21 @@ class _LoginScreenState extends State<LoginScreen> {
         final User? firebaseUser = userCredential.user;
 
         if (firebaseUser != null) {
+          final String? photoUrl = account.photoUrl ?? firebaseUser.photoURL;
+
           // Sync worker profile to Firestore only (No VPS token transmission)
           final userData = await FirestoreService.syncUserProfile(
             uid: firebaseUser.uid,
             email: firebaseUser.email ?? account.email,
             displayName: firebaseUser.displayName ?? account.displayName,
             role: 'WORKER',
+            photoUrl: photoUrl,
           );
 
-          await authProvider.setFirebaseUser(firebaseUser, userData);
+          await authProvider.setFirebaseUser(firebaseUser, {
+            ...userData,
+            'photoUrl': photoUrl,
+          });
 
           final String phone = userData['phone'] ?? '';
           if (mounted) {

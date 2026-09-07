@@ -60,11 +60,12 @@ class ApiService {
     await prefs.setString('auth_token', token);
   }
 
-  static Future<void> saveUserData({required String email, required String uid, String? name}) async {
+  static Future<void> saveUserData({required String email, required String uid, String? name, String? photoUrl}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_email', email);
     await prefs.setString('user_id', uid);
     if (name != null) await prefs.setString('user_name', name);
+    if (photoUrl != null && photoUrl.isNotEmpty) await prefs.setString('user_photo_url', photoUrl);
   }
 
   static Future<void> clearToken() async {
@@ -73,6 +74,7 @@ class ApiService {
     await prefs.remove('user_email');
     await prefs.remove('user_id');
     await prefs.remove('user_name');
+    await prefs.remove('user_photo_url');
   }
 
   static Future<Map<String, String>> _headers() async {
@@ -92,6 +94,7 @@ class ApiService {
           final idToken = await currentUser.getIdToken().timeout(const Duration(seconds: 4));
           if (idToken != null && idToken.isNotEmpty) {
             token = idToken;
+            await prefs.setString('auth_token', idToken);
           }
         } catch (_) {}
       }
