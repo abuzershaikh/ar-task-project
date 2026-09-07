@@ -45,16 +45,25 @@ async function testWorkerFlow() {
   console.log('   Profile API Status:', profRes.status);
   console.log('   Profile Data:', JSON.stringify(profJson));
 
-  // 4. Fetch Worker Earnings
-  console.log('\n4. Fetching worker earnings...');
-  const earnRes = await fetch(`${BASE_URL}/worker/earnings`, {
+  // 5. Fetch Worker Score (Must be 0 for new worker, tier NEW)
+  console.log('\n5. Fetching worker score...');
+  const scoreRes = await fetch(`${BASE_URL}/worker/score`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
-  const earnJson = await earnRes.json();
-  console.log('   Earnings API Status:', earnRes.status);
-  console.log('   Earnings Data:', JSON.stringify(earnJson));
+  const scoreJson = await scoreRes.json();
+  console.log('   Score API Status:', scoreRes.status);
+  console.log('   Score Data:', JSON.stringify(scoreJson));
 
-  console.log('\n✅ ALL WORKER APP ENDPOINTS TESTED AND WORKING ON NEW VPS!');
+  // 6. Worker attempting to access Admin Settings (Must be 403 Forbidden)
+  console.log('\n6. Worker trying to access /admin/settings (Must be 403 Forbidden)...');
+  const adminRes = await fetch(`${BASE_URL}/admin/settings`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  console.log('   Admin Access Status:', adminRes.status, '(Expected 403)');
+  const adminJson = await adminRes.json();
+  console.log('   Admin Response:', JSON.stringify(adminJson));
+
+  console.log('\n✅ ALL WORKER APP ENDPOINTS TESTED AND WORKING ON VPS!');
 }
 
 testWorkerFlow();

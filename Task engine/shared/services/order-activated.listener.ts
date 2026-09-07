@@ -56,7 +56,7 @@ export class OrderActivatedListener {
                 return;
             }
 
-            const rewardAmount = payload.workerRewardSnapshot || Number(order?.workerRewardSnapshot || order?.rewardPerTask || 5);
+            const rewardAmount = payload.workerRewardSnapshot || Number(order?.workerRewardSnapshot || order?.rewardPerTask || 0);
 
             let job = await this.jobRepo.findByOrderId(payload.orderId);
             if (!job) {
@@ -253,6 +253,11 @@ export class OrderActivatedListener {
                             appIcon: appIcon || combinedRequirements?.appIcon,
                             appName: appName || combinedRequirements?.appName,
                             packageId: packageId || combinedRequirements?.packageId,
+                            rewardSnapshot: {
+                                totalReward: rewardAmount,
+                                baseReward: rewardAmount,
+                                currency: 'INR',
+                            },
                         },
                         rewardAmount,
                     });

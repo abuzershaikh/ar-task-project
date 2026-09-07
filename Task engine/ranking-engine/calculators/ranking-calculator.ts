@@ -28,7 +28,7 @@ export class RankingCalculator {
             if (missingWorkerIds.length > 0) {
                 this.logger.warn(`Missing scores for ${missingWorkerIds.length} workers. Triggering recalculation.`);
                 missingWorkerIds.forEach(id => {
-                    this.eventEmitter.emit('worker.score.recalculate', { workerId: id });
+                    this.eventEmitter.emit('worker.score.recalculate', id);
                 });
             }
         }

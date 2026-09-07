@@ -45,11 +45,31 @@ export class WorkerRepository {
         await this.repository.update(id, stats);
     }
 
-    async incrementTasksCompleted(id: string): Promise<void> {
-        await this.repository.increment({ id }, 'totalTasksCompleted', 1);
+    async findWorker(idOrUserId: string): Promise<Worker | null> {
+        if (!idOrUserId) return null;
+        return this.repository.findOne({
+            where: [{ id: idOrUserId }, { userId: idOrUserId }],
+        });
     }
 
-    async incrementTasksRejected(id: string): Promise<void> {
-        await this.repository.increment({ id }, 'totalTasksRejected', 1);
+    async incrementTasksCompleted(idOrUserId: string): Promise<void> {
+        const worker = await this.findWorker(idOrUserId);
+        if (worker) {
+            await this.repository.increment({ id: worker.id }, 'totalTasksCompleted', 1);
+        }
+    }
+
+    async decrementTasksCompleted(idOrUserId: string): Promise<void> {
+        const worker = await this.findWorker(idOrUserId);
+        if (worker && Number(worker.totalTasksCompleted || 0) > 0) {
+            await this.repository.decrement({ id: worker.id }, 'totalTasksCompleted', 1);
+        }
+    }
+
+    async incrementTasksRejected(idOrUserId: string): Promise<void> {
+        const worker = await this.findWorker(idOrUserId);
+        if (worker) {
+            await this.repository.increment({ id: worker.id }, 'totalTasksRejected', 1);
+        }
     }
 }

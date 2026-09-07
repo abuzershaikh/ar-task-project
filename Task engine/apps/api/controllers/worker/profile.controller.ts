@@ -44,26 +44,26 @@ export class WorkerProfileController {
         const completed = Number(worker.totalTasksCompleted || 0);
         const rejected = Number(worker.totalTasksRejected || 0);
         const total = completed + rejected;
-        const quality = total > 0 ? Math.round((completed / total) * 1000) / 10 : 98.5;
-        const reliability = total > 0 ? Math.max(85, Math.round((1 - (rejected / total)) * 1000) / 10) : 99.2;
-        const rating = (worker.averageRating && Number(worker.averageRating) > 0) ? Number(worker.averageRating) : 4.9;
-        const overallScore = Math.round(((quality * 0.45) + (reliability * 0.35) + ((rating / 5) * 100 * 0.20)) * 10) / 10;
+        const quality = total > 0 ? Math.round((completed / total) * 1000) / 10 : 0;
+        const reliability = total > 0 ? Math.max(0, Math.round((1 - (rejected / total)) * 1000) / 10) : 0;
+        const rating = (worker.averageRating && Number(worker.averageRating) > 0) ? Number(worker.averageRating) : 0;
+        const overallScore = total > 0 ? Math.round(((quality * 0.45) + (reliability * 0.35) + ((rating / 5) * 100 * 0.20)) * 10) / 10 : 0;
 
         const effectiveScore = score ? {
-            totalScore: score.totalScore,
-            breakdown: score.breakdown,
+            totalScore: Number(score.totalScore || 0),
+            breakdown: score.breakdown || {},
             updatedAt: score.updatedAt,
         } : {
             totalScore: overallScore,
             breakdown: {
                 quality,
-                completion: total > 0 ? 100 : 98.0,
+                completion: quality,
                 reliability,
                 rating,
-                recentPerformance: 95.0,
-                experience: Math.min(100, 70 + (completed * 2)),
+                recentPerformance: quality,
+                experience: Math.min(100, completed * 2),
             },
-            updatedAt: new Date(),
+            updatedAt: worker.updatedAt || new Date(),
         };
 
         return {

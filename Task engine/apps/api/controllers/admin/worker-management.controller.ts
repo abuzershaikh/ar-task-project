@@ -58,10 +58,10 @@ export class AdminWorkerManagementController {
                 phone: u.phone || '',
                 status: (u.status || 'ACTIVE').toUpperCase(),
                 kycStatus: (w?.kycStatus || 'VERIFIED').toUpperCase(),
-                rating: Number(w?.averageRating || 4.9),
+                rating: Number(w?.averageRating || 0),
                 completedTasks: tasks.length || Number(w?.totalTasksCompleted || 0),
                 totalEarnings: totalEarned || Number(w?.totalEarnings || 0),
-                tier: (w as any)?.tier || 'Silver',
+                tier: (Number(w?.totalTasksCompleted || 0) >= 25 ? 'Gold' : (Number(w?.totalTasksCompleted || 0) >= 10 ? 'Silver' : (Number(w?.totalTasksCompleted || 0) > 0 ? 'Bronze' : 'New'))),
                 createdAt: u.createdAt || w?.createdAt,
             };
         }));
@@ -107,10 +107,10 @@ export class AdminWorkerManagementController {
             phone: user?.phone || '',
             status: (user?.status || worker?.status || 'ACTIVE').toUpperCase(),
             kycStatus: (worker?.kycStatus || 'VERIFIED').toUpperCase(),
-            rating: Number(worker?.averageRating || 4.9),
+            rating: Number(worker?.averageRating || 0),
             completedTasks: tasks.length || Number(worker?.totalTasksCompleted || 0),
             totalEarnings: totalEarningsRecorded || Number(worker?.totalEarnings || 0),
-            tier: (worker as any)?.tier || 'Silver',
+            tier: (Number(worker?.totalTasksCompleted || 0) >= 25 ? 'Gold' : (Number(worker?.totalTasksCompleted || 0) >= 10 ? 'Silver' : (Number(worker?.totalTasksCompleted || 0) > 0 ? 'Bronze' : 'New'))),
             createdAt: user?.createdAt || worker?.createdAt,
         };
 
@@ -118,7 +118,7 @@ export class AdminWorkerManagementController {
             success: true,
             worker: formattedWorker,
             user,
-            score: score || { totalScore: 92.5, accuracyRate: 98, speedScore: 89 },
+            score: score ? { totalScore: Number(score.totalScore), qualityScore: Number(score.qualityScore), reliabilityScore: Number(score.reliabilityScore), breakdown: score.breakdown } : { totalScore: 0, qualityScore: 0, reliabilityScore: 0, accuracyRate: 0, speedScore: 0 },
             tasks,
             earnings,
             ratings,
@@ -164,12 +164,14 @@ export class AdminWorkerManagementController {
     @Get(':id/score-history')
     @ApiOperation({ summary: 'Get worker score history' })
     async getWorkerScoreHistory(@Param('id') workerId: string) {
-        let worker = await this.workerRepo.findById(workerId);
+        let worker = await this.workerRepo.findWorker(workerId);
         const score = worker ? await this.scoreRepo.findByWorker(worker.id) : null;
         return {
             success: true,
-            scoreHistory: [
-                { timestamp: new Date(), score: score ? score.totalScore : 94.0 },
+            scoreHistory: score ? [
+                { timestamp: score.updatedAt || new Date(), score: Number(score.totalScore) },
+            ] : [
+                { timestamp: worker?.createdAt || new Date(), score: 0 },
             ],
         };
     }

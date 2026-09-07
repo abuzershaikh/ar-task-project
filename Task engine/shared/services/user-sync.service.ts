@@ -79,6 +79,13 @@ export class UserSyncService {
 
       return user;
     } catch (error) {
+      if (error?.message?.includes('Duplicate entry')) {
+        this.logger.warn(`Concurrently created user for ${emailOrId}. Retrieving existing record.`);
+        const existing = await this.userRepo.findByEmail(emailOrId) || await this.userRepo.findById(emailOrId);
+        if (existing) {
+          return existing;
+        }
+      }
       this.logger.error(`Error in ensureUserInMySQL for ${emailOrId}`, error);
       throw error;
     }

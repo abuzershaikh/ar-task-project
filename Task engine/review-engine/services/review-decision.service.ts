@@ -52,12 +52,6 @@ export class ReviewDecisionService {
                 );
             }
 
-            await this.taskEngine.approveTask({
-                taskId: submission.taskId,
-                reviewedBy,
-                notes,
-            });
-
             // Process earning safely (Split-Brain Prevention)
             try {
                 const earning = await this.earningEngine.calculateEarning(
@@ -75,6 +69,13 @@ export class ReviewDecisionService {
                 throw new Error(`Payment processing failed: ${error.message}`);
             }
 
+            // Only transition task to approved state AFTER earning is safely secured
+            await this.taskEngine.approveTask({
+                taskId: submission.taskId,
+                reviewedBy,
+                notes,
+            });
+
             // Notify Worker
             await this.notificationEngine.sendNotification(
                 submission.workerId,
@@ -86,7 +87,7 @@ export class ReviewDecisionService {
             // Trigger Realtime Score Recalculation
             this.eventEmitter.emit('worker.score.recalculate', submission.workerId);
 
-            console.log(`✅ Task approved via state machine: ${submission.taskId}`);
+            console.log(`✅ Task approved and earning posted: ${submission.taskId}`);
         } else if (action === 'rejected') {
             await this.taskEngine.rejectTask({
                 taskId: submission.taskId,

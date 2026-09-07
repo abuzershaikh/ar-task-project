@@ -26,12 +26,12 @@ export class RewardCalculator {
             throw new Error('Order not found');
         }
 
-        // Base reward from order — CRITICAL: MySQL DECIMAL returns strings, must convert to Number
-        const baseReward = Number(order.rewardPerTask || 0);
+        // Base reward from order (prioritize locked workerRewardSnapshot) — CRITICAL: MySQL DECIMAL returns strings
+        const baseReward = Number(order.workerRewardSnapshot || order.rewardPerTask || task.rewardAmount || 0);
         let bonus = 0;
 
         if (isNaN(baseReward) || baseReward <= 0) {
-            throw new Error(`Invalid rewardPerTask value '${order.rewardPerTask}' for order '${order.id}'`);
+            throw new Error(`Invalid reward value for order '${order.id}' (workerRewardSnapshot: ${order.workerRewardSnapshot}, rewardPerTask: ${order.rewardPerTask})`);
         }
 
         // Apply bonuses based on task requirements
