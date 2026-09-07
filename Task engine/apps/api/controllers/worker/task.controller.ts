@@ -18,6 +18,7 @@ import { ReviewEngineService } from '../../../../review-engine/review.service';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
+import { WorkerRepository } from '../../../../shared/database/repositories/worker.repository';
 
 @ApiTags('Worker - Tasks')
 @Roles(UserRole.WORKER)
@@ -30,6 +31,7 @@ export class WorkerTaskController {
         private readonly submissionRepo: SubmissionRepository,
         private readonly reviewEngine: ReviewEngineService,
         private readonly executionEngine: ExecutionEngineService,
+        private readonly workerRepo: WorkerRepository,
     ) { }
 
     @Get()
@@ -136,24 +138,11 @@ export class WorkerTaskController {
         // Allow viewing if: unassigned, assigned to current user, or task is still active/available
         const taskStatus = (task.status || '').toLowerCase();
         const isUnassigned = !task.assignedTo || task.assignedTo === '';
-        const isAssignedToMe = task.assignedTo === user.id;
+        const worker = await this.workerRepo.findWorker(user.id);
+        const isAssignedToMe = task.assignedTo === user.id || (worker && task.assignedTo === worker.id);
         const isAvailable = taskStatus === 'active' || taskStatus === 'available' || taskStatus === 'pending';
 
         if (!isUnassigned && !isAssignedToMe && !isAvailable) {
-            // Check if another available task in the same campaign exists for this worker
-            const campaignId = task.campaignId || task.orderId;
-            if (campaignId) {
-                try {
-                    const available = await this.taskEngine.getAvailableTasks(user.id);
-                    const altTask = available.find((t: any) => (t.campaignId || t.orderId) === campaignId);
-                    if (altTask) {
-                        return {
-                            success: true,
-                            task: altTask,
-                        };
-                    }
-                } catch (_) {}
-            }
             throw new ForbiddenException('You do not have permission to view this task');
         }
 
@@ -167,7 +156,9 @@ export class WorkerTaskController {
     @ApiOperation({ summary: 'Get task state transitions timeline' })
     async getTaskTimeline(@Param('id') taskId: string, @CurrentUser() user: User) {
         const task = await this.taskEngine.getTaskById(taskId);
-        if (!task || (task.assignedTo && task.assignedTo !== user.id)) {
+        const worker = await this.workerRepo.findWorker(user.id);
+        const isAssigned = task && (!task.assignedTo || task.assignedTo === user.id || (worker && task.assignedTo === worker.id));
+        if (!task || !isAssigned) {
             throw new NotFoundException('Task not found');
         }
 
@@ -231,26 +222,39 @@ export class WorkerTaskController {
     @Post(':id/accept')
     @ApiOperation({ summary: 'Accept an assigned task' })
     async acceptTask(@Param('id') taskId: string, @CurrentUser() user: User) {
-        let task = await this.taskEngine.getTaskById(taskId);
-        if (!task || (task.assignedTo && task.assignedTo !== user.id)) {
-            try {
-                const available = await this.taskEngine.getAvailableTasks(user.id);
-                const alt = available.find((t: any) => 
-                    t.orderId === taskId || t.id === taskId || t.campaignId === taskId ||
-                    (task && (t.campaignId || t.orderId) === (task.campaignId || task.orderId))
-                );
-                if (alt) {
-                    task = alt;
-                    taskId = alt.id;
-                }
-            } catch (_) {}
+        // 1. Verify worker exists and is active
+        const worker = await this.workerRepo.findWorker(user.id);
+        if (!worker) {
+            throw new BadRequestException('Worker profile not found');
         }
-        if (task && (!task.assignedTo || task.status === 'active')) {
-            try {
-                await this.taskEngine.assignTask({ taskId, workerId: user.id });
-            } catch (_) {}
+        if (worker.status && worker.status.toLowerCase() !== 'active') {
+            throw new ForbiddenException(`Worker account is ${worker.status}. Only active workers can accept tasks.`);
         }
+
+        // 2. Fetch the specific requested task (NO SILENT SWAP)
+        const task = await this.taskEngine.getTaskById(taskId);
+        if (!task) {
+            throw new NotFoundException(`Task ${taskId} not found`);
+        }
+
+        // 3. Verify task availability / ownership
+        if (task.assignedTo && task.assignedTo !== user.id && task.assignedTo !== worker.id) {
+            throw new BadRequestException('Task is already assigned to another worker');
+        }
+
+        const taskStatus = (task.status || '').toLowerCase();
+        if (taskStatus !== 'active' && taskStatus !== 'assigned' && taskStatus !== 'accepted') {
+            throw new BadRequestException(`Task is not available for acceptance (current status: ${task.status})`);
+        }
+
+        // 4. Assign task if unassigned
+        if (!task.assignedTo || taskStatus === 'active') {
+            await this.taskEngine.assignTask({ taskId, workerId: user.id });
+        }
+
+        // 5. Accept task
         await this.taskEngine.acceptTask({ taskId, workerId: user.id });
+
         return {
             success: true,
             taskId,

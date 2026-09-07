@@ -16,7 +16,10 @@ export class TaskValidationService {
     }
 
     ensureWorkerOwnership(task: { assignedTo?: string | null }, workerId: string): void {
-        if (task.assignedTo && task.assignedTo !== workerId) {
+        if (!task.assignedTo) {
+            throw new BadRequestException('Task is not assigned to any worker');
+        }
+        if (task.assignedTo !== workerId) {
             throw new BadRequestException('Task is assigned to another worker');
         }
     }

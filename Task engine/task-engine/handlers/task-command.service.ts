@@ -135,7 +135,9 @@ export class TaskCommandService {
                 try {
                     const participation = manager.create(CampaignWorkerParticipation, { campaignId, workerId: command.workerId, status: ParticipationStatus.ASSIGNED });
                     await manager.save(participation);
-                } catch (_) {}
+                } catch (partErr) {
+                    throw new BadRequestException('You have already participated in this campaign. Each worker can only complete 1 task per campaign.');
+                }
 
                 const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
                 const assignment = manager.create(TaskAssignment, {
@@ -246,7 +248,7 @@ export class TaskCommandService {
             const task = await this.ensureTaskTransactional(manager, command.taskId);
             this.validationService.ensureWorkerOwnership(task, command.workerId);
 
-            if (task.status === TaskStatus.SUBMITTED) return task;
+            if (task.status === TaskStatus.UNDER_REVIEW) return task;
 
             this.stateMachine.validateTransition({
                 taskId: task.id,
@@ -254,12 +256,12 @@ export class TaskCommandService {
                 campaignId: task.campaignId,
                 taskType: task.taskType,
                 currentStatus: task.status,
-                targetStatus: TaskStatus.SUBMITTED,
+                targetStatus: TaskStatus.UNDER_REVIEW,
                 timestamp: new Date(),
                 actor: { id: command.workerId, type: 'worker' },
             });
 
-            task.status = TaskStatus.SUBMITTED;
+            task.status = TaskStatus.UNDER_REVIEW;
             task.submittedAt = new Date();
             task.metadata = { ...(task.metadata || {}), ...(command.metadata || {}), submissionData: command.data };
             return manager.save(task);
@@ -329,7 +331,7 @@ export class TaskCommandService {
     async rejectTask(command: RejectTaskCommand) {
         return this.dataSource.transaction(async (manager) => {
             const task = await this.ensureTaskTransactional(manager, command.taskId);
-            if (task.status === TaskStatus.REJECTED) return task;
+            if (task.status === TaskStatus.ACTIVE && !task.assignedTo) return task;
 
             if (task.status !== TaskStatus.SUBMITTED && task.status !== TaskStatus.UNDER_REVIEW) {
                 throw new BadRequestException('Task is not ready for rejection');
@@ -357,8 +359,30 @@ export class TaskCommandService {
                 await manager.save(activeAssignment);
             }
 
-            task.status = TaskStatus.REJECTED;
-            task.metadata = { ...(task.metadata || {}), reviewedBy: command.reviewedBy, reviewNotes: command.notes };
+            // Return unit to ACTIVE pool so another worker can complete the order
+            this.stateMachine.validateTransition({
+                taskId: task.id,
+                orderId: task.orderId,
+                campaignId: task.campaignId,
+                taskType: task.taskType,
+                currentStatus: TaskStatus.REJECTED,
+                targetStatus: TaskStatus.ACTIVE,
+                timestamp: new Date(),
+                actor: { id: command.reviewedBy || 'system', type: 'system' },
+            });
+
+            task.status = TaskStatus.ACTIVE;
+            task.assignedTo = null;
+            task.assignedAt = null;
+            task.acceptedAt = null;
+            task.submittedAt = null;
+            task.deadline = null;
+            task.metadata = {
+                ...(task.metadata || {}),
+                lastReviewedBy: command.reviewedBy,
+                lastReviewNotes: command.notes,
+                lastRejectedAt: new Date(),
+            };
             return manager.save(task);
         });
     }
@@ -378,6 +402,12 @@ export class TaskCommandService {
                 timestamp: new Date(),
                 actor: { id: command.actorId || 'system', type: 'system' },
             });
+
+            if (task.assignedTo) {
+                const campaignId = task.campaignId || task.orderId;
+                await manager.delete(CampaignWorkerParticipation, { campaignId, workerId: task.assignedTo }).catch(() => null);
+                task.assignedTo = null;
+            }
 
             task.status = TaskStatus.CANCELLED;
             task.metadata = { ...(task.metadata || {}), cancellationReason: command.reason, cancelledBy: command.actorId };

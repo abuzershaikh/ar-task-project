@@ -8,8 +8,8 @@ import { TaskStatus } from '../../../task-engine/types/task-status.enum';
 export class TaskRepository {
     private static readonly statusAliases: Record<string, string[]> = {
         draft: ['draft'],
-        active: ['active', 'draft', 'created', 'available'],
-        pending: ['draft', 'active', 'created', 'available', 'pending'],
+        active: ['active', 'created', 'available'],
+        pending: ['active', 'created', 'available', 'pending'],
         assigned: ['assigned', 'accepted', 'in_progress', 'working', 'started'],
         accepted: ['accepted', 'assigned', 'in_progress'],
         in_progress: ['in_progress', 'accepted', 'assigned', 'working', 'started'],
@@ -80,8 +80,6 @@ export class TaskRepository {
             where: [
                 { status: TaskStatus.ACTIVE, assignedTo: null },
                 { status: 'active' as any, assignedTo: null },
-                { status: TaskStatus.DRAFT, assignedTo: null },
-                { status: 'draft' as any, assignedTo: null },
             ],
             order: { createdAt: 'DESC' },
         });

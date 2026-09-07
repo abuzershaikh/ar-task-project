@@ -60,7 +60,7 @@ export class AuthService {
         if (dto.role === UserRole.WORKER) {
             await this.workerRepo.create({
                 userId: user.id,
-                status: 'inactive',
+                status: 'active',
                 kycStatus: 'pending',
                 totalTasksCompleted: 0,
                 totalTasksRejected: 0,
