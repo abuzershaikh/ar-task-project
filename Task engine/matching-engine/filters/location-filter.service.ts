@@ -4,12 +4,18 @@ import { MatchingContext } from '../types';
 
 /**
  * Location based filtering
+ * (Currently disabled / commented out for future implementation)
  */
 @Injectable()
 export class LocationFilterService {
     constructor(private readonly workerRepo: WorkerRepository) { }
 
     async apply(workerIds: string[], context: MatchingContext, loadedWorkers?: any[]): Promise<string[]> {
+        // Location filter disabled for now - will be enabled in a future release.
+        // Return all workerIds without restricting by location.
+        return workerIds;
+
+        /*
         const requiredLocation = context.requirements?.location;
 
         if (!requiredLocation) {
@@ -32,8 +38,10 @@ export class LocationFilterService {
         });
 
         return matchingWorkers.map(w => w.id);
+        */
     }
 
+    /*
     private matchesLocation(workerLocation: any, requiredLocation: any): boolean {
         if (!workerLocation) return false;
 
@@ -93,4 +101,5 @@ export class LocationFilterService {
 
         return true;
     }
+    */
 }

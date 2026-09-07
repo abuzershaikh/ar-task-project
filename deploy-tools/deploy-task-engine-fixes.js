@@ -34,6 +34,7 @@ async function deployTaskEngineFixes() {
       'progress-engine/services/campaign-progress.service.ts',
       'apps/worker/processors/allocation-queue.processor.ts',
       'apps/api/controllers/admin/system-settings.controller.ts',
+      'task-engine/handlers/task-attempt.service.ts',
     ];
 
     console.log(`📤 Uploading ${filesToUpload.length} files to VPS...`);
