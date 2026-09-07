@@ -49,6 +49,7 @@ deploy-tools/test-queue.js
 deploy-tools/fix-db.js
 deploy-tools/reset-mysql-user.js
 Task engine/.env.backup.
+task engine bug hunt/
 
 # Build old artifacts
 build_old/
