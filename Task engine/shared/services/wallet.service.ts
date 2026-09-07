@@ -4,6 +4,8 @@ import { WalletRepository } from '../database/repositories/wallet.repository';
 import { WalletTransactionRepository } from '../database/repositories/wallet-transaction.repository';
 import { UserRepository } from '../database/repositories/user.repository';
 import { User, UserRole } from '../database/entities/user.entity';
+import { Wallet } from '../database/entities/wallet.entity';
+import { WalletTransaction } from '../database/entities/wallet-transaction.entity';
 
 @Injectable()
 export class WalletService {
@@ -46,34 +48,45 @@ export class WalletService {
      * Throws BadRequestException if insufficient balance.
      */
     async deductForOrder(userId: string, amount: number, orderId: string, orderTitle?: string) {
-        const wallet = await this.getOrCreateWallet(userId);
-        const currentBalance = Number(wallet.availableBalance);
+        return this.dataSource.transaction(async (manager) => {
+            let wallet = await manager.findOne(Wallet, {
+                where: { userId },
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (!wallet) {
+                wallet = manager.create(Wallet, { userId, availableBalance: 0, reservedBalance: 0 });
+                await manager.save(wallet);
+            }
 
-        if (currentBalance < amount) {
-            throw new BadRequestException(
-                `Insufficient wallet balance. Required: ₹${amount.toFixed(2)}, Available: ₹${currentBalance.toFixed(2)}. Please top up your wallet.`,
-            );
-        }
+            const currentBalance = Number(wallet.availableBalance);
+            if (currentBalance < amount) {
+                throw new BadRequestException(
+                    `Insufficient wallet balance. Required: ₹${amount.toFixed(2)}, Available: ₹${currentBalance.toFixed(2)}. Please top up your wallet.`,
+                );
+            }
 
-        const remainingBalance = currentBalance - amount;
-        await this.walletRepo.deductBalance(wallet.id, amount);
+            const remainingBalance = currentBalance - amount;
+            wallet.availableBalance = remainingBalance;
+            await manager.save(wallet);
 
-        const txn = await this.transactionRepo.create({
-            walletId: wallet.id,
-            type: 'DEBIT',
-            amount,
-            balanceAfter: remainingBalance,
-            referenceId: orderId,
-            description: orderTitle ? `Campaign Order: ${orderTitle}` : `Campaign Order #${orderId.slice(0, 8)}`,
-            status: 'COMPLETED',
+            const txn = manager.create(WalletTransaction, {
+                walletId: wallet.id,
+                type: 'DEBIT',
+                amount,
+                balanceAfter: remainingBalance,
+                referenceId: orderId,
+                description: orderTitle ? `Campaign Order: ${orderTitle}` : `Campaign Order #${orderId.slice(0, 8)}`,
+                status: 'COMPLETED',
+            });
+            const savedTxn = await manager.save(txn);
+
+            return {
+                success: true,
+                deductedAmount: amount,
+                remainingBalance,
+                transactionId: savedTxn.id,
+            };
         });
-
-        return {
-            success: true,
-            deductedAmount: amount,
-            remainingBalance,
-            transactionId: txn.id,
-        };
     }
 
     /**
@@ -84,26 +97,38 @@ export class WalletService {
             throw new BadRequestException('Topup amount must be greater than 0');
         }
 
-        const wallet = await this.getOrCreateWallet(userId);
-        const currentBalance = Number(wallet.availableBalance);
-        const newBalance = currentBalance + amount;
-        await this.walletRepo.updateBalance(wallet.id, amount, true);
+        return this.dataSource.transaction(async (manager) => {
+            let wallet = await manager.findOne(Wallet, {
+                where: { userId },
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (!wallet) {
+                wallet = manager.create(Wallet, { userId, availableBalance: 0, reservedBalance: 0 });
+                await manager.save(wallet);
+            }
 
-        const txn = await this.transactionRepo.create({
-            walletId: wallet.id,
-            type: 'CREDIT',
-            amount,
-            balanceAfter: newBalance,
-            description,
-            status: 'COMPLETED',
+            const currentBalance = Number(wallet.availableBalance);
+            const newBalance = currentBalance + amount;
+            wallet.availableBalance = newBalance;
+            await manager.save(wallet);
+
+            const txn = manager.create(WalletTransaction, {
+                walletId: wallet.id,
+                type: 'CREDIT',
+                amount,
+                balanceAfter: newBalance,
+                description,
+                status: 'COMPLETED',
+            });
+            const savedTxn = await manager.save(txn);
+
+            return {
+                success: true,
+                addedAmount: amount,
+                newBalance,
+                transaction: savedTxn,
+            };
         });
-
-        return {
-            success: true,
-            addedAmount: amount,
-            newBalance,
-            transaction: txn,
-        };
     }
 
     /**
@@ -119,42 +144,56 @@ export class WalletService {
             throw new BadRequestException('Amount must be greater than 0');
         }
 
-        const wallet = await this.getOrCreateWallet(buyerId);
-        const currentBalance = Number(wallet.availableBalance);
+        return this.dataSource.transaction(async (manager) => {
+            const user = await manager.findOne(User, { where: { id: buyerId } });
+            if (!user) {
+                throw new NotFoundException(`User with ID '${buyerId}' not found`);
+            }
+            if (user.role !== UserRole.BUYER && user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) {
+                throw new BadRequestException(`User '${buyerId}' is not a buyer or admin (Role: ${user.role})`);
+            }
 
-        if (type === 'DEBIT' && currentBalance < amount) {
-            throw new BadRequestException(
-                `Cannot debit ₹${amount.toFixed(2)}. Buyer currently only has ₹${currentBalance.toFixed(2)} available.`,
-            );
-        }
+            let wallet = await manager.findOne(Wallet, {
+                where: { userId: buyerId },
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (!wallet) {
+                wallet = manager.create(Wallet, { userId: buyerId, availableBalance: 0, reservedBalance: 0 });
+                await manager.save(wallet);
+            }
 
-        let newBalance = currentBalance;
-        if (type === 'CREDIT') {
-            newBalance += amount;
-            await this.walletRepo.updateBalance(wallet.id, amount, true);
-        } else {
-            newBalance -= amount;
-            await this.walletRepo.deductBalance(wallet.id, amount);
-        }
+            const currentBalance = Number(wallet.availableBalance);
 
-        const txn = await this.transactionRepo.create({
-            walletId: wallet.id,
-            type,
-            amount,
-            balanceAfter: newBalance,
-            description: notes || `Admin Manual ${type === 'CREDIT' ? 'Credit' : 'Debit'}`,
-            status: 'COMPLETED',
+            if (type === 'DEBIT' && currentBalance < amount) {
+                throw new BadRequestException(
+                    `Cannot debit ₹${amount.toFixed(2)}. Buyer currently only has ₹${currentBalance.toFixed(2)} available.`,
+                );
+            }
+
+            const newBalance = type === 'CREDIT' ? currentBalance + amount : currentBalance - amount;
+            wallet.availableBalance = newBalance;
+            await manager.save(wallet);
+
+            const txn = manager.create(WalletTransaction, {
+                walletId: wallet.id,
+                type,
+                amount,
+                balanceAfter: newBalance,
+                description: notes || `Admin Manual ${type === 'CREDIT' ? 'Credit' : 'Debit'}`,
+                status: 'COMPLETED',
+            });
+            const savedTxn = await manager.save(txn);
+
+            return {
+                success: true,
+                buyerId,
+                type,
+                amount,
+                previousBalance: currentBalance,
+                newBalance,
+                transaction: savedTxn,
+            };
         });
-
-        return {
-            success: true,
-            buyerId,
-            type,
-            amount,
-            previousBalance: currentBalance,
-            newBalance,
-            transaction: txn,
-        };
     }
 
     /**

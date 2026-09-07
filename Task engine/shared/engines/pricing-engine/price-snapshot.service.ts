@@ -24,7 +24,8 @@ export class PriceSnapshotService {
             pricing.marginValue,
         );
 
-        const workerReward = Number(pricing.workerReward);
+        const maxWorkerReward = Math.max(0, buyerUnitPrice - marginAmount);
+        const workerReward = Math.min(Number(pricing.workerReward || maxWorkerReward), maxWorkerReward);
         const totalAmount = this.priceCalculator.calculateBuyerTotal(buyerUnitPrice, quantity);
 
         return {

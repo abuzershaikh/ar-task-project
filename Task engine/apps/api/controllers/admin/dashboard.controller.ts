@@ -135,13 +135,14 @@ export class AdminDashboardController {
     async getEarningsDashboard() {
         const totalEarnings = await this.earningRepo.sumTotalEarnings();
         const totalPayouts = await this.withdrawalRepo.sumPaidWithdrawals();
+        const metrics = await this.orderRepo.getPlatformFinancialMetrics();
 
         return {
             success: true,
             financialSummary: {
-                grossPlatformVolume: totalEarnings + (totalEarnings * 0.3),
+                grossPlatformVolume: metrics.grossVolume || totalEarnings,
                 workerPayoutsDisbursed: totalPayouts || 0.0,
-                platformNetMargin: totalEarnings * 0.3,
+                platformNetMargin: metrics.platformMargin || 0.0,
             },
         };
     }

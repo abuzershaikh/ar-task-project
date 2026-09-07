@@ -5,6 +5,8 @@ import { NotificationEngineService } from '../notification-engine/notification.s
 import { EarningRepository } from '../shared/database/repositories/earning.repository';
 import { WalletRepository } from '../shared/database/repositories/wallet.repository';
 import { WorkerRepository } from '../shared/database/repositories/worker.repository';
+import { WithdrawalRepository } from '../shared/database/repositories/withdrawal.repository';
+import { WithdrawalStatus } from '../shared/database/entities/withdrawal.entity';
 import { Earning } from './types/earning';
 
 /**
@@ -20,6 +22,7 @@ export class EarningEngineService {
         private readonly earningRepo: EarningRepository,
         private readonly walletRepo: WalletRepository,
         private readonly workerRepo: WorkerRepository,
+        private readonly withdrawalRepo: WithdrawalRepository,
     ) { }
 
     async calculateEarning(taskId: string, workerId: string): Promise<Earning> {
@@ -38,16 +41,18 @@ export class EarningEngineService {
     }
 
     async getAvailableBalance(workerId: string): Promise<number> {
-        // Resolve wallet by userId or workerId
         const worker = await this.workerRepo.findWorker(workerId);
-        const userId = worker?.userId || workerId;
-        const wallet = await this.walletRepo.findByUserId(userId);
-        if (wallet) {
-            return Number(wallet.availableBalance || 0);
-        }
-        // Fallback check by workerId directly in case wallet.userId stored workerId
-        const altWallet = await this.walletRepo.findByUserId(workerId);
-        return altWallet ? Number(altWallet.availableBalance || 0) : 0;
+        const workerIds = Array.from(new Set([workerId, worker?.id, worker?.userId].filter(Boolean) as string[]));
+
+        const totalEarned = await this.earningRepo.getTotalEarnings(workerIds);
+        const totalDeducted = await this.withdrawalRepo.getTotalWithdrawalsAmount(workerIds, [
+            WithdrawalStatus.REQUESTED,
+            WithdrawalStatus.UNDER_REVIEW,
+            WithdrawalStatus.PROCESSING,
+            WithdrawalStatus.PAID,
+        ]);
+
+        return Math.max(0, totalEarned - totalDeducted);
     }
 
     async reverseEarning(earningId: string): Promise<void> {

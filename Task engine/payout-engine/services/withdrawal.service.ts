@@ -8,6 +8,8 @@ import { NotificationEngineService } from '../../notification-engine/notificatio
 import { Withdrawal, WithdrawalStatus } from '../../shared/database/entities/withdrawal.entity';
 import { Worker } from '../../shared/database/entities/worker.entity';
 import { Earning } from '../../shared/database/entities/earning.entity';
+import { Wallet } from '../../shared/database/entities/wallet.entity';
+import { WalletTransaction } from '../../shared/database/entities/wallet-transaction.entity';
 import { PayoutRequest } from '../types';
 
 /**
@@ -25,12 +27,16 @@ export class WithdrawalService {
     ) { }
 
     async create(request: PayoutRequest): Promise<string> {
-        return this.dataSource.transaction(async (manager) => {
-            const { workerId, amount, paymentMethod, idempotencyKey, metadata } = request;
+        return this.initiateWithdrawal(request);
+    }
 
+    async initiateWithdrawal(request: PayoutRequest): Promise<string> {
+        const { workerId, amount, paymentMethod, idempotencyKey, metadata } = request;
+
+        return this.dataSource.transaction(async (manager) => {
             // Idempotency check with lock
             if (idempotencyKey) {
-                const existing = await manager.findOne(Withdrawal, { 
+                const existing = await manager.findOne(Withdrawal, {
                     where: { idempotencyKey },
                     lock: { mode: 'pessimistic_write' }
                 });
@@ -41,18 +47,13 @@ export class WithdrawalService {
 
             // Acquire pessimistic lock on the Worker to serialize withdrawal requests
             let worker = await manager.findOne(Worker, { 
-                where: { userId: workerId },
+                where: [{ userId: workerId }, { id: workerId }],
                 lock: { mode: 'pessimistic_write' },
                 relations: ['profile']
             });
-            
-            if (!worker) {
-                worker = await manager.findOne(Worker, { 
-                    where: { id: workerId },
-                    lock: { mode: 'pessimistic_write' },
-                    relations: ['profile']
-                });
-            }
+
+            // Canonical ID resolution for earnings & withdrawals (support both users.id and workers.id)
+            const matchingWorkerIds = Array.from(new Set([workerId, worker?.id, worker?.userId].filter(Boolean) as string[]));
 
             const minLimit = worker?.profile?.minWithdrawalLimit || this.configService.getGlobalMinWithdrawalLimit();
 
@@ -62,17 +63,17 @@ export class WithdrawalService {
                 );
             }
 
-            // Calculate available balance inside the transaction
+            // Calculate available balance inside the transaction across all matching IDs
             const resultEarned = await manager.createQueryBuilder(Earning, 'earning')
                 .select('SUM(earning.amount)', 'total')
-                .where('earning.worker_id = :workerId', { workerId: worker?.id || workerId })
+                .where('earning.worker_id IN (:...matchingWorkerIds)', { matchingWorkerIds })
                 .andWhere('earning.status = :status', { status: 'posted' })
                 .getRawOne();
             const totalEarned = parseFloat(resultEarned?.total || 0);
 
             const resultDeducted = await manager.createQueryBuilder(Withdrawal, 'withdrawal')
                 .select('SUM(withdrawal.amount)', 'total')
-                .where('withdrawal.worker_id = :workerId', { workerId: worker?.id || workerId })
+                .where('withdrawal.worker_id IN (:...matchingWorkerIds)', { matchingWorkerIds })
                 .andWhere('withdrawal.status IN (:...statuses)', { 
                     statuses: [
                         WithdrawalStatus.REQUESTED,
@@ -92,8 +93,9 @@ export class WithdrawalService {
                 );
             }
 
+            // Save withdrawal with workerId matching the user/worker
             const withdrawalEntity = manager.create(Withdrawal, {
-                workerId: worker?.id || workerId,
+                workerId: workerId,
                 amount,
                 status: WithdrawalStatus.REQUESTED,
                 paymentMethodId: paymentMethod || 'DEFAULT',
@@ -103,6 +105,30 @@ export class WithdrawalService {
             });
 
             const withdrawal = await manager.save(withdrawalEntity);
+
+            // Synchronize with wallets table: reserve the balance so parallel withdrawal / order is blocked
+            const walletUserId = worker?.userId || workerId;
+            let wallet = await manager.findOne(Wallet, {
+                where: [{ userId: walletUserId }, { userId: workerId }],
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (wallet) {
+                const currentAvail = Number(wallet.availableBalance || 0);
+                wallet.availableBalance = Math.max(0, currentAvail - amount);
+                wallet.reservedBalance = Number(wallet.reservedBalance || 0) + amount;
+                await manager.save(wallet);
+
+                const tx = manager.create(WalletTransaction, {
+                    walletId: wallet.id,
+                    type: 'DEBIT',
+                    amount,
+                    balanceAfter: wallet.availableBalance,
+                    description: `Withdrawal request #${withdrawal.id.slice(0, 8)}`,
+                    status: 'PENDING',
+                    referenceId: withdrawal.id,
+                });
+                await manager.save(tx);
+            }
 
             await this.notificationEngine.sendNotification(
                 workerId,
@@ -117,8 +143,11 @@ export class WithdrawalService {
     }
 
     async getBalance(workerId: string): Promise<number> {
-        const totalEarned = await this.earningRepo.getTotalEarnings(workerId);
-        const totalDeducted = await this.withdrawalRepo.getTotalWithdrawalsAmount(workerId, [
+        const worker = await this.workerRepo.findWorker(workerId);
+        const matchingWorkerIds = Array.from(new Set([workerId, worker?.id, worker?.userId].filter(Boolean) as string[]));
+
+        const totalEarned = await this.earningRepo.getTotalEarnings(matchingWorkerIds);
+        const totalDeducted = await this.withdrawalRepo.getTotalWithdrawalsAmount(matchingWorkerIds, [
             WithdrawalStatus.REQUESTED,
             WithdrawalStatus.UNDER_REVIEW,
             WithdrawalStatus.PROCESSING,

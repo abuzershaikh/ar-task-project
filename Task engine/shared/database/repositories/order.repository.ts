@@ -47,4 +47,18 @@ export class OrderRepository {
     async incrementCompletedTasks(orderId: string): Promise<void> {
         await this.repository.increment({ id: orderId }, 'tasksCompleted', 1);
     }
+
+    async getPlatformFinancialMetrics(): Promise<{ grossVolume: number; platformMargin: number }> {
+        const result = await this.repository
+            .createQueryBuilder('o')
+            .select('SUM(o.total_amount)', 'grossVolume')
+            .addSelect('SUM(o.tasks_completed * o.platform_margin_snapshot)', 'platformMargin')
+            .where('o.status != :status', { status: 'CANCELLED' })
+            .getRawOne();
+
+        return {
+            grossVolume: parseFloat(result?.grossVolume || 0),
+            platformMargin: parseFloat(result?.platformMargin || 0),
+        };
+    }
 }

@@ -18,11 +18,13 @@ export class WithdrawalRepository {
         return this.repository.findOne({ where: { idempotencyKey: key } });
     }
 
-    async findByWorker(workerId: string): Promise<Withdrawal[]> {
-        return this.repository.find({
-            where: { workerId },
-            order: { createdAt: 'DESC' },
-        });
+    async findByWorker(workerId: string | string[]): Promise<Withdrawal[]> {
+        const ids = Array.isArray(workerId) ? workerId : [workerId];
+        return this.repository
+            .createQueryBuilder('withdrawal')
+            .where('withdrawal.worker_id IN (:...ids)', { ids })
+            .orderBy('withdrawal.created_at', 'DESC')
+            .getMany();
     }
 
     async findPending(): Promise<Withdrawal[]> {
@@ -36,13 +38,14 @@ export class WithdrawalRepository {
         });
     }
 
-    async getTotalWithdrawalsAmount(workerId: string, statuses: WithdrawalStatus[]): Promise<number> {
+    async getTotalWithdrawalsAmount(workerId: string | string[], statuses: WithdrawalStatus[]): Promise<number> {
         if (!statuses || statuses.length === 0) return 0;
+        const ids = Array.isArray(workerId) ? workerId : [workerId];
 
         const result = await this.repository
             .createQueryBuilder('withdrawal')
             .select('SUM(withdrawal.amount)', 'total')
-            .where('withdrawal.worker_id = :workerId', { workerId })
+            .where('withdrawal.worker_id IN (:...ids)', { ids })
             .andWhere('withdrawal.status IN (:...statuses)', { statuses })
             .getRawOne();
 

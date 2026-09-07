@@ -18,18 +18,21 @@ export class EarningRepository {
         return this.repository.findOne({ where: { taskId } });
     }
 
-    async findByWorker(workerId: string): Promise<Earning[]> {
-        return this.repository.find({
-            where: { workerId },
-            order: { createdAt: 'DESC' },
-        });
+    async findByWorker(workerId: string | string[]): Promise<Earning[]> {
+        const ids = Array.isArray(workerId) ? workerId : [workerId];
+        return this.repository
+            .createQueryBuilder('earning')
+            .where('earning.worker_id IN (:...ids)', { ids })
+            .orderBy('earning.created_at', 'DESC')
+            .getMany();
     }
 
-    async getTotalEarnings(workerId: string): Promise<number> {
+    async getTotalEarnings(workerId: string | string[]): Promise<number> {
+        const ids = Array.isArray(workerId) ? workerId : [workerId];
         const result = await this.repository
             .createQueryBuilder('earning')
             .select('SUM(earning.amount)', 'total')
-            .where('earning.worker_id = :workerId', { workerId })
+            .where('earning.worker_id IN (:...ids)', { ids })
             .andWhere('earning.status = :status', { status: 'posted' })
             .getRawOne();
 

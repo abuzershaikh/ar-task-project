@@ -50,7 +50,7 @@ export class PaymentTransaction {
     @Column({ type: 'varchar', length: 10, default: 'INR' })
     currency: string;
 
-    @Column({ type: 'json', nullable: true })
+    @Column({ name: 'raw_payload', type: 'json', nullable: true })
     rawPayload: any;
 
     @Column({ name: 'verified_at', type: 'timestamp', nullable: true })

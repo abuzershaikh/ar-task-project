@@ -31,7 +31,9 @@ export class WorkerEarningController {
     @Get()
     @ApiOperation({ summary: 'Get worker earnings history' })
     async getEarnings(@CurrentUser() user: User) {
-        const earnings = await this.earningRepo.findByWorker(user.id);
+        const worker = await this.workerRepo.findByUserId(user.id);
+        const workerIds = Array.from(new Set([user.id, worker?.id].filter(Boolean) as string[]));
+        const earnings = await this.earningRepo.findByWorker(workerIds);
         return {
             success: true,
             earnings,
@@ -42,18 +44,19 @@ export class WorkerEarningController {
     @ApiOperation({ summary: 'Get worker wallet summary with minimum withdrawal threshold' })
     async getWallet(@CurrentUser() user: User) {
         const worker = await this.workerRepo.findByUserId(user.id);
+        const workerIds = Array.from(new Set([user.id, worker?.id].filter(Boolean) as string[]));
         const minWithdrawalLimit = worker?.profile?.minWithdrawalLimit || this.payoutEngine.getMinWithdrawalLimit();
 
-        const totalEarned = await this.earningRepo.getTotalEarnings(user.id);
+        const totalEarned = await this.earningRepo.getTotalEarnings(workerIds);
 
-        const totalDeducted = await this.withdrawalRepo.getTotalWithdrawalsAmount(user.id, [
+        const totalDeducted = await this.withdrawalRepo.getTotalWithdrawalsAmount(workerIds, [
             WithdrawalStatus.REQUESTED,
             WithdrawalStatus.UNDER_REVIEW,
             WithdrawalStatus.PROCESSING,
             WithdrawalStatus.PAID,
         ]);
 
-        const pendingWithdrawals = await this.withdrawalRepo.getTotalWithdrawalsAmount(user.id, [
+        const pendingWithdrawals = await this.withdrawalRepo.getTotalWithdrawalsAmount(workerIds, [
             WithdrawalStatus.REQUESTED,
             WithdrawalStatus.UNDER_REVIEW,
             WithdrawalStatus.PROCESSING,
@@ -62,8 +65,8 @@ export class WorkerEarningController {
         const availableBalance = Math.max(0, totalEarned - totalDeducted);
         const isEligibleToWithdraw = availableBalance >= minWithdrawalLimit;
 
-        const earnings = await this.earningRepo.findByWorker(user.id);
-        const withdrawals = await this.withdrawalRepo.findByWorker(user.id);
+        const earnings = await this.earningRepo.findByWorker(workerIds);
+        const withdrawals = await this.withdrawalRepo.findByWorker(workerIds);
 
         return {
             success: true,
@@ -160,7 +163,9 @@ export class WorkerEarningController {
     @Get('withdrawals')
     @ApiOperation({ summary: 'Get worker withdrawal history' })
     async getWithdrawals(@CurrentUser() user: User) {
-        const withdrawals = await this.withdrawalRepo.findByWorker(user.id);
+        const worker = await this.workerRepo.findByUserId(user.id);
+        const workerIds = Array.from(new Set([user.id, worker?.id].filter(Boolean) as string[]));
+        const withdrawals = await this.withdrawalRepo.findByWorker(workerIds);
         return {
             success: true,
             withdrawals,

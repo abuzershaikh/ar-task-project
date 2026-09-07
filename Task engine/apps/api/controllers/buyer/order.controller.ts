@@ -8,8 +8,10 @@ import {
     BadRequestException,
     HttpCode,
     HttpStatus,
+    Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { DataSource } from 'typeorm';
 import { OrderRepository } from '../../../../shared/database/repositories/order.repository';
 import { TaskRepository } from '../../../../shared/database/repositories/task.repository';
 import { SubmissionRepository } from '../../../../shared/database/repositories/submission.repository';
@@ -21,6 +23,9 @@ import { CurrentUser } from '../../../../shared/auth/decorators/current-user.dec
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { Public } from '../../../../shared/auth/decorators/public.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
+import { Order } from '../../../../shared/database/entities/order.entity';
+import { Wallet } from '../../../../shared/database/entities/wallet.entity';
+import { WalletTransaction } from '../../../../shared/database/entities/wallet-transaction.entity';
 import { TimingPolicy } from '../../../../shared/policies/timing-policy';
 import { WalletService } from '../../../../shared/services/wallet.service';
 import { AiGeneratorService } from '../../../../shared/ai-generator/ai-generator.service';
@@ -32,6 +37,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 @ApiBearerAuth('bearer')
 @Controller('buyer/orders')
 export class BuyerOrderController {
+    private readonly logger = new Logger(BuyerOrderController.name);
+
     constructor(
         private readonly orderRepo: OrderRepository,
         private readonly taskRepo: TaskRepository,
@@ -44,6 +51,7 @@ export class BuyerOrderController {
         private readonly aiGeneratorService: AiGeneratorService,
         private readonly playStoreScraper: PlayStoreScraperService,
         private readonly eventEmitter: EventEmitter2,
+        private readonly dataSource: DataSource,
     ) { }
 
     @Public()
@@ -200,36 +208,76 @@ export class BuyerOrderController {
         const campaignExpiryDate = data.campaignExpiryDate ? new Date(data.campaignExpiryDate) : undefined;
         const totalCost = Number(snapshot.totalAmount);
 
-        // Deduct from buyer's wallet balance
-        const deductionResult = await this.walletService.deductForOrder(
-            user.id,
-            totalCost,
-            'temp_order',
-            title,
-        );
+        // Execute order creation and wallet deduction atomically in a single database transaction
+        const { order, deductionResult } = await this.dataSource.transaction(async (manager) => {
+            // 1. Pessimistic lock on buyer's wallet
+            let wallet = await manager.findOne(Wallet, {
+                where: { userId: user.id },
+                lock: { mode: 'pessimistic_write' },
+            });
+            if (!wallet) {
+                wallet = manager.create(Wallet, { userId: user.id, availableBalance: 0, reservedBalance: 0 });
+                await manager.save(wallet);
+            }
 
-        const order = await this.orderRepo.create({
-            buyerId: user.id,
-            title,
-            description: data.description,
-            taskType: snapshot.serviceCode || serviceIdentifier,
-            totalTasksRequired: quantity,
-            rewardPerTask: snapshot.workerRewardSnapshot,
-            buyerUnitPrice: snapshot.buyerUnitPrice,
-            workerRewardSnapshot: snapshot.workerRewardSnapshot,
-            platformMarginSnapshot: snapshot.marginAmount,
-            serviceCode: snapshot.serviceCode || serviceIdentifier,
-            pricingVersion: snapshot.pricingVersion,
-            totalAmount: snapshot.totalAmount,
-            status: 'ACTIVE',
-            requirements: normalizedRequirements,
-            reviewMode: finalReviewMode,
-            timeToAcceptHours: timeToAccept,
-            timeToCompleteHours: timeToComplete,
-            campaignExpiryDate: campaignExpiryDate,
-            timeToAcceptHoursSnapshot: timeToAccept,
-            timeToCompleteHoursSnapshot: timeToComplete,
-            campaignExpiryDateSnapshot: campaignExpiryDate,
+            const currentBalance = Number(wallet.availableBalance);
+            if (currentBalance < totalCost) {
+                throw new BadRequestException(
+                    `Insufficient wallet balance. Required: ₹${totalCost.toFixed(2)}, Available: ₹${currentBalance.toFixed(2)}. Please top up your wallet.`,
+                );
+            }
+
+            // 2. Insert Order first so real order.id exists
+            const newOrder = manager.create(Order, {
+                buyerId: user.id,
+                title,
+                description: data.description,
+                taskType: snapshot.serviceCode || serviceIdentifier,
+                totalTasksRequired: quantity,
+                rewardPerTask: snapshot.workerRewardSnapshot,
+                buyerUnitPrice: snapshot.buyerUnitPrice,
+                workerRewardSnapshot: snapshot.workerRewardSnapshot,
+                platformMarginSnapshot: snapshot.marginAmount,
+                serviceCode: snapshot.serviceCode || serviceIdentifier,
+                pricingVersion: snapshot.pricingVersion,
+                totalAmount: snapshot.totalAmount,
+                status: 'ACTIVE',
+                requirements: normalizedRequirements,
+                reviewMode: finalReviewMode,
+                timeToAcceptHours: timeToAccept,
+                timeToCompleteHours: timeToComplete,
+                campaignExpiryDate: campaignExpiryDate,
+                timeToAcceptHoursSnapshot: timeToAccept,
+                timeToCompleteHoursSnapshot: timeToComplete,
+                campaignExpiryDateSnapshot: campaignExpiryDate,
+            });
+            const savedOrder = await manager.save(newOrder);
+
+            // 3. Deduct balance from wallet with actual order ID reference
+            const remainingBalance = currentBalance - totalCost;
+            wallet.availableBalance = remainingBalance;
+            await manager.save(wallet);
+
+            const txn = manager.create(WalletTransaction, {
+                walletId: wallet.id,
+                type: 'DEBIT',
+                amount: totalCost,
+                balanceAfter: remainingBalance,
+                referenceId: savedOrder.id,
+                description: title ? `Campaign Order: ${title}` : `Campaign Order #${savedOrder.id.slice(0, 8)}`,
+                status: 'COMPLETED',
+            });
+            const savedTxn = await manager.save(txn);
+
+            return {
+                order: savedOrder,
+                deductionResult: {
+                    success: true,
+                    deductedAmount: totalCost,
+                    remainingBalance,
+                    transactionId: savedTxn.id,
+                },
+            };
         });
 
         // Trigger task generation queue directly via event
@@ -242,7 +290,9 @@ export class BuyerOrderController {
                 workerRewardSnapshot: order.workerRewardSnapshot,
                 activatedAt: new Date(),
             });
-        } catch (_) {}
+        } catch (emitErr) {
+            this.logger.error(`Failed to emit 'order.activated' for order ${order.id}: ${emitErr.message}`, emitErr.stack);
+        }
 
         return {
             success: true,

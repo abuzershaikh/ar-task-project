@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ServicePricingRepository } from '../../../database/repositories/service-pricing.repository';
 import { ServiceCatalogRepository } from '../../../database/repositories/service-catalog.repository';
 import { ServicePricing } from '../../../database/entities/service-pricing.entity';
@@ -40,9 +40,21 @@ export class ServicePricingService {
             data.marginType,
             marginValue,
         );
-        const workerReward = (data.workerReward !== undefined && data.workerReward !== null && !isNaN(Number(data.workerReward)))
-            ? Number(data.workerReward)
-            : (buyerUnitPrice - marginAmount);
+        const maxWorkerReward = Math.max(0, buyerUnitPrice - marginAmount);
+        let workerReward = maxWorkerReward;
+
+        if (data.workerReward !== undefined && data.workerReward !== null && !isNaN(Number(data.workerReward))) {
+            const requestedReward = Number(data.workerReward);
+            if (requestedReward > maxWorkerReward) {
+                throw new BadRequestException(
+                    `workerReward (₹${requestedReward.toFixed(2)}) cannot exceed buyerUnitPrice minus margin (₹${maxWorkerReward.toFixed(2)})`,
+                );
+            }
+            if (requestedReward <= 0) {
+                throw new BadRequestException('workerReward must be greater than 0');
+            }
+            workerReward = requestedReward;
+        }
 
         // Deactivate all existing versions for this service to ensure exactly ONE active version
         await this.servicePricingRepo.deactivateAllVersions(serviceId);
