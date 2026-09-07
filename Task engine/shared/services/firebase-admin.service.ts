@@ -89,6 +89,12 @@ export class FirebaseAdminService implements OnModuleInit {
     orderId?: string;
     reward?: number;
     serviceCode?: string;
+    category?: string;
+    icon?: string;
+    imageUrl?: string;
+    appName?: string;
+    appIcon?: string;
+    targetUrl?: string;
   }): Promise<void> {
     try {
       const rewardFormatted = params.reward ? `₹${params.reward}` : 'Cash Reward';
@@ -97,6 +103,8 @@ export class FirebaseAdminService implements OnModuleInit {
         params.body ||
         `A new ${params.serviceCode || 'reward'} task is ready. Accept now before slots fill up!`;
 
+      const iconUrl = params.imageUrl || params.icon || params.appIcon || '';
+
       const dataPayload: Record<string, string> = {
         type: 'NEW_TASK',
         click_action: 'FLUTTER_NOTIFICATION_CLICK',
@@ -104,6 +112,14 @@ export class FirebaseAdminService implements OnModuleInit {
         orderId: params.orderId || '',
         reward: String(params.reward || '0'),
         serviceCode: params.serviceCode || '',
+        category: params.category || '',
+        title: notificationTitle,
+        body: notificationBody,
+        icon: iconUrl,
+        imageUrl: iconUrl,
+        appIcon: params.appIcon || iconUrl,
+        appName: params.appName || '',
+        targetUrl: params.targetUrl || '',
         createdAt: new Date().toISOString(),
       };
 
@@ -114,6 +130,7 @@ export class FirebaseAdminService implements OnModuleInit {
           notification: {
             title: notificationTitle,
             body: notificationBody,
+            ...(iconUrl ? { imageUrl: iconUrl } : {}),
           },
           data: dataPayload,
           android: {
@@ -123,6 +140,7 @@ export class FirebaseAdminService implements OnModuleInit {
               priority: 'high',
               sound: 'default',
               clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+              ...(iconUrl ? { imageUrl: iconUrl } : {}),
             },
           },
         };

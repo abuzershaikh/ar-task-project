@@ -7,6 +7,7 @@ import '../../../services/data/repositories/service_repository_impl.dart';
 import '../../../services/presentation/widgets/category_accordion_card.dart';
 import '../../../services/presentation/widgets/ai_comment_config_widget.dart';
 import '../../../../core/utils/service_unit_helper.dart';
+import '../../../../shared/presentation/widgets/login_dialog.dart';
 
 class CreateCampaignPage extends StatefulWidget {
   final String? serviceId;
@@ -374,6 +375,18 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   }
 
   void _submitCampaign() async {
+    if (!AuthHelper.isAuthenticated()) {
+      final authenticated = await AuthHelper.requireAuth(
+        context,
+        title: 'Sign In to Place Order',
+        message: 'Please sign in with Google to confirm and launch this campaign.',
+      );
+      if (!authenticated) return;
+      if (!mounted) return;
+      _loadWalletBalance();
+    }
+
+    if (!mounted) return;
     if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return;
     }
@@ -507,14 +520,16 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         ),
       );
     } catch (e) {
-      setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('⚠️ Order failed: $e'),
-          backgroundColor: Colors.red.shade700,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Order failed: $e'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 

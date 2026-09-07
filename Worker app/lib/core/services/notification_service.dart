@@ -1,5 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -213,6 +216,95 @@ class NotificationService {
         _handleNotificationPayload(jsonEncode(message.data));
       }
     });
+
+    // 4. Local Notification Terminated State Click Handler
+    _localNotifications.getNotificationAppLaunchDetails().then((details) async {
+      if (details != null && details.didNotificationLaunchApp) {
+        final payload = details.notificationResponse?.payload;
+        if (payload != null && payload.isNotEmpty) {
+          debugPrint(
+            '🔔 [LOCAL NOTIF COLD START] App opened from local notification: $payload',
+          );
+          await Future.delayed(const Duration(milliseconds: 1500));
+          _handleNotificationPayload(payload);
+        }
+      }
+    });
+  }
+
+  /// Helper to download and cache remote icon for rich notifications
+  Future<String?> _downloadAndSaveFile(String url, String fileName) async {
+    try {
+      final directory = await getTemporaryDirectory();
+      final filePath = '${directory.path}/$fileName';
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
+        final file = File(filePath);
+        await file.writeAsBytes(response.bodyBytes);
+        return filePath;
+      }
+    } catch (e) {
+      debugPrint('⚠️ [NOTIF ICON DOWNLOAD ERROR] $e');
+    }
+    return null;
+  }
+
+  /// Resolve the best high-res icon URL for the task
+  String _resolveNotificationIconUrl(Map<String, dynamic> data) {
+    // 1. Direct explicit appIcon / imageUrl / icon from backend
+    final explicitIcon = (data['appIcon'] ?? data['icon'] ?? data['imageUrl'])
+        ?.toString()
+        .trim();
+    if (explicitIcon != null && explicitIcon.startsWith('http')) {
+      return explicitIcon;
+    }
+
+    // 2. Fallback: resolve using self-hosted VPS icon assets
+    const assetBaseUrl = 'http://65.20.77.112:3000/api/v1/assets/icons';
+
+    final serviceCode = (data['serviceCode'] ?? data['category'] ?? data['type'] ?? '')
+        .toString()
+        .toLowerCase();
+    final title = (data['title'] ?? '').toString().toLowerCase();
+    final body = (data['body'] ?? data['message'] ?? '').toString().toLowerCase();
+    final combined = '$serviceCode $title $body';
+
+    // Instagram
+    if (combined.contains('instagram') || combined.contains('insta')) {
+      return '$assetBaseUrl/instagram';
+    }
+
+    // YouTube
+    if (combined.contains('youtube') || combined.contains('yt')) {
+      return '$assetBaseUrl/youtube';
+    }
+
+    // App Install / Google Play Store
+    if (combined.contains('install') ||
+        combined.contains('app') ||
+        combined.contains('playstore') ||
+        combined.contains('play.google')) {
+      return '$assetBaseUrl/playstore';
+    }
+
+    // Facebook
+    if (combined.contains('facebook') || combined.contains('fb')) {
+      return '$assetBaseUrl/facebook';
+    }
+
+    // Telegram
+    if (combined.contains('telegram')) {
+      return '$assetBaseUrl/telegram';
+    }
+
+    // Twitter / X
+    if (combined.contains('twitter') || combined.contains(' x ')) {
+      return '$assetBaseUrl/twitter';
+    }
+
+    return '$assetBaseUrl/playstore';
   }
 
   /// Display a heads-up floating notification banner with sound and vibration
@@ -240,6 +332,24 @@ class NotificationService {
       _recentNotificationKeys.remove(_recentNotificationKeys.first);
     }
 
+    final notificationId = dedupeKey.hashCode.abs();
+
+    // 🖼️ Download & attach rich icon (App icon, Instagram logo, YouTube logo, etc.)
+    final iconUrl = _resolveNotificationIconUrl(message.data);
+    String? localIconPath;
+    if (iconUrl.isNotEmpty) {
+      final safeExt = iconUrl.contains('.jpg') ? 'jpg' : 'png';
+      localIconPath = await _downloadAndSaveFile(
+        iconUrl,
+        'notif_icon_${notificationId}.$safeExt',
+      );
+    }
+
+    AndroidBitmap<Object>? largeIconBitmap;
+    if (localIconPath != null && localIconPath.isNotEmpty) {
+      largeIconBitmap = FilePathAndroidBitmap(localIconPath);
+    }
+
     final androidDetails = AndroidNotificationDetails(
       _channel.id,
       _channel.name,
@@ -249,13 +359,25 @@ class NotificationService {
       playSound: true,
       enableVibration: true,
       icon: '@mipmap/ic_launcher',
-      styleInformation: BigTextStyleInformation(body),
+      largeIcon: largeIconBitmap,
+      styleInformation: BigTextStyleInformation(
+        body,
+        contentTitle: title,
+        summaryText: message.data['category'] ?? message.data['serviceCode'] ?? 'New Task',
+      ),
     );
 
     final notificationDetails = NotificationDetails(android: androidDetails);
 
-    final notificationId = dedupeKey.hashCode.abs();
-    final payload = jsonEncode(message.data);
+    final payloadMap = Map<String, dynamic>.from(message.data);
+    payloadMap['title'] = title;
+    payloadMap['body'] = body;
+    if (iconUrl.isNotEmpty) {
+      payloadMap['icon'] ??= iconUrl;
+      payloadMap['imageUrl'] ??= iconUrl;
+      payloadMap['appIcon'] ??= iconUrl;
+    }
+    final payload = jsonEncode(payloadMap);
 
     await _localNotifications.show(
       notificationId,

@@ -27,6 +27,7 @@ import { ExecutionEngineModule } from '../../execution-engine/execution.module';
 
 import { AuthController } from './controllers/auth/auth.controller';
 import { FileController } from './controllers/common/file.controller';
+import { AssetController } from './controllers/common/asset.controller';
 import { WebhookController } from './controllers/webhooks/webhook.controller';
 import { HealthController } from './controllers/common/health.controller';
 import { AppUpdateController } from './controllers/common/app-update.controller';
@@ -111,6 +112,7 @@ import { AdminWalletController } from './controllers/admin/wallet.controller';
         AppUpdateController,
         AuthController,
         FileController,
+        AssetController,
         WebhookController,
 
         // Worker

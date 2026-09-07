@@ -10,6 +10,7 @@ import '../../../../core/di/injection.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../bloc/profile_bloc.dart';
 import '../../data/models/profile_model.dart';
+import '../../../../shared/presentation/widgets/login_dialog.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -182,6 +183,15 @@ class _ProfilePageState extends State<ProfilePage> {
                         tag: 'PROFILE',
                         tagColor: const Color(0xFF38BDF8),
                         onTap: () async {
+                          if (!AuthHelper.isAuthenticated()) {
+                            final ok = await AuthHelper.requireAuth(
+                              context,
+                              title: 'Sign In Required',
+                              message: 'Please sign in to view and edit personal information.',
+                            );
+                            if (!ok) return;
+                          }
+                          if (!context.mounted) return;
                           final bloc = context.read<ProfileBloc>();
                           await Navigator.pushNamed(context, AppRouter.editProfile);
                           bloc.add(RefreshProfileEvent());
@@ -197,6 +207,15 @@ class _ProfilePageState extends State<ProfilePage> {
                         tag: profile.companyName.isNotEmpty ? 'VERIFIED' : 'BUSINESS',
                         tagColor: const Color(0xFF10B981),
                         onTap: () async {
+                          if (!AuthHelper.isAuthenticated()) {
+                            final ok = await AuthHelper.requireAuth(
+                              context,
+                              title: 'Sign In Required',
+                              message: 'Please sign in to view and edit business details.',
+                            );
+                            if (!ok) return;
+                          }
+                          if (!context.mounted) return;
                           final bloc = context.read<ProfileBloc>();
                           await Navigator.pushNamed(context, AppRouter.businessProfile);
                           bloc.add(RefreshProfileEvent());
@@ -209,7 +228,18 @@ class _ProfilePageState extends State<ProfilePage> {
                         subtitle: 'Official campaign billing statements & receipts',
                         tag: 'RECEIPTS',
                         tagColor: const Color(0xFFF59E0B),
-                        onTap: () => Navigator.pushNamed(context, AppRouter.invoices),
+                        onTap: () async {
+                          if (!AuthHelper.isAuthenticated()) {
+                            final ok = await AuthHelper.requireAuth(
+                              context,
+                              title: 'Sign In Required',
+                              message: 'Please sign in to view official invoices.',
+                            );
+                            if (!ok) return;
+                          }
+                          if (!context.mounted) return;
+                          Navigator.pushNamed(context, AppRouter.invoices);
+                        },
                       ),
                     ]),
                     const SizedBox(height: 20),
@@ -259,35 +289,83 @@ class _ProfilePageState extends State<ProfilePage> {
                     ]),
                     const SizedBox(height: 24),
 
-                    // ── 6. Logout CTA ──
+                    // ── 6. Auth CTA (Sign In or Logout) ──
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 18),
-                      child: GestureDetector(
-                        onTap: () => _showLogoutDialog(context),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 18),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Logout of Account',
-                                style: GoogleFonts.outfit(
-                                  color: const Color(0xFFEF4444),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
+                      child: AuthHelper.isAuthenticated()
+                          ? GestureDetector(
+                              onTap: () => _showLogoutDialog(context),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Logout of Account',
+                                      style: GoogleFonts.outfit(
+                                        color: const Color(0xFFEF4444),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
+                            )
+                          : GestureDetector(
+                              onTap: () {
+                                AuthHelper.requireAuth(
+                                  context,
+                                  title: 'Sign In to Profile',
+                                  message: 'Sign in to customize your profile, company details and view invoices.',
+                                  onAuthenticated: () {
+                                    if (context.mounted) {
+                                      context.read<ProfileBloc>().add(RefreshProfileEvent());
+                                    }
+                                  },
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF0284C7), Color(0xFF2563EB)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.login_rounded, color: Colors.white, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Sign In with Google',
+                                      style: GoogleFonts.outfit(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                     ),
                     const SizedBox(height: 120),
                   ],
@@ -486,6 +564,15 @@ class _ProfilePageState extends State<ProfilePage> {
                 // Edit Profile Button
                 GestureDetector(
                   onTap: () async {
+                    if (!AuthHelper.isAuthenticated()) {
+                      final ok = await AuthHelper.requireAuth(
+                        context,
+                        title: 'Sign In to Edit Profile',
+                        message: 'Please sign in with Google to edit your name and phone number.',
+                      );
+                      if (!ok) return;
+                    }
+                    if (!context.mounted) return;
                     await Navigator.pushNamed(context, AppRouter.editProfile);
                     if (context.mounted) context.read<ProfileBloc>().add(RefreshProfileEvent());
                   },

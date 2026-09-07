@@ -6,6 +6,7 @@ import '../bloc/wallet_state.dart';
 import '../widgets/balance_card.dart';
 import '../widgets/transaction_list_item.dart';
 import 'add_balance_screen.dart';
+import '../../../../shared/presentation/widgets/login_dialog.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -206,6 +207,77 @@ class _WalletScreenState extends State<WalletScreen>
                         ),
                     ],
                   ),
+                ),
+              ),
+            );
+          }
+
+          if (!AuthHelper.isAuthenticated()) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0284C7).withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: Color(0xFF0284C7),
+                        size: 36,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Sign In to View Wallet & Billing',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Access real-time balance, deposit funds, view invoice statements and transaction history.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF64748B),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        AuthHelper.requireAuth(
+                          context,
+                          title: 'Sign In to Wallet',
+                          message: 'Sign in to access your wallet, deposit balance and view transactions.',
+                          onAuthenticated: () {
+                            if (mounted) {
+                              context.read<WalletBloc>().add(const GetBalanceEvent());
+                            }
+                          },
+                        );
+                      },
+                      icon: const Icon(Icons.login_rounded, size: 18),
+                      label: const Text(
+                        'Sign In with Google',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );

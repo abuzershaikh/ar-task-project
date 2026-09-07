@@ -9,6 +9,7 @@ import '../../../../core/di/injection.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../../domain/entities/dashboard_data.dart';
 import '../../domain/entities/campaign_summary.dart';
+import '../../../../shared/presentation/widgets/login_dialog.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -496,7 +497,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4), width: 0.8),
                         ),
                         child: Text(
-                          'BUYER VIP',
+                          AuthHelper.isAuthenticated() ? 'BUYER VIP' : 'GUEST',
                           style: GoogleFonts.outfit(
                             color: const Color(0xFF34D399),
                             fontSize: 9,
@@ -519,6 +520,56 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ],
               ),
             ),
+
+            // Sign In button if unauthenticated
+            if (!AuthHelper.isAuthenticated()) ...[
+              GestureDetector(
+                onTap: () {
+                  AuthHelper.requireAuth(
+                    context,
+                    title: 'Sign In to ReviewsGateway',
+                    message: 'Sign in to access your buyer dashboard, live wallet & analytics.',
+                    onAuthenticated: () {
+                      if (mounted) setState(() {});
+                    },
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF38BDF8), Color(0xFF2563EB)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.login_rounded, color: Colors.white, size: 15),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Sign In',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
 
             // Notification Center with Glow
             GestureDetector(

@@ -25,6 +25,10 @@ async function deployNotifications() {
         local: path.join(localBase, 'shared/services/order-activated.listener.ts'),
         remote: `${remoteBase}/shared/services/order-activated.listener.ts`,
       },
+      {
+        local: path.join(localBase, 'apps/api/controllers/worker/task.controller.ts'),
+        remote: `${remoteBase}/apps/api/controllers/worker/task.controller.ts`,
+      },
     ];
 
     for (const f of files) {
@@ -32,8 +36,8 @@ async function deployNotifications() {
       await ssh.putFile(f.local, f.remote);
     }
 
-    console.log('\nCompiling backend on VPS (npm run build:api)...');
-    const buildRes = await ssh.execCommand('npm run build:api', { cwd: remoteBase });
+    console.log('\nCompiling backend on VPS (npx nest build)...');
+    const buildRes = await ssh.execCommand('npx nest build', { cwd: remoteBase });
     console.log('Build Output:', buildRes.stdout || 'Done');
     if (buildRes.stderr) console.warn('Build Warning:', buildRes.stderr);
 

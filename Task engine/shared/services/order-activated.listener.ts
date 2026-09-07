@@ -272,6 +272,31 @@ export class OrderActivatedListener {
                 const allTasks = await this.taskRepo.findByOrderId(payload.orderId);
                 const targetTaskId = allTasks.length > 0 ? allTasks[0].id : payload.orderId;
 
+                const category = serviceCatalog?.category || (payload.serviceCode.toLowerCase().includes('instagram') ? 'Instagram' : (payload.serviceCode.toLowerCase().includes('install') || payload.serviceCode.toLowerCase().includes('app') ? 'App Install' : 'General'));
+
+                // 🖼️ Resolve Platform / App Icon for Rich Notification Display
+                let notificationIcon = '';
+                const sLower = `${payload.serviceCode} ${serviceTitle} ${category}`.toLowerCase();
+                const specificAppIcon = appIcon || combinedRequirements?.appIcon || '';
+                const assetBaseUrl = (process.env.APP_URL || 'http://65.20.77.112:3000') + '/api/v1/assets/icons';
+                if (specificAppIcon && specificAppIcon.startsWith('http')) {
+                    notificationIcon = specificAppIcon;
+                } else if (sLower.includes('instagram') || sLower.includes('insta')) {
+                    notificationIcon = `${assetBaseUrl}/instagram`;
+                } else if (sLower.includes('youtube') || sLower.includes('yt')) {
+                    notificationIcon = `${assetBaseUrl}/youtube`;
+                } else if (sLower.includes('install') || sLower.includes('app') || sLower.includes('playstore') || sLower.includes('google')) {
+                    notificationIcon = `${assetBaseUrl}/playstore`;
+                } else if (sLower.includes('facebook') || sLower.includes('fb')) {
+                    notificationIcon = `${assetBaseUrl}/facebook`;
+                } else if (sLower.includes('telegram')) {
+                    notificationIcon = `${assetBaseUrl}/telegram`;
+                } else if (sLower.includes('twitter') || sLower.includes(' x ')) {
+                    notificationIcon = `${assetBaseUrl}/twitter`;
+                } else {
+                    notificationIcon = `${assetBaseUrl}/playstore`;
+                }
+
                 await this.firebaseAdmin.sendTaskBroadcastNotification({
                     title: notificationTitle,
                     body: notificationBody,
@@ -279,6 +304,12 @@ export class OrderActivatedListener {
                     orderId: payload.orderId,
                     reward: rewardAmount,
                     serviceCode: payload.serviceCode,
+                    category,
+                    icon: notificationIcon,
+                    imageUrl: notificationIcon,
+                    appIcon: specificAppIcon || notificationIcon,
+                    appName: appName || combinedRequirements?.appName || '',
+                    targetUrl: targetUrl || '',
                 });
 
                 // Persist in MySQL for worker in-app notification history
@@ -294,6 +325,12 @@ export class OrderActivatedListener {
                         orderId: payload.orderId,
                         reward: rewardAmount,
                         serviceCode: payload.serviceCode,
+                        category,
+                        icon: notificationIcon,
+                        imageUrl: notificationIcon,
+                        appIcon: specificAppIcon || notificationIcon,
+                        appName: appName || combinedRequirements?.appName || '',
+                        targetUrl: targetUrl || '',
                         type: 'NEW_TASK',
                     },
                 });

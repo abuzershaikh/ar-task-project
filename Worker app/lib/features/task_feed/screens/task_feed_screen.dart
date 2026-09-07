@@ -124,14 +124,15 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
       reqStr = task['requirements'].toString().toLowerCase();
     }
     final metaStr = (task['metadata'] != null) ? task['metadata'].toString().toLowerCase() : '';
-    final combined = '$type $reqStr $metaStr';
-    if (combined.contains('youtube') || combined.contains('yt_')) return 'youtube';
+    final title = (task['title'] ?? '').toString().toLowerCase();
+    final combined = '$type $reqStr $metaStr $title';
     if (combined.contains('instagram') || combined.contains('insta')) return 'instagram';
+    if (combined.contains('google') || combined.contains('maps') || combined.contains('playstore') || combined.contains('play.google') || combined.contains('install') || combined.contains('app')) return 'google';
+    if (combined.contains('youtube') || combined.contains('yt_')) return 'youtube';
     if (combined.contains('facebook') || combined.contains('fb')) return 'facebook';
-    if (combined.contains('google') || combined.contains('maps') || combined.contains('playstore')) return 'google';
     if (combined.contains('twitter') || combined.contains(' x ') || combined.contains('x.com')) return 'x';
     if (combined.contains('telegram')) return 'telegram';
-    return 'youtube';
+    return 'google';
   }
 
   @override

@@ -15,6 +15,7 @@ import '../../../features/campaigns/presentation/pages/campaigns_page.dart';
 import '../../../features/campaigns/presentation/pages/create_campaign_page.dart';
 import '../../../features/wallet/presentation/pages/wallet_screen.dart';
 import '../../../features/profile/presentation/pages/profile_page.dart';
+import '../widgets/login_dialog.dart';
 
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});
@@ -41,6 +42,46 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     try {
       context.read<WalletBloc>().add(const GetBalanceEvent());
     } catch (_) {}
+
+    // Web & App: If user is not logged in, prompt them with the login dialog
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!AuthHelper.isAuthenticated()) {
+        AuthHelper.requireAuth(
+          context,
+          title: 'Sign In to ReviewsGateway',
+          message:
+              'Login to access your enterprise dashboard, launch marketing campaigns, and monitor tasks in real time.',
+          onAuthenticated: () {
+            if (mounted) setState(() {});
+          },
+        );
+      }
+    });
+  }
+
+  void _handleNavigation(int index) {
+    // If selecting a protected tab (Campaigns, Wallet, Profile) while unauthenticated
+    if (index > 0 && !AuthHelper.isAuthenticated()) {
+      AuthHelper.requireAuth(
+        context,
+        title: index == 2
+            ? 'Sign In to Launch Campaign'
+            : (index == 3 ? 'Sign In to Access Wallet' : 'Sign In Required'),
+        message: 'Please sign in with Google to continue with this section.',
+        onAuthenticated: () {
+          if (mounted) {
+            setState(() {
+              _currentIndex = index;
+            });
+          }
+        },
+      );
+      return;
+    }
+
+    setState(() {
+      _currentIndex = index;
+    });
   }
 
   String _getPageTitle(int index) {
@@ -114,11 +155,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             ),
             child: BottomNavigationBar(
               currentIndex: _currentIndex,
-              onTap: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
+              onTap: (index) => _handleNavigation(index),
               type: BottomNavigationBarType.fixed,
               backgroundColor: Colors.white,
               selectedItemColor: AppColors.primary,
@@ -395,63 +432,106 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                 top: BorderSide(color: Color(0xFF1E293B), width: 1),
               ),
             ),
-            child: Row(
-              children: [
-                // Avatar
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.4), width: 1.5),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: userPhoto != null && userPhoto.isNotEmpty
-                        ? Image.network(
-                            userPhoto,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Image.asset('assets/images/vip_badge_3d.jpg', fit: BoxFit.cover),
-                          )
-                        : Image.asset('assets/images/vip_badge_3d.jpg', fit: BoxFit.cover),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+            child: AuthHelper.isAuthenticated()
+                ? Row(
                     children: [
-                      Text(
-                        userName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
+                      // Avatar
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: const Color(0xFF38BDF8).withValues(alpha: 0.4), width: 1.5),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: userPhoto != null && userPhoto.isNotEmpty
+                              ? Image.network(
+                                  userPhoto,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Image.asset(
+                                      'assets/images/vip_badge_3d.jpg',
+                                      fit: BoxFit.cover),
+                                )
+                              : Image.asset('assets/images/vip_badge_3d.jpg', fit: BoxFit.cover),
                         ),
                       ),
-                      Text(
-                        userEmail,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(
-                          color: const Color(0xFF64748B),
-                          fontSize: 10.5,
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              userName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              userEmail,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(
+                                color: const Color(0xFF64748B),
+                                fontSize: 10.5,
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
+                      // Logout Icon Button
+                      IconButton(
+                        icon: const Icon(Icons.logout_rounded, color: Color(0xFF94A3B8), size: 18),
+                        tooltip: 'Logout',
+                        onPressed: () => _confirmSignOut(context),
                       ),
                     ],
+                  )
+                : InkWell(
+                    onTap: () {
+                      AuthHelper.requireAuth(
+                        context,
+                        title: 'Sign In to ReviewsGateway',
+                        message: 'Sign in to manage your campaigns, wallet, and micro-tasks.',
+                        onAuthenticated: () {
+                          if (mounted) setState(() {});
+                        },
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0284C7), Color(0xFF2563EB)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.login_rounded, color: Colors.white, size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Sign In with Google',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                // Logout Icon Button
-                IconButton(
-                  icon: const Icon(Icons.logout_rounded, color: Color(0xFF94A3B8), size: 18),
-                  tooltip: 'Logout',
-                  onPressed: () => _confirmSignOut(context),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -471,7 +551,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       return Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         child: InkWell(
-          onTap: () => setState(() => _currentIndex = index),
+          onTap: () => _handleNavigation(index),
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -512,7 +592,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 2.5),
       child: InkWell(
-        onTap: () => setState(() => _currentIndex = index),
+        onTap: () => _handleNavigation(index),
         borderRadius: BorderRadius.circular(10),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -606,7 +686,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                 builder: (context, state) {
                   final balance = state is WalletLoaded ? state.balance.availableBalance : 0.0;
                   return InkWell(
-                    onTap: () => setState(() => _currentIndex = 3),
+                    onTap: () => _handleNavigation(3),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -655,7 +735,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
               // + Launch Campaign CTA Button
               if (_currentIndex != 2) ...[
                 GestureDetector(
-                  onTap: () => setState(() => _currentIndex = 2),
+                  onTap: () => _handleNavigation(2),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(

@@ -6,6 +6,7 @@ import '../../../../core/routes/app_router.dart';
 import '../../../../core/di/injection.dart';
 import '../bloc/campaigns_list_bloc.dart';
 import '../../domain/entities/campaign_detail.dart';
+import '../../../../shared/presentation/widgets/login_dialog.dart';
 
 class CampaignsPage extends StatelessWidget {
   const CampaignsPage({super.key});
@@ -87,6 +88,76 @@ class _CampaignsViewState extends State<_CampaignsView> with SingleTickerProvide
           }
 
           if (state is CampaignsListError) {
+            if (!AuthHelper.isAuthenticated()) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2563EB).withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.campaign_rounded,
+                          color: Color(0xFF2563EB),
+                          size: 36,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      const Text(
+                        'Sign In to View Campaigns',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Monitor active tasks, micro-worker submissions, screenshots, and live progress.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF64748B),
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          AuthHelper.requireAuth(
+                            context,
+                            title: 'Sign In to Campaigns',
+                            message: 'Sign in to track your active campaigns and task submissions.',
+                            onAuthenticated: () {
+                              final status = _statuses[_tabController.index];
+                              context.read<CampaignsListBloc>().add(LoadCampaignsListEvent(status: status));
+                            },
+                          );
+                        },
+                        icon: const Icon(Icons.login_rounded, size: 18),
+                        label: const Text(
+                          'Sign In with Google',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

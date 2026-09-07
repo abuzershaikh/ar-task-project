@@ -123,7 +123,7 @@ export class WorkerTaskController {
             try {
                 const available = await this.taskEngine.getAvailableTasks(user.id);
                 task = available.find((t: any) => 
-                    t.orderId === taskId || t.id === taskId
+                    t.orderId === taskId || t.id === taskId || t.campaignId === taskId
                 );
             } catch (_) {}
         }
@@ -140,6 +140,20 @@ export class WorkerTaskController {
         const isAvailable = taskStatus === 'active' || taskStatus === 'available' || taskStatus === 'pending';
 
         if (!isUnassigned && !isAssignedToMe && !isAvailable) {
+            // Check if another available task in the same campaign exists for this worker
+            const campaignId = task.campaignId || task.orderId;
+            if (campaignId) {
+                try {
+                    const available = await this.taskEngine.getAvailableTasks(user.id);
+                    const altTask = available.find((t: any) => (t.campaignId || t.orderId) === campaignId);
+                    if (altTask) {
+                        return {
+                            success: true,
+                            task: altTask,
+                        };
+                    }
+                } catch (_) {}
+            }
             throw new ForbiddenException('You do not have permission to view this task');
         }
 
@@ -217,7 +231,20 @@ export class WorkerTaskController {
     @Post(':id/accept')
     @ApiOperation({ summary: 'Accept an assigned task' })
     async acceptTask(@Param('id') taskId: string, @CurrentUser() user: User) {
-        const task = await this.taskEngine.getTaskById(taskId);
+        let task = await this.taskEngine.getTaskById(taskId);
+        if (!task || (task.assignedTo && task.assignedTo !== user.id)) {
+            try {
+                const available = await this.taskEngine.getAvailableTasks(user.id);
+                const alt = available.find((t: any) => 
+                    t.orderId === taskId || t.id === taskId || t.campaignId === taskId ||
+                    (task && (t.campaignId || t.orderId) === (task.campaignId || task.orderId))
+                );
+                if (alt) {
+                    task = alt;
+                    taskId = alt.id;
+                }
+            } catch (_) {}
+        }
         if (task && (!task.assignedTo || task.status === 'active')) {
             try {
                 await this.taskEngine.assignTask({ taskId, workerId: user.id });
@@ -226,6 +253,7 @@ export class WorkerTaskController {
         await this.taskEngine.acceptTask({ taskId, workerId: user.id });
         return {
             success: true,
+            taskId,
             message: 'Task accepted successfully',
         };
     }

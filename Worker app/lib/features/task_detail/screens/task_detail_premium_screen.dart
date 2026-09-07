@@ -111,10 +111,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
   // ── Helper Extractors ──────────────────────────────────────────────────────
   String _getPlatform() {
     final t = widget.task;
-    if (t == null) return 'youtube';
+    if (t == null) return 'playstore';
     if (t['platform'] != null && t['platform'].toString().trim().isNotEmpty) {
       final p = t['platform'].toString().toLowerCase().trim();
-      if (p.contains('play') || p.contains('google_play') || p.contains('google')) return 'playstore';
+      if (p.contains('play') || p.contains('google_play') || p.contains('google') || p.contains('install') || p.contains('app')) return 'playstore';
+      if (p.contains('instagram') || p.contains('insta')) return 'instagram';
       return p;
     }
     final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? '').toString().toLowerCase();
@@ -123,15 +124,17 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
       reqStr = t['requirements'].toString().toLowerCase();
     }
     final metaStr = (t['metadata'] != null) ? t['metadata'].toString().toLowerCase() : '';
-    final combined = '$type $reqStr $metaStr';
-    if (combined.contains('playstore') || combined.contains('google_play') || combined.contains('play_store') || combined.contains('app_review') || combined.contains('play.google') || combined.contains('google_rating') || combined.contains('google_review')) return 'playstore';
-    if (combined.contains('youtube') || combined.contains('yt_')) return 'youtube';
+    final titleStr = (t['title'] ?? '').toString().toLowerCase();
+    final descStr = (t['description'] ?? t['body'] ?? '').toString().toLowerCase();
+    final combined = '$type $reqStr $metaStr $titleStr $descStr';
     if (combined.contains('instagram') || combined.contains('insta')) return 'instagram';
+    if (combined.contains('install') || combined.contains('app_install') || combined.contains('playstore') || combined.contains('google_play') || combined.contains('play_store') || combined.contains('app_review') || combined.contains('play.google') || combined.contains('google_rating') || combined.contains('google_review')) return 'playstore';
+    if (combined.contains('youtube') || combined.contains('yt_')) return 'youtube';
     if (combined.contains('facebook') || combined.contains('fb')) return 'facebook';
     if (combined.contains('google') || combined.contains('maps')) return 'playstore';
     if (combined.contains('twitter') || combined.contains(' x ') || combined.contains('x.com')) return 'x';
     if (combined.contains('telegram')) return 'telegram';
-    return 'youtube';
+    return 'playstore';
   }
 
   String _getAppIcon() {
@@ -139,6 +142,12 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     if (t == null) return '';
     if (t['appIcon'] != null && t['appIcon'].toString().trim().isNotEmpty) {
       return t['appIcon'].toString().trim();
+    }
+    if (t['icon'] != null && t['icon'].toString().trim().isNotEmpty) {
+      return t['icon'].toString().trim();
+    }
+    if (t['imageUrl'] != null && t['imageUrl'].toString().trim().isNotEmpty) {
+      return t['imageUrl'].toString().trim();
     }
     if (t['requirements'] is Map) {
       final req = t['requirements'] as Map;
@@ -148,6 +157,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
       if (req['icon'] != null && req['icon'].toString().trim().isNotEmpty) {
         return req['icon'].toString().trim();
       }
+      if (req['imageUrl'] != null && req['imageUrl'].toString().trim().isNotEmpty) {
+        return req['imageUrl'].toString().trim();
+      }
     }
     if (t['metadata'] is Map) {
       final meta = t['metadata'] as Map;
@@ -156,6 +168,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
       }
       if (meta['icon'] != null && meta['icon'].toString().trim().isNotEmpty) {
         return meta['icon'].toString().trim();
+      }
+      if (meta['imageUrl'] != null && meta['imageUrl'].toString().trim().isNotEmpty) {
+        return meta['imageUrl'].toString().trim();
       }
     }
     return '';
@@ -207,12 +222,16 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     }
     final p = _getPlatform();
     if (p == 'playstore') {
+      final tUpper = (widget.task['taskType'] ?? widget.task['type'] ?? widget.task['serviceCode'] ?? '').toString().toUpperCase();
+      if (tUpper.contains('INSTALL')) {
+        return 'Install & Open App from Play Store 📱';
+      }
       return '5-Star Rating & App Review on Play Store ⭐⭐⭐⭐⭐';
     }
     if (p == 'instagram') {
-      return 'Instagram Engagement Task (Follow, Like or Comment)';
+      return 'Instagram Task (Follow & Like) 📸';
     }
-    return 'Comment on ${p[0].toUpperCase()}${p.substring(1)} Video';
+    return 'Complete ${p[0].toUpperCase()}${p.substring(1)} Task';
   }
 
   String _getBadgeText() {
