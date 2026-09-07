@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { EarningRepository } from '../../shared/database/repositories/earning.repository';
 import { WorkerRepository } from '../../shared/database/repositories/worker.repository';
+import { WithdrawalRepository } from '../../shared/database/repositories/withdrawal.repository';
+import { WithdrawalStatus } from '../../shared/database/entities/withdrawal.entity';
 
 /**
  * Worker ka progress aur stats track karta hai
@@ -12,16 +14,31 @@ export class WorkerProgressService {
         private readonly taskRepo: TaskRepository,
         private readonly earningRepo: EarningRepository,
         private readonly workerRepo: WorkerRepository,
+        private readonly withdrawalRepo: WithdrawalRepository,
     ) { }
 
     async getProgress(workerId: string) {
-        const worker = await this.workerRepo.findById(workerId);
+        const worker = await this.workerRepo.findById(workerId) || await this.workerRepo.findByUserId(workerId);
         if (!worker) {
             throw new Error('Worker not found');
         }
 
-        const tasks = await this.taskRepo.findByWorker(workerId);
-        const totalEarnings = await this.earningRepo.getTotalEarnings(workerId);
+        const matchingWorkerIds = Array.from(new Set([workerId, worker.id, worker.userId].filter(Boolean) as string[]));
+
+        const tasks = await this.taskRepo.findByWorker(worker.id);
+        const totalEarnings = await this.earningRepo.getTotalEarnings(matchingWorkerIds);
+        const totalDeducted = await this.withdrawalRepo.getTotalWithdrawalsAmount(matchingWorkerIds, [
+            WithdrawalStatus.REQUESTED,
+            WithdrawalStatus.UNDER_REVIEW,
+            WithdrawalStatus.PROCESSING,
+            WithdrawalStatus.PAID,
+        ]);
+        const pendingWithdrawals = await this.withdrawalRepo.getTotalWithdrawalsAmount(matchingWorkerIds, [
+            WithdrawalStatus.REQUESTED,
+            WithdrawalStatus.UNDER_REVIEW,
+            WithdrawalStatus.PROCESSING,
+        ]);
+        const availableEarnings = Math.max(0, totalEarnings - totalDeducted);
 
         const assigned = tasks.filter(t => t.status === 'assigned').length;
         const inProgress = tasks.filter(t => ['accepted', 'in_progress'].includes(t.status)).length;
@@ -33,7 +50,8 @@ export class WorkerProgressService {
         const successRate = total > 0 ? (completed / (completed + rejected)) * 100 : 0;
 
         return {
-            workerId,
+            workerId: worker.id,
+            userId: worker.userId,
             tasks: {
                 assigned,
                 inProgress,
@@ -44,8 +62,8 @@ export class WorkerProgressService {
             },
             earnings: {
                 total: totalEarnings,
-                available: totalEarnings, // TODO: Subtract withdrawals
-                pending: 0,
+                available: availableEarnings,
+                pending: pendingWithdrawals,
             },
             stats: {
                 successRate: Math.round(successRate * 100) / 100,
@@ -55,3 +73,4 @@ export class WorkerProgressService {
         };
     }
 }
+

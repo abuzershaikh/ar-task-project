@@ -33,6 +33,7 @@ async function deployFinanceAndWalletFixes() {
       'apps/api/controllers/admin/payout-management.controller.ts',
       'apps/api/controllers/worker/earning.controller.ts',
       'earning-engine/earning.service.ts',
+      'progress-engine/services/worker-progress.service.ts',
     ];
 
     console.log(`📤 Uploading ${filesToUpload.length} files to VPS...`);

@@ -3,6 +3,7 @@ import {
     Get,
     Post,
     Body,
+    Req,
     BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -10,6 +11,7 @@ import { KycStatus } from '../../../../shared/database/entities/kyc.entity';
 import { EarningRepository } from '../../../../shared/database/repositories/earning.repository';
 import { WithdrawalRepository } from '../../../../shared/database/repositories/withdrawal.repository';
 import { WorkerRepository } from '../../../../shared/database/repositories/worker.repository';
+import { WalletRepository } from '../../../../shared/database/repositories/wallet.repository';
 import { WithdrawalStatus } from '../../../../shared/database/entities/withdrawal.entity';
 import { PayoutEngineService } from '../../../../payout-engine/payout.service';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
@@ -25,6 +27,7 @@ export class WorkerEarningController {
         private readonly earningRepo: EarningRepository,
         private readonly withdrawalRepo: WithdrawalRepository,
         private readonly workerRepo: WorkerRepository,
+        private readonly walletRepo: WalletRepository,
         private readonly payoutEngine: PayoutEngineService,
     ) { }
 
@@ -68,6 +71,9 @@ export class WorkerEarningController {
         const earnings = await this.earningRepo.findByWorker(workerIds);
         const withdrawals = await this.withdrawalRepo.findByWorker(workerIds);
 
+        // Fetch wallet table record for user
+        const wallet = await this.walletRepo.findByUserId(user.id);
+
         return {
             success: true,
             worker,
@@ -76,6 +82,7 @@ export class WorkerEarningController {
                 totalDeducted,
                 pendingWithdrawals,
                 availableBalance,
+                reservedBalance: wallet ? Number(wallet.reservedBalance || 0) : pendingWithdrawals,
                 minWithdrawalLimit,
                 isEligibleToWithdraw,
                 earningsCount: earnings.length,
@@ -85,12 +92,16 @@ export class WorkerEarningController {
     }
 
     @Get('balance')
-    @ApiOperation({ summary: 'Get worker balance' })
+    @ApiOperation({ summary: 'Get worker available balance' })
     async getBalance(@CurrentUser() user: User) {
         const walletRes = await this.getWallet(user);
         return {
-            success: true,
-            balance: walletRes.wallet,
+            availableBalance: walletRes.wallet.availableBalance,
+            totalEarned: walletRes.wallet.totalEarned,
+            totalDeducted: walletRes.wallet.totalDeducted,
+            pendingWithdrawals: walletRes.wallet.pendingWithdrawals,
+            minWithdrawalLimit: walletRes.wallet.minWithdrawalLimit,
+            isEligibleToWithdraw: walletRes.wallet.isEligibleToWithdraw,
         };
     }
 
@@ -98,6 +109,7 @@ export class WorkerEarningController {
     @ApiOperation({ summary: 'Request withdrawal (Enforces minimum limit and idempotency)' })
     async requestWithdrawal(
         @CurrentUser() user: User,
+        @Req() req: any,
         @Body()
         body: {
             amount: number;
@@ -130,33 +142,21 @@ export class WorkerEarningController {
             );
         }
 
+        const effectiveIdempotencyKey = body.idempotencyKey || req?.headers?.['idempotency-key'] as string;
+
         const withdrawalId = await this.payoutEngine.initiateWithdrawal({
             workerId: user.id,
             amount: body.amount,
             paymentMethod: body.paymentMethodId || body.paymentMethod || 'DEFAULT',
-            idempotencyKey: body.idempotencyKey,
+            idempotencyKey: effectiveIdempotencyKey,
             metadata: body.metadata,
         });
-
-        const status = await this.payoutEngine.processPayout(withdrawalId);
-
-        if (status.status === 'completed') {
-            await this.withdrawalRepo.update(withdrawalId, {
-                status: WithdrawalStatus.PAID,
-                paidAt: status.processedAt,
-                transactionId: status.transactionId,
-            });
-        } else if (status.status === 'processing' || status.status === 'pending') {
-            await this.withdrawalRepo.update(withdrawalId, {
-                status: WithdrawalStatus.PROCESSING,
-            });
-        }
 
         return {
             success: true,
             withdrawalId,
-            status,
-            message: 'Withdrawal request submitted successfully',
+            status: WithdrawalStatus.REQUESTED,
+            message: 'Withdrawal request submitted successfully and is pending review',
         };
     }
 
