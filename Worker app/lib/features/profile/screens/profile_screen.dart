@@ -133,29 +133,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         profile['photoUrl']?.toString() ??
         profile['avatarUrl']?.toString();
 
-    // Stats
-    final double rating = (profile['averageRating'] != null &&
-            double.tryParse(profile['averageRating'].toString()) != null &&
-            double.parse(profile['averageRating'].toString()) > 0)
-        ? double.parse(profile['averageRating'].toString())
-        : (profile['score']?['breakdown']?['rating'] != null
-            ? (double.tryParse(profile['score']['breakdown']['rating'].toString()) ?? 4.9)
-            : 4.9);
+    // Stats - 100% Live from Api & ProfileProvider
+    final double rating = profileProvider.liveRating;
 
-    final double qualityScore = (profile['score'] != null && profile['score']['totalScore'] != null)
-        ? (double.tryParse(profile['score']['totalScore'].toString()) ?? 96.5)
-        : (profile['score']?['overallScore'] != null
-            ? (double.tryParse(profile['score']['overallScore'].toString()) ?? 96.5)
-            : 96.5);
+    final double qualityScore = profileProvider.liveQualityScore;
 
     final String totalEarnings = profile['totalEarnings']?.toString() ??
         taskProvider.dashboardStats['totalEarnings']?.toString() ??
         taskProvider.walletData['balance']?.toString() ??
-        '12.50';
+        '0.00';
 
     final String workerId = user?['uid'] != null && user!['uid'].toString().length > 6
         ? user['uid'].toString().substring(0, 6).toUpperCase()
-        : 'WKR982';
+        : (profile['id'] != null && profile['id'].toString().length > 6
+            ? profile['id'].toString().substring(0, 6).toUpperCase()
+            : 'WKR-01');
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -1020,14 +1012,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             icon: Icons.stars_rounded,
             iconColor: const Color(0xFFD97706),
             title: 'Quality Score & Accuracy',
-            subtitle: '${qualityScore.toStringAsFixed(1)}% score  •  ${rating.toStringAsFixed(1)} avg rating',
+            subtitle: '${qualityScore.toStringAsFixed(1)}% score  •  ${rating > 0 ? "${rating.toStringAsFixed(1)} avg rating" : "New Worker"}',
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 18),
                 const SizedBox(width: 4),
                 Text(
-                  rating.toStringAsFixed(1),
+                  rating > 0 ? rating.toStringAsFixed(1) : 'New',
                   style: GoogleFonts.poppins(
                     color: const Color(0xFFB45309),
                     fontSize: 13,

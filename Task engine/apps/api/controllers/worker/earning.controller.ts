@@ -126,8 +126,10 @@ export class WorkerEarningController {
         const walletRes = await this.getWallet(user);
         const minLimit = walletRes.wallet.minWithdrawalLimit;
 
-        if (walletRes.worker?.kycStatus !== KycStatus.VERIFIED) {
-            throw new BadRequestException('Please complete and verify your KYC bank details before withdrawing funds');
+        const isKycValid = walletRes.worker?.kycStatus === KycStatus.VERIFIED || 
+                           walletRes.worker?.kycStatus === KycStatus.SUBMITTED;
+        if (!isKycValid) {
+            throw new BadRequestException('Please add and submit your bank or payout details before requesting a withdrawal');
         }
 
         if (body.amount < minLimit) {

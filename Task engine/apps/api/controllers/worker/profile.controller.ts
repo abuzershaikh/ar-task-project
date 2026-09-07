@@ -5,6 +5,7 @@ import { WorkerScoreRepository } from '../../../../shared/database/repositories/
 import { TaskRepository } from '../../../../shared/database/repositories/task.repository';
 import { EarningRepository } from '../../../../shared/database/repositories/earning.repository';
 import { RatingRepository } from '../../../../shared/database/repositories/rating.repository';
+import { KycRepository } from '../../../../shared/database/repositories/kyc.repository';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
@@ -20,6 +21,7 @@ export class WorkerProfileController {
         private readonly taskRepo: TaskRepository,
         private readonly earningRepo: EarningRepository,
         private readonly ratingRepo: RatingRepository,
+        private readonly kycRepo: KycRepository,
     ) { }
 
     private async getOrCreateWorker(user: User) {
@@ -47,24 +49,34 @@ export class WorkerProfileController {
         const quality = total > 0 ? Math.round((completed / total) * 1000) / 10 : 0;
         const reliability = total > 0 ? Math.max(0, Math.round((1 - (rejected / total)) * 1000) / 10) : 0;
         const rating = (worker.averageRating && Number(worker.averageRating) > 0) ? Number(worker.averageRating) : 0;
-        const overallScore = total > 0 ? Math.round(((quality * 0.45) + (reliability * 0.35) + ((rating / 5) * 100 * 0.20)) * 10) / 10 : 0;
+        const calculatedOverallScore = total > 0 ? Math.round(((quality * 0.45) + (reliability * 0.35) + ((rating / 5) * 100 * 0.20)) * 10) / 10 : 60;
 
-        const effectiveScore = score ? {
-            totalScore: Number(score.totalScore || 0),
-            breakdown: score.breakdown || {},
-            updatedAt: score.updatedAt,
-        } : {
-            totalScore: overallScore,
-            breakdown: {
+        const effectiveTotalScore = score ? Number(score.totalScore || 0) : calculatedOverallScore;
+        const effectiveScore = {
+            totalScore: effectiveTotalScore,
+            overallScore: effectiveTotalScore,
+            breakdown: score?.breakdown || {
                 quality,
                 completion: quality,
                 reliability,
                 rating,
-                recentPerformance: quality,
+                recentPerformance: 0,
                 experience: Math.min(100, completed * 2),
             },
-            updatedAt: worker.updatedAt || new Date(),
+            isStarterScore: total === 0 && !score,
+            updatedAt: score?.updatedAt || worker.updatedAt || new Date(),
         };
+
+        const kyc = await this.kycRepo.findByWorkerId(worker.id);
+        const bankDetails = kyc ? {
+            bankName: kyc.bankName || null,
+            accountNumber: kyc.accountNumber || null,
+            ifscCode: kyc.ifscCode || null,
+            upiId: kyc.upiId || null,
+            paypalId: kyc.paypalId || null,
+            status: kyc.status,
+            submittedAt: kyc.submittedAt,
+        } : (worker.profile?.bankDetails || null);
 
         return {
             success: true,
@@ -75,8 +87,10 @@ export class WorkerProfileController {
                 fullName: user.fullName,
                 phone: user.phone,
                 status: worker.status,
-                kycStatus: worker.kycStatus,
+                kycStatus: kyc ? kyc.status : worker.kycStatus,
                 profile: worker.profile,
+                bankDetails,
+                kyc: kyc || null,
                 preferences: worker.preferences,
                 totalTasksCompleted: completed,
                 totalTasksRejected: rejected,

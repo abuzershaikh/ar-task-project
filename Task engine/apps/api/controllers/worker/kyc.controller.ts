@@ -29,6 +29,12 @@ export class WorkerKycController {
         return worker;
     }
 
+    @Get()
+    @ApiOperation({ summary: 'Get worker KYC status and details' })
+    async getKyc(@CurrentUser() user: User) {
+        return this.getStatus(user);
+    }
+
     @Get('status')
     @ApiOperation({ summary: 'Get worker KYC status and details' })
     async getStatus(@CurrentUser() user: User) {
@@ -66,10 +72,6 @@ export class WorkerKycController {
         const worker = await this.getWorker(user.id);
         let kyc = await this.kycRepo.findByWorkerId(worker.id);
 
-        if (kyc && (kyc.status === KycStatus.VERIFIED || kyc.status === KycStatus.UNDER_REVIEW)) {
-            throw new BadRequestException(`Cannot update KYC while status is ${kyc.status}`);
-        }
-
         const payload = {
             workerId: worker.id,
             fullName: body.fullName || user.fullName,
@@ -95,12 +97,29 @@ export class WorkerKycController {
             kyc = await this.kycRepo.create(payload);
         }
 
-        await this.workerRepo.update(worker.id, { kycStatus: KycStatus.SUBMITTED });
+        const bankDetails = {
+            bankName: body.bankName || kyc?.bankName || null,
+            accountNumber: body.accountNumber || kyc?.accountNumber || null,
+            ifscCode: body.ifscCode || kyc?.ifscCode || null,
+            upiId: body.upiId || kyc?.upiId || null,
+            paypalId: body.paypalId || kyc?.paypalId || null,
+            status: KycStatus.SUBMITTED,
+            submittedAt: new Date(),
+        };
+
+        await this.workerRepo.update(worker.id, {
+            kycStatus: KycStatus.SUBMITTED,
+            profile: {
+                ...(worker.profile || {}),
+                bankDetails,
+            },
+        });
 
         return {
             success: true,
             kyc,
-            message: 'KYC application submitted successfully',
+            bankDetails,
+            message: 'Payout and KYC details submitted successfully',
         };
     }
 }

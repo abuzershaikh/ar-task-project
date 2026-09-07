@@ -12,6 +12,7 @@ import '../../profile/screens/quality_score_screen.dart';
 import '../../wallet/screens/wallet_screen.dart';
 import '../../notifications/screens/notification_history_screen.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/providers/profile_provider.dart';
 import '../widgets/task_feed_card.dart';
 
 /// Task Feed Screen with Multi-Slide Top Hero Banner:
@@ -1324,13 +1325,21 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                     children: [
                       const Icon(Icons.verified_rounded, color: Color(0xFFD8B4FE), size: 12),
                       const SizedBox(width: 4),
-                      Text(
-                        '98.5% QUALITY SCORE',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFFE9D5FF),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 9.0,
-                        ),
+                      Consumer<ProfileProvider>(
+                        builder: (context, prof, _) {
+                          final score = prof.liveQualityScore;
+                          final text = score > 0
+                              ? '${score.toStringAsFixed(0)}% QUALITY SCORE'
+                              : 'QUALITY SCORE';
+                          return Text(
+                            text,
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFFE9D5FF),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 9.0,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

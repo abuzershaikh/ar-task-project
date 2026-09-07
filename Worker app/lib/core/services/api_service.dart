@@ -318,6 +318,20 @@ class ApiService {
   }
 
   // --- Worker Profile & KYC APIs ---
+  static Future<Map<String, dynamic>> getKycStatus() async {
+    try {
+      final headers = await _headers();
+      final response = await http.get(
+        Uri.parse('$baseUrl/worker/kyc/status'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
+    return {};
+  }
+
   static Future<Map<String, dynamic>> submitKycBankDetails(Map<String, dynamic> data) async {
     final headers = await _headers();
     final response = await http.post(

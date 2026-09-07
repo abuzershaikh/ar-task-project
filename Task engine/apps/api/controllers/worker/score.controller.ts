@@ -51,6 +51,7 @@ export class WorkerScoreController {
                 success: true,
                 score: {
                     overallScore: 0,
+                    totalScore: 0,
                     breakdown: { completion: 0, quality: 0, reliability: 0, rating: 0, experience: 0 },
                     priority: this.determinePriority(0),
                     workerTier: 'NEW',
@@ -65,13 +66,14 @@ export class WorkerScoreController {
         const completed = Number(worker.totalTasksCompleted || 0);
         const rejected = Number(worker.totalTasksRejected || 0);
 
-        // New worker: starter score 50
+        // New worker: starter score 60
         if (completed === 0 && rejected === 0) {
             const activityStatus = this.workerRepo.getActivityStatus(worker);
             return {
                 success: true,
                 score: {
                     overallScore: 60,
+                    totalScore: 60,
                     breakdown: {
                         completion: 0,
                         quality: 0,
@@ -79,7 +81,7 @@ export class WorkerScoreController {
                         rating: 0,
                         experience: 0,
                     },
-                    priority: this.determinePriority(50),
+                    priority: this.determinePriority(60),
                     workerTier: 'NEW',
                     activityStatus,
                     isEligibleForTasks: this.workerRepo.isActivityEligible(worker) && !this.workerRepo.isOnCooldown(worker),
@@ -114,6 +116,7 @@ export class WorkerScoreController {
             success: true,
             score: {
                 overallScore,
+                totalScore: overallScore,
                 breakdown,
                 priority: this.determinePriority(overallScore),
                 workerTier: this.determineTier(completed, overallScore),
