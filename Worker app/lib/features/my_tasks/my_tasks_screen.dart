@@ -251,7 +251,9 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
                         top: -3,
                         right: -3,
                         child: Container(
-                          padding: const EdgeInsets.all(3.5),
+                          width: 19,
+                          height: 19,
+                          padding: const EdgeInsets.all(2.5),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: const LinearGradient(
@@ -267,10 +269,14 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.workspace_premium_rounded,
-                            size: 11,
-                            color: Colors.white,
+                          child: Image.asset(
+                            'assets/icons/crown.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) => const Icon(
+                              Icons.workspace_premium_rounded,
+                              size: 11,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
@@ -339,170 +345,28 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
                   ),
                   const SizedBox(width: 8),
 
-                  // ── Right: Today Earnings Pill + Bell + Refresh ──
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Today Earnings Dark Translucent Pill
-                        Consumer<TaskProvider>(
-                          builder: (context, provider, _) {
-                            final wallet = provider.walletData;
-                            final stats = provider.dashboardStats;
-                            final dynamic rawEarn = wallet['todayEarnings'] ??
-                                wallet['today_earnings'] ??
-                                stats['todayEarnings'] ??
-                                stats['today_earnings'] ??
-                                wallet['earnings'] ??
-                                wallet['balance'] ??
-                                12.50;
-                            final double earningsVal = (rawEarn is num)
-                                ? rawEarn.toDouble()
-                                : (double.tryParse(rawEarn.toString()) ?? 12.50);
-                            final String displayAmount = earningsVal.toStringAsFixed(2);
-
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.38),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: const Color(0xFF4ADE80).withOpacity(0.38),
-                                  width: 1.1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0x334ADE80),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.account_balance_wallet_rounded,
-                                      color: Color(0xFF6EE7B7),
-                                      size: 15,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Text(
-                                        'Today Earnings',
-                                        style: TextStyle(
-                                          color: Color(0xFFD1FAE5),
-                                          fontSize: 8.5,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      Text(
-                                        '₹$displayAmount',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: -0.2,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(width: 3),
-                                  const Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: Colors.white54,
-                                    size: 14,
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                  // ── Right: Circular Refresh Button ──
+                  InkWell(
+                    onTap: () {
+                      _loadStage(_currentStageIndex, forceRefresh: true);
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.38),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF4ADE80).withOpacity(0.38),
+                          width: 1.2,
                         ),
-                        const SizedBox(width: 6),
-
-                        // Notification Bell Button with Red Unread Dot
-                        InkWell(
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('🔔 No new task alerts at the moment.'),
-                                backgroundColor: Color(0xFF047857),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.38),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFF4ADE80).withOpacity(0.38),
-                                width: 1.1,
-                              ),
-                            ),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.notifications_none_rounded,
-                                  color: Colors.white,
-                                  size: 17,
-                                ),
-                                Positioned(
-                                  top: 6,
-                                  right: 6,
-                                  child: Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEF4444),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: const Color(0xFF044E33),
-                                        width: 1.2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-
-                        // Circular Refresh Button
-                        InkWell(
-                          onTap: () {
-                            _loadStage(_currentStageIndex, forceRefresh: true);
-                            Provider.of<TaskProvider>(context, listen: false).fetchWalletData();
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.38),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFF4ADE80).withOpacity(0.38),
-                                width: 1.1,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.refresh_rounded,
-                              color: Colors.white,
-                              size: 17,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
+                      child: const Icon(
+                        Icons.refresh_rounded,
+                        color: Colors.white,
+                        size: 19,
+                      ),
                     ),
                   ),
                 ],
