@@ -44,6 +44,11 @@ export class EarningEngineService {
         const worker = await this.workerRepo.findWorker(workerId);
         const workerIds = Array.from(new Set([workerId, worker?.id, worker?.userId].filter(Boolean) as string[]));
 
+        const wallet = await this.walletRepo.findByUserId(worker?.userId || workerId);
+        if (wallet) {
+            return Number(wallet.availableBalance);
+        }
+
         const totalEarned = await this.earningRepo.getTotalEarnings(workerIds);
         const totalDeducted = await this.withdrawalRepo.getTotalWithdrawalsAmount(workerIds, [
             WithdrawalStatus.REQUESTED,
@@ -52,7 +57,7 @@ export class EarningEngineService {
             WithdrawalStatus.PAID,
         ]);
 
-        return Math.max(0, totalEarned - totalDeducted);
+        return totalEarned - totalDeducted;
     }
 
     async reverseEarning(earningId: string): Promise<void> {

@@ -176,7 +176,8 @@ export class EarningPostingService {
 
             if (worker) {
                 resolvedWorkerId = worker.id;
-                worker.totalEarnings = Math.max(0, Number(worker.totalEarnings || 0) - Number(earning.amount || 0));
+                // Allow totalEarnings to deduct even if it becomes negative or 0
+                worker.totalEarnings = Number(worker.totalEarnings || 0) - Number(earning.amount || 0);
                 worker.totalTasksCompleted = Math.max(0, Number(worker.totalTasksCompleted || 0) - 1);
 
                 const totalAttempts = worker.totalTasksCompleted + Number(worker.totalTasksRejected || 0);
@@ -185,7 +186,7 @@ export class EarningPostingService {
                 await manager.save(worker);
             }
 
-            // Debit Wallet
+            // Debit Wallet - Allows negative balance if worker already withdrew funds
             const walletUserId = user?.id || worker?.userId || worker?.id || earning.workerId;
             const wallet = await manager.findOne(Wallet, {
                 where: [{ userId: walletUserId }, { userId: earning.workerId }],
@@ -193,16 +194,21 @@ export class EarningPostingService {
             }).catch(() => null);
 
             if (wallet) {
-                wallet.availableBalance = Math.max(0, Number(wallet.availableBalance || 0) - Number(earning.amount || 0));
+                // Negative balance allowed: future worker earnings will pay off negative deficit
+                const currentBal = Number(wallet.availableBalance || 0);
+                const deductAmount = Number(earning.amount || 0);
+                const newBal = currentBal - deductAmount;
+                wallet.availableBalance = newBal;
                 await manager.save(wallet);
 
                 const tx = manager.create(WalletTransaction, {
                     walletId: wallet.id,
                     type: 'DEBIT',
                     amount: earning.amount,
-                    description: `Reversal of task earning ${earning.id}`,
+                    balanceAfter: newBal,
+                    description: `Deduction / Penalty: Early app uninstall for task ${earning.taskId}`,
                     status: 'COMPLETED',
-                    referenceId: earning.id,
+                    referenceId: earning.taskId || earning.id,
                 });
                 await manager.save(tx);
             }

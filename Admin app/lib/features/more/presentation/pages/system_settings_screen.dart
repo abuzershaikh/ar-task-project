@@ -17,6 +17,11 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
   double _platformMargin = 20.0;
   double _minWithdrawalAmount = 100.0;
 
+  // App Install & Play Store Retention Engine Settings
+  double _appInstallRetentionHours = 24.0;
+  bool _allowNegativeBalance = true;
+  bool _strictEarlyUninstallPenalty = true;
+
   @override
   void initState() {
     super.initState();
@@ -33,10 +38,24 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
         _maintenanceMode = data['maintenanceMode'] ?? false;
         _platformMargin = double.tryParse(data['platformMargin']?.toString() ?? '20.0') ?? 20.0;
         _minWithdrawalAmount = double.tryParse(data['minWithdrawalAmount']?.toString() ?? '100.0') ?? 100.0;
-        _isLoading = false;
       });
+
+      try {
+        final retentionResp = await dio.get('/admin/settings/app-retention');
+        final rData = retentionResp.data?['settings'] ?? retentionResp.data ?? {};
+        if (rData['minRetentionHours'] != null) {
+          _appInstallRetentionHours = double.tryParse(rData['minRetentionHours'].toString()) ?? 24.0;
+        }
+        if (rData['allowNegativeBalance'] != null) {
+          _allowNegativeBalance = rData['allowNegativeBalance'] == true;
+        }
+        if (rData['strictPenalty'] != null) {
+          _strictEarlyUninstallPenalty = rData['strictPenalty'] == true;
+        }
+      } catch (_) {}
     } catch (_) {
-      setState(() => _isLoading = false);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -49,8 +68,15 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
         'platformMargin': _platformMargin,
         'minWithdrawalAmount': _minWithdrawalAmount,
       });
+
+      await dio.post('/admin/settings/app-retention', data: {
+        'minRetentionHours': _appInstallRetentionHours,
+        'allowNegativeBalance': _allowNegativeBalance,
+        'strictPenalty': _strictEarlyUninstallPenalty,
+      });
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings updated successfully')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All system and retention settings updated successfully')));
       }
     } catch (_) {
       if (mounted) {
@@ -124,6 +150,128 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  // App Install & Play Store Retention Engine
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: AppColors.primary.withOpacity(0.3), width: 1.2),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.install_mobile_rounded, color: AppColors.primary, size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text(
+                                  'Play Store & App Install Retention',
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Control how long workers must keep target apps installed on their devices. Worker app crons verify installation periodically.',
+                            style: TextStyle(fontSize: 13, color: Colors.black54),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Minimum Retention Duration:', style: TextStyle(fontWeight: FontWeight.w600)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${_appInstallRetentionHours.toStringAsFixed(0)} Hours (${(_appInstallRetentionHours / 24).toStringAsFixed(1)} Days)',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Slider(
+                            value: _appInstallRetentionHours,
+                            min: 1.0,
+                            max: 168.0,
+                            divisions: 167,
+                            activeColor: AppColors.primary,
+                            label: '${_appInstallRetentionHours.toStringAsFixed(0)}h',
+                            onChanged: (val) => setState(() => _appInstallRetentionHours = val),
+                          ),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              ChoiceChip(
+                                label: const Text('12h'),
+                                selected: _appInstallRetentionHours == 12.0,
+                                onSelected: (_) => setState(() => _appInstallRetentionHours = 12.0),
+                              ),
+                              ChoiceChip(
+                                label: const Text('24h (1 Day)'),
+                                selected: _appInstallRetentionHours == 24.0,
+                                onSelected: (_) => setState(() => _appInstallRetentionHours = 24.0),
+                              ),
+                              ChoiceChip(
+                                label: const Text('48h (2 Days)'),
+                                selected: _appInstallRetentionHours == 48.0,
+                                onSelected: (_) => setState(() => _appInstallRetentionHours = 48.0),
+                              ),
+                              ChoiceChip(
+                                label: const Text('72h (3 Days)'),
+                                selected: _appInstallRetentionHours == 72.0,
+                                onSelected: (_) => setState(() => _appInstallRetentionHours = 72.0),
+                              ),
+                              ChoiceChip(
+                                label: const Text('7 Days (168h)'),
+                                selected: _appInstallRetentionHours == 168.0,
+                                onSelected: (_) => setState(() => _appInstallRetentionHours = 168.0),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 28),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Allow Negative Balance on Reversal (-)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            subtitle: const Text(
+                              'If worker already withdrew funds prior to uninstalling the app, driving their wallet balance into negative so upcoming earnings recover the deficit.',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            value: _allowNegativeBalance,
+                            activeColor: AppColors.primary,
+                            onChanged: (val) => setState(() => _allowNegativeBalance = val),
+                          ),
+                          const SizedBox(height: 8),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Strict Early Uninstall Penalty', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            subtitle: const Text(
+                              'Automatically deduct task reward and decrement completed count upon worker app detecting app is not installed during retention period.',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            value: _strictEarlyUninstallPenalty,
+                            activeColor: AppColors.primary,
+                            onChanged: (val) => setState(() => _strictEarlyUninstallPenalty = val),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -142,3 +290,4 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
     );
   }
 }
+

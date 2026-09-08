@@ -10,6 +10,8 @@ import '../../../core/services/api_service.dart';
 import '../../../core/providers/task_provider.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/services/retention_sync_service.dart';
+
 /// Main Navigation Shell with 5 bottom tabs:
 /// Feed (Leaf) | Tasks | Strike (Center Glowing Flame) | Wallet | Profile
 class MainNavScreen extends StatefulWidget {
@@ -29,6 +31,15 @@ class _MainNavScreenState extends State<MainNavScreen> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pingPresence();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      RetentionSyncService.startMonitoring(context);
+    });
+  }
+
+  @override
+  void dispose() {
+    RetentionSyncService.stopMonitoring();
+    super.dispose();
   }
 
   Future<void> _pingPresence() async {

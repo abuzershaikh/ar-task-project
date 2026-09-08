@@ -564,5 +564,40 @@ class ApiService {
       return null;
     }
   }
+
+  // --- App Install Retention Tracking APIs ---
+  static Future<List<dynamic>> getRetentionTrackedTasks() async {
+    try {
+      final headers = await _headers();
+      final response = await http.get(
+        Uri.parse('$baseUrl/worker/tasks/retention-tracked'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) return data;
+        if (data is Map && data['tasks'] is List) return data['tasks'];
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  static Future<Map<String, dynamic>> reportRetentionStatus(
+      List<Map<String, dynamic>> reports) async {
+    try {
+      final headers = await _headers();
+      final response = await http.post(
+        Uri.parse('$baseUrl/worker/tasks/retention-report'),
+        headers: headers,
+        body: jsonEncode({'reports': reports}),
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) return data;
+      }
+    } catch (_) {}
+    return {};
+  }
 }
+
 

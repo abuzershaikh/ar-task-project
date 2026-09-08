@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers/task_provider.dart';
 import '../../../shared/widgets/platform_logo.dart';
+import '../../../core/services/package_tracker_service.dart';
 
 /// Premium 3D Realistic Task Detail & Execution Screen
 /// - Exact visual layout matching reference UI image
@@ -885,6 +886,34 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     Navigator.of(dialogContext).pop();
     setState(() => _isSubmitting = true);
 
+    // Pre-flight check: If this is an App Install task, verify it is actually installed!
+    if (widget.task is Map &&
+        PackageTrackerService.isAppInstallTask(
+            Map<String, dynamic>.from(widget.task))) {
+      final pkg = PackageTrackerService.extractPackageName(
+              widget.task['requirements']) ??
+          PackageTrackerService.extractPackageName(widget.task['metadata']) ??
+          PackageTrackerService.extractPackageName(
+              widget.task['targetUrl'] ?? widget.task['url']);
+      if (pkg != null && pkg.isNotEmpty) {
+        final isInstalled = await PackageTrackerService.isAppInstalled(pkg);
+        if (!isInstalled) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    '⚠️ App Not Installed: Please install "$pkg" from Google Play Store before submitting proof!'),
+                backgroundColor: const Color(0xFFDC2626),
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+          setState(() => _isSubmitting = false);
+          return;
+        }
+      }
+    }
+
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
 
@@ -1041,6 +1070,13 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
                 ] else if (isUnderReviewOrSubmitted) ...[
                   _buildUnderReviewSection(reward),
                   const SizedBox(height: 16),
+                ],
+
+                // ── App Install Retention Warning Banner ───
+                if (widget.task is Map &&
+                    PackageTrackerService.isAppInstallTask(
+                        Map<String, dynamic>.from(widget.task))) ...[
+                  _buildRetentionNoticeBanner(),
                 ],
 
                 // ── 8. Remember / Guidelines Box ───────────────────────────
@@ -2853,6 +2889,73 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
                   child: Text(
                     'The proof submitted for this task did not meet the required instructions.',
                     style: TextStyle(color: Color(0xFF9F1239), fontSize: 12, height: 1.35),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Retention Policy Banner for App Install Tasks ──────────────────────────
+  Widget _buildRetentionNoticeBanner() {
+    final req = (widget.task is Map && widget.task['requirements'] is Map)
+        ? widget.task['requirements']
+        : {};
+    final hours = req['minRetentionHours'] ?? req['min_retention_hours'] ?? 24;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB), // Soft Amber warning
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFDE68A), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFEF3C7),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.schedule_rounded,
+              color: Color(0xFFD97706),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Minimum Retention Requirement',
+                  style: TextStyle(
+                    color: Color(0xFF92400E),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'You must keep this app installed on your phone for at least $hours hours after completion. If uninstalled early, task rewards will be deducted automatically.',
+                  style: const TextStyle(
+                    color: Color(0xFFB45309),
+                    fontSize: 11.5,
+                    height: 1.35,
                   ),
                 ),
               ],

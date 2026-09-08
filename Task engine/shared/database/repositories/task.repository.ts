@@ -243,4 +243,13 @@ export class TaskRepository {
         }
         return participationMap;
     }
+
+    async save(task: Task): Promise<Task> {
+        return this.repository.save(task);
+    }
+
+    async update(id: string, partial: Partial<Task>): Promise<void> {
+        await this.repository.update(id, partial as any);
+    }
 }
+

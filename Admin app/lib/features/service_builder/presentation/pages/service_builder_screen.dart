@@ -53,6 +53,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
   late TextEditingController _adminInstructionsController;
   late TextEditingController _videoUrlController;
   late TextEditingController _audioUrlController;
+  late TextEditingController _minRetentionHoursController;
 
   // State flags
   bool _isLinkFieldEnabled = true;
@@ -267,19 +268,20 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     },
     {
       'category': 'App Install',
-      'icon': Icons.android,
+      'icon': Icons.install_mobile_rounded,
       'color': Colors.greenAccent,
       'code': 'APP_INSTALL',
-      'name': 'Android App Install & Open',
-      'desc': 'Download app from Google Play Store and open for 60 seconds',
+      'name': 'Android App Install & Retain',
+      'desc': 'Download app from Google Play Store, open, and keep installed on phone for required retention hours',
       'buyerPrice': 10.0,
       'margin': 3.0,
       'workerReward': 7.0,
-      'linkLabel': 'Play Store Link',
+      'linkLabel': 'Play Store Link (id=package)',
       'linkPlaceholder': 'https://play.google.com/store/apps/details?id=...',
       'needText': false,
       'watchtime': 60,
       'aiEnabled': false,
+      'minRetentionHours': 24,
     },
     {
       'category': 'Website',
@@ -324,6 +326,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     _adminInstructionsController = TextEditingController();
     _videoUrlController = TextEditingController();
     _audioUrlController = TextEditingController();
+    _minRetentionHoursController = TextEditingController(text: '24');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _bootstrapped) return;
@@ -367,6 +370,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     _adminInstructionsController.dispose();
     _videoUrlController.dispose();
     _audioUrlController.dispose();
+    _minRetentionHoursController.dispose();
     super.dispose();
   }
 
@@ -429,6 +433,9 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
       _watchtimeSeconds = preset['watchtime'] ?? 0;
       if (preset['aiEnabled'] != null) {
         _aiGeneratorEnabled = preset['aiEnabled'] == true;
+      }
+      if (preset['minRetentionHours'] != null) {
+        _minRetentionHoursController.text = preset['minRetentionHours'].toString();
       }
     });
 
@@ -1406,6 +1413,14 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 14),
+                _buildTextField(
+                  controller: _minRetentionHoursController,
+                  label: 'App Install Min Retention (Hours)',
+                  hint: '24 (Worker must keep app installed for this duration)',
+                  icon: Icons.install_mobile_rounded,
+                  keyboardType: TextInputType.number,
                 ),
               ],
             ),

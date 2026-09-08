@@ -102,6 +102,9 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
         // 2. Process Campaign Auto-Extensions using designated campaign extension setting (not unaccepted task expiry)
         const extensionResults = await this.processCampaignAutoExtensions(campaignAutoExtensionHours || 10);
 
+        // 3. Process App Install Retention Window Expiries
+        await this.processRetentionExpiries();
+
         return {
             evaluatedTasksCount: timeoutResults.evaluatedCount,
             expiredTasksCount: timeoutResults.expiredCount,
@@ -230,4 +233,43 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
 
         return { extendedCampaignsCount };
     }
+
+    /**
+     * Evaluates active App Install retention tasks and marks them VERIFIED_COMPLETED
+     * once their required retention deadline has successfully passed without uninstallation.
+     */
+    async processRetentionExpiries(): Promise<number> {
+        try {
+            const now = new Date();
+            const approvedTasks = await this.taskRepo.findByStatus('approved');
+            const completedTasks = await this.taskRepo.findByStatus('completed');
+            const allTasks = [...approvedTasks, ...completedTasks];
+
+            let completedRetentionCount = 0;
+
+            for (const task of allTasks) {
+                const meta = task.metadata || {};
+                if (meta.retentionStatus === 'ACTIVE' && meta.retentionUntil) {
+                    if (now.getTime() >= new Date(meta.retentionUntil).getTime()) {
+                        task.metadata = {
+                            ...meta,
+                            retentionStatus: 'VERIFIED_COMPLETED',
+                            verifiedCompletedAt: now.toISOString(),
+                        };
+                        await this.taskRepo.save(task);
+                        completedRetentionCount++;
+                    }
+                }
+            }
+
+            if (completedRetentionCount > 0) {
+                this.logger.log(`🎉 Retention Monitor: Marked ${completedRetentionCount} app install tasks as VERIFIED_COMPLETED.`);
+            }
+            return completedRetentionCount;
+        } catch (e: any) {
+            this.logger.warn(`Retention monitor cycle warning: ${e?.message || e}`);
+            return 0;
+        }
+    }
 }
+

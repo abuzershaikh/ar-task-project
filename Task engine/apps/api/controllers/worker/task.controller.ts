@@ -20,6 +20,11 @@ import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
 import { WorkerRepository } from '../../../../shared/database/repositories/worker.repository';
 import { OrderRepository } from '../../../../shared/database/repositories/order.repository';
+import { TaskRepository } from '../../../../shared/database/repositories/task.repository';
+import { EarningEngineService } from '../../../../earning-engine/earning.service';
+import { EarningRepository } from '../../../../shared/database/repositories/earning.repository';
+import { SystemSettingsRepository } from '../../../../shared/database/repositories/system-settings.repository';
+import { NotificationEngineService } from '../../../../notification-engine/notification.service';
 
 @ApiTags('Worker - Tasks')
 @Roles(UserRole.WORKER)
@@ -34,6 +39,11 @@ export class WorkerTaskController {
         private readonly executionEngine: ExecutionEngineService,
         private readonly workerRepo: WorkerRepository,
         private readonly orderRepo: OrderRepository,
+        private readonly taskRepo: TaskRepository,
+        private readonly earningEngine: EarningEngineService,
+        private readonly earningRepo: EarningRepository,
+        private readonly settingsRepo: SystemSettingsRepository,
+        private readonly notificationEngine: NotificationEngineService,
     ) { }
 
     @Get()
@@ -119,6 +129,198 @@ export class WorkerTaskController {
         return {
             success: true,
             progress,
+        };
+    }
+
+    @Get('retention-tracked')
+    @ApiOperation({ summary: 'Get worker active app install tasks being tracked for retention' })
+    async getRetentionTrackedTasks(@CurrentUser() user: User) {
+        const worker = await this.workerRepo.findWorker(user.id);
+        const workerId = worker ? worker.id : user.id;
+
+        // Fetch tasks assigned to this worker (checking both user.id and worker.id)
+        const userTasks = await this.taskRepo.findByWorker(user.id);
+        const workerProfileTasks = worker ? await this.taskRepo.findByWorker(worker.id) : [];
+
+        // Deduplicate by task ID
+        const taskMap = new Map<string, any>();
+        for (const t of [...userTasks, ...workerProfileTasks]) {
+            taskMap.set(t.id, t);
+        }
+
+        // Fetch system default retention hours if not configured in task
+        const retentionSetting = await this.settingsRepo.findByKey('app_install_min_retention_hours');
+        const defaultRetentionHours = retentionSetting ? Number(retentionSetting.value) : 24.0;
+
+        const now = new Date();
+        const trackedTasks: any[] = [];
+
+        for (const task of taskMap.values()) {
+            const taskType = (task.taskType || '').toUpperCase();
+            const req = task.requirements || {};
+            const meta = task.metadata || {};
+
+            const isAppInstall =
+                taskType.includes('APP_INSTALL') ||
+                taskType.includes('PLAY_STORE') ||
+                taskType.includes('INSTALL') ||
+                req.isAppInstall === true ||
+                req.minRetentionHours != null ||
+                req.min_retention_hours != null ||
+                meta.minRetentionHours != null;
+
+            if (!isAppInstall) continue;
+
+            const status = (task.status || '').toLowerCase();
+            if (status !== 'approved' && status !== 'completed' && status !== 'submitted' && status !== 'under_review') {
+                continue;
+            }
+
+            // Skip if already breached or verified completed
+            if (meta.retentionStatus === 'BREACHED' || meta.retentionStatus === 'VERIFIED_COMPLETED') {
+                continue;
+            }
+
+            const minHours = Number(meta.minRetentionHours || req.minRetentionHours || req.min_retention_hours || defaultRetentionHours);
+
+            let retentionUntil = meta.retentionUntil ? new Date(meta.retentionUntil) : null;
+            if (!retentionUntil) {
+                const baseTime = task.completedAt || task.submittedAt || task.updatedAt || new Date();
+                retentionUntil = new Date(new Date(baseTime).getTime() + minHours * 3600 * 1000);
+                task.metadata = {
+                    ...meta,
+                    minRetentionHours: minHours,
+                    retentionUntil: retentionUntil.toISOString(),
+                    retentionStatus: 'ACTIVE',
+                    installedAt: meta.installedAt || baseTime,
+                };
+                await this.taskRepo.save(task);
+            }
+
+            // If retention window already passed, auto-complete
+            if (now.getTime() >= retentionUntil.getTime()) {
+                task.metadata = {
+                    ...task.metadata,
+                    retentionStatus: 'VERIFIED_COMPLETED',
+                    verifiedCompletedAt: now.toISOString(),
+                };
+                await this.taskRepo.save(task);
+                continue;
+            }
+
+            trackedTasks.push({
+                id: task.id,
+                taskId: task.id,
+                taskType: task.taskType,
+                status: task.status,
+                requirements: task.requirements,
+                metadata: task.metadata,
+                targetUrl: req.targetUrl || req.url || req.playStoreUrl || req.link,
+                retentionUntil: retentionUntil.toISOString(),
+                minRetentionHours: minHours,
+                rewardAmount: task.rewardAmount,
+            });
+        }
+
+        return {
+            success: true,
+            tasks: trackedTasks,
+            count: trackedTasks.length,
+        };
+    }
+
+    @Post('retention-report')
+    @ApiOperation({ summary: 'Process worker retention status reports and penalize early uninstalls' })
+    async reportRetentionStatus(
+        @Body() body: { reports: Array<{ taskId: string; packageName: string; isInstalled: boolean; checkedAt?: string }> },
+        @CurrentUser() user: User,
+    ) {
+        const reports = body?.reports || [];
+        if (!Array.isArray(reports) || reports.length === 0) {
+            return { success: true, processedCount: 0, breachedCount: 0, deductionApplied: false };
+        }
+
+        const worker = await this.workerRepo.findWorker(user.id);
+        const workerId = worker ? worker.id : user.id;
+
+        let breachedCount = 0;
+        let deductionApplied = false;
+        const now = new Date();
+
+        for (const report of reports) {
+            const { taskId, packageName, isInstalled } = report;
+            if (!taskId) continue;
+
+            const task = await this.taskRepo.findById(taskId);
+            if (!task) continue;
+
+            // Verify worker ownership
+            if (task.assignedTo && task.assignedTo !== user.id && task.assignedTo !== workerId) {
+                continue;
+            }
+
+            const meta = task.metadata || {};
+
+            // If app was UNINSTALLED before retention ended
+            if (isInstalled === false) {
+                // If already breached, avoid duplicate penalties
+                if (meta.retentionStatus === 'BREACHED') continue;
+
+                const retentionUntil = meta.retentionUntil ? new Date(meta.retentionUntil) : null;
+                const isStillInWindow = !retentionUntil || now.getTime() < retentionUntil.getTime();
+
+                if (isStillInWindow || meta.retentionStatus === 'ACTIVE') {
+                    // Mark task as BREACHED
+                    task.status = 'BREACHED';
+                    task.metadata = {
+                        ...meta,
+                        retentionStatus: 'BREACHED',
+                        breachedAt: now.toISOString(),
+                        uninstalledPackage: packageName,
+                        breachReason: `Worker uninstalled package ${packageName} before required retention period`,
+                    };
+                    await this.taskRepo.save(task);
+
+                    // Find earning to reverse
+                    const earning = await this.earningRepo.findByTaskId(task.id);
+                    if (earning && earning.status !== 'reversed') {
+                        // Reverse earning: Atomic debit from wallet (allows negative balance if withdrawn)
+                        await this.earningEngine.reverseEarning(earning.id);
+                        deductionApplied = true;
+
+                        // Notify worker
+                        try {
+                            await this.notificationEngine.sendNotification(
+                                user.id,
+                                `⚠️ Early Uninstall Penalty: You uninstalled ${packageName} before the required retention period. Reward of ₹${earning.amount} was deducted from your wallet balance.`,
+                                'RETENTION_BREACH_PENALTY',
+                                { taskId: task.id, earningId: earning.id, amount: earning.amount, packageName },
+                            );
+                        } catch (_) {}
+                    }
+
+                    breachedCount++;
+                }
+            } else if (isInstalled === true) {
+                // If app is still installed and time has passed retentionUntil, mark completed
+                const retentionUntil = meta.retentionUntil ? new Date(meta.retentionUntil) : null;
+                if (retentionUntil && now.getTime() >= retentionUntil.getTime() && meta.retentionStatus === 'ACTIVE') {
+                    task.metadata = {
+                        ...meta,
+                        retentionStatus: 'VERIFIED_COMPLETED',
+                        verifiedCompletedAt: now.toISOString(),
+                    };
+                    await this.taskRepo.save(task);
+                }
+            }
+        }
+
+        return {
+            success: true,
+            message: 'Retention check reports processed',
+            processedCount: reports.length,
+            breachedCount,
+            deductionApplied,
         };
     }
 

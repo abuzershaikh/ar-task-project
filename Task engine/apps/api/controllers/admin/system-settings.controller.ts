@@ -301,6 +301,9 @@ export class AdminSystemSettingsController {
             { key: 'unaccepted_task_expiry_hours', value: 24.0, description: 'Unaccepted task pool expiry in hours' },
             { key: 'auto_reassign_on_expiry', value: true, description: 'Auto-reassign expired tasks' },
             { key: 'review_timeout', value: 86400, description: 'Auto-approval review timeout in seconds (24 hours)' },
+            { key: 'app_install_min_retention_hours', value: 24.0, description: 'Default minimum hours worker must keep installed apps on phone' },
+            { key: 'app_install_allow_negative_balance', value: true, description: 'Allow negative wallet balance if worker withdrew earnings before early uninstall' },
+            { key: 'app_install_strict_penalty', value: true, description: 'Strictly penalize and deduct task earnings upon early uninstall detection' },
             { key: 'worker_score_weights', value: { quality: 0.3, completionRate: 0.25, reliability: 0.2, recentPerformance: 0.15, experience: 0.1 } },
             { key: 'rating_weight', value: 0.2, description: 'Rating weight in Matching Brain score calculation' },
         ];
@@ -308,6 +311,90 @@ export class AdminSystemSettingsController {
         return {
             success: true,
             settings: settings.length > 0 ? settings : defaultSettings,
+        };
+    }
+
+    @Get('app-retention')
+    @ApiOperation({ summary: 'Get App Install Retention & Penalty Settings' })
+    async getAppRetentionSettings() {
+        const retentionHoursSetting = await this.settingsRepo.findByKey('app_install_min_retention_hours');
+        const allowNegativeSetting = await this.settingsRepo.findByKey('app_install_allow_negative_balance');
+        const strictPenaltySetting = await this.settingsRepo.findByKey('app_install_strict_penalty');
+
+        const parseBool = (val: any, defaultVal = true): boolean => {
+            if (val === null || val === undefined) return defaultVal;
+            if (typeof val === 'boolean') return val;
+            const s = String(val).trim().toLowerCase();
+            if (s === 'false' || s === '0' || s === 'no') return false;
+            if (s === 'true' || s === '1' || s === 'yes') return true;
+            return defaultVal;
+        };
+
+        return {
+            success: true,
+            settings: {
+                minRetentionHours: retentionHoursSetting ? Number(retentionHoursSetting.value) : 24.0,
+                allowNegativeBalance: parseBool(allowNegativeSetting?.value, true),
+                strictPenalty: parseBool(strictPenaltySetting?.value, true),
+            },
+        };
+    }
+
+    @Post('app-retention')
+    @ApiOperation({ summary: 'Update App Install Retention & Penalty Settings' })
+    async saveAppRetentionSettings(
+        @Body() body: {
+            minRetentionHours?: number;
+            allowNegativeBalance?: boolean;
+            strictPenalty?: boolean;
+        },
+        @CurrentUser() user: User,
+    ) {
+        const userId = user ? user.id : 'admin';
+
+        if (body.minRetentionHours !== undefined) {
+            await this.settingsRepo.set(
+                'app_install_min_retention_hours',
+                Number(body.minRetentionHours),
+                userId,
+                'Minimum hours worker must keep app installed on their phone',
+            );
+        }
+
+        if (body.allowNegativeBalance !== undefined) {
+            await this.settingsRepo.set(
+                'app_install_allow_negative_balance',
+                Boolean(body.allowNegativeBalance),
+                userId,
+                'Allow worker wallet balance to go negative if already withdrawn upon early uninstall',
+            );
+        }
+
+        if (body.strictPenalty !== undefined) {
+            await this.settingsRepo.set(
+                'app_install_strict_penalty',
+                Boolean(body.strictPenalty),
+                userId,
+                'Strictly penalize and deduct task earnings upon detecting early uninstall',
+            );
+        }
+
+        await this.auditLogService.logAction({
+            userId,
+            action: 'UPDATE_APP_RETENTION_SETTINGS',
+            targetType: 'SYSTEM_SETTINGS',
+            targetId: 'APP_RETENTION',
+            newValue: body,
+        });
+
+        return {
+            success: true,
+            message: 'App Install Retention & Penalty settings updated successfully',
+            settings: {
+                minRetentionHours: body.minRetentionHours ?? 24.0,
+                allowNegativeBalance: body.allowNegativeBalance ?? true,
+                strictPenalty: body.strictPenalty ?? true,
+            },
         };
     }
 
