@@ -266,7 +266,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Submit Proof tab tak invisible / locked rahega jab tak aap pura video nahi dekhenge.',
+                      'Submit Proof tab tak locked rahega jab tak aap pura video complete nahi dekhenge.',
                       style: TextStyle(
                         fontSize: 12,
                         color: Color(0xFF9F1239),
@@ -1306,8 +1306,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
                 // ── 7. Submit Proof / Status Section ───────────────────────
                 if (_isTaskAccepted && !isUnderReviewOrSubmitted && !isApprovedOrCompleted && !isRejected) ...[
                   if (_isYouTubeTask() && !_isWatchCompleted) ...[
-                    // Proof submission is completely invisible until full video is watched
                     _buildYouTubeWatchCard(targetUrl),
+                    const SizedBox(height: 16),
+                    // Semi-transparent locked proof card (user sees what proof to submit, but locked until watched)
+                    _buildLockedProofSubmissionCard(),
                     const SizedBox(height: 16),
                   ] else ...[
                     if (_isYouTubeTask()) ...[
@@ -2820,6 +2822,117 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
                   style: TextStyle(color: Color(0xFF047857), fontSize: 11),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Locked & Semi-Transparent Submit Proof Card ───────────────────────────
+  // Shows proof card with semi-transparency so user knows what proof to submit,
+  // while keeping it locked with an overlay until the full video is watched.
+  Widget _buildLockedProofSubmissionCard() {
+    return GestureDetector(
+      onTap: _showPleaseWatchCompleteVideoDialog,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 1. Semi-transparent Proof Card (User clearly sees screenshot picker & requirements)
+          Opacity(
+            opacity: 0.38,
+            child: IgnorePointer(
+              ignoring: true,
+              child: _buildProofSubmissionCard(),
+            ),
+          ),
+
+          // 2. Centered Floating Lock Badge / Card
+          Positioned(
+            left: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.93),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: const Color(0xFFEF4444).withValues(alpha: 0.8),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.18),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock_rounded,
+                      color: Color(0xFFF87171),
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Submit Proof (Locked)',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'Pura video complete dekhne ke baad hi proof attachment aur submission unlock hoga.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFFCBD5E1),
+                      fontSize: 12,
+                      height: 1.35,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.touch_app_rounded, color: Color(0xFFFCA5A5), size: 14),
+                        SizedBox(width: 6),
+                        Text(
+                          'Tap to Watch Complete Video',
+                          style: TextStyle(
+                            color: Color(0xFFFCA5A5),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
