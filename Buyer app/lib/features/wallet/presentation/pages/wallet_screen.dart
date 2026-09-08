@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../domain/entities/transaction.dart';
 import '../bloc/wallet_bloc.dart';
 import '../bloc/wallet_event.dart';
 import '../bloc/wallet_state.dart';
@@ -18,33 +19,76 @@ class _WalletScreenState extends State<WalletScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
+  int _selectedTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(_handleTabAnimation);
     _scrollController.addListener(_onScroll);
-    
+
     // Load initial data
     context.read<WalletBloc>().add(const GetBalanceEvent());
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabAnimation);
     _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
+  void _handleTabAnimation() {
+    if (_tabController.indexIsChanging) return;
+    if (_tabController.index != _selectedTabIndex) {
+      _selectTab(_tabController.index);
+    }
+  }
+
+  void _selectTab(int index) {
+    if (_selectedTabIndex == index && _tabController.index == index) return;
+    setState(() {
+      _selectedTabIndex = index;
+    });
+    if (_tabController.index != index) {
+      _tabController.animateTo(index);
+    }
+
+    final type = _getTransactionType(index);
+    context.read<WalletBloc>().add(
+          GetTransactionsEvent(type: type, page: 1, limit: 20),
+        );
+  }
+
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent * 0.9) {
-      context.read<WalletBloc>().add(const LoadMoreTransactionsEvent());
+      final type = _getTransactionType(_selectedTabIndex);
+      context.read<WalletBloc>().add(LoadMoreTransactionsEvent(type: type));
+    }
+  }
+
+  List<Transaction> _getFilteredTransactions(
+      List<Transaction> transactions, int tabIndex) {
+    switch (tabIndex) {
+      case 1: // Credits
+        return transactions.where((tx) => tx.isCredit).toList();
+      case 2: // Debits
+        return transactions.where((tx) => tx.isDebit).toList();
+      case 3: // Reserved
+        return transactions.where((tx) => tx.isReserved).toList();
+      case 0: // All
+      default:
+        return transactions;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Wallet & Billing'),
@@ -53,6 +97,12 @@ class _WalletScreenState extends State<WalletScreen>
             icon: const Icon(Icons.refresh),
             onPressed: () {
               context.read<WalletBloc>().add(const RefreshWalletEvent());
+              final type = _getTransactionType(_selectedTabIndex);
+              if (type != null) {
+                context.read<WalletBloc>().add(
+                      GetTransactionsEvent(type: type, page: 1, limit: 20),
+                    );
+              }
             },
           ),
         ],
@@ -93,9 +143,20 @@ class _WalletScreenState extends State<WalletScreen>
                   )
                 : state as WalletLoaded;
 
+            final displayedTransactions = _getFilteredTransactions(
+              loadedState.transactions,
+              _selectedTabIndex,
+            );
+
             return RefreshIndicator(
               onRefresh: () async {
                 context.read<WalletBloc>().add(const RefreshWalletEvent());
+                final type = _getTransactionType(_selectedTabIndex);
+                if (type != null) {
+                  context.read<WalletBloc>().add(
+                        GetTransactionsEvent(type: type, page: 1, limit: 20),
+                      );
+                }
               },
               child: CustomScrollView(
                 controller: _scrollController,
@@ -121,61 +182,127 @@ class _WalletScreenState extends State<WalletScreen>
                   // Transactions Header
                   SliverToBoxAdapter(
                     child: Container(
-                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                      child: const Text(
-                        'Transactions',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Transactions',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (displayedTransactions.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${displayedTransactions.length} items',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.primaryColor,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
 
                   // Transaction Tabs
                   SliverToBoxAdapter(
-                    child: TabBar(
-                      controller: _tabController,
-                      isScrollable: true,
-                      labelColor: Theme.of(context).primaryColor,
-                      unselectedLabelColor: Colors.grey,
-                      indicatorColor: Theme.of(context).primaryColor,
-                      onTap: (index) {
-                        final type = _getTransactionType(index);
-                        context.read<WalletBloc>().add(
-                              GetTransactionsEvent(type: type),
-                            );
-                      },
-                      tabs: const [
-                        Tab(text: 'All'),
-                        Tab(text: 'Credits'),
-                        Tab(text: 'Debits'),
-                        Tab(text: 'Reserved'),
+                    child: Column(
+                      children: [
+                        TabBar(
+                          controller: _tabController,
+                          isScrollable: true,
+                          tabAlignment: TabAlignment.start,
+                          labelColor: theme.primaryColor,
+                          unselectedLabelColor: Colors.grey[600],
+                          indicatorColor: theme.primaryColor,
+                          indicatorWeight: 3,
+                          labelStyle: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          unselectedLabelStyle: const TextStyle(
+                            fontWeight: FontWeight.normal,
+                            fontSize: 14,
+                          ),
+                          onTap: _selectTab,
+                          tabs: const [
+                            Tab(text: 'All'),
+                            Tab(text: 'Credits'),
+                            Tab(text: 'Debits'),
+                            Tab(text: 'Reserved'),
+                          ],
+                        ),
+                        if (loadedState.isFiltering)
+                          LinearProgressIndicator(
+                            minHeight: 2.5,
+                            backgroundColor: Colors.transparent,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              theme.primaryColor,
+                            ),
+                          )
+                        else
+                          const Divider(height: 1, thickness: 1),
                       ],
                     ),
                   ),
 
                   // Transaction List
-                  if (loadedState.transactions.isEmpty)
-                    const SliverFillRemaining(
+                  if (displayedTransactions.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
                       child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.receipt_long_outlined,
-                              size: 64,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'No transactions yet',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  _getEmptyIcon(_selectedTabIndex),
+                                  size: 36,
+                                  color: Colors.grey.shade400,
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 16),
+                              Text(
+                                _getEmptyTitle(_selectedTabIndex),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _getEmptySubtitle(_selectedTabIndex),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[500],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     )
@@ -185,9 +312,9 @@ class _WalletScreenState extends State<WalletScreen>
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
-                            if (index < loadedState.transactions.length) {
+                            if (index < displayedTransactions.length) {
                               return TransactionListItem(
-                                transaction: loadedState.transactions[index],
+                                transaction: displayedTransactions[index],
                               );
                             } else if (loadedState.hasMore) {
                               return const Center(
@@ -199,7 +326,7 @@ class _WalletScreenState extends State<WalletScreen>
                             }
                             return const SizedBox.shrink();
                           },
-                          childCount: loadedState.transactions.length +
+                          childCount: displayedTransactions.length +
                               (loadedState.hasMore ? 1 : 0),
                         ),
                       ),
@@ -229,6 +356,48 @@ class _WalletScreenState extends State<WalletScreen>
         return 'reserved';
       default:
         return null;
+    }
+  }
+
+  String _getEmptyTitle(int index) {
+    switch (index) {
+      case 1:
+        return 'No Credit Transactions';
+      case 2:
+        return 'No Debit Transactions';
+      case 3:
+        return 'No Reserved Funds';
+      case 0:
+      default:
+        return 'No Transactions Yet';
+    }
+  }
+
+  String _getEmptySubtitle(int index) {
+    switch (index) {
+      case 1:
+        return 'Top-ups, earnings, and refunds will appear here.';
+      case 2:
+        return 'Campaign payments and balance deductions will appear here.';
+      case 3:
+        return 'Funds reserved for active campaigns will appear here.';
+      case 0:
+      default:
+        return 'Your wallet activity will show up here once you begin.';
+    }
+  }
+
+  IconData _getEmptyIcon(int index) {
+    switch (index) {
+      case 1:
+        return Icons.arrow_downward_rounded;
+      case 2:
+        return Icons.arrow_upward_rounded;
+      case 3:
+        return Icons.lock_clock_outlined;
+      case 0:
+      default:
+        return Icons.receipt_long_outlined;
     }
   }
 }

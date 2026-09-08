@@ -10,12 +10,44 @@ export class WalletTransactionRepository {
         private readonly repo: Repository<WalletTransaction>,
     ) {}
 
-    async findByWallet(walletId: string, limit: number = 20): Promise<WalletTransaction[]> {
-        return this.repo.find({
-            where: { walletId },
-            order: { createdAt: 'DESC' },
-            take: limit,
-        });
+    async findByWallet(
+        walletId: string,
+        type?: string,
+        page: number = 1,
+        limit: number = 20,
+    ): Promise<{ transactions: WalletTransaction[]; total: number }> {
+        const query = this.repo.createQueryBuilder('txn')
+            .where('txn.walletId = :walletId', { walletId });
+
+        if (type && type.trim().toLowerCase() !== 'all') {
+            const upperType = type.trim().toUpperCase();
+            if (upperType === 'CREDIT' || upperType === 'CREDITS') {
+                query.andWhere('UPPER(txn.type) IN (:...creditTypes)', {
+                    creditTypes: ['CREDIT', 'REFUND', 'RELEASE', 'RELEASED'],
+                });
+            } else if (upperType === 'DEBIT' || upperType === 'DEBITS') {
+                query.andWhere('UPPER(txn.type) IN (:...debitTypes)', {
+                    debitTypes: ['DEBIT', 'CAPTURED', 'CAPTURE'],
+                });
+            } else if (upperType === 'RESERVED' || upperType === 'RESERVE') {
+                query.andWhere('UPPER(txn.type) IN (:...reservedTypes)', {
+                    reservedTypes: ['RESERVED', 'RESERVE', 'HOLD'],
+                });
+            } else {
+                query.andWhere('UPPER(txn.type) = :type', { type: upperType });
+            }
+        }
+
+        const safePage = Math.max(1, page || 1);
+        const safeLimit = Math.max(1, limit || 20);
+
+        const [transactions, total] = await query
+            .orderBy('txn.createdAt', 'DESC')
+            .skip((safePage - 1) * safeLimit)
+            .take(safeLimit)
+            .getManyAndCount();
+
+        return { transactions, total };
     }
 
     async create(data: Partial<WalletTransaction>): Promise<WalletTransaction> {

@@ -37,10 +37,10 @@ export class WalletService {
         };
     }
 
-    async getTransactions(userId: string, limit: number = 50) {
+    async getTransactions(userId: string, type?: string, page: number = 1, limit: number = 20) {
         const wallet = await this.getOrCreateWallet(userId);
-        const txns = await this.transactionRepo.findByWallet(wallet.id, limit);
-        return { transactions: txns, total: txns.length };
+        const { transactions, total } = await this.transactionRepo.findByWallet(wallet.id, type, page, limit);
+        return { transactions, total };
     }
 
     /**
@@ -250,13 +250,13 @@ export class WalletService {
      */
     async getBuyerTransactions(buyerId: string, limit: number = 50) {
         const wallet = await this.getOrCreateWallet(buyerId);
-        const transactions = await this.transactionRepo.findByWallet(wallet.id, limit);
+        const { transactions, total } = await this.transactionRepo.findByWallet(wallet.id, undefined, 1, limit);
         return {
             success: true,
             buyerId,
             availableBalance: Number(wallet.availableBalance),
             transactions,
-            total: transactions.length,
+            total,
         };
     }
 }

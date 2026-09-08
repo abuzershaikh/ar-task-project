@@ -55,7 +55,14 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     GetTransactionsEvent event,
     Emitter<WalletState> emit,
   ) async {
-    if (state is! WalletLoaded) {
+    if (state is WalletLoaded) {
+      final currentState = state as WalletLoaded;
+      emit(currentState.copyWith(
+        activeType: event.type,
+        clearActiveType: event.type == null,
+        isFiltering: true,
+      ));
+    } else {
       emit(const WalletLoading());
     }
 
@@ -66,7 +73,14 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     );
 
     result.fold(
-      (failure) => emit(WalletError(failure.message)),
+      (failure) {
+        if (state is WalletLoaded) {
+          final currentState = state as WalletLoaded;
+          emit(currentState.copyWith(isFiltering: false));
+        } else {
+          emit(WalletError(failure.message));
+        }
+      },
       (transactions) {
         if (state is WalletLoaded) {
           final currentState = state as WalletLoaded;
@@ -74,6 +88,9 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
             transactions: transactions,
             currentPage: event.page,
             hasMore: transactions.length >= event.limit,
+            activeType: event.type,
+            clearActiveType: event.type == null,
+            isFiltering: false,
           ));
         }
       },
@@ -87,16 +104,21 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     if (state is! WalletLoaded) return;
 
     final currentState = state as WalletLoaded;
-    if (!currentState.hasMore) return;
+    if (!currentState.hasMore || currentState.isFiltering) return;
+
+    final currentType = event.type ?? currentState.activeType;
 
     emit(TransactionsLoadingMore(
       balance: currentState.balance,
       transactions: currentState.transactions,
       hasMore: currentState.hasMore,
       currentPage: currentState.currentPage,
+      activeType: currentType,
+      isFiltering: false,
     ));
 
     final result = await getTransactions(
+      type: currentType,
       page: currentState.currentPage + 1,
       limit: 20,
     );
@@ -109,6 +131,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
           transactions: [...currentState.transactions, ...newTransactions],
           currentPage: currentState.currentPage + 1,
           hasMore: newTransactions.length >= 20,
+          activeType: currentType,
+          isFiltering: false,
         ));
       },
     );

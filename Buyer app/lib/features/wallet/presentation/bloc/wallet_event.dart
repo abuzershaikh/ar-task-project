@@ -30,7 +30,12 @@ class GetTransactionsEvent extends WalletEvent {
 
 /// Load more transactions
 class LoadMoreTransactionsEvent extends WalletEvent {
-  const LoadMoreTransactionsEvent();
+  final String? type;
+
+  const LoadMoreTransactionsEvent({this.type});
+
+  @override
+  List<Object?> get props => [type];
 }
 
 /// Initiate add balance

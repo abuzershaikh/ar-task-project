@@ -1,7 +1,5 @@
-import 'package:flutter/foundation.dart';
 import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/dio_client.dart';
-import '../../domain/entities/transaction.dart';
 import '../models/wallet_balance_model.dart';
 import '../models/transaction_model.dart';
 
@@ -41,7 +39,8 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
     final response = await client.get(
       ApiEndpoints.transactions,
       queryParameters: {
-        if (type != null) 'type': type,
+        if (type != null && type.trim().isNotEmpty && type.trim().toLowerCase() != 'all')
+          'type': type.trim(),
         'page': page,
         'limit': limit,
       },

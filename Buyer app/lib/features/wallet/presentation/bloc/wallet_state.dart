@@ -22,28 +22,37 @@ class WalletLoaded extends WalletState {
   final List<Transaction> transactions;
   final bool hasMore;
   final int currentPage;
+  final String? activeType;
+  final bool isFiltering;
 
   const WalletLoaded({
     required this.balance,
     required this.transactions,
     this.hasMore = true,
     this.currentPage = 1,
+    this.activeType,
+    this.isFiltering = false,
   });
 
   @override
-  List<Object?> get props => [balance, transactions, hasMore, currentPage];
+  List<Object?> get props => [balance, transactions, hasMore, currentPage, activeType, isFiltering];
 
   WalletLoaded copyWith({
     WalletBalance? balance,
     List<Transaction>? transactions,
     bool? hasMore,
     int? currentPage,
+    String? activeType,
+    bool clearActiveType = false,
+    bool? isFiltering,
   }) {
     return WalletLoaded(
       balance: balance ?? this.balance,
       transactions: transactions ?? this.transactions,
       hasMore: hasMore ?? this.hasMore,
       currentPage: currentPage ?? this.currentPage,
+      activeType: clearActiveType ? null : (activeType ?? this.activeType),
+      isFiltering: isFiltering ?? this.isFiltering,
     );
   }
 }
@@ -54,6 +63,8 @@ class TransactionsLoadingMore extends WalletLoaded {
     required super.transactions,
     required super.hasMore,
     required super.currentPage,
+    super.activeType,
+    super.isFiltering,
   });
 }
 

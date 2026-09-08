@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import '../../../../core/utils/currency_formatter.dart';
 import '../../domain/entities/transaction.dart';
 
 class TransactionListItem extends StatelessWidget {
@@ -99,7 +98,11 @@ class TransactionListItem extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: transaction.isCredit ? Colors.green : Colors.red,
+                  color: transaction.isCredit
+                      ? Colors.green
+                      : (transaction.isReserved
+                          ? Colors.orange.shade800
+                          : Colors.red),
                 ),
               ),
               const SizedBox(height: 4),

@@ -35,7 +35,14 @@ export class BuyerWalletController {
         @Query('page') page?: number,
         @Query('limit') limit?: number,
     ) {
-        const { transactions, total } = await this.walletService.getTransactions(user.id, limit || 20);
+        const pageNum = page ? Number(page) : 1;
+        const limitNum = limit ? Number(limit) : 20;
+        const { transactions, total } = await this.walletService.getTransactions(
+            user.id,
+            type,
+            pageNum,
+            limitNum,
+        );
         return {
             success: true,
             transactions,

@@ -54,13 +54,20 @@ class Transaction extends Equatable {
 
   /// Check if transaction is debit type
   bool get isDebit => type == TransactionType.debit || 
-                      type == TransactionType.reserved ||
                       type == TransactionType.captured;
+
+  /// Check if transaction is reserved type
+  bool get isReserved => type == TransactionType.reserved;
 
   /// Get formatted amount with sign
   String getFormattedAmount() {
-    final sign = isCredit ? '+' : '−';
-    return '$sign ₹${amount.toStringAsFixed(2)}';
+    if (isCredit) {
+      return '+ ₹${amount.toStringAsFixed(2)}';
+    } else if (isReserved) {
+      return '🔒 ₹${amount.toStringAsFixed(2)}';
+    } else {
+      return '− ₹${amount.toStringAsFixed(2)}';
+    }
   }
 
   @override
