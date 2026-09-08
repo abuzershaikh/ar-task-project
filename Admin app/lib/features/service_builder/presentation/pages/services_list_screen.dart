@@ -244,6 +244,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
 
   IconData _getServiceIcon(String name) {
     final lower = name.toLowerCase();
+    if (lower.contains('playstore') || lower.contains('play store') || lower.contains('play_store')) {
+      return Icons.shop_two_rounded;
+    }
     if (lower.contains('youtube') || lower.contains('video') || lower.contains('watch')) {
       return Icons.play_circle_fill_rounded;
     }
@@ -261,6 +264,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
 
   Color _getServiceColor(String name) {
     final lower = name.toLowerCase();
+    if (lower.contains('playstore') || lower.contains('play store') || lower.contains('play_store')) {
+      return const Color(0xFF10B981);
+    }
     if (lower.contains('youtube') || lower.contains('video')) return const Color(0xFFEF4444);
     if (lower.contains('telegram')) return const Color(0xFF0EA5E9);
     if (lower.contains('insta')) return const Color(0xFFEC4899);
@@ -359,6 +365,20 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                     s.description.toLowerCase().contains(q);
                 if (_selectedFilter == 'All') return matchesQuery;
                 if (_selectedFilter == 'YouTube') return matchesQuery && s.name.toLowerCase().contains('youtube');
+                if (_selectedFilter == 'PlayStore') {
+                  final lowerName = s.name.toLowerCase();
+                  final lowerCode = s.code.toLowerCase();
+                  return matchesQuery &&
+                      (lowerName.contains('playstore') ||
+                          lowerName.contains('play store') ||
+                          lowerName.contains('app') ||
+                          lowerName.contains('install') ||
+                          lowerName.contains('download') ||
+                          lowerName.contains('rating') ||
+                          lowerName.contains('review') ||
+                          lowerCode.contains('playstore') ||
+                          lowerCode.contains('app'));
+                }
                 if (_selectedFilter == 'Telegram') return matchesQuery && s.name.toLowerCase().contains('telegram');
                 if (_selectedFilter == 'Social') {
                   return matchesQuery &&
@@ -451,7 +471,15 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: Row(
-                      children: ['All', 'YouTube', 'Telegram', 'Social'].map((filter) {
+                      children: [
+                        {'name': 'All', 'icon': Icons.apps_rounded},
+                        {'name': 'YouTube', 'icon': Icons.play_circle_fill_rounded},
+                        {'name': 'PlayStore', 'icon': Icons.shop_two_rounded},
+                        {'name': 'Telegram', 'icon': Icons.send_rounded},
+                        {'name': 'Social', 'icon': Icons.camera_alt_rounded},
+                      ].map((chip) {
+                        final filter = chip['name'] as String;
+                        final icon = chip['icon'] as IconData;
                         final isSelected = _selectedFilter == filter;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
@@ -460,7 +488,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                             onTap: () => setState(() => _selectedFilter = filter),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: isSelected ? accentBlue : surfaceWhite,
                                 borderRadius: BorderRadius.circular(20),
@@ -477,13 +505,34 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                                       ]
                                     : null,
                               ),
-                              child: Text(
-                                filter,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                  color: isSelected ? Colors.white : textSecondary,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    icon,
+                                    size: 14,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : (filter == 'PlayStore'
+                                            ? const Color(0xFF10B981)
+                                            : (filter == 'YouTube'
+                                                ? const Color(0xFFEF4444)
+                                                : (filter == 'Telegram'
+                                                    ? const Color(0xFF0EA5E9)
+                                                    : (filter == 'Social'
+                                                        ? const Color(0xFFEC4899)
+                                                        : accentBlue)))),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    filter,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                      color: isSelected ? Colors.white : textPrimary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
