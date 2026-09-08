@@ -22,7 +22,6 @@ class AppConstants {
 
   static const List<String> myTaskStages = [
     stageAccepted,
-    stageSubmitted,
     stageUnderReview,
     stageApproved,
     stageRejected,
@@ -30,8 +29,7 @@ class AppConstants {
 
   static const List<String> myTaskStageLabels = [
     'Accepted',
-    'Submitted',
-    'Under Review',
+    'In Review',
     'Approved',
     'Rejected',
   ];

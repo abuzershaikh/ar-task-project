@@ -5,9 +5,11 @@ class TaskProvider extends ChangeNotifier {
   List<dynamic> _availableTasks = [];
   List<dynamic> _myTasks = [];
   bool _isLoading = false;
-  String _selectedStage = 'submitted';
+  String _selectedStage = 'assigned';
   Map<String, dynamic> _dashboardStats = {};
   String? _error;
+  final Map<String, List<dynamic>> _stageTasksCache = {};
+  int _myTasksRequestId = 0;
 
   List<dynamic> get availableTasks => _availableTasks;
   List<dynamic> get myTasks => _myTasks;
@@ -90,24 +92,52 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchMyTasks(String stage) async {
+  Future<void> fetchMyTasks(String stage, {bool forceRefresh = false}) async {
     _selectedStage = stage;
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+    final hasCached = _stageTasksCache.containsKey(stage);
+
+    if (hasCached && !forceRefresh) {
+      _myTasks = List<dynamic>.from(_stageTasksCache[stage]!);
+      _isLoading = false;
+      _error = null;
+      notifyListeners();
+    } else {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+    }
+
+    final currentReqId = ++_myTasksRequestId;
+
     try {
       final fetched = await ApiService.getMyTasks(stage);
       // Guarantee latest tasks are strictly at the top
       fetched.sort((a, b) => _compareTasksDesc(a, b, includeUpdated: true));
+
+      // Guard against race condition: if user changed tab while request was ongoing, discard!
+      if (currentReqId != _myTasksRequestId) {
+        debugPrint('[TaskProvider] Discarding outdated fetchMyTasks for $stage (Req: $currentReqId vs $_myTasksRequestId)');
+        return;
+      }
+
+      _stageTasksCache[stage] = fetched;
       _myTasks = fetched;
+      _error = null;
       debugPrint('[TaskProvider] Fetched ${_myTasks.length} my tasks ($stage, newest top)');
     } catch (e) {
       debugPrint('[TaskProvider ERROR] fetchMyTasks failed: $e');
-      _error = e.toString().replaceAll('Exception: ', '');
-      _myTasks = [];
+      if (currentReqId == _myTasksRequestId) {
+        _error = e.toString().replaceAll('Exception: ', '');
+        if (!hasCached) {
+          _myTasks = [];
+        }
+      }
+    } finally {
+      if (currentReqId == _myTasksRequestId) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
-    _isLoading = false;
-    notifyListeners();
   }
 
   Future<void> fetchDashboardStats() async {
@@ -145,8 +175,9 @@ class TaskProvider extends ChangeNotifier {
     try {
       final res = await ApiService.acceptTask(taskId);
       if (res['success'] == true || res['status'] == 'assigned' || res['status'] == 'ASSIGNED') {
+        _stageTasksCache.clear();
         await fetchAvailableTasks();
-        await fetchMyTasks('assigned');
+        await fetchMyTasks('assigned', forceRefresh: true);
         return true;
       }
     } catch (e) {
@@ -161,7 +192,8 @@ class TaskProvider extends ChangeNotifier {
     try {
       final res = await ApiService.startTask(taskId);
       if (res['success'] == true || res['status'] == 'IN_PROGRESS' || res['status'] == 'in_progress') {
-        await fetchMyTasks('assigned');
+        _stageTasksCache.clear();
+        await fetchMyTasks('assigned', forceRefresh: true);
         return true;
       }
     } catch (e) {
@@ -213,7 +245,8 @@ class TaskProvider extends ChangeNotifier {
       });
 
       if (res['success'] == true || res['status'] == 'SUBMITTED' || res['status'] == 'submitted') {
-        fetchMyTasks(_selectedStage);
+        _stageTasksCache.clear();
+        fetchMyTasks(_selectedStage, forceRefresh: true);
         return true;
       } else {
         throw Exception(res['message'] ?? 'Failed to submit task proof');

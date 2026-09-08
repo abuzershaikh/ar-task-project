@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/providers/task_provider.dart';
 import 'screens/task_stage_list_view.dart';
 
 /// My Tasks Screen:
-/// - Sticky Header & Filter Row at top (fixed)
+/// - Curved Emerald Jungle Top Header Banner with 3D Avatar, Title, Today Earnings Pill, Notification & Refresh
+/// - Sticky Subtitle & Filter Row
 /// - Scrollable Task List in middle (only tasks scroll)
-/// - 100% Edge-to-Edge Full-Width Dark Sub-Bottom Navigation Bar (Accepted, Submitted, Review, Approved, Rejected)
+/// - 100% Edge-to-Edge Full-Width Dark Sub-Bottom Navigation Bar (Accepted, In Review, Approved, Rejected)
 class MyTasksScreen extends StatefulWidget {
   const MyTasksScreen({super.key});
 
@@ -25,14 +27,9 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
       'title': 'Accepted Tasks',
     },
     {
-      'label': 'Submitted',
-      'icon': Icons.send_rounded,
-      'title': 'Submitted Tasks',
-    },
-    {
-      'label': 'Review',
-      'icon': Icons.hourglass_empty_rounded,
-      'title': 'Review Tasks',
+      'label': 'In Review',
+      'icon': Icons.hourglass_top_rounded,
+      'title': 'In Review Tasks',
     },
     {
       'label': 'Approved',
@@ -51,90 +48,96 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadStage(0);
+      Provider.of<TaskProvider>(context, listen: false).fetchWalletData();
     });
   }
 
-  void _loadStage(int index) {
+  void _loadStage(int index, {bool forceRefresh = false}) {
     setState(() => _currentStageIndex = index);
-    Provider.of<TaskProvider>(context, listen: false)
-        .fetchMyTasks(AppConstants.myTaskStages[index]);
+    Provider.of<TaskProvider>(context, listen: false).fetchMyTasks(
+      AppConstants.myTaskStages[index],
+      forceRefresh: forceRefresh,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FA),
-      body: SafeArea(
-        top: true,
-        bottom: false,
-        left: false,
-        right: false,
-        child: Column(
+    final topPadding = MediaQuery.of(context).padding.top;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F8FA),
+        body: Column(
           children: [
-            // ── 1. Top Fixed Section (Header & Filter Row) ────────────────
+            // ── 1. Top Emerald Jungle Header Banner ───────────────────────
+            _buildTopBanner(topPadding),
+
+            // ── 2. Fixed Section Title & Filter Row ────────────────────────
             Container(
               color: const Color(0xFFF6F8FA),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Top Header Bar
-                  _buildHeaderBar(),
-                  const SizedBox(height: 14),
-
-                  // Section Title & Filter Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _stageMeta[_currentStageIndex]['title'] as String,
-                        style: const TextStyle(
-                          color: Color(0xFF0F172A),
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
+                  Text(
+                    _stageMeta[_currentStageIndex]['title'] as String,
+                    style: const TextStyle(
+                      color: Color(0xFF0F172A),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  // Filter Pill Button
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 4,
+                          offset: Offset(0, 1),
                         ),
-                      ),
-                      // Filter Pill Button
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.filter_list_rounded,
+                            size: 13, color: Color(0xFF475569)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Filter',
+                          style: TextStyle(
+                            color: Color(0xFF334155),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
                         ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.filter_list_rounded,
-                                size: 13, color: Color(0xFF475569)),
-                            SizedBox(width: 4),
-                            Text(
-                              'Filter',
-                              style: TextStyle(
-                                color: Color(0xFF334155),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 11,
-                              ),
-                            ),
-                            SizedBox(width: 2),
-                            Icon(Icons.keyboard_arrow_down_rounded,
-                                size: 15, color: Color(0xFF64748B)),
-                          ],
-                        ),
-                      ),
-                    ],
+                        SizedBox(width: 2),
+                        Icon(Icons.keyboard_arrow_down_rounded,
+                            size: 15, color: Color(0xFF64748B)),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // ── 2. Scrollable Task List (Only tasks scroll) ───────────────
+            // ── 3. Scrollable Task List (Only tasks scroll) ───────────────
             Expanded(
               child: TaskStageListView(
                 stage: AppConstants.myTaskStages[_currentStageIndex],
               ),
             ),
 
-            // ── 3. 100% Full-Width Dark Sub Bottom Navigation Bar ─────────
+            // ── 4. 100% Full-Width Dark Sub Bottom Navigation Bar ─────────
             _buildStageSubBottomBar(),
           ],
         ),
@@ -142,77 +145,380 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
     );
   }
 
-  // ── Header Bar ─────────────────────────────────────────────────────────────
-  Widget _buildHeaderBar() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // Title & Subtitle
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  // ── Top Emerald Jungle Banner (Matching User Reference Image) ───────────────
+  Widget _buildTopBanner(double topPadding) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF022B19),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF044E33).withOpacity(0.35),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+        child: Stack(
           children: [
-            RichText(
-              text: const TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'My ',
-                    style: TextStyle(
-                      color: Color(0xFF0F172A),
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
+            // Background Image with gradient fallback
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/tasks_banner_bg.jpg',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF011E11),
+                        Color(0xFF03442A),
+                        Color(0xFF046640),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
-                  TextSpan(
-                    text: 'Tasks',
-                    style: TextStyle(
-                      color: Color(0xFF00875A),
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+
+            // Subtle dark overlay to guarantee text legibility
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withOpacity(0.25),
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.35),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+            ),
+
+            // Foreground Content
+            Padding(
+              padding: EdgeInsets.fromLTRB(14, topPadding + 10, 14, 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // ── Left: 3D Boy Avatar with Neon Border & Golden Crown ──
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF22C55E), // Vivid Neon Green Ring
+                            width: 2.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF22C55E).withOpacity(0.45),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/images/worker_avatar_3d.jpg',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const CircleAvatar(
+                              backgroundColor: Color(0xFF064E3B),
+                              child: Icon(Icons.person_rounded, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Golden Crown Badge at top-right
+                      Positioned(
+                        top: -3,
+                        right: -3,
+                        child: Container(
+                          padding: const EdgeInsets.all(3.5),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFDF00), Color(0xFFF59E0B)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.35),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.workspace_premium_rounded,
+                            size: 11,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 10),
+
+                  // ── Title & Subtitle with Leaf Motif ──
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        RichText(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          text: const TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'My ',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.4,
+                                ),
+                              ),
+                              TextSpan(
+                                text: 'Tasks',
+                                style: TextStyle(
+                                  color: Color(0xFF4ADE80), // Mint green
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'Track and manage your tasks',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: const Color(0xFFD1FAE5).withOpacity(0.88),
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.eco_rounded,
+                              size: 13,
+                              color: Color(0xFF4ADE80),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // ── Right: Today Earnings Pill + Bell + Refresh ──
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Today Earnings Dark Translucent Pill
+                        Consumer<TaskProvider>(
+                          builder: (context, provider, _) {
+                            final wallet = provider.walletData;
+                            final stats = provider.dashboardStats;
+                            final dynamic rawEarn = wallet['todayEarnings'] ??
+                                wallet['today_earnings'] ??
+                                stats['todayEarnings'] ??
+                                stats['today_earnings'] ??
+                                wallet['earnings'] ??
+                                wallet['balance'] ??
+                                12.50;
+                            final double earningsVal = (rawEarn is num)
+                                ? rawEarn.toDouble()
+                                : (double.tryParse(rawEarn.toString()) ?? 12.50);
+                            final String displayAmount = earningsVal.toStringAsFixed(2);
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.38),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xFF4ADE80).withOpacity(0.38),
+                                  width: 1.1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0x334ADE80),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.account_balance_wallet_rounded,
+                                      color: Color(0xFF6EE7B7),
+                                      size: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        'Today Earnings',
+                                        style: TextStyle(
+                                          color: Color(0xFFD1FAE5),
+                                          fontSize: 8.5,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      Text(
+                                        '₹$displayAmount',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 3),
+                                  const Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: Colors.white54,
+                                    size: 14,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 6),
+
+                        // Notification Bell Button with Red Unread Dot
+                        InkWell(
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('🔔 No new task alerts at the moment.'),
+                                backgroundColor: Color(0xFF047857),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.38),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF4ADE80).withOpacity(0.38),
+                                width: 1.1,
+                              ),
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.notifications_none_rounded,
+                                  color: Colors.white,
+                                  size: 17,
+                                ),
+                                Positioned(
+                                  top: 6,
+                                  right: 6,
+                                  child: Container(
+                                    width: 7,
+                                    height: 7,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(0xFF044E33),
+                                        width: 1.2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+
+                        // Circular Refresh Button
+                        InkWell(
+                          onTap: () {
+                            _loadStage(_currentStageIndex, forceRefresh: true);
+                            Provider.of<TaskProvider>(context, listen: false).fetchWalletData();
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.38),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF4ADE80).withOpacity(0.38),
+                                width: 1.1,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.refresh_rounded,
+                              color: Colors.white,
+                              size: 17,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 2),
-            const Text(
-              'Track and manage your tasks',
-              style: TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
           ],
         ),
-
-        // Circular Refresh Button
-        InkWell(
-          onTap: () => _loadStage(_currentStageIndex),
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: const Icon(
-              Icons.refresh_rounded,
-              color: Color(0xFF00875A),
-              size: 20,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  // ── 100% Full-Width Sub Bottom Navigation Bar (Stage Tabs) ─────────────────
+  // ── 100% Full-Width Sub Bottom Navigation Bar (4 Clean Stage Tabs) ─────────
   Widget _buildStageSubBottomBar() {
     return Container(
       width: double.infinity,
-      height: 52,
+      height: 54,
       margin: EdgeInsets.zero,
       padding: EdgeInsets.zero,
       decoration: const BoxDecoration(
@@ -237,17 +543,17 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
                 children: [
                   Icon(
                     meta['icon'] as IconData,
-                    size: 17,
+                    size: 18,
                     color: isSelected ? activeColor : inactiveColor,
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     meta['label'] as String,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: isSelected ? activeColor : inactiveColor,
-                      fontSize: 9.5,
+                      fontSize: 10,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                     ),
                   ),

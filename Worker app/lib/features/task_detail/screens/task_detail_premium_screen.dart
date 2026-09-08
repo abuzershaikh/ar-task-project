@@ -926,8 +926,8 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     });
 
     try {
-      await taskProvider.fetchMyTasks('submitted');
-      await taskProvider.fetchMyTasks('assigned');
+      await taskProvider.fetchMyTasks('under_review', forceRefresh: true);
+      await taskProvider.fetchMyTasks('assigned', forceRefresh: true);
       await taskProvider.fetchAvailableTasks();
     } catch (_) {}
 
