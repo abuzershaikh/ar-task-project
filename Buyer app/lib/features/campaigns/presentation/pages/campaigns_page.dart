@@ -705,6 +705,12 @@ class _CampaignsViewState extends State<_CampaignsView> {
     Widget? customBadge;
     bool badgeTopLeft = false;
 
+    final bool isExplicitPremium = nameLower.contains('premium') ||
+        nameLower.contains('vip') ||
+        nameLower.contains('crown') ||
+        nameLower.contains('special') ||
+        nameLower.contains('pro');
+
     if (nameLower.contains('comment')) {
       // Lavender / Purple gradient
       gradientColors = const [Color(0xFFF3E8FF), Color(0xFFE9D5FF)];
@@ -754,32 +760,34 @@ class _CampaignsViewState extends State<_CampaignsView> {
       }
     } else if (nameLower.contains('sub') || nameLower.contains('subscribe')) {
       // YouTube Channel Subscribe
-      final bool isCrownStyle = campaign.id.hashCode % 2 == 0;
+      final bool isCrownStyle = isExplicitPremium || (campaign.id.hashCode % 2 == 0);
       if (isCrownStyle) {
         gradientColors = const [Color(0xFFFFF1F2), Color(0xFFFFE4E6)]; // soft rose
         mainAsset = 'assets/icons/youtube.png';
         mainSize = 34;
         badgeTopLeft = true;
         customBadge = Container(
-          width: 19,
-          height: 19,
+          width: 22,
+          height: 22,
           decoration: BoxDecoration(
-            color: const Color(0xFFF59E0B),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 3,
-                offset: const Offset(0, 1),
+                color: Colors.black.withOpacity(0.20),
+                blurRadius: 4,
+                offset: const Offset(0, 1.5),
               ),
             ],
           ),
-          child: const Center(
-            child: Icon(
+          child: Image.asset(
+            'assets/icons/crown.png',
+            width: 22,
+            height: 22,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Icon(
               Icons.workspace_premium_rounded,
-              color: Colors.white,
-              size: 11,
+              color: Color(0xFFF59E0B),
+              size: 14,
             ),
           ),
         );
@@ -815,6 +823,35 @@ class _CampaignsViewState extends State<_CampaignsView> {
       gradientColors = const [Color(0xFFE6FFFA), Color(0xFFB2F5EA)];
       mainAsset = 'assets/icons/marketing.png';
       mainSize = 32;
+    }
+
+    if (isExplicitPremium && customBadge == null) {
+      badgeTopLeft = true;
+      customBadge = Container(
+        width: 22,
+        height: 22,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.20),
+              blurRadius: 4,
+              offset: const Offset(0, 1.5),
+            ),
+          ],
+        ),
+        child: Image.asset(
+          'assets/icons/crown.png',
+          width: 22,
+          height: 22,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const Icon(
+            Icons.workspace_premium_rounded,
+            color: Color(0xFFF59E0B),
+            size: 14,
+          ),
+        ),
+      );
     }
 
     return Container(
@@ -854,9 +891,9 @@ class _CampaignsViewState extends State<_CampaignsView> {
           if (badgeAsset != null || customBadge != null)
             Positioned(
               right: badgeTopLeft ? null : -2,
-              left: badgeTopLeft ? -2 : null,
+              left: badgeTopLeft ? -3 : null,
               bottom: badgeTopLeft ? null : -2,
-              top: badgeTopLeft ? -2 : null,
+              top: badgeTopLeft ? -3 : null,
               child: customBadge ??
                   Container(
                     width: 20,

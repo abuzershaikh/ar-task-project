@@ -52,6 +52,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   int? _ytDurationSeconds;
   int? _ytRequiredWatchSeconds;
   String? _ytDurationFormatted;
+  String? _ytRequiredWatchFormatted;
   bool _ytIsCappedAt5Min = false;
   bool _isFetchingYtInfo = false;
   String? _ytFetchError;
