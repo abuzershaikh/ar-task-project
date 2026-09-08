@@ -6,7 +6,6 @@ import '../bloc/service_builder_event.dart';
 import '../bloc/service_builder_state.dart';
 import '../widgets/buyer_worker_preview_modal.dart';
 import '../../domain/models/service_model.dart';
-import '../../domain/models/pricing_config.dart';
 
 class ServiceBuilderScreen extends StatefulWidget {
   final String? serviceId;
@@ -63,153 +62,22 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
   String _reviewMode = 'buyer';
   bool _isPercentageMargin = false;
   bool _bootstrapped = false;
-  String _selectedPresetCategory = 'All';
 
-  // AI Generator Settings (Section 18)
+  // AI Generator Settings
   bool _aiGeneratorEnabled = false;
   String _aiLanguage = 'English';
   String _aiTone = 'natural';
   bool _aiUniqueness = true;
 
-  // Category Presets
-  final List<Map<String, dynamic>> _presetTemplates = [
-    // YouTube Fixed 4 Services Presets
-    {
-      'category': 'YouTube',
-      'icon': Icons.chat_bubble_outline_rounded,
-      'color': Colors.redAccent,
-      'code': 'YOUTUBE_COMMENT',
-      'name': 'YouTube Video Comment',
-      'desc': 'Post unique, high-retention comments on the target video with AI generator support',
-      'buyerPrice': 3.0,
-      'margin': 1.0,
-      'workerReward': 2.0,
-      'linkLabel': 'YouTube Video URL',
-      'linkPlaceholder': 'https://www.youtube.com/watch?v=...',
-      'needText': true,
-      'textLabel': 'Comment Topic / Keywords',
-      'textPlaceholder': 'e.g. informative tutorial, honest review, excellent breakdown',
-      'watchtime': 0,
-      'aiEnabled': true,
-    },
-    {
-      'category': 'YouTube',
-      'icon': Icons.thumb_up_alt_outlined,
-      'color': Colors.redAccent,
-      'code': 'YOUTUBE_LIKE',
-      'name': 'YouTube Video Like',
-      'desc': 'Real user likes on YouTube video with high retention',
-      'buyerPrice': 2.0,
-      'margin': 0.5,
-      'workerReward': 1.5,
-      'linkLabel': 'YouTube Video URL',
-      'linkPlaceholder': 'https://www.youtube.com/watch?v=...',
-      'needText': false,
-      'watchtime': 0,
-      'aiEnabled': false,
-    },
-    {
-      'category': 'YouTube',
-      'icon': Icons.subscriptions_outlined,
-      'color': Colors.redAccent,
-      'code': 'YOUTUBE_SUBSCRIBE',
-      'name': 'YouTube Channel Subscribe',
-      'desc': 'Permanent subscribers from verified active accounts',
-      'buyerPrice': 5.0,
-      'margin': 1.5,
-      'workerReward': 3.5,
-      'linkLabel': 'YouTube Channel Link',
-      'linkPlaceholder': 'https://www.youtube.com/@channel',
-      'needText': false,
-      'watchtime': 0,
-      'aiEnabled': false,
-    },
-    {
-      'category': 'YouTube',
-      'icon': Icons.auto_awesome,
-      'color': Colors.amberAccent,
-      'code': 'YOUTUBE_COMBO',
-      'name': 'YouTube Combo (Like + Sub + Comment)',
-      'desc': 'All-in-one engagement: Like video + Subscribe to Channel + Post unique AI comment',
-      'buyerPrice': 8.0,
-      'margin': 2.5,
-      'workerReward': 5.5,
-      'linkLabel': 'YouTube Video / Channel URL',
-      'linkPlaceholder': 'https://www.youtube.com/watch?v=...',
-      'needText': true,
-      'textLabel': 'Comment Topic / Keywords',
-      'textPlaceholder': 'e.g. loved the video, subscribed!',
-      'watchtime': 60,
-      'aiEnabled': true,
-    },
-    {
-      'category': 'Telegram',
-      'icon': Icons.send_rounded,
-      'color': Colors.lightBlueAccent,
-      'code': 'TELEGRAM_JOIN',
-      'name': 'Telegram Channel Join',
-      'desc': 'Join public/private Telegram channel and stay active for 7 days',
-      'buyerPrice': 3.0,
-      'margin': 1.0,
-      'workerReward': 2.0,
-      'linkLabel': 'Telegram Invite Link',
-      'linkPlaceholder': 'https://t.me/yourchannel',
-      'needText': true,
-      'textLabel': 'Telegram Username (Worker Proof)',
-      'textPlaceholder': '@username',
-      'watchtime': 0,
-      'aiEnabled': false,
-    },
-    {
-      'category': 'Instagram',
-      'icon': Icons.camera_alt,
-      'color': Colors.pinkAccent,
-      'code': 'INSTA_FOLLOW',
-      'name': 'Instagram Profile Follow',
-      'desc': 'Organic profile follow from real active accounts',
-      'buyerPrice': 4.0,
-      'margin': 1.0,
-      'workerReward': 3.0,
-      'linkLabel': 'Instagram Profile URL',
-      'linkPlaceholder': 'https://instagram.com/profile',
-      'needText': true,
-      'textLabel': 'Worker Instagram Handle',
-      'textPlaceholder': '@handle',
-      'watchtime': 0,
-      'aiEnabled': false,
-    },
-    {
-      'category': 'App Install',
-      'icon': Icons.android,
-      'color': Colors.greenAccent,
-      'code': 'APP_INSTALL',
-      'name': 'Android App Install & Open',
-      'desc': 'Download app from Google Play Store and open for 60 seconds',
-      'buyerPrice': 10.0,
-      'margin': 3.0,
-      'workerReward': 7.0,
-      'linkLabel': 'Play Store Link',
-      'linkPlaceholder': 'https://play.google.com/store/apps/details?id=...',
-      'needText': false,
-      'watchtime': 60,
-      'aiEnabled': false,
-    },
-    {
-      'category': 'Website',
-      'icon': Icons.language,
-      'color': Colors.amberAccent,
-      'code': 'WEB_VISIT',
-      'name': 'Website Visit & Stay 30s',
-      'desc': 'Visit landing page and browse at least 2 pages for 30s',
-      'buyerPrice': 2.5,
-      'margin': 0.7,
-      'workerReward': 1.8,
-      'linkLabel': 'Website URL',
-      'linkPlaceholder': 'https://example.com',
-      'needText': false,
-      'watchtime': 30,
-    },
-  ];
+  // Professional Blue & White Theme Palette
+  static const Color primaryBlue = Color(0xFF1E40AF); // Deep Royal Blue
+  static const Color accentBlue = Color(0xFF2563EB); // Vibrant Royal Blue
+  static const Color lightBlueBg = Color(0xFFEFF6FF); // Soft Blue Tint
+  static const Color surfaceWhite = Colors.white;
+  static const Color backgroundLight = Color(0xFFF8FAFC); // Clean Light Slate
+  static const Color textPrimary = Color(0xFF0F172A); // Dark Slate
+  static const Color textSecondary = Color(0xFF64748B); // Slate Muted
+  static const Color borderSubtle = Color(0xFFE2E8F0); // Subtle Border
 
   @override
   void initState() {
@@ -296,10 +164,8 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     _minCompleteHoursController.text = service.minCompleteHours.toString();
     _maxCompleteHoursController.text = service.maxCompleteHours.toString();
     _linkFieldLabelController.text = service.linkFieldLabel ?? 'Target Link / URL';
-    _linkFieldPlaceholderController.text =
-        service.linkFieldPlaceholder ?? 'https://...';
-    _textFieldLabelController.text =
-        service.textFieldLabel ?? 'Custom Instructions / Text';
+    _linkFieldPlaceholderController.text = service.linkFieldPlaceholder ?? 'https://...';
+    _textFieldLabelController.text = service.textFieldLabel ?? 'Custom Instructions / Text';
     _textFieldPlaceholderController.text = service.textFieldPlaceholder ?? '';
     _adminInstructionsController.text = service.adminInstructions ?? '';
     _videoUrlController.text = service.videoTutorialUrl ?? '';
@@ -318,40 +184,6 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
           service.aiGeneratorConfig!['unique'] == true ||
           service.aiGeneratorConfig!['uniqueness'] == null;
     }
-  }
-
-  void _applyPreset(Map<String, dynamic> preset) {
-    setState(() {
-      _codeController.text = preset['code'] ?? _codeController.text;
-      _nameController.text = preset['name'] ?? _nameController.text;
-      _descController.text = preset['desc'] ?? _descController.text;
-      _buyerPriceController.text = (preset['buyerPrice'] ?? 5.0).toString();
-      _marginController.text = (preset['margin'] ?? 1.5).toString();
-      if (preset['linkLabel'] != null) {
-        _linkFieldLabelController.text = preset['linkLabel'];
-        _linkFieldPlaceholderController.text = preset['linkPlaceholder'] ?? 'https://...';
-        _isLinkFieldEnabled = true;
-      }
-      if (preset['needText'] == true) {
-        _isTextFieldEnabled = true;
-        if (preset['textLabel'] != null) _textFieldLabelController.text = preset['textLabel'];
-        if (preset['textPlaceholder'] != null) {
-          _textFieldPlaceholderController.text = preset['textPlaceholder'];
-        }
-      }
-      _watchtimeSeconds = preset['watchtime'] ?? 0;
-      if (preset['aiEnabled'] != null) {
-        _aiGeneratorEnabled = preset['aiEnabled'] == true;
-      }
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Applied preset: ${preset['name']}'),
-        backgroundColor: AppColors.success,
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   double _getCalculatedWorkerReward() {
@@ -388,12 +220,10 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
           'tone': _aiTone,
           'uniqueness': _aiUniqueness,
         },
-        videoTutorialUrl: _videoUrlController.text.trim().isNotEmpty
-            ? _videoUrlController.text.trim()
-            : null,
-        audioGuideUrl: _audioUrlController.text.trim().isNotEmpty
-            ? _audioUrlController.text.trim()
-            : null,
+        videoTutorialUrl:
+            _videoUrlController.text.trim().isNotEmpty ? _videoUrlController.text.trim() : null,
+        audioGuideUrl:
+            _audioUrlController.text.trim().isNotEmpty ? _audioUrlController.text.trim() : null,
         adminInstructions: _adminInstructionsController.text.trim().isNotEmpty
             ? _adminInstructionsController.text.trim()
             : null,
@@ -460,7 +290,9 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.successMessage!),
-                backgroundColor: AppColors.success,
+                backgroundColor: const Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             );
           }
@@ -468,7 +300,9 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.errorMessage!),
-                backgroundColor: AppColors.error,
+                backgroundColor: const Color(0xFFEF4444),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             );
           }
@@ -484,40 +318,52 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xFF0B1120),
+          backgroundColor: backgroundLight,
           appBar: AppBar(
-            backgroundColor: const Color(0xFF1E293B),
+            backgroundColor: surfaceWhite,
+            surfaceTintColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: const Icon(Icons.arrow_back_rounded, color: primaryBlue),
               onPressed: () => Navigator.pop(context),
             ),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _nameController.text.isNotEmpty
-                      ? _nameController.text
-                      : 'Fixed Service Setup',
+                  _nameController.text.isNotEmpty ? _nameController.text : 'Configure Service',
                   style: const TextStyle(
-                      color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    color: textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.3,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   _codeController.text.isNotEmpty ? _codeController.text : 'NEW SERVICE',
                   style: const TextStyle(
-                      color: Colors.cyanAccent,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600),
+                    color: accentBlue,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ],
             ),
             actions: [
               if (service != null)
                 IconButton(
-                  tooltip: 'Preview Buyer & Worker View',
-                  icon: const Icon(Icons.remove_red_eye_rounded,
-                      color: Colors.cyanAccent, size: 22),
+                  tooltip: 'Preview Runtime View',
+                  icon: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: lightBlueBg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: const Icon(Icons.remove_red_eye_rounded, color: accentBlue, size: 18),
+                  ),
                   onPressed: () {
                     showModalBottomSheet(
                       context: context,
@@ -528,55 +374,66 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                   },
                 ),
               Padding(
-                padding: const EdgeInsets.only(right: 12),
+                padding: const EdgeInsets.only(right: 12, left: 4),
                 child: isSaving
                     ? const Center(
                         child: SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.cyanAccent),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: accentBlue),
                         ),
                       )
                     : ElevatedButton.icon(
                         onPressed: () => _saveAndPublish(context, false),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: accentBlue,
                           foregroundColor: Colors.white,
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                          elevation: 2,
+                          shadowColor: accentBlue.withOpacity(0.3),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        icon: const Icon(Icons.save_rounded, size: 16),
-                        label: const Text('Save',
-                            style: TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.bold)),
+                        icon: const Icon(Icons.check_circle_rounded, size: 16),
+                        label: const Text(
+                          'Save Changes',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
                       ),
               ),
             ],
-            bottom: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              indicatorColor: Colors.cyanAccent,
-              indicatorWeight: 3,
-              labelColor: Colors.cyanAccent,
-              unselectedLabelColor: Colors.white60,
-              tabs: const [
-                Tab(icon: Icon(Icons.info_outline, size: 18), text: 'General & Presets'),
-                Tab(icon: Icon(Icons.currency_rupee, size: 18), text: 'Pricing & Margin'),
-                Tab(icon: Icon(Icons.input_rounded, size: 18), text: 'Buyer Inputs'),
-                Tab(icon: Icon(Icons.verified_user_outlined, size: 18), text: 'Worker Rules'),
-              ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(49),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: surfaceWhite,
+                  border: Border(bottom: BorderSide(color: borderSubtle, width: 1)),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  indicatorColor: accentBlue,
+                  indicatorWeight: 3,
+                  labelColor: accentBlue,
+                  unselectedLabelColor: textSecondary,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                  tabs: const [
+                    Tab(icon: Icon(Icons.info_outline_rounded, size: 18), text: 'General Info'),
+                    Tab(icon: Icon(Icons.currency_rupee_rounded, size: 18), text: 'Pricing & Margin'),
+                    Tab(icon: Icon(Icons.input_rounded, size: 18), text: 'Buyer Inputs'),
+                    Tab(icon: Icon(Icons.verified_user_outlined, size: 18), text: 'Worker Rules'),
+                  ],
+                ),
+              ),
             ),
           ),
           body: TabBarView(
             controller: _tabController,
             children: [
-              // Tab 1: General & Category Presets
+              // Tab 1: General Information (Clean, presets hidden)
               _buildGeneralTab(),
 
-              // Tab 2: Fixed Pricing & Margin Calculator
+              // Tab 2: Pricing & Margin Calculator
               _buildPricingTab(),
 
               // Tab 3: Buyer Input Configuration
@@ -591,114 +448,133 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     );
   }
 
-  // ==================== TAB 1: GENERAL & PRESETS ====================
+  // ==================== TAB 1: GENERAL INFO (CLEAN & PRESETS HIDDEN) ====================
   Widget _buildGeneralTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Quick Category Presets
+          // Service Basic Info Card
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: surfaceWhite,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.bolt_rounded, color: Colors.amberAccent, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'One-Tap Preset Templates',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Tap any preset below to instantly populate standard settings:',
-                  style: TextStyle(color: Colors.white54, fontSize: 11),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _presetTemplates.map((p) {
-                    return ActionChip(
-                      avatar: Icon(p['icon'] as IconData,
-                          size: 16, color: p['color'] as Color),
-                      label: Text(
-                        p['name'],
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600),
-                      ),
-                      backgroundColor: const Color(0xFF0F172A),
-                      side: const BorderSide(color: Colors.white24),
-                      onPressed: () => _applyPreset(p),
-                    );
-                  }).toList(),
+              border: Border.all(color: borderSubtle),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 20),
-
-          // Service Basic Info Card
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white12),
-            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Service Identification',
-                  style: TextStyle(
-                      color: Colors.cyanAccent,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: lightBlueBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.badge_outlined, color: accentBlue, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Service Identification',
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 4),
+                const Text(
+                  'Set the internal system key, visible name and brief description for this service',
+                  style: TextStyle(color: textSecondary, fontSize: 12),
+                ),
+                const SizedBox(height: 18),
 
                 // Unique Code
                 _buildTextField(
                   controller: _codeController,
-                  label: 'Service Code (System Key)',
-                  hint: 'e.g. YOUTUBE_LIKE, INSTA_FOLLOW',
+                  label: 'Service Code (Unique System Key)',
+                  hint: 'e.g. YOUTUBE_LIKE, INSTA_FOLLOW, TELEGRAM_JOIN',
                   icon: Icons.key_rounded,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // Service Name
                 _buildTextField(
                   controller: _nameController,
                   label: 'Service Display Name',
-                  hint: 'e.g. YouTube Video Like',
-                  icon: Icons.label_important_rounded,
+                  hint: 'e.g. YouTube Video Like & Stay 60s',
+                  icon: Icons.label_important_outline_rounded,
                   onChanged: (val) => setState(() {}),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // Description
                 _buildTextField(
                   controller: _descController,
                   label: 'Service Description (Shown to Buyers & Workers)',
-                  hint: 'Explain what workers need to do clearly...',
-                  icon: Icons.description_rounded,
+                  hint: 'Explain what workers need to do clearly in simple steps...',
+                  icon: Icons.description_outlined,
                   maxLines: 3,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Catalog Status Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: surfaceWhite,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: borderSubtle),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
+                  ),
+                  child: const Icon(Icons.public_rounded, color: Color(0xFF16A34A), size: 22),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Instant Live Deployment',
+                        style: TextStyle(color: textPrimary, fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Changes saved here immediately synchronize with Buyer & Worker apps',
+                        style: TextStyle(color: textSecondary, fontSize: 11),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -719,114 +595,161 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Live Margin & Reward Calculation Card
+          // Live Margin & Reward Breakdown Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.cyanAccent.withOpacity(0.15),
-                  const Color(0xFF1E293B)
-                ],
+              gradient: const LinearGradient(
+                colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
+              boxShadow: [
+                BoxShadow(
+                  color: accentBlue.withOpacity(0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.calculate_rounded, color: Colors.cyanAccent, size: 20),
+                    Icon(Icons.calculate_rounded, color: primaryBlue, size: 20),
                     SizedBox(width: 8),
                     Text(
                       'Live Profit & Reward Breakdown',
                       style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold),
+                        color: textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
-                const Divider(color: Colors.white12, height: 20),
+                const SizedBox(height: 4),
+                const Text(
+                  'Automatic per-unit calculation for each completed order',
+                  style: TextStyle(color: textSecondary, fontSize: 11),
+                ),
+                const SizedBox(height: 14),
+                const Divider(color: Color(0xFFBFDBFE), height: 1),
+                const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildPricingStatColumn('Buyer Pays', '₹${buyerPrice.toStringAsFixed(2)}', Colors.cyanAccent),
-                    const Text('-', style: TextStyle(color: Colors.white38, fontSize: 20)),
-                    _buildPricingStatColumn('Admin Margin', _isPercentageMargin ? '$margin%' : '₹${margin.toStringAsFixed(2)}', Colors.amberAccent),
-                    const Text('=', style: TextStyle(color: Colors.white38, fontSize: 20)),
-                    _buildPricingStatColumn('Worker Reward', '₹${workerReward.toStringAsFixed(2)}', Colors.greenAccent),
+                    _buildPricingStatColumn('Buyer Pays', '₹${buyerPrice.toStringAsFixed(2)}', primaryBlue),
+                    const Text('-', style: TextStyle(color: textSecondary, fontSize: 24, fontWeight: FontWeight.w300)),
+                    _buildPricingStatColumn(
+                      'Admin Margin',
+                      _isPercentageMargin ? '$margin%' : '₹${margin.toStringAsFixed(2)}',
+                      const Color(0xFFD97706),
+                    ),
+                    const Text('=', style: TextStyle(color: textSecondary, fontSize: 24, fontWeight: FontWeight.w300)),
+                    _buildPricingStatColumn('Worker Reward', '₹${workerReward.toStringAsFixed(2)}', const Color(0xFF16A34A)),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // Pricing Configuration Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: surfaceWhite,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: borderSubtle),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Pricing Parameters',
-                  style: TextStyle(
-                      color: Colors.cyanAccent,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: lightBlueBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.tune_rounded, color: accentBlue, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Pricing Parameters',
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
 
                 // Buyer Unit Price
                 _buildTextField(
                   controller: _buyerPriceController,
                   label: 'Buyer Price Per Unit (₹)',
                   hint: 'e.g. 5.00',
-                  icon: Icons.currency_rupee,
+                  icon: Icons.currency_rupee_rounded,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (val) => setState(() {}),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // Margin Type Selector
                 Row(
                   children: [
-                    const Text('Margin Type: ',
-                        style: TextStyle(color: Colors.white70, fontSize: 13)),
-                    const SizedBox(width: 8),
+                    const Text(
+                      'Margin Type:',
+                      style: TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 10),
                     ChoiceChip(
                       label: const Text('Fixed Amount (₹)'),
                       selected: !_isPercentageMargin,
-                      selectedColor: Colors.cyanAccent,
+                      selectedColor: accentBlue,
+                      backgroundColor: backgroundLight,
                       labelStyle: TextStyle(
-                          color: !_isPercentageMargin ? Colors.black : Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold),
+                        color: !_isPercentageMargin ? Colors.white : textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      side: BorderSide(color: !_isPercentageMargin ? accentBlue : borderSubtle),
                       onSelected: (val) => setState(() => _isPercentageMargin = false),
                     ),
                     const SizedBox(width: 8),
                     ChoiceChip(
                       label: const Text('Percentage (%)'),
                       selected: _isPercentageMargin,
-                      selectedColor: Colors.cyanAccent,
+                      selectedColor: accentBlue,
+                      backgroundColor: backgroundLight,
                       labelStyle: TextStyle(
-                          color: _isPercentageMargin ? Colors.black : Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold),
+                        color: _isPercentageMargin ? Colors.white : textSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      side: BorderSide(color: _isPercentageMargin ? accentBlue : borderSubtle),
                       onSelected: (val) => setState(() => _isPercentageMargin = true),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
                 // Admin Margin Value
                 _buildTextField(
@@ -835,13 +758,13 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                       ? 'Admin Margin Percentage (%)'
                       : 'Admin Margin Value (₹)',
                   hint: _isPercentageMargin ? 'e.g. 30' : 'e.g. 1.50',
-                  icon: Icons.pie_chart_outline,
+                  icon: Icons.pie_chart_outline_rounded,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (val) => setState(() {}),
                 ),
                 const SizedBox(height: 16),
 
-                // Min & Max Quantity
+                // Min & Max Quantity Row
                 Row(
                   children: [
                     Expanded(
@@ -849,7 +772,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                         controller: _minQuantityController,
                         label: 'Min Order Qty',
                         hint: '10',
-                        icon: Icons.format_list_numbered,
+                        icon: Icons.format_list_numbered_rounded,
                         keyboardType: TextInputType.number,
                       ),
                     ),
@@ -859,7 +782,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                         controller: _maxQuantityController,
                         label: 'Max Order Qty',
                         hint: '10000',
-                        icon: Icons.all_inclusive,
+                        icon: Icons.all_inclusive_rounded,
                         keyboardType: TextInputType.number,
                       ),
                     ),
@@ -880,13 +803,20 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Target Link Requirement Switch Card
+          // Target Link Requirement Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: surfaceWhite,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: borderSubtle),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -894,40 +824,50 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.link_rounded, color: Colors.cyanAccent, size: 20),
-                        SizedBox(width: 8),
-                        Text(
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: lightBlueBg,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.link_rounded, color: accentBlue, size: 18),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
                           'Target URL / Link Input',
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold),
+                            color: textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
                     Switch(
                       value: _isLinkFieldEnabled,
-                      activeColor: Colors.cyanAccent,
+                      activeColor: accentBlue,
                       onChanged: (val) => setState(() => _isLinkFieldEnabled = val),
                     ),
                   ],
                 ),
                 if (_isLinkFieldEnabled) ...[
-                  const Divider(color: Colors.white12, height: 16),
+                  const SizedBox(height: 12),
+                  const Divider(color: borderSubtle, height: 1),
+                  const SizedBox(height: 16),
                   _buildTextField(
                     controller: _linkFieldLabelController,
                     label: 'Field Label (Shown to Buyer)',
                     hint: 'e.g. YouTube Video Link, Instagram Post URL',
-                    icon: Icons.title,
+                    icon: Icons.title_rounded,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   _buildTextField(
                     controller: _linkFieldPlaceholderController,
                     label: 'Placeholder Text',
                     hint: 'e.g. https://www.youtube.com/watch?v=...',
-                    icon: Icons.short_text,
+                    icon: Icons.short_text_rounded,
                   ),
                 ],
               ],
@@ -935,13 +875,20 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
           ),
           const SizedBox(height: 16),
 
-          // Custom Text Requirement Switch Card
+          // Custom Text Requirement Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: surfaceWhite,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: borderSubtle),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -949,41 +896,50 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.text_fields_rounded,
-                            color: Colors.cyanAccent, size: 20),
-                        SizedBox(width: 8),
-                        Text(
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: lightBlueBg,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.text_fields_rounded, color: accentBlue, size: 18),
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
                           'Custom Text / Comment Input',
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold),
+                            color: textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
                     Switch(
                       value: _isTextFieldEnabled,
-                      activeColor: Colors.cyanAccent,
+                      activeColor: accentBlue,
                       onChanged: (val) => setState(() => _isTextFieldEnabled = val),
                     ),
                   ],
                 ),
                 if (_isTextFieldEnabled) ...[
-                  const Divider(color: Colors.white12, height: 16),
+                  const SizedBox(height: 12),
+                  const Divider(color: borderSubtle, height: 1),
+                  const SizedBox(height: 16),
                   _buildTextField(
                     controller: _textFieldLabelController,
                     label: 'Field Label',
                     hint: 'e.g. Custom Comment Text, Keywords',
-                    icon: Icons.title,
+                    icon: Icons.title_rounded,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   _buildTextField(
                     controller: _textFieldPlaceholderController,
                     label: 'Placeholder Text',
                     hint: 'e.g. Enter positive comment to post...',
-                    icon: Icons.short_text,
+                    icon: Icons.short_text_rounded,
                   ),
                 ],
               ],
@@ -993,40 +949,65 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
 
           // Watch Time Requirement Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: surfaceWhite,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: borderSubtle),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.timer_outlined, color: Colors.cyanAccent, size: 20),
-                    SizedBox(width: 8),
-                    Text(
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: lightBlueBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.timer_outlined, color: accentBlue, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
                       'Mandatory Stay / Watch Time',
                       style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold),
+                        color: textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 14),
                 DropdownButtonFormField<int>(
                   value: _watchtimeSeconds,
-                  dropdownColor: const Color(0xFF1E293B),
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  dropdownColor: surfaceWhite,
+                  style: const TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     filled: true,
-                    fillColor: const Color(0xFF0F172A),
+                    fillColor: backgroundLight,
+                    prefixIcon: const Icon(Icons.schedule_rounded, color: accentBlue, size: 18),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.white24),
+                      borderSide: const BorderSide(color: borderSubtle),
                     ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: borderSubtle),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: accentBlue, width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   ),
                   items: const [
                     DropdownMenuItem(value: 0, child: Text('No Timer (Instant Action)')),
@@ -1042,16 +1023,23 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
           ),
           const SizedBox(height: 16),
 
-          // AI Generator Switch Card (Section 18)
+          // AI Generator Switch Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: surfaceWhite,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _aiGeneratorEnabled ? Colors.purpleAccent : Colors.white12,
+                color: _aiGeneratorEnabled ? const Color(0xFFC084FC) : borderSubtle,
                 width: _aiGeneratorEnabled ? 1.5 : 1.0,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: _aiGeneratorEnabled ? const Color(0xFF9333EA).withOpacity(0.05) : Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1062,12 +1050,13 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.purpleAccent.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
+                            color: const Color(0xFFFAF5FF),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE9D5FF)),
                           ),
-                          child: const Icon(Icons.auto_awesome, color: Colors.purpleAccent, size: 20),
+                          child: const Icon(Icons.auto_awesome, color: Color(0xFF9333EA), size: 18),
                         ),
                         const SizedBox(width: 10),
                         const Column(
@@ -1076,13 +1065,14 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                             Text(
                               'AI Content Generator',
                               style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold),
+                                color: textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             Text(
                               'Auto-generate comments/tasks on backend',
-                              style: TextStyle(color: Colors.white54, fontSize: 10),
+                              style: TextStyle(color: textSecondary, fontSize: 11),
                             ),
                           ],
                         ),
@@ -1090,18 +1080,15 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                     ),
                     Switch(
                       value: _aiGeneratorEnabled,
-                      activeColor: Colors.purpleAccent,
+                      activeColor: const Color(0xFF9333EA),
                       onChanged: (val) => setState(() => _aiGeneratorEnabled = val),
                     ),
                   ],
                 ),
                 if (_aiGeneratorEnabled) ...[
-                  const Divider(color: Colors.white12, height: 20),
-                  const Text(
-                    'Default AI Settings for this Service:',
-                    style: TextStyle(color: Colors.purpleAccent, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
                   const SizedBox(height: 12),
+                  const Divider(color: borderSubtle, height: 1),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       // Language
@@ -1109,19 +1096,23 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Language', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                            const Text('Language', style: TextStyle(color: textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
                             const SizedBox(height: 6),
                             DropdownButtonFormField<String>(
                               value: _aiLanguage,
-                              dropdownColor: const Color(0xFF1E293B),
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                              dropdownColor: surfaceWhite,
+                              style: const TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                               decoration: InputDecoration(
                                 filled: true,
-                                fillColor: const Color(0xFF0F172A),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                fillColor: backgroundLight,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: Colors.white24),
+                                  borderSide: const BorderSide(color: borderSubtle),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: borderSubtle),
                                 ),
                               ),
                               items: const [
@@ -1137,32 +1128,36 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                           ],
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       // Tone
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Tone', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                            const Text('Tone', style: TextStyle(color: textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
                             const SizedBox(height: 6),
                             DropdownButtonFormField<String>(
                               value: _aiTone,
-                              dropdownColor: const Color(0xFF1E293B),
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                              dropdownColor: surfaceWhite,
+                              style: const TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                               decoration: InputDecoration(
                                 filled: true,
-                                fillColor: const Color(0xFF0F172A),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                fillColor: backgroundLight,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: Colors.white24),
+                                  borderSide: const BorderSide(color: borderSubtle),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: borderSubtle),
                                 ),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'natural', child: Text('🌿 Natural')),
-                                DropdownMenuItem(value: 'enthusiastic', child: Text('🔥 Excited')),
-                                DropdownMenuItem(value: 'professional', child: Text('💼 Professional')),
-                                DropdownMenuItem(value: 'questioning', child: Text('❓ Question')),
+                                DropdownMenuItem(value: 'natural', child: Text('Natural')),
+                                DropdownMenuItem(value: 'enthusiastic', child: Text('Excited')),
+                                DropdownMenuItem(value: 'professional', child: Text('Professional')),
+                                DropdownMenuItem(value: 'questioning', child: Text('Question')),
                               ],
                               onChanged: (val) => setState(() => _aiTone = val ?? 'natural'),
                             ),
@@ -1175,10 +1170,16 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     dense: true,
-                    title: const Text('Ensure 100% Unique Comments', style: TextStyle(color: Colors.white, fontSize: 12)),
-                    subtitle: const Text('No two workers receive the same comment text', style: TextStyle(color: Colors.white54, fontSize: 10)),
+                    title: const Text(
+                      'Ensure 100% Unique Comments',
+                      style: TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text(
+                      'No two workers receive the same comment text',
+                      style: TextStyle(color: textSecondary, fontSize: 11),
+                    ),
                     value: _aiUniqueness,
-                    activeColor: Colors.purpleAccent,
+                    activeColor: const Color(0xFF9333EA),
                     onChanged: (val) => setState(() => _aiUniqueness = val),
                   ),
                 ],
@@ -1199,44 +1200,71 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
         children: [
           // Proof Requirements Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: surfaceWhite,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: borderSubtle),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Proof Submission Requirements',
-                  style: TextStyle(
-                      color: Colors.cyanAccent,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: lightBlueBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.verified_user_rounded, color: accentBlue, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Proof Submission Requirements',
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Screenshot Proof Required',
-                      style: TextStyle(color: Colors.white, fontSize: 13)),
+                  title: const Text(
+                    'Screenshot Proof Required',
+                    style: TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                   subtitle: const Text(
-                      'Worker must upload screenshot showing task completion',
-                      style: TextStyle(color: Colors.white54, fontSize: 11)),
+                    'Worker must upload screenshot showing task completion',
+                    style: TextStyle(color: textSecondary, fontSize: 11),
+                  ),
                   value: _requiresScreenshot,
-                  activeColor: Colors.cyanAccent,
+                  activeColor: accentBlue,
                   onChanged: (val) => setState(() => _requiresScreenshot = val),
                 ),
-                const Divider(color: Colors.white12),
+                const Divider(color: borderSubtle, height: 1),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Text Proof / Username Required',
-                      style: TextStyle(color: Colors.white, fontSize: 13)),
+                  title: const Text(
+                    'Text Proof / Username Required',
+                    style: TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
                   subtitle: const Text(
-                      'Worker must provide text answer (e.g. Account handle)',
-                      style: TextStyle(color: Colors.white54, fontSize: 11)),
+                    'Worker must provide text answer (e.g. Account handle or username)',
+                    style: TextStyle(color: textSecondary, fontSize: 11),
+                  ),
                   value: _requiresTextProof,
-                  activeColor: Colors.cyanAccent,
+                  activeColor: accentBlue,
                   onChanged: (val) => setState(() => _requiresTextProof = val),
                 ),
               ],
@@ -1246,35 +1274,61 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
 
           // Review Mode & Timing Windows
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: surfaceWhite,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: borderSubtle),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Review Mode & Timings',
-                  style: TextStyle(
-                      color: Colors.cyanAccent,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: lightBlueBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.rule_rounded, color: accentBlue, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Review Mode & Timings',
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
                   value: _reviewMode,
-                  dropdownColor: const Color(0xFF1E293B),
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  dropdownColor: surfaceWhite,
+                  style: const TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     labelText: 'Task Review Mode',
-                    labelStyle: const TextStyle(color: Colors.white70),
+                    labelStyle: const TextStyle(color: textSecondary, fontSize: 12),
                     filled: true,
-                    fillColor: const Color(0xFF0F172A),
+                    fillColor: backgroundLight,
+                    prefixIcon: const Icon(Icons.fact_check_outlined, color: accentBlue, size: 18),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.white24),
+                      borderSide: const BorderSide(color: borderSubtle),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: borderSubtle),
                     ),
                   ),
                   items: const [
@@ -1284,7 +1338,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                   ],
                   onChanged: (val) => setState(() => _reviewMode = val ?? 'buyer'),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
 
                 // Timing Windows
                 Row(
@@ -1294,7 +1348,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                         controller: _minAcceptHoursController,
                         label: 'Accept Window (Hours)',
                         hint: '24',
-                        icon: Icons.timelapse,
+                        icon: Icons.timelapse_rounded,
                         keyboardType: TextInputType.number,
                       ),
                     ),
@@ -1304,7 +1358,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                         controller: _minCompleteHoursController,
                         label: 'Complete Deadline (Hours)',
                         hint: '48',
-                        icon: Icons.hourglass_bottom,
+                        icon: Icons.hourglass_bottom_rounded,
                         keyboardType: TextInputType.number,
                       ),
                     ),
@@ -1317,23 +1371,44 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
 
           // Worker Guidelines & Media URLs Card
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
+              color: surfaceWhite,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: borderSubtle),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Worker Guidelines & Tutorials',
-                  style: TextStyle(
-                      color: Colors.cyanAccent,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: lightBlueBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.school_outlined, color: accentBlue, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Worker Guidelines & Tutorials',
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 _buildTextField(
                   controller: _adminInstructionsController,
                   label: 'Step-by-Step Instructions',
@@ -1341,14 +1416,14 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                   icon: Icons.list_alt_rounded,
                   maxLines: 4,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 _buildTextField(
                   controller: _videoUrlController,
                   label: 'Video Tutorial URL (Optional)',
                   hint: 'https://youtube.com/watch?v=...',
                   icon: Icons.video_collection_outlined,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 _buildTextField(
                   controller: _audioUrlController,
                   label: 'Audio Guide URL (Optional)',
@@ -1367,12 +1442,16 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
   Widget _buildPricingStatColumn(String title, String value, Color valueColor) {
     return Column(
       children: [
-        Text(title, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+        Text(title, style: const TextStyle(color: textSecondary, fontSize: 11, fontWeight: FontWeight.w500)),
         const SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
-              color: valueColor, fontSize: 16, fontWeight: FontWeight.bold),
+            color: valueColor,
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            letterSpacing: -0.3,
+          ),
         ),
       ],
     );
@@ -1392,27 +1471,27 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
       keyboardType: keyboardType,
       maxLines: maxLines,
       onChanged: onChanged,
-      style: const TextStyle(color: Colors.white, fontSize: 13),
+      style: const TextStyle(color: textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+        labelStyle: const TextStyle(color: textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
-        prefixIcon: Icon(icon, color: Colors.cyanAccent, size: 18),
+        hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+        prefixIcon: Icon(icon, color: accentBlue, size: 18),
         filled: true,
-        fillColor: const Color(0xFF0F172A),
+        fillColor: backgroundLight,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white24),
+          borderSide: const BorderSide(color: borderSubtle),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white12),
+          borderSide: const BorderSide(color: borderSubtle),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.cyanAccent),
+          borderSide: const BorderSide(color: accentBlue, width: 1.5),
         ),
       ),
     );
