@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers/task_provider.dart';
 import '../../../shared/widgets/platform_logo.dart';
 import '../../../core/services/package_tracker_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Premium 3D Realistic Task Detail & Execution Screen
 /// - Exact visual layout matching reference UI image
@@ -24,7 +25,7 @@ class TaskDetailPremiumScreen extends StatefulWidget {
   State<TaskDetailPremiumScreen> createState() => _TaskDetailPremiumScreenState();
 }
 
-class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
+class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with WidgetsBindingObserver {
   final _proofTextController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -39,9 +40,17 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
   Timer? _countdownTimer;
   int _secondsRemaining = 180;
 
+  // YouTube watch time tracking state
+  int _elapsedWatchSeconds = 0;
+  DateTime? _watchStartTime;
+  bool _isWatchingOnYouTube = false;
+  bool _isWatchCompleted = false;
+  Timer? _inAppWatchTimer;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final status = _getTaskStatus();
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
@@ -58,17 +67,248 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
     if (isSubmittedState) {
       _isSubmitted = true;
       _isTaskAccepted = false;
+      _isWatchCompleted = true;
     } else if (status == 'ACCEPTED' || status == 'ASSIGNED' || status == 'IN_PROGRESS' || isAssignedToUser || isAlreadyInMyTasks) {
       _isTaskAccepted = true;
       _startTimer();
+      _loadWatchTimeState();
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _inAppWatchTimer?.cancel();
     _countdownTimer?.cancel();
     _proofTextController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isWatchingOnYouTube && !_isWatchCompleted) {
+      _handleReturnFromYouTube();
+    }
+  }
+
+  bool _isYouTubeTask() {
+    final p = _getPlatform();
+    if (p == 'youtube') return true;
+    final target = _getTargetUrl().toLowerCase();
+    return target.contains('youtube.com') || target.contains('youtu.be');
+  }
+
+  int _getRequiredWatchSeconds() {
+    final t = widget.task;
+    int duration = 0;
+    if (t is Map) {
+      if (t['videoDurationSeconds'] is int && t['videoDurationSeconds'] > 0) {
+        duration = t['videoDurationSeconds'];
+      } else if (t['requirements'] is Map &&
+          t['requirements']['videoDurationSeconds'] is int &&
+          t['requirements']['videoDurationSeconds'] > 0) {
+        duration = t['requirements']['videoDurationSeconds'];
+      } else if (t['watchTimeSeconds'] is int && t['watchTimeSeconds'] > 0) {
+        duration = t['watchTimeSeconds'];
+      } else if (t['requirements'] is Map &&
+          t['requirements']['watchTimeSeconds'] is int &&
+          t['requirements']['watchTimeSeconds'] > 0) {
+        duration = t['requirements']['watchTimeSeconds'];
+      } else if (t['watchTimeSeconds'] != null) {
+        duration = int.tryParse(t['watchTimeSeconds'].toString()) ?? 0;
+      }
+    }
+
+    // 5-Minute Cap Rule:
+    // If video > 5 minutes (300 seconds), required watch time is capped at 300 seconds (5 min).
+    // If video <= 5 minutes (300s) and > 0, required watch time is the complete video.
+    if (duration > 300) return 300;
+    if (duration > 0) return duration;
+    return 60; // minimum fallback 60 seconds
+  }
+
+  Future<void> _loadWatchTimeState() async {
+    if (!_isYouTubeTask()) {
+      setState(() => _isWatchCompleted = true);
+      return;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
+      final savedElapsed = prefs.getInt('yt_watch_elapsed_$taskId') ?? 0;
+      final required = _getRequiredWatchSeconds();
+      if (mounted) {
+        setState(() {
+          _elapsedWatchSeconds = savedElapsed;
+          if (_elapsedWatchSeconds >= required) {
+            _isWatchCompleted = true;
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveWatchTimeProgress() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
+      await prefs.setInt('yt_watch_elapsed_$taskId', _elapsedWatchSeconds);
+    } catch (_) {}
+  }
+
+  void _startWatchingYouTubeVideo() {
+    final targetUrl = _getTargetUrl();
+    _watchStartTime = DateTime.now();
+    _isWatchingOnYouTube = true;
+
+    _startInAppWatchTimer();
+    _launchURL(targetUrl.isNotEmpty ? targetUrl : 'https://youtube.com');
+  }
+
+  void _startInAppWatchTimer() {
+    _inAppWatchTimer?.cancel();
+    _inAppWatchTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      final required = _getRequiredWatchSeconds();
+      if (_elapsedWatchSeconds >= required) {
+        t.cancel();
+        if (mounted) {
+          setState(() {
+            _isWatchCompleted = true;
+            _isWatchingOnYouTube = false;
+          });
+        }
+        _saveWatchTimeProgress();
+      } else {
+        if (mounted) {
+          setState(() {
+            _elapsedWatchSeconds++;
+          });
+        }
+      }
+    });
+  }
+
+  void _handleReturnFromYouTube() {
+    if (_watchStartTime != null) {
+      final secondsAway = DateTime.now().difference(_watchStartTime!).inSeconds;
+      _elapsedWatchSeconds += secondsAway;
+      _watchStartTime = null;
+    }
+    _isWatchingOnYouTube = false;
+    _saveWatchTimeProgress();
+
+    final required = _getRequiredWatchSeconds();
+    if (_elapsedWatchSeconds >= required) {
+      if (mounted) {
+        setState(() {
+          _isWatchCompleted = true;
+        });
+      }
+    } else {
+      // User returned before completing the video!
+      // Do NOT reveal exact seconds/minutes - strictly instruct user to watch complete video:
+      if (mounted) {
+        _showPleaseWatchCompleteVideoDialog();
+      }
+    }
+  }
+
+  void _showPleaseWatchCompleteVideoDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        backgroundColor: Colors.white,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 24),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Please Watch Complete Video!',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Aapne video pura nahi dekha hai! Task proof submit karne ke liye please pura video complete dekhein.',
+              style: TextStyle(fontSize: 13.5, color: Color(0xFF334155), height: 1.45),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1F2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFECDD3)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lock_clock_rounded, color: Color(0xFFE11D48), size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Submit Proof tab tak invisible / locked rahega jab tak aap pura video nahi dekhenge.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF9F1239),
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Wait in App',
+              style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+            ),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              elevation: 2,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _startWatchingYouTubeVideo();
+            },
+            icon: const Icon(Icons.play_arrow_rounded, size: 20),
+            label: const Text(
+              'Watch Video on YouTube',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _getTaskStatus() {
@@ -552,6 +792,12 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
 
   // ── 3. Submit Task Proof Flow ─────────────────────────────────────────────
   void _onPressSubmit() {
+    // YouTube Watch Time Check (Strict: Proof cannot be submitted until full watch requirement is met)
+    if (_isYouTubeTask() && !_isWatchCompleted) {
+      _showPleaseWatchCompleteVideoDialog();
+      return;
+    }
+
     final textProof = _proofTextController.text.trim();
 
     if (_selectedProofImage == null) {
@@ -1059,8 +1305,18 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
 
                 // ── 7. Submit Proof / Status Section ───────────────────────
                 if (_isTaskAccepted && !isUnderReviewOrSubmitted && !isApprovedOrCompleted && !isRejected) ...[
-                  _buildProofSubmissionCard(),
-                  const SizedBox(height: 16),
+                  if (_isYouTubeTask() && !_isWatchCompleted) ...[
+                    // Proof submission is completely invisible until full video is watched
+                    _buildYouTubeWatchCard(targetUrl),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    if (_isYouTubeTask()) ...[
+                      _buildYouTubeWatchCompletedBanner(),
+                      const SizedBox(height: 12),
+                    ],
+                    _buildProofSubmissionCard(),
+                    const SizedBox(height: 16),
+                  ],
                 ] else if (isApprovedOrCompleted) ...[
                   _buildApprovedSection(reward),
                   const SizedBox(height: 16),
@@ -2322,7 +2578,13 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
 
           // Right Button (Fixed padding & shrink-wrapped)
           InkWell(
-            onTap: () => _launchURL(targetUrl),
+            onTap: () {
+              if (_isYouTubeTask() && _isTaskAccepted && !_isWatchCompleted) {
+                _startWatchingYouTubeVideo();
+              } else {
+                _launchURL(targetUrl);
+              }
+            },
             borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -2337,7 +2599,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: (isPlayStore ? const Color(0xFF10B981) : const Color(0xFFF97316)).withOpacity(0.35),
+                    color: (isPlayStore ? const Color(0xFF10B981) : const Color(0xFFF97316)).withValues(alpha: 0.35),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -2358,6 +2620,206 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── YouTube Video Watch Requirement Card (Submit proof locked until watched) ──
+  Widget _buildYouTubeWatchCard(String targetUrl) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.35), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFDC2626), Color(0xFFEF4444)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFDC2626).withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Watch Complete Video',
+                      style: TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Complete watching to unlock proof submission',
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 11.5),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.lock_rounded, color: Color(0xFFDC2626), size: 12),
+                    SizedBox(width: 4),
+                    Text(
+                      'Locked',
+                      style: TextStyle(color: Color(0xFFDC2626), fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Informational Notice
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline_rounded, color: Color(0xFF475569), size: 16),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Pura video complete dekhein. Video complete hone ke baad hi proof attachment aur submission unlock hoga.',
+                    style: TextStyle(color: Color(0xFF475569), fontSize: 12, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Big "Watch on YouTube" Action Button
+          InkWell(
+            onTap: _startWatchingYouTubeVideo,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFDC2626), Color(0xFFEF4444)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFDC2626).withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    'Watch Video on YouTube',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── YouTube Watch Completed Banner ──────────────────────────────────────────
+  Widget _buildYouTubeWatchCompletedBanner() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFECFDF5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10B981).withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 22),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Video Watched Successfully! ✓',
+                  style: TextStyle(
+                    color: Color(0xFF065F46),
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Proof submission is now unlocked. Please attach your screenshot below.',
+                  style: TextStyle(color: Color(0xFF047857), fontSize: 11),
+                ),
+              ],
             ),
           ),
         ],
@@ -3132,55 +3594,94 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> {
             ),
             const SizedBox(width: 10),
 
-            // Right: "Accept Task & Start" or "Submit Proof" Button
+            // Right: "Accept Task & Start" or "Submit Proof" or "Watch on YouTube" Button
             Expanded(
               child: _isTaskAccepted
-                  ? InkWell(
-                      onTap: _onPressSubmit,
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF059669), Color(0xFF10B981)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                  ? (_isYouTubeTask() && !_isWatchCompleted
+                      ? InkWell(
+                          onTap: _startWatchingYouTubeVideo,
                           borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF059669).withOpacity(0.35),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: _isSubmitting
-                            ? const Center(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
-                                ),
-                              )
-                            : const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 20),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Submit Task Proof',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14.5,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ],
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFDC2626), Color(0xFFEF4444)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                      ),
-                    )
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFDC2626).withValues(alpha: 0.35),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Watch Video on YouTube',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : InkWell(
+                          onTap: _onPressSubmit,
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF059669), Color(0xFF10B981)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF059669).withOpacity(0.35),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: _isSubmitting
+                                ? const Center(
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2),
+                                    ),
+                                  )
+                                : const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.cloud_upload_rounded, color: Colors.white, size: 20),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Submit Task Proof',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ))
                   : InkWell(
                       onTap: _isAccepting ? null : _onAcceptAndStart,
                       borderRadius: BorderRadius.circular(14),

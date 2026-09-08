@@ -30,6 +30,7 @@ import { TimingPolicy } from '../../../../shared/policies/timing-policy';
 import { WalletService } from '../../../../shared/services/wallet.service';
 import { AiGeneratorService } from '../../../../shared/ai-generator/ai-generator.service';
 import { PlayStoreScraperService } from '../../../../shared/services/playstore-scraper.service';
+import { YouTubeMetadataService } from '../../../../shared/services/youtube-metadata.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @ApiTags('Buyer - Orders')
@@ -50,6 +51,7 @@ export class BuyerOrderController {
         private readonly walletService: WalletService,
         private readonly aiGeneratorService: AiGeneratorService,
         private readonly playStoreScraper: PlayStoreScraperService,
+        private readonly ytMetadataService: YouTubeMetadataService,
         private readonly eventEmitter: EventEmitter2,
         private readonly dataSource: DataSource,
     ) { }
@@ -66,6 +68,21 @@ export class BuyerOrderController {
             throw new BadRequestException('URL or packageId is required');
         }
         const info = await this.playStoreScraper.getAppMetadata(input);
+        return info;
+    }
+
+    @Public()
+    @Post('youtube-video-info')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Fetch YouTube video duration, title, thumbnail, and 5-min capped watch time' })
+    async getYouTubeVideoInfo(
+        @Body() body: { url?: string; link?: string; videoId?: string },
+    ) {
+        const input = body.url || body.link || body.videoId || '';
+        if (!input) {
+            throw new BadRequestException('URL or videoId is required');
+        }
+        const info = await this.ytMetadataService.getVideoMetadata(input);
         return info;
     }
 
@@ -189,11 +206,36 @@ export class BuyerOrderController {
 
         // Normalize requirements payload for simplified buyer form & legacy elements
         const reqs = data.requirements || {};
+        const targetUrl = reqs.targetUrl || reqs.url || reqs.link || reqs.channelUrl || reqs.videoUrl || '';
+        let watchTimeSeconds = reqs.watchTimeSeconds || catalog?.watchtimeSeconds || 0;
+        let videoDurationSeconds = reqs.videoDurationSeconds || 0;
+
+        // Auto-extract YouTube video duration and enforce 5-minute cap rule if targetUrl is YouTube
+        const ytId = this.ytMetadataService.extractVideoId(targetUrl);
+        if (ytId) {
+            try {
+                const ytInfo = await this.ytMetadataService.getVideoMetadata(targetUrl);
+                if (ytInfo && ytInfo.success) {
+                    videoDurationSeconds = ytInfo.durationSeconds || 0;
+                    // If watchTimeSeconds not specified or 0, use calculated requiredWatchSeconds
+                    if (!reqs.watchTimeSeconds || Number(reqs.watchTimeSeconds) <= 0) {
+                        watchTimeSeconds = ytInfo.requiredWatchSeconds || 0;
+                    } else if (Number(reqs.watchTimeSeconds) > 300) {
+                        // Strict enforcement: Cap watch time at 300s (5 minutes) maximum
+                        watchTimeSeconds = 300;
+                    }
+                }
+            } catch (err: any) {
+                this.logger.warn(`Failed to auto-fetch YouTube metadata for ${targetUrl}: ${err?.message || err}`);
+            }
+        }
+
         const normalizedRequirements = {
             ...reqs,
-            targetUrl: reqs.targetUrl || reqs.url || reqs.link || reqs.channelUrl || reqs.videoUrl || '',
+            targetUrl,
             customText: reqs.customText || reqs.text || reqs.comment || reqs.instructions || data.description || '',
-            watchTimeSeconds: reqs.watchTimeSeconds || catalog?.watchtimeSeconds || 0,
+            watchTimeSeconds: Number(watchTimeSeconds) || 0,
+            videoDurationSeconds: Number(videoDurationSeconds) || 0,
             videoTutorialUrl: catalog?.videoTutorialUrl || '',
             audioGuideUrl: catalog?.audioGuideUrl || '',
             adminInstructions: catalog?.adminInstructions || catalog?.description || '',

@@ -185,7 +185,8 @@ export class OrderActivatedListener {
                 audioGuideUrl: serviceCatalog?.audioGuideUrl || order?.requirements?.audioGuideUrl || '',
                 adminInstructions: serviceCatalog?.adminInstructions || serviceCatalog?.description || order?.requirements?.instructions || '',
                 targetUrl,
-                watchTimeSeconds: order?.requirements?.watchTimeSeconds || serviceCatalog?.watchtimeSeconds || 0,
+                watchTimeSeconds: Number(order?.requirements?.watchTimeSeconds || serviceCatalog?.watchtimeSeconds || 0),
+                videoDurationSeconds: Number(order?.requirements?.videoDurationSeconds || 0),
                 proofType: order?.requirements?.proofType || 'SCREENSHOT',
                 actions: {
                     rating5Star: isPlayStore || serviceIdentifier.includes('RATING') || serviceIdentifier.includes('REVIEW'),

@@ -54,6 +54,15 @@ export class ExecutionEngineService {
             if (durationMs < 5000) {
                 throw new BadRequestException('Submission rejected: Task completed suspiciously fast (bot detected).');
             }
+
+            // YouTube video watch time check (Do not reveal exact seconds, instruct to watch complete video)
+            const requiredWatchSeconds = Number(task.requirements?.watchTimeSeconds || 0);
+            if (requiredWatchSeconds > 0) {
+                const durationSec = Math.floor(durationMs / 1000);
+                if (durationSec < Math.max(1, requiredWatchSeconds - 5)) {
+                    throw new BadRequestException('Please watch the complete video before submitting proof.');
+                }
+            }
         }
 
         // Mark task as submitted in task engine

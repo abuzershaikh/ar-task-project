@@ -46,6 +46,16 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   String? _appFetchError;
   Timer? _urlDebounceTimer;
 
+  // YouTube Video Metadata State
+  String? _ytTitle;
+  String? _ytThumbnail;
+  int? _ytDurationSeconds;
+  int? _ytRequiredWatchSeconds;
+  String? _ytDurationFormatted;
+  bool _ytIsCappedAt5Min = false;
+  bool _isFetchingYtInfo = false;
+  String? _ytFetchError;
+
   @override
   void initState() {
     super.initState();
@@ -78,10 +88,29 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         desc.contains('PLAY STORE');
   }
 
+  bool _isYouTubeService(ServiceModel? s) {
+    if (s == null) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    final desc = s.description.toUpperCase();
+    final cat = s.category.toUpperCase();
+    return code.contains('YOUTUBE') ||
+        code.contains('YT_') ||
+        cat.contains('YOUTUBE') ||
+        name.contains('YOUTUBE') ||
+        desc.contains('YOUTUBE');
+  }
+
   void _onTargetUrlChanged(String val) {
-    if (!_isPlayStoreService(_selectedService)) return;
-    _urlDebounceTimer?.cancel();
     final trimmed = val.trim();
+    final isPlayStore = _isPlayStoreService(_selectedService);
+    final isYouTube = _isYouTubeService(_selectedService) ||
+        trimmed.contains('youtube.com') ||
+        trimmed.contains('youtu.be');
+
+    if (!isPlayStore && !isYouTube) return;
+    _urlDebounceTimer?.cancel();
+
     if (trimmed.isEmpty) {
       setState(() {
         _appName = null;
@@ -90,21 +119,93 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         _packageId = null;
         _appFetchError = null;
         _isFetchingAppInfo = false;
+
+        _ytTitle = null;
+        _ytThumbnail = null;
+        _ytDurationSeconds = null;
+        _ytRequiredWatchSeconds = null;
+        _ytDurationFormatted = null;
+        _ytRequiredWatchFormatted = null;
+        _ytIsCappedAt5Min = false;
+        _ytFetchError = null;
+        _isFetchingYtInfo = false;
+
         _sampleComments = [];
       });
       return;
     }
-    // Clear error immediately when user starts typing again
-    if (_appFetchError != null) {
-      setState(() => _appFetchError = null);
+
+    if (isPlayStore) {
+      if (_appFetchError != null) setState(() => _appFetchError = null);
+      if (trimmed.length >= 5 && (trimmed.contains('.') || trimmed.contains('/'))) {
+        _urlDebounceTimer = Timer(const Duration(milliseconds: 700), () {
+          _fetchPlayStoreAppInfo(trimmed);
+        });
+      }
+    } else if (isYouTube) {
+      if (_ytFetchError != null) setState(() => _ytFetchError = null);
+      if (trimmed.length >= 10 && (trimmed.contains('youtu.be') || trimmed.contains('youtube.com'))) {
+        _urlDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+          _fetchYouTubeVideoInfo(trimmed);
+        });
+      }
     }
-    // Only debounce fetch if input looks like a link or package name (e.g. has a dot or slash)
-    if (trimmed.length < 5 || (!trimmed.contains('.') && !trimmed.contains('/'))) {
-      return;
-    }
-    _urlDebounceTimer = Timer(const Duration(milliseconds: 700), () {
-      _fetchPlayStoreAppInfo(trimmed);
+  }
+
+  Future<void> _fetchYouTubeVideoInfo(String input) async {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty || _serviceRepository.dioClient == null) return;
+    setState(() {
+      _isFetchingYtInfo = true;
+      _ytFetchError = null;
     });
+
+    try {
+      final res = await _serviceRepository.dioClient!.post(
+        '/buyer/orders/youtube-video-info',
+        data: {'url': trimmed},
+      );
+
+      final isSuccess = (res.statusCode == 200 || res.statusCode == 201) &&
+          res.data != null &&
+          res.data['success'] == true;
+
+      if (isSuccess) {
+        final data = res.data;
+        setState(() {
+          _ytTitle = data['title']?.toString();
+          _ytThumbnail = data['thumbnail']?.toString();
+          _ytDurationSeconds = data['durationSeconds'] is int
+              ? data['durationSeconds']
+              : int.tryParse(data['durationSeconds']?.toString() ?? '0');
+          _ytRequiredWatchSeconds = data['requiredWatchSeconds'] is int
+              ? data['requiredWatchSeconds']
+              : int.tryParse(data['requiredWatchSeconds']?.toString() ?? '0');
+          _ytDurationFormatted = data['durationFormatted']?.toString();
+          _ytRequiredWatchFormatted = data['requiredWatchFormatted']?.toString();
+          _ytIsCappedAt5Min = data['isCappedAt5Min'] == true;
+          _ytFetchError = null;
+
+          if (_topicController.text.trim().isEmpty && _ytTitle != null && _ytTitle!.isNotEmpty) {
+            _topicController.text = _ytTitle!;
+          }
+        });
+      } else {
+        final err = res.data?['error']?.toString();
+        setState(() {
+          _ytFetchError = err ?? 'Could not extract video duration from YouTube link.';
+        });
+      }
+    } catch (err) {
+      debugPrint('Error fetching YouTube metadata: $err');
+      setState(() {
+        _ytFetchError = 'Could not fetch video info. You can still proceed normally.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isFetchingYtInfo = false);
+      }
+    }
   }
 
   Future<void> _fetchPlayStoreAppInfo(String input) async {
@@ -334,6 +435,16 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       _packageId = null;
       _appFetchError = null;
       _isFetchingAppInfo = false;
+
+      _ytTitle = null;
+      _ytThumbnail = null;
+      _ytDurationSeconds = null;
+      _ytRequiredWatchSeconds = null;
+      _ytDurationFormatted = null;
+      _ytRequiredWatchFormatted = null;
+      _ytIsCappedAt5Min = false;
+      _ytFetchError = null;
+      _isFetchingYtInfo = false;
     });
   }
 
@@ -345,6 +456,10 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       });
       if (_isPlayStoreService(_selectedService)) {
         _fetchPlayStoreAppInfo(_targetUrlController.text.trim());
+      } else if (_isYouTubeService(_selectedService) ||
+          _targetUrlController.text.contains('youtube.com') ||
+          _targetUrlController.text.contains('youtu.be')) {
+        _fetchYouTubeVideoInfo(_targetUrlController.text.trim());
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -435,6 +550,13 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               : (_appName ?? ''),
           'appIcon': _appIcon,
           'packageId': _packageId,
+          'watchTimeSeconds': _ytRequiredWatchSeconds ??
+              (_ytDurationSeconds != null
+                  ? (_ytDurationSeconds! > 300 ? 300 : _ytDurationSeconds!)
+                  : 0),
+          'videoDurationSeconds': _ytDurationSeconds ?? 0,
+          'videoTitle': _ytTitle ?? '',
+          'videoThumbnail': _ytThumbnail ?? '',
         },
         'timeToAcceptHours': _selectedService!.minAcceptHours,
         'timeToCompleteHours': _selectedService!.maxCompleteHours > 48
@@ -847,6 +969,33 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                                   ),
                                 ),
                               ),
+                            if ((_isYouTubeService(_selectedService) ||
+                                    _targetUrlController.text.contains('youtu')) &&
+                                _targetUrlController.text.trim().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 2),
+                                child: InkWell(
+                                  onTap: _isFetchingYtInfo
+                                      ? null
+                                      : () => _fetchYouTubeVideoInfo(_targetUrlController.text.trim()),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFEF2F2),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFFECACA)),
+                                    ),
+                                    child: _isFetchingYtInfo
+                                        ? const SizedBox(
+                                            width: 14,
+                                            height: 14,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFDC2626)),
+                                          )
+                                        : const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFFDC2626)),
+                                  ),
+                                ),
+                              ),
                             InkWell(
                               onTap: _pasteFromClipboard,
                               borderRadius: BorderRadius.circular(10),
@@ -1065,6 +1214,205 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                       Text(
                         '💡 ${_appFetchError!}',
                         style: const TextStyle(fontSize: 11, color: Color(0xFFD97706)),
+                      ),
+                    ],
+
+                    // YouTube Loading State
+                    if (_isFetchingYtInfo) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFFECACA)),
+                        ),
+                        child: const Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFDC2626)),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Extracting video length & watch time from YouTube...',
+                                style: TextStyle(fontSize: 12, color: Color(0xFF991B1B), fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // YouTube Video Preview Card
+                    if (_ytTitle != null && _ytTitle!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF2F2),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFF87171).withValues(alpha: 0.5), width: 1.2),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Thumbnail with length badge
+                                Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        width: 96,
+                                        height: 60,
+                                        color: Colors.black,
+                                        child: (_ytThumbnail != null && _ytThumbnail!.isNotEmpty)
+                                            ? Image.network(
+                                                _ytThumbnail!,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) => const Icon(
+                                                  Icons.play_circle_fill,
+                                                  color: Colors.white70,
+                                                  size: 32,
+                                                ),
+                                              )
+                                            : const Icon(
+                                                Icons.play_circle_fill,
+                                                color: Colors.white70,
+                                                size: 32,
+                                              ),
+                                      ),
+                                    ),
+                                    if (_ytDurationFormatted != null)
+                                      Positioned(
+                                        bottom: 4,
+                                        right: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(alpha: 0.85),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            _ytDurationFormatted!,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(width: 12),
+                                // Title & Watch Info
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _ytTitle!,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFEE2E2),
+                                              borderRadius: BorderRadius.circular(5),
+                                            ),
+                                            child: Text(
+                                              'Total: ${_ytDurationFormatted ?? ''}',
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFFB91C1C),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: _ytIsCappedAt5Min
+                                                  ? const Color(0xFFFEF3C7)
+                                                  : const Color(0xFFDCFCE7),
+                                              borderRadius: BorderRadius.circular(5),
+                                            ),
+                                            child: Text(
+                                              _ytIsCappedAt5Min ? 'Capped at 5m' : 'Full Video',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: _ytIsCappedAt5Min
+                                                    ? const Color(0xFFB45309)
+                                                    : const Color(0xFF15803D),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFFECACA)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _ytIsCappedAt5Min ? Icons.timer_outlined : Icons.check_circle_outline_rounded,
+                                    size: 13,
+                                    color: _ytIsCappedAt5Min ? const Color(0xFFD97706) : const Color(0xFF16A34A),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      _ytIsCappedAt5Min
+                                          ? '5-Minute Cap Rule: Worker must watch 5 minutes before submit unlocks'
+                                          : 'Worker must watch complete video before submit unlocks',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: _ytIsCappedAt5Min ? const Color(0xFF92400E) : const Color(0xFF166534),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // YouTube Error Hint
+                    if (_ytFetchError != null && (_ytTitle == null || _ytTitle!.isEmpty)) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        '💡 ${_ytFetchError!}',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFFDC2626)),
                       ),
                     ],
                   ],

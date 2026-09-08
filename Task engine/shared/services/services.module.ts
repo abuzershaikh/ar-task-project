@@ -41,6 +41,7 @@ import { ReallocationEngine } from '../engines/reallocation-engine/reallocation.
 import { FirebaseAdminService } from './firebase-admin.service';
 import { UserSyncService } from './user-sync.service';
 import { PlayStoreScraperService } from './playstore-scraper.service';
+import { YouTubeMetadataService } from './youtube-metadata.service';
 
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
@@ -73,6 +74,7 @@ const providers = [
     UserSyncService,
     WalletService,
     PlayStoreScraperService,
+    YouTubeMetadataService,
 ];
 
 @Global()
