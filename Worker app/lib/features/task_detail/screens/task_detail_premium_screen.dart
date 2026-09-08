@@ -98,6 +98,60 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
     return target.contains('youtube.com') || target.contains('youtu.be');
   }
 
+  bool _isCommentRequiredTask() {
+    final t = widget.task;
+    if (t == null) return false;
+    final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? '').toString().toUpperCase();
+
+    // Instagram Combo is strictly Like + Follow, NO COMMENT!
+    if (type.contains('INSTA') && type.contains('COMBO')) {
+      return false;
+    }
+
+    // Instagram Follow or Like only
+    if (type == 'INSTAGRAM_FOLLOW' || type == 'INSTAGRAM_LIKE' || (type.contains('FOLLOW') && !type.contains('COMMENT'))) {
+      if (!type.contains('COMMENT') && !type.contains('COMBO')) return false;
+    }
+
+    // YouTube Subscribe only
+    if (type == 'YOUTUBE_SUBSCRIBE' || type == 'YOUTUBE_LIKE' || type == 'YOUTUBE_WATCH_TIME') {
+      return false;
+    }
+
+    // YouTube Combo DOES require comment!
+    if ((type.contains('YT') || type.contains('YOUTUBE')) && type.contains('COMBO')) {
+      return true;
+    }
+
+    // Check actions if available from backend
+    if (t['actions'] is Map) {
+      final act = t['actions'] as Map;
+      if (act['comment'] == true || act['review'] == true) return true;
+      if (act['comment'] == false && act['review'] == false) return false;
+    }
+
+    if (t['requirements'] is Map) {
+      final req = t['requirements'] as Map;
+      if (req['actions'] is Map) {
+        final act = req['actions'] as Map;
+        if (act['comment'] == true || act['review'] == true) return true;
+        if (act['comment'] == false && act['review'] == false) return false;
+      }
+      if (req['aiGeneratorEnabled'] == true) return true;
+    }
+
+    // Standard comment and review tasks
+    if (type.contains('COMMENT') || type.contains('REVIEW')) return true;
+
+    final p = _getPlatform();
+    if (p == 'playstore') {
+      if (type.contains('INSTALL') || type.contains('RATING')) return false;
+      return true;
+    }
+
+    return false;
+  }
+
   int _getRequiredWatchSeconds() {
     final t = widget.task;
     int duration = 0;
@@ -471,7 +525,19 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
       return '5-Star Rating & App Review on Play Store ⭐⭐⭐⭐⭐';
     }
     if (p == 'instagram') {
+      final tUpper = (widget.task['taskType'] ?? widget.task['type'] ?? widget.task['serviceCode'] ?? '').toString().toUpperCase();
+      if (tUpper.contains('COMBO')) return 'Instagram Combo: Like & Follow 📸';
+      if (tUpper.contains('LIKE')) return 'Like Instagram Post / Reel ❤️';
+      if (tUpper.contains('COMMENT')) return 'Comment on Instagram Post 💬';
       return 'Instagram Task (Follow & Like) 📸';
+    }
+    if (p == 'youtube') {
+      final tUpper = (widget.task['taskType'] ?? widget.task['type'] ?? widget.task['serviceCode'] ?? '').toString().toUpperCase();
+      if (tUpper.contains('COMBO')) return 'YouTube Combo: Watch, Like, Sub & Comment 🎬';
+      if (tUpper.contains('COMMENT')) return 'Comment on YouTube Video 💬';
+      if (tUpper.contains('SUB')) return 'Subscribe to YouTube Channel 🔔';
+      if (tUpper.contains('LIKE')) return 'Like YouTube Video 👍';
+      return 'Watch & Engage on YouTube 🎬';
     }
     return 'Complete ${p[0].toUpperCase()}${p.substring(1)} Task';
   }
@@ -482,10 +548,12 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
       return t['badge'].toString().trim().toUpperCase();
     }
     final p = _getPlatform();
-    final type = (t['taskType'] ?? t['type'] ?? 'COMMENT').toString().toUpperCase();
+    final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? 'COMMENT').toString().toUpperCase();
     if (p == 'playstore' || type.contains('PLAYSTORE') || type.contains('GOOGLE_PLAY') || type.contains('APP_REVIEW') || type.contains('RATING')) {
       return 'PLAY STORE REVIEW';
     }
+    if (type.contains('INSTA') && type.contains('COMBO')) return 'LIKE + FOLLOW';
+    if ((type.contains('YT') || type.contains('YOUTUBE')) && type.contains('COMBO')) return 'LIKE + SUB + COMMENT';
     if (type.contains('COMBO')) return '$p COMBO'.toUpperCase();
     if (type.contains('COMMENT')) return '$p COMMENT'.toUpperCase();
     if (type.contains('LIKE')) return '$p LIKE'.toUpperCase();
@@ -1295,11 +1363,13 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
                 _buildTaskInstructionsSection(platformName),
                 const SizedBox(height: 16),
 
-                // ── 5. Comment Text (Copy & Paste) Box ─────────────────────
-                _buildCommentCopySection(customText),
-                const SizedBox(height: 16),
+                // ── 5. Comment Text (Copy & Paste) Box (Only when task requires comment) ─
+                if (_isCommentRequiredTask()) ...[
+                  _buildCommentCopySection(customText),
+                  const SizedBox(height: 16),
+                ],
 
-                // ── 6. Where to Comment & Open Platform ────────────────────
+                // ── 6. Where to Perform / Comment & Open Platform ──────────
                 _buildWhereToCommentSection(platformName, targetUrl),
                 const SizedBox(height: 16),
 
@@ -2226,8 +2296,29 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
         }
       }
     }
+    final type = (widget.task['taskType'] ?? widget.task['type'] ?? widget.task['serviceCode'] ?? '').toString().toUpperCase();
+    final bool isInstaCombo = type.contains('INSTA') && type.contains('COMBO');
+    final bool isYtCombo = (type.contains('YT') || type.contains('YOUTUBE')) && type.contains('COMBO');
+
     if (steps.isEmpty) {
-      if (isPlayStore) {
+      if (isInstaCombo) {
+        steps.addAll([
+          'Click on the "Open Instagram" button below.',
+          'Follow the creator profile specified in the link.',
+          'Like the latest post or reel of the creator.',
+          'Take a clear screenshot showing that you followed the profile and liked the post/reel.',
+          'Return to this app and upload the screenshot proof to receive your instant reward.',
+        ]);
+      } else if (isYtCombo) {
+        steps.addAll([
+          'Click on the "Watch on YouTube" button below.',
+          'Watch the video completely (watch timer will unlock proof submission).',
+          'Like the YouTube video and Subscribe to the channel.',
+          'Copy the assigned comment text above and post it on the video.',
+          'Take a clear screenshot showing your Like, Subscribe, and Comment.',
+          'Return to this app and upload the screenshot proof to receive your instant reward.',
+        ]);
+      } else if (isPlayStore) {
         steps.addAll([
           'Click on the "Open Play Store" button below.',
           'Install or open the application page on Google Play Store.',
@@ -2356,9 +2447,13 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    isPlayStore
-                        ? 'Ensure your 5-star rating and review are posted on the app page before submitting proof.'
-                        : 'Make sure your comment is genuine. Spam or fake comments will get rejected.',
+                    isInstaCombo
+                        ? 'Make sure you have followed the profile and liked the post/reel before submitting proof.'
+                        : (isYtCombo
+                            ? 'Make sure you watch the video, like, subscribe, and post the assigned comment.'
+                            : (isPlayStore
+                                ? 'Ensure your 5-star rating and review are posted on the app page before submitting proof.'
+                                : 'Make sure your submission is genuine. Spam or incomplete tasks will get rejected.')),
                     style: const TextStyle(
                       color: Color(0xFF065F46),
                       fontSize: 11,
@@ -2518,9 +2613,35 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
     );
   }
 
-  // ── 6. Where to Comment & Open Platform (Overflow-Proof Layout) ─────────────
+  // ── 6. Where to Perform Action & Open Platform (Overflow-Proof Layout) ─────
   Widget _buildWhereToCommentSection(String platformName, String targetUrl) {
     final bool isPlayStore = _getPlatform() == 'playstore';
+    final bool isCommentReq = _isCommentRequiredTask();
+    final type = (widget.task['taskType'] ?? widget.task['type'] ?? widget.task['serviceCode'] ?? '').toString().toUpperCase();
+    final bool isInstaCombo = type.contains('INSTA') && type.contains('COMBO');
+
+    String headerText = 'Where to Perform Task';
+    String subText = 'On $platformName';
+    String iconEmoji = '🔗';
+    Color iconBg = const Color(0xFFEFF6FF);
+
+    if (isPlayStore) {
+      headerText = isCommentReq ? 'Where to Rate & Review' : 'Where to Rate App';
+      subText = 'On Google Play Store App Page';
+      iconEmoji = '⭐';
+      iconBg = const Color(0xFFD1FAE5);
+    } else if (isInstaCombo) {
+      headerText = 'Where to Like & Follow';
+      subText = 'On Instagram Profile & Recent Post/Reel';
+      iconEmoji = '📸';
+      iconBg = const Color(0xFFFCE7F3);
+    } else if (isCommentReq) {
+      headerText = 'Where to Comment';
+      subText = 'On $platformName – Video/Post Section';
+      iconEmoji = '💬';
+      iconBg = const Color(0xFFFEF3C7);
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2542,10 +2663,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
           Container(
             padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: isPlayStore ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
+              color: iconBg,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(isPlayStore ? '⭐' : '💬', style: const TextStyle(fontSize: 18)),
+            child: Text(iconEmoji, style: const TextStyle(fontSize: 18)),
           ),
           const SizedBox(width: 10),
 
@@ -2556,7 +2677,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  isPlayStore ? 'Where to Rate & Review' : 'Where to Comment',
+                  headerText,
                   style: const TextStyle(
                     color: Color(0xFF0F172A),
                     fontSize: 13.5,
@@ -2565,7 +2686,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen> with 
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  isPlayStore ? 'On Google Play Store App Page' : 'On $platformName – Video/Post Section',
+                  subText,
                   style: const TextStyle(
                     color: Color(0xFF64748B),
                     fontSize: 11,

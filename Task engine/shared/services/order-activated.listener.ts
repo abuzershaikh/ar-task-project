@@ -86,11 +86,17 @@ export class OrderActivatedListener {
                 (serviceCatalog?.category || '').toLowerCase().includes('play') ||
                 (serviceCatalog?.name || '').toLowerCase().includes('play store');
 
-            const isCommentRequired = Boolean(serviceCatalog?.aiGeneratorEnabled) ||
+            const isInstagram = serviceIdentifier.includes('INSTA') || serviceIdentifier.includes('IG');
+            const isInstagramCombo = isInstagram && serviceIdentifier.includes('COMBO');
+            const isYouTubeCombo = (serviceIdentifier.includes('YT') || serviceIdentifier.includes('YOUTUBE')) && serviceIdentifier.includes('COMBO');
+
+            const isCommentRequired = !isInstagramCombo && (
+                Boolean(serviceCatalog?.aiGeneratorEnabled) ||
                 serviceIdentifier.includes('COMMENT') ||
-                serviceIdentifier.includes('COMBO') ||
+                isYouTubeCombo ||
                 serviceIdentifier.includes('REVIEW') ||
-                Boolean(order?.requirements?.aiGeneratorEnabled);
+                Boolean(order?.requirements?.aiGeneratorEnabled)
+            );
 
             const count = payload.totalTasksRequired;
             const targetUrl = order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '';
@@ -107,7 +113,6 @@ export class OrderActivatedListener {
                 ? rawSampleComments.filter((c: any) => typeof c === 'string' && c.trim().length > 0) 
                 : [];
 
-            const isInstagram = serviceIdentifier.includes('INSTA') || serviceIdentifier.includes('IG');
             const generatorType = isPlayStore ? 'playstore_review' : (isInstagram ? 'instagram_comment' : 'youtube_comment');
 
             let generatedComments: string[] = [];
@@ -192,8 +197,9 @@ export class OrderActivatedListener {
                     rating5Star: isPlayStore || serviceIdentifier.includes('RATING') || serviceIdentifier.includes('REVIEW'),
                     review: isPlayStore && isCommentRequired,
                     like: serviceIdentifier.includes('LIKE') || serviceIdentifier.includes('COMBO'),
-                    subscribe: serviceIdentifier.includes('SUBSCRIBE') || serviceIdentifier.includes('FOLLOW') || serviceIdentifier.includes('COMBO'),
-                    comment: isCommentRequired || serviceIdentifier.includes('COMMENT') || serviceIdentifier.includes('COMBO'),
+                    subscribe: !isInstagram && (serviceIdentifier.includes('SUBSCRIBE') || isYouTubeCombo),
+                    follow: isInstagram && (serviceIdentifier.includes('FOLLOW') || isInstagramCombo),
+                    comment: isCommentRequired,
                 },
             };
 

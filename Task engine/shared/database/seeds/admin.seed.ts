@@ -106,12 +106,21 @@ export async function seedAdminAndServices(dataSource: DataSource) {
     },
     {
       code: 'INSTAGRAM_COMBO',
-      name: 'Instagram All-in-One Growth Combo',
-      description: 'Follow profile + Like post/reel + post relevant AI comment bundle',
-      buyerUnitPrice: 4.50,
+      name: 'Instagram Engagement Combo (Like + Follow)',
+      description: 'Follow profile + Like post/reel engagement bundle',
+      buyerUnitPrice: 2.50,
       marginType: MarginType.FIXED,
-      marginValue: 0.90,
-      workerReward: 3.60,
+      marginValue: 0.50,
+      workerReward: 2.00,
+    },
+    {
+      code: 'YOUTUBE_COMBO',
+      name: 'YouTube Growth Combo (Watch + Like + Sub + Comment)',
+      description: 'Watch video + Like + Subscribe + post relevant AI comment bundle',
+      buyerUnitPrice: 8.00,
+      marginType: MarginType.FIXED,
+      marginValue: 2.00,
+      workerReward: 6.00,
     },
   ];
 

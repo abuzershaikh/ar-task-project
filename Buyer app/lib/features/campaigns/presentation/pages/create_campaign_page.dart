@@ -267,19 +267,24 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   bool _isCommentOrComboService(ServiceModel? s) {
     if (s == null) return false;
     final code = s.code.toUpperCase();
+    // Instagram combo is strictly Like + Follow, NOT comment!
+    if (code.contains('INSTA') && (code.contains('COMBO') || code.contains('FOLLOW') || code.contains('LIKE'))) {
+      if (!code.contains('COMMENT')) return false;
+    }
+    // YouTube Combo IS a comment service (Watch + Like + Sub + Comment)
+    if ((code.contains('YT') || code.contains('YOUTUBE')) && code.contains('COMBO')) {
+      return true;
+    }
     final name = s.name.toUpperCase();
     final desc = s.description.toUpperCase();
     final type = s.serviceType.toUpperCase();
     return s.aiGeneratorEnabled ||
         code.contains('COMMENT') ||
-        code.contains('COMBO') ||
         code.contains('REVIEW') ||
         name.contains('COMMENT') ||
-        name.contains('COMBO') ||
         name.contains('REVIEW') ||
         desc.contains('COMMENT') ||
-        type.contains('COMMENT') ||
-        type.contains('COMBO');
+        type.contains('COMMENT');
   }
 
   Future<void> _generateSampleComments() async {

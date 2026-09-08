@@ -64,10 +64,17 @@ class TaskFeedCard extends StatelessWidget {
     final rawType = (task['taskType'] ?? task['type'] ?? 'Task').toString();
     final plat = _getPlatform(task);
     if (plat == 'google') return 'Write a review on Google';
-    if (plat == 'youtube') return 'Like & Comment on YouTube';
+    if (plat == 'youtube') {
+      final rtLower = rawType.toLowerCase();
+      if (rtLower.contains('combo')) return 'Like, Sub & Comment on YouTube';
+      if (rtLower.contains('sub')) return 'Subscribe on YouTube';
+      if (rtLower.contains('comment')) return 'Comment on YouTube';
+      if (rtLower.contains('like')) return 'Like YouTube Video';
+      return 'Like & Comment on YouTube';
+    }
     if (plat == 'instagram') {
       final rtLower = rawType.toLowerCase();
-      if (rtLower.contains('combo')) return 'Instagram Engagement Combo';
+      if (rtLower.contains('combo')) return 'Like & Follow on Instagram';
       if (rtLower.contains('like')) return 'Like Instagram Post / Reel';
       if (rtLower.contains('comment')) return 'Comment on Instagram Post';
       return 'Follow on Instagram';

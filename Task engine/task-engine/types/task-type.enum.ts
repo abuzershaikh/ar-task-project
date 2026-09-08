@@ -5,6 +5,7 @@ export enum TaskType {
     YOUTUBE_SUBSCRIBE = 'youtube_subscribe',
     YOUTUBE_LIKE = 'youtube_like',
     YOUTUBE_SHARE = 'youtube_share',
+    YOUTUBE_COMBO = 'youtube_combo',
 
     // Instagram Tasks
     INSTAGRAM_FOLLOW = 'instagram_follow',
