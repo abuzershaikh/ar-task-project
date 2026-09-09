@@ -164,7 +164,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
 
   void _populateFromService(ServiceModel service) {
     if (_codeController.text.isEmpty) _codeController.text = service.code;
-    if (_nameController.text.isEmpty) _nameController.text = service.name;
+    if (service.name.isNotEmpty) _nameController.text = service.name;
     if (_descController.text.isEmpty)
       _descController.text = service.description;
     _buyerPriceController.text = service.pricing.buyerPrice.toString();
@@ -225,7 +225,11 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     // 1. Update Info
     bloc.add(
       UpdateServiceInfoEvent(
-        name: _nameController.text.trim(),
+        name: _nameController.text.trim().isNotEmpty
+            ? _nameController.text.trim()
+            : (widget.draftName?.trim().isNotEmpty == true
+                ? widget.draftName!.trim()
+                : 'Service'),
         description: _descController.text.trim(),
         category:
             _codeController.text.startsWith('YOUTUBE') ? 'YouTube' : 'General',
@@ -568,13 +572,87 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                 ),
                 const SizedBox(height: 16),
 
-                // Service Name
-                _buildTextField(
-                  controller: _nameController,
-                  label: 'Service Display Name',
-                  hint: 'e.g. YouTube Video Like & Stay 60s',
-                  icon: Icons.label_important_outline_rounded,
-                  onChanged: (val) => setState(() {}),
+                // Fixed Service Title Display (Read-Only)
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: backgroundLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: borderSubtle),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: lightBlueBg,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.label_important_rounded,
+                          color: accentBlue,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text(
+                                  'Service Title',
+                                  style: TextStyle(
+                                    color: textSecondary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                        color: const Color(0xFFCBD5E1)),
+                                  ),
+                                  child: const Text(
+                                    'FIXED',
+                                    style: TextStyle(
+                                      color: textSecondary,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              _nameController.text.isNotEmpty
+                                  ? _nameController.text
+                                  : (widget.draftName?.isNotEmpty == true
+                                      ? widget.draftName!
+                                      : 'Service Title'),
+                              style: const TextStyle(
+                                color: textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
 
