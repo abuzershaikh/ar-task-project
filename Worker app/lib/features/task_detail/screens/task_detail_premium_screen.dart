@@ -2040,6 +2040,8 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           color: fg,
           fontWeight: FontWeight.w800,
@@ -2166,8 +2168,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Badge Pill Row (Category + Stage)
-                Row(
+                // Badge Pill Wrap (Category + Stage)
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -2180,6 +2185,8 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                       ),
                       child: Text(
                         badge,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Color(0xFF475569),
                           fontWeight: FontWeight.w800,
@@ -2188,7 +2195,6 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 6),
                     _buildStagePill(status),
                   ],
                 ),
