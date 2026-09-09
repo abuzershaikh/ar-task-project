@@ -39,6 +39,16 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
     super.dispose();
   }
 
+  Future<void> _navigateToBuilder(Widget screen) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => screen),
+    );
+    if (mounted) {
+      context.read<ServiceBuilderBloc>().add(LoadServicesEvent());
+    }
+  }
+
   void _showCreateServiceModal() {
     final nameCtrl = TextEditingController();
     final descCtrl = TextEditingController();
@@ -221,14 +231,11 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                       if (formKey.currentState!.validate()) {
                         final draftCode = 'SVC_${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
                         Navigator.pop(ctx);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ServiceBuilderScreen(
-                              draftCode: draftCode,
-                              draftName: nameCtrl.text.trim(),
-                              draftDescription: descCtrl.text.trim(),
-                            ),
+                        _navigateToBuilder(
+                          ServiceBuilderScreen(
+                            draftCode: draftCode,
+                            draftName: nameCtrl.text.trim(),
+                            draftDescription: descCtrl.text.trim(),
                           ),
                         );
                       }
@@ -328,10 +335,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
             tooltip: 'Task Expiry & Timeout Settings',
             icon: const Icon(Icons.timer_outlined, color: primaryBlue, size: 22),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TaskExpirySettingsScreen()),
-              );
+              _navigateToBuilder(const TaskExpirySettingsScreen());
             },
           ),
           IconButton(
@@ -593,7 +597,12 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                               ],
                             ),
                           )
-                        : ListView.builder(
+                        : RefreshIndicator(
+                            color: accentBlue,
+                            onRefresh: () async {
+                              context.read<ServiceBuilderBloc>().add(LoadServicesEvent());
+                            },
+                            child: ListView.builder(
                             padding: const EdgeInsets.fromLTRB(14, 2, 14, 90),
                             itemCount: filteredServices.length,
                             itemBuilder: (context, index) {
@@ -618,14 +627,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                                 ),
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(16),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ServiceBuilderScreen(serviceId: service.id),
-                                      ),
-                                    );
-                                  },
+                                  onTap: () => _navigateToBuilder(
+                                    ServiceBuilderScreen(serviceId: service.id),
+                                  ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(14),
                                     child: Column(
@@ -788,14 +792,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                                                     'Open Studio',
                                                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                                   ),
-                                                  onPressed: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (_) => ServiceBuilderScreen(serviceId: service.id),
-                                                      ),
-                                                    );
-                                                  },
+                                                  onPressed: () => _navigateToBuilder(
+                                                    ServiceBuilderScreen(serviceId: service.id),
+                                                  ),
                                                 ),
                                               ],
                                             ),
@@ -808,6 +807,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                               );
                             },
                           ),
+                        ),
                   ),
                 ],
               );
@@ -842,7 +842,15 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                 ),
               );
             }
-            return const SizedBox.shrink();
+            // Auto-reload catalog when returning from editor in ServiceEditingState or any unhandled state
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                context.read<ServiceBuilderBloc>().add(LoadServicesEvent());
+              }
+            });
+            return const Center(
+              child: CircularProgressIndicator(color: accentBlue),
+            );
           },
         ),
       ),
