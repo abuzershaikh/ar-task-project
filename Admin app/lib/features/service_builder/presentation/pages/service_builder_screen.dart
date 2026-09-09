@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../bloc/service_builder_bloc.dart';
 import '../bloc/service_builder_event.dart';
 import '../bloc/service_builder_state.dart';
@@ -889,7 +888,10 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                 const SizedBox(height: 16),
 
                 // Margin Type Selector
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     const Text(
                       'Margin Type:',
@@ -898,7 +900,6 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                           fontSize: 13,
                           fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(width: 10),
                     ChoiceChip(
                       label: const Text('Fixed Amount (₹)'),
                       selected: !_isPercentageMargin,
@@ -918,7 +919,6 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                       onSelected: (val) =>
                           setState(() => _isPercentageMargin = false),
                     ),
-                    const SizedBox(width: 8),
                     ChoiceChip(
                       label: const Text('Percentage (%)'),
                       selected: _isPercentageMargin,
@@ -1014,30 +1014,28 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: lightBlueBg,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.link_rounded,
-                              color: accentBlue, size: 18),
-                        ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Target URL / Link Input',
-                          style: TextStyle(
-                            color: textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: lightBlueBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.link_rounded,
+                          color: accentBlue, size: 18),
                     ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Target URL / Link Input',
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Switch(
                       value: _isLinkFieldEnabled,
                       activeColor: accentBlue,
@@ -1088,30 +1086,28 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: lightBlueBg,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.text_fields_rounded,
-                              color: accentBlue, size: 18),
-                        ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Custom Text / Comment Input',
-                          style: TextStyle(
-                            color: textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: lightBlueBg,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.text_fields_rounded,
+                          color: accentBlue, size: 18),
                     ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Custom Text / Comment Input',
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Switch(
                       value: _isTextFieldEnabled,
                       activeColor: accentBlue,
@@ -1173,12 +1169,14 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                           color: accentBlue, size: 18),
                     ),
                     const SizedBox(width: 10),
-                    const Text(
-                      'Mandatory Stay / Watch Time',
-                      style: TextStyle(
-                        color: textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                    const Expanded(
+                      child: Text(
+                        'Mandatory Stay / Watch Time',
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -1258,41 +1256,39 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFAF5FF),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFE9D5FF)),
-                          ),
-                          child: const Icon(Icons.auto_awesome,
-                              color: Color(0xFF9333EA), size: 18),
-                        ),
-                        const SizedBox(width: 10),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'AI Content Generator',
-                              style: TextStyle(
-                                color: textPrimary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Auto-generate comments/tasks on backend',
-                              style:
-                                  TextStyle(color: textSecondary, fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ],
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAF5FF),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE9D5FF)),
+                      ),
+                      child: const Icon(Icons.auto_awesome,
+                          color: Color(0xFF9333EA), size: 18),
                     ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'AI Content Generator',
+                            style: TextStyle(
+                              color: textPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Auto-generate comments/tasks on backend',
+                            style:
+                                TextStyle(color: textSecondary, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Switch(
                       value: _aiGeneratorEnabled,
                       activeColor: const Color(0xFF9333EA),
