@@ -250,7 +250,7 @@ class _VoiceGuideStudioCardState extends State<VoiceGuideStudioCard> {
     setState(() {
       _isUploading = true;
       _uploadProgress = 0.0;
-      _uploadStatusText = 'Uploading audio to Cloudflare R2...';
+      _uploadStatusText = 'Uploading audio...';
     });
 
     try {
@@ -276,7 +276,7 @@ class _VoiceGuideStudioCardState extends State<VoiceGuideStudioCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✓ Voice Guide uploaded to Cloudflare R2 storage!'),
+            content: Text('✓ Voice Guide uploaded successfully!'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 3),
           ),
@@ -286,7 +286,7 @@ class _VoiceGuideStudioCardState extends State<VoiceGuideStudioCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('⚠️ Upload to Cloudflare failed: $e'),
+            content: Text('⚠️ Upload failed: $e'),
             backgroundColor: Colors.redAccent,
             duration: const Duration(seconds: 4),
           ),
@@ -376,7 +376,7 @@ class _VoiceGuideStudioCardState extends State<VoiceGuideStudioCard> {
                         ),
                       ),
                       Text(
-                        'Cloudflare R2 Direct Storage',
+                        'Voice Cloud Storage',
                         style: TextStyle(color: Colors.white54, fontSize: 10),
                       ),
                     ],
