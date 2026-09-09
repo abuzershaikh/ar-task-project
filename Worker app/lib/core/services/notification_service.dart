@@ -257,9 +257,6 @@ class NotificationService {
     final explicitIcon = (data['appIcon'] ?? data['icon'] ?? data['imageUrl'])
         ?.toString()
         .trim();
-    if (explicitIcon != null && explicitIcon.startsWith('http')) {
-      return explicitIcon;
-    }
 
     // 2. Fallback: resolve using self-hosted VPS icon assets
     const assetBaseUrl = 'http://65.20.77.112:3000/api/v1/assets/icons';
@@ -269,38 +266,51 @@ class NotificationService {
         .toLowerCase();
     final title = (data['title'] ?? '').toString().toLowerCase();
     final body = (data['body'] ?? data['message'] ?? '').toString().toLowerCase();
-    final combined = '$serviceCode $title $body';
+    final targetUrl = (data['targetUrl'] ?? data['url'] ?? data['link'] ?? '').toString().toLowerCase();
+    final combined = '$serviceCode $title $body $targetUrl';
 
-    // Instagram
-    if (combined.contains('instagram') || combined.contains('insta')) {
-      return '$assetBaseUrl/instagram';
+    final isAppInstallOrPlayStore = combined.contains('install') ||
+        combined.contains('app_install') ||
+        combined.contains('playstore') ||
+        combined.contains('play.google') ||
+        combined.contains('google_play');
+
+    // If explicitIcon is a real high-res app icon (e.g. from Play Store CDN), always use it!
+    if (explicitIcon != null && explicitIcon.startsWith('http')) {
+      // If it was wrongly tagged as the fallback instagram icon due to 'install' matching 'insta', fix it
+      if (isAppInstallOrPlayStore && explicitIcon.contains('instagram')) {
+        return '$assetBaseUrl/playstore';
+      }
+      return explicitIcon;
     }
 
-    // YouTube
+    // 1. App Install / Google Play Store (Checked FIRST to avoid 'install' matching 'insta')
+    if (isAppInstallOrPlayStore) {
+      return '$assetBaseUrl/playstore';
+    }
+
+    // 2. YouTube
     if (combined.contains('youtube') || combined.contains('yt')) {
       return '$assetBaseUrl/youtube';
     }
 
-    // App Install / Google Play Store
-    if (combined.contains('install') ||
-        combined.contains('app') ||
-        combined.contains('playstore') ||
-        combined.contains('play.google')) {
-      return '$assetBaseUrl/playstore';
+    // 3. Instagram (Strict check: ensure word does not contain 'install')
+    if (combined.contains('instagram') || (combined.contains('insta') && !combined.contains('install'))) {
+      return '$assetBaseUrl/instagram';
     }
 
-    // Facebook
+    // 4. Facebook
     if (combined.contains('facebook') || combined.contains('fb')) {
       return '$assetBaseUrl/facebook';
     }
 
-    // Telegram
+    // 5. Telegram
     if (combined.contains('telegram')) {
       return '$assetBaseUrl/telegram';
     }
 
-    // Twitter / X
-    if (combined.contains('twitter') || combined.contains(' x ')) {
+    // 6. Twitter / X
+    if (combined.contains('twitter') || combined.contains(' x ') || combined.contains('x.com')) {
       return '$assetBaseUrl/twitter';
     }
 
@@ -335,7 +345,38 @@ class NotificationService {
     final notificationId = dedupeKey.hashCode.abs();
 
     // 🖼️ Download & attach rich icon (App icon, Instagram logo, YouTube logo, etc.)
-    final iconUrl = _resolveNotificationIconUrl(message.data);
+    String iconUrl = _resolveNotificationIconUrl(message.data);
+    final notifImageUrl = message.notification?.android?.imageUrl ?? message.notification?.apple?.imageUrl;
+    if (iconUrl.isEmpty && notifImageUrl != null && notifImageUrl.isNotEmpty) {
+      iconUrl = notifImageUrl;
+    }
+
+    // If it is an App Install / Play Store task and we don't have a high-res app CDN icon yet, try quick scrape
+    final combinedStr = '${message.data} $title $body'.toLowerCase();
+    final isAppInstall = combinedStr.contains('install') ||
+        combinedStr.contains('app_install') ||
+        combinedStr.contains('play.google') ||
+        combinedStr.contains('playstore');
+
+    if (isAppInstall && (iconUrl.isEmpty || iconUrl.contains('/assets/icons/playstore') || iconUrl.contains('instagram'))) {
+      final target = (message.data['targetUrl'] ?? message.data['url'] ?? message.data['link'] ?? '').toString();
+      if (target.contains('play.google.com') || target.contains('id=') || target.contains('market://')) {
+        try {
+          final res = await http.post(
+            Uri.parse('http://65.20.77.112:3000/api/v1/buyer/orders/playstore-app-info'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'url': target}),
+          ).timeout(const Duration(milliseconds: 3000));
+          if (res.statusCode == 200) {
+            final parsed = jsonDecode(res.body);
+            if (parsed['appIcon'] != null && parsed['appIcon'].toString().startsWith('http')) {
+              iconUrl = parsed['appIcon'].toString().trim();
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
     String? localIconPath;
     if (iconUrl.isNotEmpty) {
       final safeExt = iconUrl.contains('.jpg') ? 'jpg' : 'png';

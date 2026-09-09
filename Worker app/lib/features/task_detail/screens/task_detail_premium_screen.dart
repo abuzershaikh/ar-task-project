@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -57,10 +59,13 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   Duration _audioPosition = Duration.zero;
   bool _isAudioBuffering = false;
 
+  String? _fetchedAppIcon;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _fetchPlayStoreIconIfNeeded();
     final status = _getTaskStatus();
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
@@ -471,20 +476,35 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   }
 
   // ── Helper Extractors ──────────────────────────────────────────────────────
+  void _fetchPlayStoreIconIfNeeded() async {
+    final direct = _getAppIcon();
+    if (direct.isNotEmpty && !direct.contains('/assets/icons/')) return;
+    final url = _getTargetUrl();
+    if (url.contains('play.google.com') || url.contains('market://') || url.contains('id=')) {
+      try {
+        final response = await http.post(
+          Uri.parse('http://65.20.77.112:3000/api/v1/buyer/orders/playstore-app-info'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'url': url}),
+        ).timeout(const Duration(seconds: 5));
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['appIcon'] != null && data['appIcon'].toString().isNotEmpty) {
+            if (mounted) {
+              setState(() {
+                _fetchedAppIcon = data['appIcon'].toString().trim();
+              });
+            }
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
   String _getPlatform() {
     final t = widget.task;
     if (t == null) return 'playstore';
-    if (t['platform'] != null && t['platform'].toString().trim().isNotEmpty) {
-      final p = t['platform'].toString().toLowerCase().trim();
-      if (p.contains('play') ||
-          p.contains('google_play') ||
-          p.contains('google') ||
-          p.contains('install') ||
-          p.contains('app'))
-        return 'playstore';
-      if (p.contains('instagram') || p.contains('insta')) return 'instagram';
-      return p;
-    }
+
     final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? '')
         .toString()
         .toLowerCase();
@@ -495,74 +515,116 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final metaStr = (t['metadata'] != null)
         ? t['metadata'].toString().toLowerCase()
         : '';
-    final titleStr = (t['title'] ?? '').toString().toLowerCase();
+    final titleStr = (t['title'] ?? t['serviceName'] ?? t['serviceTitle'] ?? '')
+        .toString()
+        .toLowerCase();
     final descStr = (t['description'] ?? t['body'] ?? '')
         .toString()
         .toLowerCase();
-    final combined = '$type $reqStr $metaStr $titleStr $descStr';
-    if (combined.contains('instagram') || combined.contains('insta'))
-      return 'instagram';
-    if (combined.contains('install') ||
-        combined.contains('app_install') ||
+    final targetUrl = _getTargetUrl().toLowerCase();
+    final combined = '$type $reqStr $metaStr $titleStr $descStr $targetUrl';
+
+    // 1. Play Store & App Install MUST ALWAYS take priority over raw platform tag
+    if (type.contains('install') ||
+        type.contains('app_install') ||
+        titleStr.contains('install') ||
+        titleStr.contains('play store') ||
+        titleStr.contains('app review') ||
+        targetUrl.contains('play.google.com') ||
+        targetUrl.contains('market://') ||
         combined.contains('playstore') ||
         combined.contains('google_play') ||
         combined.contains('play_store') ||
-        combined.contains('app_review') ||
-        combined.contains('play.google') ||
-        combined.contains('google_rating') ||
-        combined.contains('google_review'))
+        combined.contains('play.google')) {
       return 'playstore';
-    if (combined.contains('youtube') || combined.contains('yt_'))
+    }
+
+    if (t['platform'] != null && t['platform'].toString().trim().isNotEmpty) {
+      final p = t['platform'].toString().toLowerCase().trim();
+      if (p.contains('play') ||
+          p.contains('google_play') ||
+          p.contains('google') ||
+          p.contains('install') ||
+          p.contains('app'))
+        return 'playstore';
+      if (p.contains('instagram') || (p.contains('insta') && !p.contains('install'))) return 'instagram';
+      return p;
+    }
+
+    // 2. YouTube
+    if (combined.contains('youtube') || combined.contains('yt_') || type.contains('yt'))
       return 'youtube';
+
+    // 3. Instagram (Strict check: ensure word does not contain 'install')
+    if (combined.contains('instagram') || (combined.contains('insta') && !combined.contains('install')))
+      return 'instagram';
+
+    // 4. Facebook
     if (combined.contains('facebook') || combined.contains('fb'))
       return 'facebook';
+
+    // 5. Google / Maps
     if (combined.contains('google') || combined.contains('maps'))
       return 'playstore';
+
+    // 6. X
     if (combined.contains('twitter') ||
         combined.contains(' x ') ||
         combined.contains('x.com'))
       return 'x';
+
+    // 7. Telegram
     if (combined.contains('telegram')) return 'telegram';
+
     return 'playstore';
   }
 
   String _getAppIcon() {
+    if (_fetchedAppIcon != null && _fetchedAppIcon!.isNotEmpty) {
+      return _fetchedAppIcon!;
+    }
     final t = widget.task;
     if (t == null) return '';
-    if (t['appIcon'] != null && t['appIcon'].toString().trim().isNotEmpty) {
+    final isPlay = _getPlatform() == 'playstore';
+
+    bool isAllowedIcon(dynamic iconVal) {
+      if (iconVal == null) return false;
+      final c = iconVal.toString().trim();
+      if (c.isEmpty) return false;
+      if (isPlay && c.contains('instagram')) return false;
+      return true;
+    }
+
+    if (isAllowedIcon(t['appIcon'])) {
       return t['appIcon'].toString().trim();
     }
-    if (t['icon'] != null && t['icon'].toString().trim().isNotEmpty) {
+    if (isAllowedIcon(t['icon'])) {
       return t['icon'].toString().trim();
     }
-    if (t['imageUrl'] != null && t['imageUrl'].toString().trim().isNotEmpty) {
+    if (isAllowedIcon(t['imageUrl'])) {
       return t['imageUrl'].toString().trim();
     }
     if (t['requirements'] is Map) {
       final req = t['requirements'] as Map;
-      if (req['appIcon'] != null &&
-          req['appIcon'].toString().trim().isNotEmpty) {
+      if (isAllowedIcon(req['appIcon'])) {
         return req['appIcon'].toString().trim();
       }
-      if (req['icon'] != null && req['icon'].toString().trim().isNotEmpty) {
+      if (isAllowedIcon(req['icon'])) {
         return req['icon'].toString().trim();
       }
-      if (req['imageUrl'] != null &&
-          req['imageUrl'].toString().trim().isNotEmpty) {
+      if (isAllowedIcon(req['imageUrl'])) {
         return req['imageUrl'].toString().trim();
       }
     }
     if (t['metadata'] is Map) {
       final meta = t['metadata'] as Map;
-      if (meta['appIcon'] != null &&
-          meta['appIcon'].toString().trim().isNotEmpty) {
+      if (isAllowedIcon(meta['appIcon'])) {
         return meta['appIcon'].toString().trim();
       }
-      if (meta['icon'] != null && meta['icon'].toString().trim().isNotEmpty) {
+      if (isAllowedIcon(meta['icon'])) {
         return meta['icon'].toString().trim();
       }
-      if (meta['imageUrl'] != null &&
-          meta['imageUrl'].toString().trim().isNotEmpty) {
+      if (isAllowedIcon(meta['imageUrl'])) {
         return meta['imageUrl'].toString().trim();
       }
     }
@@ -665,18 +727,26 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   String _getBadgeText() {
     final t = widget.task;
-    if (t['badge'] != null && t['badge'].toString().trim().isNotEmpty) {
-      return t['badge'].toString().trim().toUpperCase();
-    }
     final p = _getPlatform();
+    if (t['badge'] != null && t['badge'].toString().trim().isNotEmpty) {
+      final b = t['badge'].toString().trim().toUpperCase();
+      if (!b.contains('INSTA') || p == 'instagram') {
+        return b;
+      }
+    }
     final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? 'COMMENT')
         .toString()
         .toUpperCase();
     if (p == 'playstore' ||
         type.contains('PLAYSTORE') ||
         type.contains('GOOGLE_PLAY') ||
+        type.contains('APP_INSTALL') ||
+        type.contains('INSTALL') ||
         type.contains('APP_REVIEW') ||
         type.contains('RATING')) {
+      if (type.contains('INSTALL') || (t['title'] ?? '').toString().toLowerCase().contains('install')) {
+        return 'PLAY STORE APP';
+      }
       return 'PLAY STORE REVIEW';
     }
     if (type.contains('INSTA') && type.contains('COMBO'))
@@ -690,7 +760,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     if (type.contains('SUBSCRIBE') || type.contains('FOLLOW'))
       return '$p FOLLOW'.toUpperCase();
     if (type.contains('INSTALL') || type.contains('APP'))
-      return '$p APP'.toUpperCase();
+      return 'PLAY STORE APP';
     return '$p TASK'.toUpperCase();
   }
 

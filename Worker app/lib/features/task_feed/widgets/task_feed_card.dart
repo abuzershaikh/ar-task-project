@@ -125,26 +125,30 @@ class TaskFeedCard extends StatelessWidget {
 
   String? _getAppIcon(dynamic task) {
     if (task == null) return null;
+    final platform = _getPlatform(task);
+    String? raw;
     if (task['appIcon'] != null && task['appIcon'].toString().trim().isNotEmpty) {
-      return task['appIcon'].toString().trim();
-    }
-    if (task['requirements'] is Map) {
+      raw = task['appIcon'].toString().trim();
+    } else if (task['requirements'] is Map) {
       final req = task['requirements'] as Map;
       if (req['appIcon'] != null && req['appIcon'].toString().trim().isNotEmpty) {
-        return req['appIcon'].toString().trim();
+        raw = req['appIcon'].toString().trim();
+      } else if (req['icon'] != null && req['icon'].toString().trim().isNotEmpty) {
+        raw = req['icon'].toString().trim();
       }
-      if (req['icon'] != null && req['icon'].toString().trim().isNotEmpty) {
-        return req['icon'].toString().trim();
-      }
-    }
-    if (task['metadata'] is Map) {
+    } else if (task['metadata'] is Map) {
       final meta = task['metadata'] as Map;
       if (meta['appIcon'] != null && meta['appIcon'].toString().trim().isNotEmpty) {
-        return meta['appIcon'].toString().trim();
+        raw = meta['appIcon'].toString().trim();
+      } else if (meta['icon'] != null && meta['icon'].toString().trim().isNotEmpty) {
+        raw = meta['icon'].toString().trim();
       }
-      if (meta['icon'] != null && meta['icon'].toString().trim().isNotEmpty) {
-        return meta['icon'].toString().trim();
+    }
+    if (raw != null && raw.isNotEmpty) {
+      if (platform == 'playstore' && raw.contains('instagram')) {
+        return null;
       }
+      return raw;
     }
     return null;
   }
@@ -165,15 +169,15 @@ class TaskFeedCard extends StatelessWidget {
     final combined = '$type $reqStr $titleStr';
 
     // 1. App Install & Play Store takes priority over raw platform tag
-    if (type.contains('app_install') || combined.contains('install & open') || combined.contains('app install') || combined.contains('playstore') || combined.contains('play.google')) {
+    if (type.contains('app_install') || type.contains('install') || combined.contains('install & open') || combined.contains('app install') || combined.contains('playstore') || combined.contains('play.google')) {
       return 'playstore';
     }
     // 2. YouTube
     if (type.contains('youtube') || combined.contains('youtube') || type.contains('yt_')) {
       return 'youtube';
     }
-    // 3. Instagram
-    if (type.contains('instagram') || combined.contains('instagram') || combined.contains('insta')) {
+    // 3. Instagram (Strict check: ensure not install)
+    if (type.contains('instagram') || combined.contains('instagram') || (combined.contains('insta') && !combined.contains('install'))) {
       return 'instagram';
     }
     // 4. Google

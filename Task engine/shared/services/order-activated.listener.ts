@@ -14,6 +14,7 @@ import { NotificationType } from '../database/entities/notification.entity';
 import { AiGeneratorService } from '../ai-generator/ai-generator.service';
 import { sanitizeReviewText } from '../ai-generator/review-sanitizer';
 import { FirebaseAdminService } from './firebase-admin.service';
+import { PlayStoreScraperService } from './playstore-scraper.service';
 
 export interface OrderActivatedEventPayload {
     orderId: string;
@@ -40,6 +41,7 @@ export class OrderActivatedListener {
         private readonly notificationRepo: NotificationRepository,
         private readonly aiGeneratorService: AiGeneratorService,
         private readonly firebaseAdmin: FirebaseAdminService,
+        private readonly playStoreScraper: PlayStoreScraperService,
         @InjectQueue('task') private readonly taskQueue: Queue,
     ) { }
 
@@ -80,13 +82,31 @@ export class OrderActivatedListener {
                 ? (await this.serviceCatalogRepo.findByCode(rawIdentifier) || await this.serviceCatalogRepo.findById(rawIdentifier))
                 : null;
 
+            const targetUrl = order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '';
+
             const isPlayStore = serviceIdentifier.includes('PLAY') ||
                 serviceIdentifier.includes('APP_REVIEW') ||
                 serviceIdentifier.includes('GOOGLE_PLAY') ||
+                serviceIdentifier.includes('INSTALL') ||
+                serviceIdentifier.includes('APP_INSTALL') ||
                 (serviceCatalog?.category || '').toLowerCase().includes('play') ||
-                (serviceCatalog?.name || '').toLowerCase().includes('play store');
+                (serviceCatalog?.category || '').toLowerCase().includes('install') ||
+                (serviceCatalog?.category || '').toLowerCase().includes('app') ||
+                (serviceCatalog?.name || '').toLowerCase().includes('play store') ||
+                (serviceCatalog?.name || '').toLowerCase().includes('app install') ||
+                (serviceCatalog?.name || '').toLowerCase().includes('install') ||
+                (targetUrl && (targetUrl.includes('play.google.com') || targetUrl.includes('market://')));
 
-            const isInstagram = serviceIdentifier.includes('INSTA') || serviceIdentifier.includes('IG');
+            // CRITICAL: Ensure 'isInstagram' does NOT match 'APP_INSTALL' or words containing 'install'!!
+            const isInstagram = !isPlayStore && (
+                serviceIdentifier.includes('INSTAGRAM') ||
+                serviceIdentifier === 'INSTA' ||
+                serviceIdentifier.startsWith('INSTA_') ||
+                serviceIdentifier.endsWith('_INSTA') ||
+                serviceIdentifier.includes('_INSTA_') ||
+                serviceIdentifier.includes('IG_') ||
+                serviceIdentifier.includes('_IG')
+            );
             const isInstagramCombo = isInstagram && serviceIdentifier.includes('COMBO');
             const isYouTubeCombo = (serviceIdentifier.includes('YT') || serviceIdentifier.includes('YOUTUBE')) && serviceIdentifier.includes('COMBO');
 
@@ -99,13 +119,33 @@ export class OrderActivatedListener {
             );
 
             const count = payload.totalTasksRequired;
-            const targetUrl = order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '';
             const topic = order?.requirements?.topic || order?.requirements?.customText || order?.requirements?.comment || '';
             const language = order?.requirements?.language || 'English';
             const tone = order?.requirements?.tone || 'natural';
-            const appName = order?.requirements?.appName || '';
-            const appIcon = order?.requirements?.appIcon || '';
-            const packageId = order?.requirements?.packageId || '';
+            let appName = order?.requirements?.appName || '';
+            let appIcon = order?.requirements?.appIcon || '';
+            let packageId = order?.requirements?.packageId || '';
+
+            // Auto-extract Google Play Store app icon & name if missing or if wrongly assigned instagram
+            if (isPlayStore && (appIcon.includes('instagram') || appIcon.includes('/icons/'))) {
+                appIcon = '';
+            }
+
+            if ((!appIcon || appIcon.includes('instagram')) && targetUrl && (isPlayStore || targetUrl.includes('play.google.com') || targetUrl.includes('id='))) {
+                const pkg = this.playStoreScraper.extractPackageId(targetUrl);
+                if (pkg) {
+                    try {
+                        const appInfo = await this.playStoreScraper.getAppMetadata(targetUrl);
+                        if (appInfo && appInfo.success) {
+                            if (appInfo.appIcon) appIcon = appInfo.appIcon;
+                            if (appInfo.appName && !appName) appName = appInfo.appName;
+                            if (appInfo.packageId && !packageId) packageId = appInfo.packageId;
+                        }
+                    } catch (err: any) {
+                        this.logger.warn(`Could not scrape Play Store metadata for order ${payload.orderId}: ${err?.message}`);
+                    }
+                }
+            }
 
             // 1. Gather any buyer sample comments/reviews sent with the order
             const rawSampleComments = order?.requirements?.sampleComments;
@@ -178,7 +218,7 @@ export class OrderActivatedListener {
                     ]);
 
             const detectedPlatform = isPlayStore
-                ? 'google'
+                ? 'playstore'
                 : (isInstagram ? 'instagram' : (serviceIdentifier.includes('FACEBOOK') || serviceIdentifier.includes('FB') ? 'facebook' : (serviceIdentifier.includes('TELEGRAM') ? 'telegram' : 'youtube')));
 
             const combinedRequirements = {
@@ -293,12 +333,12 @@ export class OrderActivatedListener {
                 const assetBaseUrl = (process.env.APP_URL || 'http://65.20.77.112:3000') + '/api/v1/assets/icons';
                 if (specificAppIcon && specificAppIcon.startsWith('http')) {
                     notificationIcon = specificAppIcon;
-                } else if (sLower.includes('instagram') || sLower.includes('insta')) {
+                } else if (isPlayStore || sLower.includes('install') || sLower.includes('app') || sLower.includes('playstore') || sLower.includes('google')) {
+                    notificationIcon = `${assetBaseUrl}/playstore`;
+                } else if (isInstagram || (sLower.includes('instagram') && !sLower.includes('install'))) {
                     notificationIcon = `${assetBaseUrl}/instagram`;
                 } else if (sLower.includes('youtube') || sLower.includes('yt')) {
                     notificationIcon = `${assetBaseUrl}/youtube`;
-                } else if (sLower.includes('install') || sLower.includes('app') || sLower.includes('playstore') || sLower.includes('google')) {
-                    notificationIcon = `${assetBaseUrl}/playstore`;
                 } else if (sLower.includes('facebook') || sLower.includes('fb')) {
                     notificationIcon = `${assetBaseUrl}/facebook`;
                 } else if (sLower.includes('telegram')) {

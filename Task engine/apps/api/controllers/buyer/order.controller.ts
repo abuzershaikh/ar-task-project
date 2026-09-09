@@ -230,6 +230,21 @@ export class BuyerOrderController {
             }
         }
 
+        // Auto-extract Google Play Store app icon & name if targetUrl is a Play Store link or package ID
+        const playPackageId = this.playStoreScraper.extractPackageId(targetUrl);
+        if (playPackageId) {
+            try {
+                const appInfo = await this.playStoreScraper.getAppMetadata(targetUrl);
+                if (appInfo && appInfo.success) {
+                    if (!reqs.appIcon && appInfo.appIcon) reqs.appIcon = appInfo.appIcon;
+                    if (!reqs.appName && appInfo.appName) reqs.appName = appInfo.appName;
+                    if (!reqs.packageId && appInfo.packageId) reqs.packageId = appInfo.packageId;
+                }
+            } catch (err: any) {
+                this.logger.warn(`Failed to auto-fetch Play Store metadata for ${targetUrl}: ${err?.message || err}`);
+            }
+        }
+
         const normalizedRequirements = {
             ...reqs,
             targetUrl,
