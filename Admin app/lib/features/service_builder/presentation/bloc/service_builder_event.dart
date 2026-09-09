@@ -221,6 +221,19 @@ class UpdateTimingRulesEvent extends ServiceBuilderEvent {
 
 class SaveServiceDraftEvent extends ServiceBuilderEvent {}
 
+class SaveCompleteServiceEvent extends ServiceBuilderEvent {
+  final ServiceModel service;
+  final bool publish;
+
+  const SaveCompleteServiceEvent({
+    required this.service,
+    this.publish = false,
+  });
+
+  @override
+  List<Object?> get props => [service, publish];
+}
+
 class PublishServiceVersionEvent extends ServiceBuilderEvent {
   final String serviceId;
   const PublishServiceVersionEvent(this.serviceId);

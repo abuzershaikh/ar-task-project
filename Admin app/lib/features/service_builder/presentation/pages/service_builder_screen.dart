@@ -190,6 +190,11 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     _videoUrlController.text = service.videoTutorialUrl ?? '';
     _audioUrlController.text = service.audioGuideUrl ?? '';
 
+    _isLinkFieldEnabled =
+        service.linkFieldLabel != null && service.linkFieldLabel!.trim().isNotEmpty;
+    _isTextFieldEnabled =
+        service.textFieldLabel != null && service.textFieldLabel!.trim().isNotEmpty;
+
     _watchtimeSeconds = service.watchtimeSeconds;
     final rMode = service.reviewMode.toLowerCase().trim();
     _reviewMode = ['buyer', 'admin', 'auto'].contains(rMode) ? rMode : 'buyer';
@@ -223,7 +228,6 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
   void _saveAndPublish(BuildContext context, bool publish) {
     final bloc = context.read<ServiceBuilderBloc>();
 
-    // 1. Update Info
     final serviceName = _nameController.text.trim().isNotEmpty
         ? _nameController.text.trim()
         : (widget.draftName?.trim().isNotEmpty == true
@@ -231,93 +235,98 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
             : (bloc.state is ServiceEditingState
                 ? (bloc.state as ServiceEditingState).serviceDraft.name
                 : 'Service'));
-    bloc.add(
-      UpdateServiceInfoEvent(
-        name: serviceName,
-        description: _descController.text.trim(),
-        category:
-            _codeController.text.startsWith('YOUTUBE') ? 'YouTube' : 'General',
-        serviceType: _codeController.text.contains('COMMENT')
-            ? 'comment'
-            : (_codeController.text.contains('LIKE')
-                ? 'like'
-                : (_codeController.text.contains('SUBSCRIBE')
-                    ? 'subscribe'
-                    : (_codeController.text.contains('COMBO')
-                        ? 'combo'
-                        : 'custom'))),
-        aiGeneratorEnabled: _aiGeneratorEnabled,
-        aiGeneratorConfig: {
-          'language': _aiLanguage,
-          'tone': _aiTone,
-          'uniqueness': _aiUniqueness,
-        },
-        videoTutorialUrl: _videoUrlController.text.trim().isNotEmpty
-            ? _videoUrlController.text.trim()
-            : null,
-        audioGuideUrl: _audioUrlController.text.trim().isNotEmpty
-            ? _audioUrlController.text.trim()
-            : null,
-        adminInstructions: _adminInstructionsController.text.trim().isNotEmpty
-            ? _adminInstructionsController.text.trim()
-            : null,
-        linkFieldLabel:
-            _isLinkFieldEnabled ? _linkFieldLabelController.text.trim() : null,
-        linkFieldPlaceholder: _isLinkFieldEnabled
-            ? _linkFieldPlaceholderController.text.trim()
-            : null,
-        textFieldLabel:
-            _isTextFieldEnabled ? _textFieldLabelController.text.trim() : null,
-        textFieldPlaceholder: _isTextFieldEnabled
-            ? _textFieldPlaceholderController.text.trim()
-            : null,
-        watchtimeSeconds: _watchtimeSeconds,
-      ),
-    );
 
-    // 2. Update Pricing
-    final buyerPrice = double.tryParse(_buyerPriceController.text) ?? 0.0;
-    final margin = double.tryParse(_marginController.text) ?? 0.0;
+    final buyerPrice = double.tryParse(_buyerPriceController.text.trim()) ?? 0.0;
+    final margin = double.tryParse(_marginController.text.trim()) ?? 0.0;
     final workerReward = _getCalculatedWorkerReward();
-    final minQty = int.tryParse(_minQuantityController.text) ?? 10;
-    final maxQty = int.tryParse(_maxQuantityController.text) ?? 10000;
+    final minQty = int.tryParse(_minQuantityController.text.trim()) ?? 10;
+    final maxQty = int.tryParse(_maxQuantityController.text.trim()) ?? 10000;
 
-    bloc.add(
-      UpdatePricingEvent(
-        buyerPrice: buyerPrice,
-        unitPrice: buyerPrice,
-        adminMarginPercent: margin,
-        marginType: _isPercentageMargin ? 'PERCENTAGE' : 'FIXED',
-        workerReward: workerReward,
-        minQuantity: minQty,
-        maxQuantity: maxQty,
-      ),
+    final minAcc = int.tryParse(_minAcceptHoursController.text.trim()) ?? 1;
+    final maxAcc = int.tryParse(_maxAcceptHoursController.text.trim()) ?? 72;
+    final minComp = int.tryParse(_minCompleteHoursController.text.trim()) ?? 1;
+    final maxComp = int.tryParse(_maxCompleteHoursController.text.trim()) ?? 168;
+    final retentionHours = int.tryParse(_minRetentionHoursController.text.trim()) ?? 24;
+
+    final pricing = PricingConfig.calculate(
+      buyerPrice: buyerPrice,
+      unitPrice: buyerPrice,
+      adminMarginPercent: margin,
+      marginType: _isPercentageMargin ? 'PERCENTAGE' : 'FIXED',
+      workerReward: workerReward,
+      minQuantity: minQty,
+      maxQuantity: maxQty,
     );
 
-    // 3. Update Timing
-    final minAcc = int.tryParse(_minAcceptHoursController.text) ?? 1;
-    final maxAcc = int.tryParse(_maxAcceptHoursController.text) ?? 72;
-    final minComp = int.tryParse(_minCompleteHoursController.text) ?? 1;
-    final maxComp = int.tryParse(_maxCompleteHoursController.text) ?? 168;
-    final retentionHours =
-        int.tryParse(_minRetentionHoursController.text) ?? 24;
+    final currentBaseService = (bloc.state is ServiceEditingState)
+        ? (bloc.state as ServiceEditingState).serviceDraft
+        : (_currentService ??
+            ServiceModel(
+              id: widget.serviceId ?? 'srv_${DateTime.now().millisecondsSinceEpoch}',
+              code: _codeController.text.trim().isNotEmpty
+                  ? _codeController.text.trim()
+                  : 'CUSTOM_SRV',
+              name: serviceName,
+              description: _descController.text.trim(),
+              category: _codeController.text.startsWith('YOUTUBE') ? 'YouTube' : 'General',
+              serviceType: 'custom',
+              elements: const [],
+              pricing: pricing,
+              updatedAt: DateTime.now(),
+            ));
 
-    bloc.add(
-      UpdateTimingRulesEvent(
-        minAcceptHours: minAcc,
-        maxAcceptHours: maxAcc,
-        minCompleteHours: minComp,
-        maxCompleteHours: maxComp,
-        minDurationSeconds: retentionHours * 3600,
-      ),
+    // Update proof requirements in elements
+    final updatedElements = currentBaseService.elements.map((el) {
+      if (el.id == 'el_screenshot' || el.type == ElementType.fileUpload) {
+        return el.copyWith(
+          isRequired: _requiresScreenshot,
+          properties: {...el.properties, 'requireScreenshot': _requiresScreenshot},
+        );
+      }
+      if (el.id == 'el_text_proof' || el.type == ElementType.textInput) {
+        return el.copyWith(
+          isRequired: _requiresTextProof,
+          properties: {...el.properties, 'requireTextProof': _requiresTextProof},
+        );
+      }
+      return el;
+    }).toList();
+
+    final completeService = currentBaseService.copyWith(
+      name: serviceName,
+      description: _descController.text.trim(),
+      category: _codeController.text.startsWith('YOUTUBE') ? 'YouTube' : 'General',
+      pricing: pricing,
+      elements: updatedElements,
+      reviewMode: _reviewMode.toUpperCase(),
+      requiresProofScreenshot: _requiresScreenshot,
+      requiresProofText: _requiresTextProof,
+      minAcceptHours: minAcc,
+      maxAcceptHours: maxAcc,
+      minCompleteHours: minComp,
+      maxCompleteHours: maxComp,
+      minDurationSeconds: retentionHours * 3600,
+      linkFieldLabel: _isLinkFieldEnabled ? _linkFieldLabelController.text.trim() : null,
+      linkFieldPlaceholder: _isLinkFieldEnabled ? _linkFieldPlaceholderController.text.trim() : null,
+      textFieldLabel: _isTextFieldEnabled ? _textFieldLabelController.text.trim() : null,
+      textFieldPlaceholder: _isTextFieldEnabled ? _textFieldPlaceholderController.text.trim() : null,
+      watchtimeSeconds: _watchtimeSeconds,
+      aiGeneratorEnabled: _aiGeneratorEnabled,
+      aiGeneratorConfig: {
+        'language': _aiLanguage,
+        'tone': _aiTone,
+        'uniqueness': _aiUniqueness,
+      },
+      videoTutorialUrl: _videoUrlController.text.trim().isNotEmpty ? _videoUrlController.text.trim() : null,
+      audioGuideUrl: _audioUrlController.text.trim().isNotEmpty ? _audioUrlController.text.trim() : null,
+      adminInstructions: _adminInstructionsController.text.trim().isNotEmpty ? _adminInstructionsController.text.trim() : null,
+      updatedAt: DateTime.now(),
     );
 
-    // 4. Save / Publish
-    if (publish && widget.serviceId != null && widget.serviceId!.isNotEmpty) {
-      bloc.add(PublishServiceVersionEvent(widget.serviceId!));
-    } else {
-      bloc.add(SaveServiceDraftEvent());
-    }
+    bloc.add(SaveCompleteServiceEvent(
+      service: completeService,
+      publish: publish,
+    ));
   }
 
   @override
@@ -329,25 +338,51 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
             _isFormPopulated = true;
             _populateFromService(state.serviceDraft);
           }
-          if (state.successMessage != null) {
+          if (state.successMessage != null && state.successMessage!.isNotEmpty) {
+            ScaffoldMessenger.of(context).clearSnackBars();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.successMessage!),
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        state.successMessage!,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
                 backgroundColor: const Color(0xFF10B981),
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                duration: const Duration(seconds: 3),
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             );
           }
-          if (state.errorMessage != null) {
+          if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
+            ScaffoldMessenger.of(context).clearSnackBars();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage!),
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        state.errorMessage!,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
                 backgroundColor: const Color(0xFFEF4444),
                 behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                duration: const Duration(seconds: 4),
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             );
           }
@@ -516,6 +551,49 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
               // Tab 4: Worker Rules & Verification
               _buildWorkerRulesTab(),
             ],
+          ),
+          bottomNavigationBar: Container(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+            decoration: BoxDecoration(
+              color: surfaceWhite,
+              border: const Border(top: BorderSide(color: borderSubtle, width: 1)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: isSaving ? null : () => _saveAndPublish(context, false),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentBlue,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: accentBlue.withOpacity(0.6),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.check_circle_rounded, size: 18),
+                  label: Text(
+                    isSaving ? 'Saving Changes to Server...' : 'Save Changes',
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
           ),
         );
       },

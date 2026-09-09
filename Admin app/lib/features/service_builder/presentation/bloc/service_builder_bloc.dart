@@ -28,6 +28,7 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
     on<RemoveTemplateElementEvent>(_onRemoveTemplateElement);
     on<ReorderTemplateElementsEvent>(_onReorderTemplateElements);
     on<SaveServiceDraftEvent>(_onSaveServiceDraft);
+    on<SaveCompleteServiceEvent>(_onSaveCompleteService);
     on<UpdateTimingRulesEvent>(_onUpdateTimingRules);
     on<PublishServiceVersionEvent>(_onPublishServiceVersion);
     on<DeleteServiceEvent>(_onDeleteService);
@@ -707,6 +708,48 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
           errorMessage: 'Failed to save draft: $e',
         ));
       }
+    }
+  }
+
+  Future<void> _onSaveCompleteService(
+    SaveCompleteServiceEvent event,
+    Emitter<ServiceBuilderState> emit,
+  ) async {
+    final currentState = state is ServiceEditingState
+        ? (state as ServiceEditingState)
+        : ServiceEditingState(serviceDraft: event.service);
+
+    emit(currentState.copyWith(
+      isSaving: true,
+      errorMessage: null,
+      successMessage: null,
+    ));
+
+    try {
+      ServiceModel targetService = event.service;
+      if (event.publish) {
+        targetService = targetService.copyWith(
+          isActive: true,
+          currentVersion: targetService.currentVersion + 1,
+          updatedAt: DateTime.now(),
+        );
+      }
+
+      final saved = await repository.saveServiceDraft(targetService);
+
+      emit(ServiceEditingState(
+        serviceDraft: saved,
+        isSaving: false,
+        successMessage: event.publish
+            ? 'Service published successfully (V${saved.currentVersion})!'
+            : 'Changes saved successfully!',
+      ));
+    } catch (e) {
+      debugPrint('[ServiceBuilderBloc] Save service error: $e');
+      emit(currentState.copyWith(
+        isSaving: false,
+        errorMessage: 'Failed to save changes: $e',
+      ));
     }
   }
 
