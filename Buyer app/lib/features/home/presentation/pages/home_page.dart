@@ -1164,44 +1164,51 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF38BDF8),
-                          borderRadius: BorderRadius.circular(2),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF38BDF8),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Growth Services Catalog',
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Growth Services Catalog',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.2,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Text(
+                        'Choose marketing category to deploy instantly',
                         style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
+                          color: const Color(0xFF64748B),
+                          fontSize: 11,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 12),
-                    child: Text(
-                      'Choose marketing category to deploy instantly',
-                      style: GoogleFonts.outfit(
-                        color: const Color(0xFF64748B),
-                        fontSize: 11,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               GestureDetector(
                 onTap: () => Navigator.pushNamed(context, AppRouter.services),
                 child: Container(
@@ -1455,7 +1462,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Row: 3D Platform Icon + Tag & Price
+                // Top Row: 3D Platform Icon + Tag & Price & Title
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1463,56 +1470,64 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     _buildService3DIcon(s['iconType'], gradient),
                     const SizedBox(width: 14),
 
-                    // Title & Category
+                    // Title & Category & Price
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: tagColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: tagColor.withValues(alpha: 0.4), width: 0.8),
-                            ),
-                            child: Text(
-                              s['tag'],
-                              style: GoogleFonts.outfit(
-                                color: tagColor,
-                                fontSize: 8.5,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.4,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: tagColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: tagColor.withValues(alpha: 0.4), width: 0.8),
+                                  ),
+                                  child: Text(
+                                    s['tag'],
+                                    style: GoogleFonts.outfit(
+                                      color: tagColor,
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.4,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  s['price'],
+                                  style: GoogleFonts.outfit(
+                                    color: const Color(0xFF34D399),
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 10.5,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 5),
+                          const SizedBox(height: 6),
                           Text(
                             s['title'],
                             style: GoogleFonts.outfit(
                               color: Colors.white,
-                              fontSize: 14.5,
+                              fontSize: 15,
                               fontWeight: FontWeight.w800,
                               height: 1.25,
                             ),
                           ),
                         ],
-                      ),
-                    ),
-
-                    // Price Tag Capsule
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        s['price'],
-                        style: GoogleFonts.outfit(
-                          color: const Color(0xFF34D399),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 10.5,
-                        ),
                       ),
                     ),
                   ],
@@ -1547,12 +1562,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         children: [
                           Icon(Icons.check_circle_rounded, color: glowColor, size: 11),
                           const SizedBox(width: 5),
-                          Text(
-                            feat,
-                            style: GoogleFonts.outfit(
-                              color: Colors.white.withValues(alpha: 0.85),
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w500,
+                          Flexible(
+                            child: Text(
+                              feat,
+                              style: GoogleFonts.outfit(
+                                color: Colors.white.withValues(alpha: 0.85),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],

@@ -125,27 +125,36 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                 ),
               ),
               if (widget.appName != null && widget.appName!.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width - 64,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.star_rounded, size: 12, color: Color(0xFFB45309)),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Target: ${widget.appName}',
-                        style: const TextStyle(
-                          color: Color(0xFFB45309),
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, size: 12, color: Color(0xFFB45309)),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Target: ${widget.appName}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFFB45309),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
             ],
@@ -169,14 +178,16 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                   color: widget.isAppReview ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  widget.isAppReview
-                      ? 'App Name:'
-                      : 'Video Title / Topic (Detected or Enter Manually):',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E293B),
+                Expanded(
+                  child: Text(
+                    widget.isAppReview
+                        ? 'App Name:'
+                        : 'Video Title / Topic (Detected or Enter Manually):',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E293B),
+                    ),
                   ),
                 ),
               ],
@@ -220,14 +231,16 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                 color: widget.isAppReview ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
               ),
               const SizedBox(width: 6),
-              Text(
-                widget.isAppReview
-                    ? 'Review Focus / Custom Prompt (Optional):'
-                    : 'AI Prompt / Comment Instructions (Optional):',
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F172A),
+              Expanded(
+                child: Text(
+                  widget.isAppReview
+                      ? 'Review Focus / Custom Prompt (Optional):'
+                      : 'AI Prompt / Comment Instructions (Optional):',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
                 ),
               ),
             ],
@@ -435,18 +448,22 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        widget.isAppReview
-                            ? 'Sample 5-Star Reviews (${displayedComments.length} of ${widget.selectedQuantity})'
-                            : (widget.selectedQuantity < 5
-                                ? 'Generated Comments (${displayedComments.length} of ${widget.selectedQuantity})'
-                                : 'Sample Preview (${displayedComments.length} of ${widget.selectedQuantity} Comments)'),
-                        style: const TextStyle(
-                          color: Color(0xFF166534),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                      Expanded(
+                        child: Text(
+                          widget.isAppReview
+                              ? 'Sample 5-Star Reviews (${displayedComments.length} of ${widget.selectedQuantity})'
+                              : (widget.selectedQuantity < 5
+                                  ? 'Generated Comments (${displayedComments.length} of ${widget.selectedQuantity})'
+                                  : 'Sample Preview (${displayedComments.length} of ${widget.selectedQuantity} Comments)'),
+                          style: const TextStyle(
+                            color: Color(0xFF166534),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 8),
                       const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 16),
                     ],
                   ),
