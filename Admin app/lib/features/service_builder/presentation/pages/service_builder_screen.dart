@@ -6,6 +6,8 @@ import '../bloc/service_builder_state.dart';
 import '../widgets/buyer_worker_preview_modal.dart';
 import '../widgets/voice_guide_studio_card.dart';
 import '../../domain/models/service_model.dart';
+import '../../domain/models/pricing_config.dart';
+import '../../domain/models/element_type.dart';
 
 class ServiceBuilderScreen extends StatefulWidget {
   final String? serviceId;
@@ -277,13 +279,13 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
 
     // Update proof requirements in elements
     final updatedElements = currentBaseService.elements.map((el) {
-      if (el.id == 'el_screenshot' || el.type == ElementType.fileUpload) {
+      if (el.id == 'el_screenshot' || el.type == ElementType.systemProof) {
         return el.copyWith(
           isRequired: _requiresScreenshot,
           properties: {...el.properties, 'requireScreenshot': _requiresScreenshot},
         );
       }
-      if (el.id == 'el_text_proof' || el.type == ElementType.textInput) {
+      if (el.id == 'el_text_proof') {
         return el.copyWith(
           isRequired: _requiresTextProof,
           properties: {...el.properties, 'requireTextProof': _requiresTextProof},
