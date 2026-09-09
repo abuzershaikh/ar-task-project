@@ -192,7 +192,8 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     _audioUrlController.text = service.audioGuideUrl ?? '';
 
     _watchtimeSeconds = service.watchtimeSeconds;
-    _reviewMode = service.reviewMode;
+    final rMode = service.reviewMode.toLowerCase().trim();
+    _reviewMode = ['buyer', 'admin', 'auto'].contains(rMode) ? rMode : 'buyer';
     _requiresScreenshot = service.requiresProofScreenshot;
     _requiresTextProof = service.requiresProofText;
 
@@ -1575,7 +1576,9 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
-                  value: _reviewMode,
+                  value: ['buyer', 'admin', 'auto'].contains(_reviewMode.toLowerCase())
+                      ? _reviewMode.toLowerCase()
+                      : 'buyer',
                   dropdownColor: surfaceWhite,
                   style: const TextStyle(
                       color: textPrimary,
