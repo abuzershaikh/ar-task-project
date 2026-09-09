@@ -650,7 +650,15 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final t = widget.task;
     if (t == null) return 'Task Details';
     final appName = _getAppName();
+    final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? '').toString().toUpperCase();
+    final isInstall = type.contains('INSTALL') ||
+        (t['requirements'] is Map &&
+            t['requirements']['serviceName']?.toString().toLowerCase().contains('install') == true);
+
     if (appName.isNotEmpty) {
+      if (isInstall) {
+        return 'Install & Open: $appName 📱';
+      }
       return 'Rate & Review: $appName ⭐⭐⭐⭐⭐';
     }
     if (t['title'] != null && t['title'].toString().trim().isNotEmpty) {
@@ -3135,60 +3143,20 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const Row(
             children: [
-              const Row(
-                children: [
-                  Icon(
-                    Icons.assignment_turned_in_rounded,
-                    color: Color(0xFF059669),
-                    size: 20,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Task Instructions',
-                    style: TextStyle(
-                      color: Color(0xFF0F172A),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
+              Icon(
+                Icons.assignment_turned_in_rounded,
+                color: Color(0xFF059669),
+                size: 20,
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: hasCustomAdminInstructions
-                      ? const Color(0xFFEFF6FF)
-                      : const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: hasCustomAdminInstructions
-                        ? const Color(0xFFBFDBFE)
-                        : const Color(0xFFA7F3D0),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      hasCustomAdminInstructions ? '🎯' : '📋',
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      hasCustomAdminInstructions
-                          ? 'Admin Verified Guide'
-                          : 'Checklist',
-                      style: TextStyle(
-                        color: hasCustomAdminInstructions
-                            ? const Color(0xFF1D4ED8)
-                            : const Color(0xFF059669),
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+              SizedBox(width: 8),
+              Text(
+                'Task Instructions',
+                style: TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],

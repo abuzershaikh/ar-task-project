@@ -126,20 +126,16 @@ export class OrderActivatedListener {
             let appIcon = order?.requirements?.appIcon || '';
             let packageId = order?.requirements?.packageId || '';
 
-            // Auto-extract Google Play Store app icon & name if missing or if wrongly assigned instagram
-            if (isPlayStore && (appIcon.includes('instagram') || appIcon.includes('/icons/'))) {
-                appIcon = '';
-            }
-
-            if ((!appIcon || appIcon.includes('instagram')) && targetUrl && (isPlayStore || targetUrl.includes('play.google.com') || targetUrl.includes('id='))) {
+            // Auto-extract Google Play Store app icon & name for the specific targetUrl
+            if (targetUrl && (isPlayStore || targetUrl.includes('play.google.com') || targetUrl.includes('id='))) {
                 const pkg = this.playStoreScraper.extractPackageId(targetUrl);
                 if (pkg) {
                     try {
                         const appInfo = await this.playStoreScraper.getAppMetadata(targetUrl);
                         if (appInfo && appInfo.success) {
                             if (appInfo.appIcon) appIcon = appInfo.appIcon;
-                            if (appInfo.appName && !appName) appName = appInfo.appName;
-                            if (appInfo.packageId && !packageId) packageId = appInfo.packageId;
+                            if (appInfo.appName) appName = appInfo.appName;
+                            packageId = appInfo.packageId || pkg;
                         }
                     } catch (err: any) {
                         this.logger.warn(`Could not scrape Play Store metadata for order ${payload.orderId}: ${err?.message}`);

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'api_service.dart';
 import '../../features/task_detail/screens/task_detail_premium_screen.dart';
-import '../../features/navigation/screens/main_nav_screen.dart';
 import '../../features/wallet/screens/wallet_screen.dart';
 
 /// Global Navigation Service enabling deep-linking from push notifications,
@@ -18,7 +17,7 @@ class NavigationService {
   }) async {
     NavigatorState? nav = navigatorKey.currentState;
     int attempts = 0;
-    while (nav == null && attempts < 12) {
+    while (nav == null && attempts < 30) {
       debugPrint('⏳ [NAV SERVICE] Waiting for navigator key (attempt $attempts)...');
       await Future.delayed(const Duration(milliseconds: 300));
       nav = navigatorKey.currentState;
@@ -47,23 +46,30 @@ class NavigationService {
     final title = (initialData?['title'] ?? '').toString().toLowerCase();
     final body = (initialData?['body'] ?? initialData?['message'] ?? '').toString().toLowerCase();
 
-    final isInstagram = serviceCode.contains('instagram') ||
-        serviceCode.contains('insta') ||
-        title.contains('instagram') ||
-        body.contains('instagram');
-
+    // 1. App Install & Play Store MUST take priority over raw string contains
     final isAppInstall = serviceCode.contains('install') ||
-        serviceCode.contains('app') ||
+        serviceCode.contains('app_install') ||
+        serviceCode.contains('playstore') ||
+        serviceCode.contains('play.google') ||
+        serviceCode.contains('google_play') ||
         title.contains('install') ||
         title.contains('app install') ||
+        title.contains('play store') ||
         body.contains('install');
 
-    debugPrint('🚀 [NAV SERVICE] Opening task details: id=$id, orderId=$orderId, isInstagram=$isInstagram, isAppInstall=$isAppInstall');
+    final isInstagram = !isAppInstall && (
+        serviceCode.contains('instagram') ||
+        (serviceCode.contains('insta') && !serviceCode.contains('install')) ||
+        title.contains('instagram') ||
+        body.contains('instagram')
+    );
 
-    // 1. Direct fetch by taskId from API
+    debugPrint('🚀 [NAV SERVICE] Opening task details: id=$id, orderId=$orderId, isAppInstall=$isAppInstall, isInstagram=$isInstagram');
+
+    // 1. Direct fetch by taskId from API (Fast 3.5s timeout)
     if (id != null && id.isNotEmpty) {
       try {
-        final task = await ApiService.getTaskDetails(id);
+        final task = await ApiService.getTaskDetails(id).timeout(const Duration(milliseconds: 3500));
         if (task != null) {
           debugPrint('✅ [NAV SERVICE] Direct task fetch succeeded for: $id');
           nav.push(
@@ -78,10 +84,10 @@ class NavigationService {
       }
     }
 
-    // 2. If orderId differs from id, try direct fetch by orderId
+    // 2. If orderId differs from id, try direct fetch by orderId (Fast 2.5s timeout)
     if (orderId != null && orderId.isNotEmpty && orderId != id) {
       try {
-        final task = await ApiService.getTaskDetails(orderId);
+        final task = await ApiService.getTaskDetails(orderId).timeout(const Duration(milliseconds: 2500));
         if (task != null) {
           debugPrint('✅ [NAV SERVICE] Direct fetch by orderId succeeded: $orderId');
           nav.push(
@@ -96,15 +102,16 @@ class NavigationService {
       }
     }
 
-    // 3. Search available tasks — match by taskId OR orderId OR category
+    // 3. Fast Parallel Search in available & assigned tasks (3s max)
     try {
-      final available = await ApiService.getAvailableTasks();
-      var match = _findMatchingTask(available, id, orderId);
-      if (match == null && (isInstagram || isAppInstall)) {
-        match = _findCategoryMatchingTask(available, isInstagram: isInstagram, isAppInstall: isAppInstall);
-      }
+      final results = await Future.wait([
+        ApiService.getAvailableTasks().timeout(const Duration(seconds: 3), onTimeout: () => []),
+        ApiService.getMyTasks('assigned').timeout(const Duration(seconds: 3), onTimeout: () => []),
+      ]);
+      final combinedTasks = [...results[0], ...results[1]];
+      final match = _findMatchingTask(combinedTasks, id, orderId);
       if (match != null) {
-        debugPrint('✅ [NAV SERVICE] Found matching available task');
+        debugPrint('✅ [NAV SERVICE] Found matching task in feed lists');
         nav.push(
           MaterialPageRoute(
             builder: (_) => TaskDetailPremiumScreen(task: match),
@@ -113,31 +120,11 @@ class NavigationService {
         return;
       }
     } catch (e) {
-      debugPrint('⚠️ [NAV SERVICE] Error checking available tasks: $e');
+      debugPrint('⚠️ [NAV SERVICE] Error searching feed tasks: $e');
     }
 
-    // 4. Search assigned/accepted tasks — match by taskId OR orderId OR category
-    try {
-      final assigned = await ApiService.getMyTasks('assigned');
-      var match = _findMatchingTask(assigned, id, orderId);
-      if (match == null && (isInstagram || isAppInstall)) {
-        match = _findCategoryMatchingTask(assigned, isInstagram: isInstagram, isAppInstall: isAppInstall);
-      }
-      if (match != null) {
-        debugPrint('✅ [NAV SERVICE] Found matching assigned task');
-        nav.push(
-          MaterialPageRoute(
-            builder: (_) => TaskDetailPremiumScreen(task: match),
-          ),
-        );
-        return;
-      }
-    } catch (e) {
-      debugPrint('⚠️ [NAV SERVICE] Error checking assigned tasks: $e');
-    }
-
-    // 5. Guaranteed Action: Build synthetic task from notification payload and open details
-    debugPrint('✨ [NAV SERVICE] Opening TaskDetailPremiumScreen with task payload');
+    // 4. Guaranteed Instant Fallback: Build synthetic task from notification payload and open details
+    debugPrint('✨ [NAV SERVICE] Opening TaskDetailPremiumScreen with guaranteed synthetic task payload');
     final syntheticTask = _buildSyntheticTask(
       id: id ?? (orderId ?? 'task_${DateTime.now().millisecondsSinceEpoch}'),
       orderId: orderId ?? id,
@@ -184,10 +171,10 @@ class NavigationService {
         final plat = (t['platform'] ?? '').toString().toLowerCase();
         final title = (t['title'] ?? '').toString().toLowerCase();
         final combined = '$code $plat $title';
-        if (isInstagram && (combined.contains('instagram') || combined.contains('insta'))) {
+        if (isAppInstall && (combined.contains('install') || combined.contains('app') || combined.contains('play'))) {
           return Map<String, dynamic>.from(t);
         }
-        if (isAppInstall && (combined.contains('install') || combined.contains('app') || combined.contains('play'))) {
+        if (isInstagram && (combined.contains('instagram') || (combined.contains('insta') && !combined.contains('install')))) {
           return Map<String, dynamic>.from(t);
         }
       }

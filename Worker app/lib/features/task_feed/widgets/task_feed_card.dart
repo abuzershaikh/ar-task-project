@@ -18,6 +18,30 @@ class TaskFeedCard extends StatelessWidget {
 
   String _formatTitle(dynamic task) {
     if (task == null) return 'Task';
+
+    final isInstall = _isAppInstall(task);
+
+    // 1. Extract app name if available
+    String? appName;
+    if (task['appName'] != null && task['appName'].toString().trim().isNotEmpty) {
+      appName = task['appName'].toString().trim();
+    } else if (task['requirements'] is Map &&
+        task['requirements']['appName'] != null &&
+        task['requirements']['appName'].toString().trim().isNotEmpty) {
+      appName = task['requirements']['appName'].toString().trim();
+    } else if (task['metadata'] is Map &&
+        task['metadata']['appName'] != null &&
+        task['metadata']['appName'].toString().trim().isNotEmpty) {
+      appName = task['metadata']['appName'].toString().trim();
+    }
+
+    if (appName != null && appName.isNotEmpty) {
+      if (isInstall) {
+        return 'Install & Open: $appName';
+      }
+      return 'Rate & Review: $appName';
+    }
+
     if (task['title'] != null && task['title'].toString().trim().isNotEmpty) {
       return task['title'].toString().trim();
     }
@@ -26,9 +50,6 @@ class TaskFeedCard extends StatelessWidget {
     }
     if (task['requirements'] != null && task['requirements'] is Map) {
       final req = task['requirements'] as Map;
-      if (req['appName'] != null && req['appName'].toString().trim().isNotEmpty) {
-        return 'Rate & Review: ${req['appName']}';
-      }
       if (req['serviceName'] != null && req['serviceName'].toString().trim().isNotEmpty) {
         return req['serviceName'].toString().trim();
       }
@@ -48,9 +69,6 @@ class TaskFeedCard extends StatelessWidget {
     }
     if (task['metadata'] != null && task['metadata'] is Map) {
       final meta = task['metadata'] as Map;
-      if (meta['appName'] != null && meta['appName'].toString().trim().isNotEmpty) {
-        return 'Rate & Review: ${meta['appName']}';
-      }
       if (meta['serviceName'] != null && meta['serviceName'].toString().trim().isNotEmpty) {
         return meta['serviceName'].toString().trim();
       }
@@ -63,7 +81,8 @@ class TaskFeedCard extends StatelessWidget {
     }
     final rawType = (task['taskType'] ?? task['type'] ?? 'Task').toString();
     final plat = _getPlatform(task);
-    if (plat == 'google') return 'Write a review on Google';
+    if (isInstall) return 'Install & Open App';
+    if (plat == 'google' || plat == 'playstore') return '5-Star Rating & Review';
     if (plat == 'youtube') {
       final rtLower = rawType.toLowerCase();
       if (rtLower.contains('combo')) return 'Like, Sub & Comment on YouTube';
@@ -91,7 +110,22 @@ class TaskFeedCard extends StatelessWidget {
         .join(' ');
   }
 
+  bool _isAppInstall(dynamic task) {
+    if (task == null) return false;
+    final type = (task['taskType'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toLowerCase();
+    String reqStr = '';
+    if (task['requirements'] is Map) {
+      reqStr = task['requirements'].toString().toLowerCase();
+    }
+    final titleStr = (task['title'] ?? task['serviceTitle'] ?? task['serviceName'] ?? '').toString().toLowerCase();
+    final combined = '$type $reqStr $titleStr';
+    return type.contains('install') || combined.contains('install & open') || combined.contains('app install');
+  }
+
   String _getSubtitle(dynamic task, String platform) {
+    if (_isAppInstall(task)) {
+      return 'Install App & Open for 30 Seconds';
+    }
     if (task != null && task['requirements'] is Map && (task['requirements']['appName'] != null && task['requirements']['appName'].toString().trim().isNotEmpty)) {
       return '5-Star Google Play Store Review';
     }

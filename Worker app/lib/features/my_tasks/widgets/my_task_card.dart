@@ -22,11 +22,15 @@ class MyTaskCard extends StatelessWidget {
         task['serviceTitle'].toString().trim().isNotEmpty) {
       return task['serviceTitle'].toString().trim();
     }
+    final type = (task['taskType'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toLowerCase();
+    final isInstall = type.contains('install');
+
     if (task['requirements'] != null && task['requirements'] is Map) {
       final req = task['requirements'] as Map;
       if (req['appName'] != null &&
           req['appName'].toString().trim().isNotEmpty) {
-        return 'Rate & Review: ${req['appName']}';
+        final name = req['appName'].toString().trim();
+        return isInstall ? 'Install & Open: $name' : 'Rate & Review: $name';
       }
       if (req['serviceName'] != null &&
           req['serviceName'].toString().trim().isNotEmpty) {

@@ -236,9 +236,9 @@ export class BuyerOrderController {
             try {
                 const appInfo = await this.playStoreScraper.getAppMetadata(targetUrl);
                 if (appInfo && appInfo.success) {
-                    if (!reqs.appIcon && appInfo.appIcon) reqs.appIcon = appInfo.appIcon;
-                    if (!reqs.appName && appInfo.appName) reqs.appName = appInfo.appName;
-                    if (!reqs.packageId && appInfo.packageId) reqs.packageId = appInfo.packageId;
+                    if (appInfo.appIcon) reqs.appIcon = appInfo.appIcon;
+                    if (appInfo.appName) reqs.appName = appInfo.appName;
+                    reqs.packageId = appInfo.packageId || playPackageId;
                 }
             } catch (err: any) {
                 this.logger.warn(`Failed to auto-fetch Play Store metadata for ${targetUrl}: ${err?.message || err}`);

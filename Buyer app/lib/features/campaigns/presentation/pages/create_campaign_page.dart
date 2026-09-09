@@ -139,6 +139,10 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     if (isPlayStore) {
       if (_appFetchError != null) setState(() => _appFetchError = null);
       if (trimmed.length >= 5 && (trimmed.contains('.') || trimmed.contains('/'))) {
+        setState(() {
+          _appIcon = null;
+          _packageId = null;
+        });
         _urlDebounceTimer = Timer(const Duration(milliseconds: 700), () {
           _fetchPlayStoreAppInfo(trimmed);
         });
@@ -236,9 +240,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           if (rawName != null && rawName.isNotEmpty) {
             final cleanName = rawName.split(RegExp(r'[:\-|–—•(]'))[0].trim();
             _appName = cleanName;
-            if (_appNameController.text.trim().isEmpty) {
-              _appNameController.text = cleanName;
-            }
+            _appNameController.text = cleanName;
           }
           _appFetchError = null;
           // Reset sample comments so user generates explicitly via the "Generate" button
@@ -627,6 +629,15 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 Navigator.of(ctx).pop();
                 setState(() {
                   _selectedService = null;
+                  _targetUrlController.clear();
+                  _appNameController.clear();
+                  _topicController.clear();
+                  _appIcon = null;
+                  _appName = null;
+                  _packageId = null;
+                  _sampleComments = [];
+                  _ytTitle = null;
+                  _ytThumbnail = null;
                 });
               },
               child: const Text('Create Another'),
