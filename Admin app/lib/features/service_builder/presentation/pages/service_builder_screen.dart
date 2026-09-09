@@ -118,6 +118,13 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     _audioUrlController = TextEditingController();
     _minRetentionHoursController = TextEditingController(text: '24');
 
+    _codeController.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _nameController.addListener(() {
+      if (mounted) setState(() {});
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
@@ -215,6 +222,50 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     setState(() {});
   }
 
+  bool _isYouTube(String code, String name, String cat) {
+    return code.contains('YOUTUBE') || name.contains('YOUTUBE') || cat.contains('YOUTUBE');
+  }
+
+  bool _isInstagram(String code, String name, String cat) {
+    if (code.contains('INSTAGRAM') || name.contains('INSTAGRAM') || cat.contains('INSTAGRAM') || cat.contains('SOCIAL')) {
+      return true;
+    }
+    if (code.startsWith('INSTA_') || code.endsWith('_INSTA') || code.contains('_INSTA_')) {
+      return true;
+    }
+    if (RegExp(r'\bINSTA\b').hasMatch(name)) {
+      return true;
+    }
+    return false;
+  }
+
+  bool get _isAppInstallService {
+    final code = _codeController.text.toUpperCase();
+    final name = _nameController.text.toUpperCase();
+    final cat = (_currentService?.category ?? '').toUpperCase();
+    final sType = (_currentService?.serviceType ?? '').toUpperCase();
+
+    // YouTube and Instagram services should never show app install retention field
+    if (_isYouTube(code, name, cat) || _isInstagram(code, name, cat)) {
+      return false;
+    }
+
+    // App Install / Play Store services
+    return code.contains('INSTALL') ||
+        code.contains('PLAYSTORE') ||
+        code.contains('PLAY_STORE') ||
+        code.contains('APP_') ||
+        code.startsWith('APP') ||
+        name.contains('INSTALL') ||
+        name.contains('PLAYSTORE') ||
+        name.contains('PLAY STORE') ||
+        name.contains('DOWNLOAD') ||
+        cat.contains('INSTALL') ||
+        cat.contains('PLAY') ||
+        cat.contains('APP') ||
+        sType.contains('INSTALL');
+  }
+
   double _getCalculatedWorkerReward() {
     final buyerPrice = double.tryParse(_buyerPriceController.text) ?? 0.0;
     final margin = double.tryParse(_marginController.text) ?? 0.0;
@@ -248,7 +299,9 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     final maxAcc = int.tryParse(_maxAcceptHoursController.text.trim()) ?? 72;
     final minComp = int.tryParse(_minCompleteHoursController.text.trim()) ?? 1;
     final maxComp = int.tryParse(_maxCompleteHoursController.text.trim()) ?? 168;
-    final retentionHours = int.tryParse(_minRetentionHoursController.text.trim()) ?? 24;
+    final retentionHours = _isAppInstallService
+        ? (int.tryParse(_minRetentionHoursController.text.trim()) ?? 24)
+        : 0;
 
     final pricing = PricingConfig.calculate(
       buyerPrice: buyerPrice,
@@ -297,7 +350,13 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     final completeService = currentBaseService.copyWith(
       name: serviceName,
       description: _descController.text.trim(),
-      category: _codeController.text.startsWith('YOUTUBE') ? 'YouTube' : 'General',
+      category: currentBaseService.category.isNotEmpty && currentBaseService.category != 'General'
+          ? currentBaseService.category
+          : (_codeController.text.toUpperCase().contains('YOUTUBE')
+              ? 'YouTube'
+              : (_codeController.text.toUpperCase().contains('INSTA')
+                  ? 'Instagram'
+                  : (_isAppInstallService ? 'Play Store' : 'General'))),
       pricing: pricing,
       elements: updatedElements,
       reviewMode: _reviewMode.toUpperCase(),
@@ -307,7 +366,13 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
       maxAcceptHours: maxAcc,
       minCompleteHours: minComp,
       maxCompleteHours: maxComp,
-      minDurationSeconds: retentionHours * 3600,
+      minDurationSeconds: _isAppInstallService
+          ? retentionHours * 3600
+          : (_watchtimeSeconds > 0
+              ? _watchtimeSeconds
+              : (currentBaseService.minDurationSeconds > 0
+                  ? currentBaseService.minDurationSeconds
+                  : 0)),
       linkFieldLabel: _isLinkFieldEnabled ? _linkFieldLabelController.text.trim() : null,
       linkFieldPlaceholder: _isLinkFieldEnabled ? _linkFieldPlaceholderController.text.trim() : null,
       textFieldLabel: _isTextFieldEnabled ? _textFieldLabelController.text.trim() : null,
@@ -1714,14 +1779,16 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                _buildTextField(
-                  controller: _minRetentionHoursController,
-                  label: 'App Install Min Retention (Hours)',
-                  hint: '24 (Worker must keep app installed for this duration)',
-                  icon: Icons.install_mobile_rounded,
-                  keyboardType: TextInputType.number,
-                ),
+                if (_isAppInstallService) ...[
+                  const SizedBox(height: 14),
+                  _buildTextField(
+                    controller: _minRetentionHoursController,
+                    label: 'App Install Min Retention (Hours)',
+                    hint: '24 (Worker must keep app installed for this duration)',
+                    icon: Icons.install_mobile_rounded,
+                    keyboardType: TextInputType.number,
+                  ),
+                ],
               ],
             ),
           ),
