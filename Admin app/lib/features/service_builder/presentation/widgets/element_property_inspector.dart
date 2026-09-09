@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../domain/models/template_element.dart';
 import '../../domain/models/visibility_context.dart';
@@ -6,6 +5,7 @@ import '../../domain/models/editability_mode.dart';
 import '../../domain/models/action_type.dart';
 import '../../domain/models/element_category.dart';
 import '../../domain/models/element_type.dart';
+import 'voice_guide_studio_card.dart';
 
 class ElementPropertyInspector extends StatefulWidget {
   final TemplateElement element;
@@ -45,16 +45,6 @@ class _ElementPropertyInspectorState extends State<ElementPropertyInspector> {
   // Proof switches
   bool _requireScreenshot = true;
   bool _requireTextProof = false;
-
-  // Voice recording simulation & preview state
-  bool _isRecording = false;
-  int _recordSeconds = 0;
-  Timer? _recordTimer;
-  bool _isPlayingAudio = false;
-  double _audioProgress = 0.0;
-  Timer? _audioPlaybackTimer;
-  int _audioElapsedSeconds = 0;
-  final int _audioTotalSeconds = 45;
 
   @override
   void initState() {
@@ -102,8 +92,6 @@ class _ElementPropertyInspectorState extends State<ElementPropertyInspector> {
     _imageUrlController.dispose();
     _timerSecondsController.dispose();
     _proofInstructionsController.dispose();
-    _recordTimer?.cancel();
-    _audioPlaybackTimer?.cancel();
     super.dispose();
   }
 
@@ -131,66 +119,6 @@ class _ElementPropertyInspectorState extends State<ElementPropertyInspector> {
     return match?.group(1);
   }
 
-  void _startVoiceRecording() {
-    setState(() {
-      _isRecording = true;
-      _recordSeconds = 0;
-    });
-    _recordTimer?.cancel();
-    _recordTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() => _recordSeconds++);
-        if (_recordSeconds >= 120) {
-          _stopVoiceRecording();
-        }
-      }
-    });
-  }
-
-  void _stopVoiceRecording() {
-    _recordTimer?.cancel();
-    final generatedUrl = 'https://earnpost-media-worker.aawuazer.workers.dev/audio/voice_guide_${DateTime.now().millisecondsSinceEpoch}.m4a';
-    setState(() {
-      _isRecording = false;
-      _audioUrlController.text = generatedUrl;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Voice Guide Recorded (${_recordSeconds}s) & Ready!'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
-
-  void _toggleAudioPlayback() {
-    if (_isPlayingAudio) {
-      _audioPlaybackTimer?.cancel();
-      setState(() => _isPlayingAudio = false);
-    } else {
-      setState(() => _isPlayingAudio = true);
-      _audioPlaybackTimer?.cancel();
-      _audioPlaybackTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-        if (!mounted) {
-          t.cancel();
-          return;
-        }
-        if (_audioElapsedSeconds < _audioTotalSeconds) {
-          setState(() {
-            _audioElapsedSeconds++;
-            _audioProgress = _audioElapsedSeconds / _audioTotalSeconds;
-          });
-        } else {
-          t.cancel();
-          setState(() {
-            _isPlayingAudio = false;
-            _audioElapsedSeconds = 0;
-            _audioProgress = 0.0;
-          });
-        }
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final type = widget.element.type;
@@ -203,7 +131,6 @@ class _ElementPropertyInspectorState extends State<ElementPropertyInspector> {
     final isNumberField = type == ElementType.numberField;
     final isDropdown = type == ElementType.dropdownField;
     final isActionButton = type == ElementType.actionButton;
-    final isImage = type == ElementType.imageBanner;
     final isSystemProof = type == ElementType.systemProof;
     final isSystemTimer = type == ElementType.systemTimer;
     final ytId = isYouTube ? _extractYouTubeId(_videoUrlController.text) : null;
@@ -537,163 +464,9 @@ class _ElementPropertyInspectorState extends State<ElementPropertyInspector> {
             // AUDIO VOICE GUIDE & RECORDER
             // ══════════════════════════════════════════════════════════
             if (isAudio) ...[
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.indigoAccent.withOpacity(0.4)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.record_voice_over_rounded, color: Colors.indigoAccent, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Voice Audio Guide Studio (Worker Guidance)',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _audioUrlController,
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                      onChanged: (_) => setState(() {}),
-                      decoration: InputDecoration(
-                        labelText: 'Cloudflare R2 / Server Audio URL',
-                        labelStyle: const TextStyle(color: Colors.indigoAccent, fontSize: 11),
-                        hintText: 'https://media.earnpost.workers.dev/audio/...',
-                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 11),
-                        filled: true,
-                        fillColor: const Color(0xFF1E293B),
-                        prefixIcon: const Icon(Icons.audiotrack_rounded, color: Colors.indigoAccent, size: 18),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Voice Recorder Studio Section
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF312E81), Color(0xFF1E1B4B)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  if (_isRecording)
-                                    Container(
-                                      width: 10,
-                                      height: 10,
-                                      margin: const EdgeInsets.only(right: 6),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.redAccent,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  Text(
-                                    _isRecording
-                                        ? 'RECORDING VOICE (${_recordSeconds}s)...'
-                                        : (_audioUrlController.text.isNotEmpty
-                                            ? 'VOICE GUIDE ATTACHED'
-                                            : 'VOICE RECORDER STUDIO'),
-                                    style: TextStyle(
-                                      color: _isRecording ? Colors.redAccent : Colors.cyanAccent,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (!_isRecording)
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.redAccent,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  icon: const Icon(Icons.mic_rounded, size: 14),
-                                  label: const Text('Record Voice',
-                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                                  onPressed: _startVoiceRecording,
-                                )
-                              else
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.greenAccent,
-                                    foregroundColor: Colors.black,
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    minimumSize: Size.zero,
-                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  icon: const Icon(Icons.stop_rounded, size: 14),
-                                  label: const Text('Stop & Upload',
-                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                                  onPressed: _stopVoiceRecording,
-                                ),
-                            ],
-                          ),
-                          if (_audioUrlController.text.isNotEmpty && !_isRecording) ...[
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                GestureDetector(
-                                  onTap: _toggleAudioPlayback,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration:
-                                        const BoxDecoration(color: Colors.cyanAccent, shape: BoxShape.circle),
-                                    child: Icon(
-                                      _isPlayingAudio ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                      color: Colors.black,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      LinearProgressIndicator(
-                                        value: _audioProgress,
-                                        backgroundColor: Colors.white24,
-                                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.cyanAccent),
-                                        minHeight: 4,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Listen Preview (${(_audioElapsedSeconds ~/ 60).toString().padLeft(2, '0')}:${(_audioElapsedSeconds % 60).toString().padLeft(2, '0')})',
-                                        style: const TextStyle(color: Colors.white70, fontSize: 9),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              VoiceGuideStudioCard(
+                audioUrlController: _audioUrlController,
+                onChanged: () => setState(() {}),
               ),
               const SizedBox(height: 12),
             ],

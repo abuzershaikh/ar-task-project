@@ -127,6 +127,80 @@ class KycTab extends StatelessWidget {
               ),
             ),
           ),
+          
+          const SizedBox(height: 12),
+          
+          // Verification Checklist Card
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x080284C7),
+                  blurRadius: 8,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.fact_check_outlined, size: 18, color: Color(0xFF0284C7)),
+                      SizedBox(width: 8),
+                      Text(
+                        'Verification Breakdown',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(color: Color(0xFFE2E8F0), height: 1),
+                  const SizedBox(height: 12),
+                  _buildChecklistItem('Email Address Verification', worker.email.isNotEmpty, 'Registered & Confirmed'),
+                  _buildChecklistItem('Phone Contact Linkage', worker.phone.isNotEmpty, worker.phone.isNotEmpty ? 'Linked to Profile' : 'Pending Linkage'),
+                  _buildChecklistItem('Identity Document Review', isVerified, isVerified ? 'Verified & Validated' : 'Awaiting Review'),
+                  _buildChecklistItem('Payout Disbursement Clearance', isVerified && worker.status == 'ACTIVE', (isVerified && worker.status == 'ACTIVE') ? 'Cleared for Payouts' : 'Restricted'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChecklistItem(String title, bool isCompleted, String statusText) {
+    final color = isCompleted ? const Color(0xFF16A34A) : const Color(0xFFD97706);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(
+            isCompleted ? Icons.check_circle_rounded : Icons.pending_rounded,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF334155), fontWeight: FontWeight.w500),
+            ),
+          ),
+          Text(
+            statusText,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+          ),
         ],
       ),
     );

@@ -17,6 +17,16 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedFilter = 'All';
 
+  // Professional Blue Theme Colors
+  static const Color primaryBlue = Color(0xFF1E40AF); // Deep Royal Blue
+  static const Color accentBlue = Color(0xFF2563EB); // Vibrant Royal Blue
+  static const Color lightBlueBg = Color(0xFFEFF6FF); // Soft Blue Tint
+  static const Color surfaceWhite = Colors.white;
+  static const Color backgroundLight = Color(0xFFF8FAFC); // Clean Light Slate
+  static const Color textPrimary = Color(0xFF0F172A); // Dark Slate
+  static const Color textSecondary = Color(0xFF64748B); // Slate Muted
+  static const Color borderSubtle = Color(0xFFE2E8F0); // Subtle Border
+
   @override
   void initState() {
     super.initState();
@@ -38,235 +48,208 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) {
-          return Container(
-            padding: EdgeInsets.only(
-              left: 18,
-              right: 18,
-              top: 20,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+      builder: (ctx) => Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 16,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        decoration: const BoxDecoration(
+          color: surfaceWhite,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x1A000000),
+              blurRadius: 20,
+              offset: Offset(0, -4),
             ),
-            decoration: const BoxDecoration(
-              color: Color(0xFF1E293B),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-            ),
-            child: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+        child: SingleChildScrollView(
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Modal Drag Handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+
+                // Header Row
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.cyanAccent.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: lightBlueBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: const Icon(Icons.add_task_rounded, color: accentBlue, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Create New Service',
+                            style: TextStyle(
+                              color: textPrimary,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.3,
+                            ),
                           ),
-                          child: const Icon(Icons.add_task_rounded, color: Colors.cyanAccent, size: 20),
-                        ),
-                        const SizedBox(width: 10),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Create New Service',
-                                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                'Set title & description to launch Template Studio',
-                                style: TextStyle(color: Colors.white60, fontSize: 11),
-                              ),
-                            ],
+                          SizedBox(height: 2),
+                          Text(
+                            'Configure title & description to launch Service Studio',
+                            style: TextStyle(color: textSecondary, fontSize: 12),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
-                    const Divider(color: Colors.white12, height: 22),
-
-                    // Quick Template Starters
-                    const Text('Quick Template Starters:',
-                        style: TextStyle(color: Colors.cyanAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        ActionChip(
-                          backgroundColor: const Color(0xFF0F172A),
-                          side: const BorderSide(color: Color(0xFF00875A)),
-                          label: const Text('Play Store Review', style: TextStyle(fontSize: 10, color: Colors.white)),
-                          avatar: const Icon(Icons.star_rate_rounded, color: Color(0xFF00875A), size: 12),
-                          onPressed: () {
-                            setModalState(() {
-                              nameCtrl.text = 'Play Store 5-Star Rating & Review';
-                              descCtrl.text =
-                                  'Download app, give 5-Star Rating and post custom authentic review on Google Play Store.';
-                            });
-                          },
-                        ),
-                        ActionChip(
-                          backgroundColor: const Color(0xFF0F172A),
-                          side: const BorderSide(color: Colors.redAccent),
-                          label: const Text('YouTube Subscribe', style: TextStyle(fontSize: 10, color: Colors.white)),
-                          avatar: const Icon(Icons.play_circle_fill_rounded, color: Colors.redAccent, size: 12),
-                          onPressed: () {
-                            setModalState(() {
-                              nameCtrl.text = 'YouTube Video Watch & Subscribe';
-                              descCtrl.text =
-                                  'Watch video for 60s, subscribe to channel and upload screenshot proof.';
-                            });
-                          },
-                        ),
-                        ActionChip(
-                          backgroundColor: const Color(0xFF0F172A),
-                          side: const BorderSide(color: Colors.lightBlueAccent),
-                          label: const Text('Telegram Channel Join', style: TextStyle(fontSize: 10, color: Colors.white)),
-                          avatar: const Icon(Icons.send_rounded, color: Colors.lightBlueAccent, size: 12),
-                          onPressed: () {
-                            setModalState(() {
-                              nameCtrl.text = 'Telegram Channel Member Join';
-                              descCtrl.text = 'Join official telegram channel, stay member and submit screenshot.';
-                            });
-                          },
-                        ),
-                        ActionChip(
-                          backgroundColor: const Color(0xFF0F172A),
-                          side: const BorderSide(color: Colors.pinkAccent),
-                          label: const Text('Instagram Follow & Like', style: TextStyle(fontSize: 10, color: Colors.white)),
-                          avatar: const Icon(Icons.favorite_rounded, color: Colors.pinkAccent, size: 12),
-                          onPressed: () {
-                            setModalState(() {
-                              nameCtrl.text = 'Instagram Follow & Like Post';
-                              descCtrl.text = 'Follow profile, like recent post and submit proof screenshot.';
-                            });
-                          },
-                        ),
-                        ActionChip(
-                          backgroundColor: const Color(0xFF0F172A),
-                          side: const BorderSide(color: Color(0xFFEC4899)),
-                          label: const Text('Instagram Comments', style: TextStyle(fontSize: 10, color: Colors.white)),
-                          avatar: const Icon(Icons.mode_comment_rounded, color: Color(0xFFEC4899), size: 12),
-                          onPressed: () {
-                            setModalState(() {
-                              nameCtrl.text = 'Instagram Relevant Comments';
-                              descCtrl.text = 'Post relevant organic comments and submit screenshot.';
-                            });
-                          },
-                        ),
-                        ActionChip(
-                          backgroundColor: const Color(0xFF0F172A),
-                          side: const BorderSide(color: Color(0xFFF43F5E)),
-                          label: const Text('Instagram All-in-One Combo', style: TextStyle(fontSize: 10, color: Colors.white)),
-                          avatar: const Icon(Icons.stars_rounded, color: Color(0xFFF43F5E), size: 12),
-                          onPressed: () {
-                            setModalState(() {
-                              nameCtrl.text = 'Instagram All-in-One Growth Combo';
-                              descCtrl.text = 'Follow profile, like post/reel, write comment and submit proof.';
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Service Title
-                    const Text('Service Title / Name *',
-                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    TextFormField(
-                      controller: nameCtrl,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter a service title' : null,
-                      decoration: InputDecoration(
-                        hintText: 'e.g. YouTube Watch & Subscribe',
-                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                        filled: true,
-                        fillColor: const Color(0xFF0F172A),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-
-                    // Service Description
-                    const Text('Short Description (Shown to Buyers) *',
-                        style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    TextFormField(
-                      controller: descCtrl,
-                      maxLines: 2,
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter description' : null,
-                      decoration: InputDecoration(
-                        hintText: 'Brief summary of what workers will execute for the buyer...',
-                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 11),
-                        filled: true,
-                        fillColor: const Color(0xFF0F172A),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 44,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.cyanAccent,
-                          foregroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: const Icon(Icons.tune_rounded, size: 18),
-                        label: const Text('Initialize & Open Studio',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        onPressed: () {
-                          if (formKey.currentState!.validate()) {
-                            final draftCode = 'SVC_${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-                            Navigator.pop(ctx);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ServiceBuilderScreen(
-                                  draftCode: draftCode,
-                                  draftName: nameCtrl.text.trim(),
-                                  draftDescription: descCtrl.text.trim(),
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: textSecondary, size: 22),
+                      onPressed: () => Navigator.pop(ctx),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 20),
+                const Divider(color: borderSubtle, height: 1),
+                const SizedBox(height: 20),
+
+                // Service Title
+                const Text(
+                  'Service Title / Name *',
+                  style: TextStyle(color: textPrimary, fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: nameCtrl,
+                  style: const TextStyle(color: textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter a service title' : null,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. YouTube Watch & Subscribe',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                    filled: true,
+                    fillColor: backgroundLight,
+                    prefixIcon: const Icon(Icons.title_rounded, color: accentBlue, size: 18),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: borderSubtle),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: borderSubtle),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: accentBlue, width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Service Description
+                const Text(
+                  'Short Description (Shown to Buyers) *',
+                  style: TextStyle(color: textPrimary, fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: descCtrl,
+                  maxLines: 3,
+                  style: const TextStyle(color: textPrimary, fontSize: 13),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter a description' : null,
+                  decoration: InputDecoration(
+                    hintText: 'Brief summary of what workers will execute for the buyer...',
+                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                    filled: true,
+                    fillColor: backgroundLight,
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(bottom: 36),
+                      child: Icon(Icons.notes_rounded, color: accentBlue, size: 18),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: borderSubtle),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: borderSubtle),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: accentBlue, width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Submit Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentBlue,
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      shadowColor: accentBlue.withOpacity(0.4),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.tune_rounded, size: 18),
+                    label: const Text(
+                      'Initialize & Open Studio',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () {
+                      if (formKey.currentState!.validate()) {
+                        final draftCode = 'SVC_${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ServiceBuilderScreen(
+                              draftCode: draftCode,
+                              draftName: nameCtrl.text.trim(),
+                              draftDescription: descCtrl.text.trim(),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
   IconData _getServiceIcon(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('play') || lower.contains('review') || lower.contains('rating')) {
-      return Icons.star_rate_rounded;
+    if (lower.contains('playstore') || lower.contains('play store') || lower.contains('play_store')) {
+      return Icons.shop_two_rounded;
     }
     if (lower.contains('youtube') || lower.contains('video') || lower.contains('watch')) {
       return Icons.play_circle_fill_rounded;
-    }
-    if (lower.contains('telegram') || lower.contains('channel') || lower.contains('group')) {
-      return Icons.send_rounded;
     }
     if (lower.contains('insta') || lower.contains('follow') || lower.contains('like')) {
       return Icons.camera_alt_rounded;
@@ -274,40 +257,76 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
     if (lower.contains('app') || lower.contains('install') || lower.contains('download')) {
       return Icons.get_app_rounded;
     }
-    return Icons.design_services_rounded;
+    return Icons.layers_rounded;
   }
 
   Color _getServiceColor(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('play') || lower.contains('review') || lower.contains('rating')) return const Color(0xFF00875A);
-    if (lower.contains('youtube') || lower.contains('video')) return Colors.redAccent;
-    if (lower.contains('telegram')) return Colors.lightBlueAccent;
-    if (lower.contains('insta')) return Colors.pinkAccent;
-    if (lower.contains('app')) return Colors.greenAccent;
-    return Colors.cyanAccent;
+    if (lower.contains('playstore') || lower.contains('play store') || lower.contains('play_store')) {
+      return const Color(0xFF10B981);
+    }
+    if (lower.contains('youtube') || lower.contains('video')) return const Color(0xFFEF4444);
+    if (lower.contains('insta')) return const Color(0xFFEC4899);
+    if (lower.contains('app')) return const Color(0xFF10B981);
+    return accentBlue;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: backgroundLight,
       appBar: AppBar(
-        titleSpacing: 14,
-        title: const Row(
+        titleSpacing: 16,
+        elevation: 0,
+        backgroundColor: surfaceWhite,
+        surfaceTintColor: Colors.transparent,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: borderSubtle, height: 1),
+        ),
+        title: Row(
           children: [
-            Icon(Icons.layers_rounded, color: Colors.cyanAccent, size: 20),
-            SizedBox(width: 8),
-            Text(
-              'Services & Pricing Engine',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: lightBlueBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: const Icon(Icons.layers_rounded, color: accentBlue, size: 19),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Services & Pricing Engine',
+                    style: TextStyle(
+                      color: textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.3,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    'Manage catalog, pricing, & worker rules',
+                    style: TextStyle(color: textSecondary, fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF0F172A),
         actions: [
           IconButton(
             tooltip: 'Task Expiry & Timeout Settings',
-            icon: const Icon(Icons.timer_outlined, color: Colors.amberAccent, size: 22),
+            icon: const Icon(Icons.timer_outlined, color: primaryBlue, size: 22),
             onPressed: () {
               Navigator.push(
                 context,
@@ -316,16 +335,19 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+            tooltip: 'Refresh Services',
+            icon: const Icon(Icons.refresh_rounded, color: accentBlue, size: 22),
             onPressed: () => context.read<ServiceBuilderBloc>().add(LoadServicesEvent()),
           ),
+          const SizedBox(width: 6),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.cyanAccent,
-        foregroundColor: Colors.black,
-        icon: const Icon(Icons.add_rounded, size: 18),
-        label: const Text('Add Service', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        backgroundColor: accentBlue,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        icon: const Icon(Icons.add_rounded, size: 20),
+        label: const Text('Add Service', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
         onPressed: _showCreateServiceModal,
       ),
       body: BlocListener<ServiceBuilderBloc, ServiceBuilderState>(
@@ -334,8 +356,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.green,
+                backgroundColor: const Color(0xFF10B981),
                 behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             );
             context.read<ServiceBuilderBloc>().add(LoadServicesEvent());
@@ -344,7 +367,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
         child: BlocBuilder<ServiceBuilderBloc, ServiceBuilderState>(
           builder: (context, state) {
             if (state is ServiceBuilderLoading) {
-              return const Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
+              return const Center(
+                child: CircularProgressIndicator(color: accentBlue),
+              );
             } else if (state is ServiceCatalogLoaded) {
               final allServices = state.services;
               final filteredServices = allServices.where((s) {
@@ -353,16 +378,21 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                     s.name.toLowerCase().contains(q) ||
                     s.description.toLowerCase().contains(q);
                 if (_selectedFilter == 'All') return matchesQuery;
-                if (_selectedFilter == 'Play Store') {
-                  return matchesQuery &&
-                      (s.name.toLowerCase().contains('play') ||
-                          s.code.toLowerCase().contains('play') ||
-                          s.category.toLowerCase().contains('play') ||
-                          s.name.toLowerCase().contains('review') ||
-                          s.name.toLowerCase().contains('rating'));
-                }
                 if (_selectedFilter == 'YouTube') return matchesQuery && s.name.toLowerCase().contains('youtube');
-                if (_selectedFilter == 'Telegram') return matchesQuery && s.name.toLowerCase().contains('telegram');
+                if (_selectedFilter == 'PlayStore') {
+                  final lowerName = s.name.toLowerCase();
+                  final lowerCode = s.code.toLowerCase();
+                  return matchesQuery &&
+                      (lowerName.contains('playstore') ||
+                          lowerName.contains('play store') ||
+                          lowerName.contains('app') ||
+                          lowerName.contains('install') ||
+                          lowerName.contains('download') ||
+                          lowerName.contains('rating') ||
+                          lowerName.contains('review') ||
+                          lowerCode.contains('playstore') ||
+                          lowerCode.contains('app'));
+                }
                 if (_selectedFilter == 'Social') {
                   return matchesQuery &&
                       (s.name.toLowerCase().contains('insta') ||
@@ -376,130 +406,195 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
 
               return Column(
                 children: [
-                  // ── 1. Compact Dashboard Stats Bar ──────────────────────
+                  const SizedBox(height: 10),
+
+                  // ── 1. Clean White Dashboard Metrics Bar ──────────────────
                   Container(
-                    margin: const EdgeInsets.fromLTRB(14, 4, 14, 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    margin: const EdgeInsets.symmetric(horizontal: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white12),
+                      color: surfaceWhite,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: borderSubtle),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildMetricItem('Services', '${allServices.length}', Colors.white),
-                        Container(height: 24, width: 1, color: Colors.white12),
-                        _buildMetricItem('Active', '$activeCount', Colors.greenAccent),
-                        Container(height: 24, width: 1, color: Colors.white12),
-                        _buildMetricItem('Delivery', '24-72h', Colors.cyanAccent),
-                        Container(height: 24, width: 1, color: Colors.white12),
-                        _buildMetricItem('Pricing', 'Live Mode', Colors.amberAccent),
+                        Expanded(child: _buildMetricItem('Total Services', '${allServices.length}', primaryBlue, Icons.apps_rounded)),
+                        Container(height: 28, width: 1, color: borderSubtle),
+                        Expanded(child: _buildMetricItem('Active', '$activeCount', const Color(0xFF10B981), Icons.check_circle_rounded)),
+                        Container(height: 28, width: 1, color: borderSubtle),
+                        Expanded(child: _buildMetricItem('Turnaround', '24-72h', const Color(0xFF0EA5E9), Icons.timer_outlined)),
+                        Container(height: 28, width: 1, color: borderSubtle),
+                        Expanded(child: _buildMetricItem('Engine', 'Live', const Color(0xFF8B5CF6), Icons.bolt_rounded)),
                       ],
                     ),
                   ),
 
+                  const SizedBox(height: 12),
+
                   // ── 2. Search & Category Filters Bar ────────────────────
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E293B),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.white12),
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                              onChanged: (_) => setState(() {}),
-                              decoration: InputDecoration(
-                                hintText: 'Search services, tags, pricing...',
-                                hintStyle: const TextStyle(color: Colors.white38, fontSize: 11),
-                                prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54, size: 16),
-                                suffixIcon: _searchController.text.isNotEmpty
-                                    ? IconButton(
-                                        icon: const Icon(Icons.clear_rounded, color: Colors.white54, size: 14),
-                                        onPressed: () => setState(() => _searchController.clear()),
-                                      )
-                                    : null,
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                              ),
-                            ),
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: surfaceWhite,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: borderSubtle),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        style: const TextStyle(color: textPrimary, fontSize: 13),
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'Search services, tags, pricing...',
+                          hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                          prefixIcon: const Icon(Icons.search_rounded, color: accentBlue, size: 18),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_rounded, color: textSecondary, size: 16),
+                                  onPressed: () => setState(() => _searchController.clear()),
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
                   // Filter Category Chips
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: Row(
-                      children: ['All', 'Play Store', 'YouTube', 'Telegram', 'Social'].map((filter) {
+                      children: [
+                        {'name': 'All', 'icon': Icons.apps_rounded},
+                        {'name': 'YouTube', 'icon': Icons.play_circle_fill_rounded},
+                        {'name': 'PlayStore', 'icon': Icons.shop_two_rounded},
+                        {'name': 'Social', 'icon': Icons.camera_alt_rounded},
+                      ].map((chip) {
+                        final filter = chip['name'] as String;
+                        final icon = chip['icon'] as IconData;
                         final isSelected = _selectedFilter == filter;
                         return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(
-                              filter,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: isSelected ? Colors.black : Colors.white70,
+                          padding: const EdgeInsets.only(right: 8),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () => setState(() => _selectedFilter = filter),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isSelected ? accentBlue : surfaceWhite,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isSelected ? accentBlue : borderSubtle,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: accentBlue.withOpacity(0.3),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    icon,
+                                    size: 14,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : (filter == 'PlayStore'
+                                            ? const Color(0xFF10B981)
+                                            : (filter == 'YouTube'
+                                                ? const Color(0xFFEF4444)
+                                                : (filter == 'Social'
+                                                    ? const Color(0xFFEC4899)
+                                                    : accentBlue))),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    filter,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                      color: isSelected ? Colors.white : textPrimary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            selected: isSelected,
-                            selectedColor: Colors.cyanAccent,
-                            backgroundColor: const Color(0xFF1E293B),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            onSelected: (_) => setState(() => _selectedFilter = filter),
                           ),
                         );
                       }).toList(),
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 10),
 
-                  // ── 3. Services Compact Cards List ─────────────────────
+                  // ── 3. Services Clean White Cards List ─────────────────
                   Expanded(
                     child: filteredServices.isEmpty
                         ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.search_off_rounded, size: 48, color: Colors.white24),
-                                const SizedBox(height: 10),
-                                const Text('No matching services found.',
-                                    style: TextStyle(color: Colors.white54, fontSize: 13)),
-                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: const BoxDecoration(
+                                    color: lightBlueBg,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.search_off_rounded, size: 36, color: accentBlue),
+                                ),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'No matching services found',
+                                  style: TextStyle(color: textPrimary, fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Try a different search or create a new service',
+                                  style: TextStyle(color: textSecondary, fontSize: 12),
+                                ),
+                                const SizedBox(height: 14),
                                 ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.cyanAccent,
-                                    foregroundColor: Colors.black,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    backgroundColor: accentBlue,
+                                    foregroundColor: Colors.white,
+                                    elevation: 2,
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                   ),
                                   icon: const Icon(Icons.add_rounded, size: 16),
                                   label: const Text('Create Service',
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                   onPressed: _showCreateServiceModal,
                                 ),
                               ],
                             ),
                           )
                         : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(14, 4, 14, 80),
+                            padding: const EdgeInsets.fromLTRB(14, 2, 14, 90),
                             itemCount: filteredServices.length,
                             itemBuilder: (context, index) {
                               final service = filteredServices[index];
@@ -508,14 +603,21 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                               final pricing = service.pricing;
 
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 10),
+                                margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF1E293B),
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                                  color: surfaceWhite,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: borderSubtle),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.025),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
                                 ),
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(16),
                                   onTap: () {
                                     Navigator.push(
                                       context,
@@ -525,22 +627,23 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                                     );
                                   },
                                   child: Padding(
-                                    padding: const EdgeInsets.all(12),
+                                    padding: const EdgeInsets.all(14),
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // Top Header: Icon + Title + Version + Status
+                                        // Header Row: Icon + Title + Version + Status
                                         Row(
                                           children: [
                                             Container(
-                                              padding: const EdgeInsets.all(7),
+                                              padding: const EdgeInsets.all(9),
                                               decoration: BoxDecoration(
-                                                color: iconColor.withOpacity(0.15),
-                                                borderRadius: BorderRadius.circular(8),
+                                                color: iconColor.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(color: iconColor.withOpacity(0.2)),
                                               ),
-                                              child: Icon(iconData, color: iconColor, size: 16),
+                                              child: Icon(iconData, color: iconColor, size: 20),
                                             ),
-                                            const SizedBox(width: 10),
+                                            const SizedBox(width: 12),
                                             Expanded(
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -548,75 +651,118 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                                                   Text(
                                                     service.name,
                                                     style: const TextStyle(
-                                                        color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                                      color: textPrimary,
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.bold,
+                                                      letterSpacing: -0.2,
+                                                    ),
                                                     maxLines: 1,
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
+                                                  const SizedBox(height: 2),
                                                   Text(
                                                     service.description.isNotEmpty
                                                         ? service.description
                                                         : 'No description provided.',
-                                                    style: const TextStyle(color: Colors.white54, fontSize: 10),
+                                                    style: const TextStyle(color: textSecondary, fontSize: 11),
                                                     maxLines: 1,
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ],
                                               ),
                                             ),
-                                            const SizedBox(width: 6),
+                                            const SizedBox(width: 8),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                               decoration: BoxDecoration(
                                                 color: service.isActive
-                                                    ? Colors.green.withOpacity(0.15)
-                                                    : Colors.red.withOpacity(0.15),
-                                                borderRadius: BorderRadius.circular(6),
+                                                    ? const Color(0xFFECFDF5)
+                                                    : const Color(0xFFFFFBEB),
+                                                borderRadius: BorderRadius.circular(20),
+                                                border: Border.all(
+                                                  color: service.isActive
+                                                      ? const Color(0xFFA7F3D0)
+                                                      : const Color(0xFFFDE68A),
+                                                ),
                                               ),
                                               child: Text(
                                                 service.isActive ? 'ACTIVE' : 'DRAFT',
                                                 style: TextStyle(
-                                                  color: service.isActive ? Colors.greenAccent : Colors.redAccent,
-                                                  fontSize: 8,
-                                                  fontWeight: FontWeight.bold,
+                                                  color: service.isActive
+                                                      ? const Color(0xFF059669)
+                                                      : const Color(0xFFD97706),
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w700,
+                                                  letterSpacing: 0.5,
                                                 ),
                                               ),
                                             ),
                                           ],
                                         ),
-                                        const SizedBox(height: 10),
+                                        const SizedBox(height: 12),
 
-                                        // Middle Row: Pricing Pills
+                                        // Pricing Pills Row
                                         Wrap(
                                           spacing: 6,
-                                          runSpacing: 4,
+                                          runSpacing: 6,
                                           children: [
-                                            _buildTag(
-                                                'Buyer: ₹${pricing.buyerPrice.toStringAsFixed(0)}', Colors.cyanAccent),
-                                            _buildTag(
-                                                'Margin: ${pricing.adminMarginPercent.toStringAsFixed(0)}%', Colors.tealAccent),
-                                            _buildTag(
-                                                'Worker: ₹${pricing.workerReward.toStringAsFixed(1)}', Colors.amberAccent),
+                                            _buildPill(
+                                              'Buyer: ₹${pricing.buyerPrice.toStringAsFixed(0)}',
+                                              lightBlueBg,
+                                              primaryBlue,
+                                              const Color(0xFFBFDBFE),
+                                            ),
+                                            _buildPill(
+                                              'Margin: ${pricing.adminMarginPercent.toStringAsFixed(0)}%',
+                                              const Color(0xFFF5F3FF),
+                                              const Color(0xFF7C3AED),
+                                              const Color(0xFFDDD6FE),
+                                            ),
+                                            _buildPill(
+                                              'Worker: ₹${pricing.workerReward.toStringAsFixed(1)}',
+                                              const Color(0xFFECFDF5),
+                                              const Color(0xFF059669),
+                                              const Color(0xFFA7F3D0),
+                                            ),
                                             if (service.aiGeneratorEnabled)
-                                              _buildTag('🤖 AI ON', Colors.purpleAccent),
+                                              _buildPill(
+                                                '✨ AI Powered',
+                                                const Color(0xFFFAF5FF),
+                                                const Color(0xFF9333EA),
+                                                const Color(0xFFE9D5FF),
+                                              ),
                                           ],
                                         ),
+                                        const SizedBox(height: 12),
+                                        const Divider(color: borderSubtle, height: 1),
                                         const SizedBox(height: 10),
 
-                                        // Bottom Action Bar
+                                        // Footer Bar
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text(
-                                              'V${service.currentVersion}',
-                                              style: const TextStyle(color: Colors.white38, fontSize: 10),
+                                            Expanded(
+                                              child: Text(
+                                                'Code: ${service.code} • v${service.currentVersion}',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  color: Color(0xFF94A3B8),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
                                             ),
+                                            const SizedBox(width: 6),
                                             Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 // Delete button
                                                 IconButton(
-                                                  icon: const Icon(Icons.delete_outline_rounded,
-                                                      color: Colors.redAccent, size: 18),
+                                                  icon: const Icon(
+                                                    Icons.delete_outline_rounded,
+                                                    color: Color(0xFFEF4444),
+                                                    size: 18,
+                                                  ),
                                                   tooltip: 'Delete Service',
                                                   constraints: const BoxConstraints(),
                                                   padding: const EdgeInsets.all(6),
@@ -626,16 +772,22 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                                                 const SizedBox(width: 6),
                                                 ElevatedButton.icon(
                                                   style: ElevatedButton.styleFrom(
-                                                    backgroundColor: Colors.cyanAccent,
-                                                    foregroundColor: Colors.black,
-                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                    backgroundColor: lightBlueBg,
+                                                    foregroundColor: primaryBlue,
+                                                    elevation: 0,
+                                                    side: const BorderSide(color: Color(0xFFBFDBFE)),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                                     minimumSize: Size.zero,
                                                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
                                                   ),
-                                                  icon: const Icon(Icons.tune_rounded, size: 12),
-                                                  label: const Text('Open Studio',
-                                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                                  icon: const Icon(Icons.tune_rounded, size: 14, color: primaryBlue),
+                                                  label: const Text(
+                                                    'Open Studio',
+                                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                                  ),
                                                   onPressed: () {
                                                     Navigator.push(
                                                       context,
@@ -660,7 +812,35 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                 ],
               );
             } else if (state is ServiceBuilderError) {
-              return Center(child: Text(state.message, style: const TextStyle(color: Colors.redAccent)));
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFEF2F2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 36),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      state.message,
+                      style: const TextStyle(color: textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentBlue,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => context.read<ServiceBuilderBloc>().add(LoadServicesEvent()),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
             }
             return const SizedBox.shrink();
           },
@@ -673,22 +853,25 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: surfaceWhite,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.15),
+                color: const Color(0xFFFEF2F2),
                 borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFECACA)),
               ),
-              child: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 22),
+              child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFEF4444), size: 22),
             ),
             const SizedBox(width: 10),
             const Expanded(
-              child: Text('Delete Service?',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Text(
+                'Delete Service?',
+                style: TextStyle(color: textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -698,47 +881,49 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
           children: [
             Text(
               '"$serviceName"',
-              style: const TextStyle(color: Colors.cyanAccent, fontSize: 13, fontWeight: FontWeight.w600),
+              style: const TextStyle(color: accentBlue, fontSize: 14, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.withOpacity(0.3)),
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.check_circle_outline_rounded, color: Colors.greenAccent, size: 16),
+                  Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A), size: 16),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Past campaigns & orders will NOT be affected.',
-                      style: TextStyle(color: Colors.greenAccent, fontSize: 11),
+                      style: TextStyle(color: Color(0xFF15803D), fontSize: 11, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             const Text(
-              'This service will be removed from the catalog and no new orders can be created for it.',
-              style: TextStyle(color: Colors.white54, fontSize: 11),
+              'This service will be removed from the catalog and buyers will no longer be able to place new orders for it.',
+              style: TextStyle(color: textSecondary, fontSize: 12),
             ),
           ],
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: const Text('Cancel', style: TextStyle(color: textSecondary, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent,
+              backgroundColor: const Color(0xFFEF4444),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
             icon: const Icon(Icons.delete_rounded, size: 16),
             label: const Text('Delete', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
@@ -752,28 +937,41 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
     );
   }
 
-  Widget _buildMetricItem(String label, String value, Color color) {
+  Widget _buildMetricItem(String label, String value, Color color, IconData icon) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
-        const SizedBox(height: 1),
-        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 9)),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 13),
+            const SizedBox(width: 4),
+            Text(
+              value,
+              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(color: textSecondary, fontSize: 10, fontWeight: FontWeight.w500),
+        ),
       ],
     );
   }
 
-  Widget _buildTag(String text, Color color) {
+  Widget _buildPill(String text, Color bgColor, Color textColor, Color borderColor) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3), width: 0.8),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor, width: 0.8),
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontSize: 9.5, fontWeight: FontWeight.bold),
+        style: TextStyle(color: textColor, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }

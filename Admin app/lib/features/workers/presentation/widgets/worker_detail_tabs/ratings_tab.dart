@@ -104,7 +104,10 @@ class RatingsTab extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final item = ratings[index];
                     final ratingVal = item['score'] ?? item['rating'] ?? 5.0;
-                    final comment = item['comment'] ?? item['review'] ?? 'Excellent submission!';
+                    final rawComment = item['comment'] ?? item['review'];
+                    final comment = (rawComment != null && rawComment.toString().trim().isNotEmpty)
+                        ? rawComment.toString().trim()
+                        : 'No written review feedback provided';
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 8),

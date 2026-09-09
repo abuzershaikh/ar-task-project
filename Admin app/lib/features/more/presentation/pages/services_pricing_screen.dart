@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/injection.dart';
@@ -438,13 +439,19 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
             onPressed: () async {
               Navigator.pop(dialogContext);
               try {
+                final double buyerPrice = double.tryParse(priceCtrl.text.trim()) ?? 2.0;
+                final double marginVal = double.tryParse(marginCtrl.text.trim()) ?? 25.0;
+                final double marginAmount = (buyerPrice * marginVal) / 100.0;
+                final double workerReward = double.parse(math.max(0.01, buyerPrice - marginAmount).toStringAsFixed(2));
+
                 final dio = getIt<DioClient>();
                 await dio.post(
-                  ApiEndpoints.servicePricingHistory(serviceId).replaceAll('/pricing-history', '/pricing'),
+                  ApiEndpoints.servicePricing(serviceId),
                   data: {
-                    'buyerUnitPrice': double.tryParse(priceCtrl.text.trim()) ?? 2.0,
+                    'buyerUnitPrice': double.parse(buyerPrice.toStringAsFixed(2)),
                     'marginType': 'PERCENTAGE',
-                    'marginValue': double.tryParse(marginCtrl.text.trim()) ?? 25.0,
+                    'marginValue': double.parse(marginVal.toStringAsFixed(2)),
+                    if (workerReward > 0) 'workerReward': workerReward,
                   },
                 );
                 _fetchServices();

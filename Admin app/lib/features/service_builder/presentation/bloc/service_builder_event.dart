@@ -98,6 +98,7 @@ class UpdatePricingEvent extends ServiceBuilderEvent {
   final int? minQuantity;
   final int? maxQuantity;
   final double? adminMarginPercent;
+  final String? marginType;
   final double? workerReward;
   final int? workerLimit;
   final List<int>? workerLimitOptions;
@@ -110,6 +111,7 @@ class UpdatePricingEvent extends ServiceBuilderEvent {
     this.minQuantity,
     this.maxQuantity,
     this.adminMarginPercent,
+    this.marginType,
     this.workerReward,
     this.workerLimit,
     this.workerLimitOptions,
@@ -124,6 +126,7 @@ class UpdatePricingEvent extends ServiceBuilderEvent {
         minQuantity,
         maxQuantity,
         adminMarginPercent,
+        marginType,
         workerReward,
         workerLimit,
         workerLimitOptions,

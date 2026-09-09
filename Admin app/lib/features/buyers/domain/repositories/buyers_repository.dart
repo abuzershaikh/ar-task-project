@@ -12,6 +12,7 @@ abstract class BuyersRepository {
   Future<List<dynamic>> getBuyerPayments(String buyerId);
   Future<List<dynamic>> getBuyerActivity(String buyerId);
   Future<Map<String, dynamic>> getBuyerAnalytics(String buyerId);
+  Future<List<dynamic>> getBuyerRatings(String buyerId);
   Future<void> adjustBuyerBalance(String buyerId, double amount, String reason);
 }
 
@@ -92,6 +93,9 @@ class BuyersRepositoryImpl implements BuyersRepository {
 
   @override
   Future<Map<String, dynamic>> getBuyerAnalytics(String buyerId) => remoteDataSource.getBuyerAnalytics(buyerId);
+
+  @override
+  Future<List<dynamic>> getBuyerRatings(String buyerId) => remoteDataSource.getBuyerRatings(buyerId);
 
   @override
   Future<void> adjustBuyerBalance(String buyerId, double amount, String reason) =>

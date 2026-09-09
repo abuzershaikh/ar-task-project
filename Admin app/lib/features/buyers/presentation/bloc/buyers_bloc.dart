@@ -42,6 +42,7 @@ class BuyerDetailLoaded extends BuyersLoaded {
   final List<dynamic> payments;
   final List<dynamic> activity;
   final Map<String, dynamic> analytics;
+  final List<dynamic> reviews;
 
   BuyerDetailLoaded({
     required List<BuyerModel> buyers,
@@ -51,6 +52,7 @@ class BuyerDetailLoaded extends BuyersLoaded {
     required this.payments,
     required this.activity,
     required this.analytics,
+    this.reviews = const [],
   }) : super(buyers);
 }
 class BuyersError extends BuyersState {
@@ -113,6 +115,7 @@ class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
       final payments = await repository.getBuyerPayments(event.buyerId).catchError((_) => <dynamic>[]);
       final activity = await repository.getBuyerActivity(event.buyerId).catchError((_) => <dynamic>[]);
       final analytics = await repository.getBuyerAnalytics(event.buyerId).catchError((_) => <String, dynamic>{});
+      final reviews = await repository.getBuyerRatings(event.buyerId).catchError((_) => <dynamic>[]);
 
       emit(BuyerDetailLoaded(
         buyers: _cachedBuyers,
@@ -122,6 +125,7 @@ class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
         payments: payments,
         activity: activity,
         analytics: analytics,
+        reviews: reviews,
       ));
     } catch (e) {
       if (_cachedBuyers.isNotEmpty) {
@@ -140,6 +144,7 @@ class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
       final payments = await repository.getBuyerPayments(event.buyerId).catchError((_) => <dynamic>[]);
       final activity = await repository.getBuyerActivity(event.buyerId).catchError((_) => <dynamic>[]);
       final analytics = await repository.getBuyerAnalytics(event.buyerId).catchError((_) => <String, dynamic>{});
+      final reviews = await repository.getBuyerRatings(event.buyerId).catchError((_) => <dynamic>[]);
 
       emit(BuyerDetailLoaded(
         buyers: _cachedBuyers,
@@ -149,6 +154,7 @@ class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
         payments: payments,
         activity: activity,
         analytics: analytics,
+        reviews: reviews,
       ));
     } catch (e) {
       if (_cachedBuyers.isNotEmpty) {

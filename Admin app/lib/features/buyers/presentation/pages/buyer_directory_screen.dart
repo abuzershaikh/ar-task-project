@@ -99,6 +99,9 @@ class _BuyerDirectoryScreenState extends State<BuyerDirectoryScreen> {
 
             final int activeCount = allBuyers.where((b) => b.status.toUpperCase() == 'ACTIVE').length;
             final double totalPlatformSpend = allBuyers.fold(0.0, (sum, b) => sum + b.totalSpend);
+            final int flaggedCount = allBuyers.where((b) => b.status.toUpperCase() != 'ACTIVE').length;
+            final String riskStatus = flaggedCount == 0 ? 'Safe 🟢' : '$flaggedCount Flagged ⚠️';
+            final Color riskColor = flaggedCount == 0 ? const Color(0xFF16A34A) : const Color(0xFFD97706);
 
             return Column(
               children: [
@@ -135,7 +138,7 @@ class _BuyerDirectoryScreenState extends State<BuyerDirectoryScreen> {
                         const Color(0xFF4F46E5),
                       ),
                       Container(height: 24, width: 1, color: const Color(0xFFC4B5FD)),
-                      _buildMetricItem('Risk Score', 'Low 🟢', const Color(0xFF16A34A)),
+                      _buildMetricItem('Risk Status', riskStatus, riskColor),
                     ],
                   ),
                 ),

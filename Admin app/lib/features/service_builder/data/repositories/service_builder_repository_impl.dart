@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/network/dio_client.dart';
@@ -242,6 +243,26 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
         dynamicBuyerUnitPrice = service.pricing.chips.first.price;
       }
 
+      final double cleanBuyerUnitPrice = double.parse(dynamicBuyerUnitPrice.toStringAsFixed(2));
+      final String cleanMarginType = service.pricing.marginType.toUpperCase().contains('FIXED') ? 'FIXED' : 'PERCENTAGE';
+      final double cleanMarginValue = double.parse(service.pricing.adminMarginPercent.toStringAsFixed(2));
+
+      final double marginAmount = cleanMarginType == 'FIXED'
+          ? math.min(cleanBuyerUnitPrice, cleanMarginValue)
+          : math.min(cleanBuyerUnitPrice, (cleanBuyerUnitPrice * cleanMarginValue) / 100.0);
+      final double maxReward = math.max(0.0, cleanBuyerUnitPrice - marginAmount);
+
+      double finalWorkerReward = service.pricing.workerReward > 0
+          ? double.parse(service.pricing.workerReward.toStringAsFixed(2))
+          : double.parse(maxReward.toStringAsFixed(2));
+
+      if (finalWorkerReward > maxReward) {
+        finalWorkerReward = double.parse(maxReward.toStringAsFixed(2));
+      }
+      if (finalWorkerReward <= 0 && maxReward > 0) {
+        finalWorkerReward = double.parse(maxReward.toStringAsFixed(2));
+      }
+
       final payload = {
         'code': service.code.isNotEmpty ? service.code : 'SRV_${DateTime.now().millisecondsSinceEpoch}',
         'name': service.name,
@@ -250,12 +271,11 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
         'serviceType': service.serviceType,
         'aiGeneratorEnabled': service.aiGeneratorEnabled,
         'aiGeneratorConfig': service.aiGeneratorConfig,
-        'buyerUnitPrice': dynamicBuyerUnitPrice,
-        'marginType': service.pricing.marginType,
-        'marginValue': service.pricing.adminMarginPercent,
-        'workerReward': service.pricing.workerReward,
+        'buyerUnitPrice': cleanBuyerUnitPrice,
+        'marginType': cleanMarginType,
+        'marginValue': cleanMarginValue,
+        if (finalWorkerReward > 0) 'workerReward': finalWorkerReward,
         'workerLimit': service.workerLimit,
-        'workerLimitOptions': service.workerLimitOptions,
         'elements': elementsJson,
         'reviewMode': service.reviewMode,
         'isActive': service.isActive,
@@ -263,8 +283,6 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
         'maxCompleteHours': service.maxCompleteHours,
         'minAcceptHours': service.minAcceptHours,
         'maxAcceptHours': service.maxAcceptHours,
-        'minDurationSeconds': service.minDurationSeconds,
-        'maxDurationSeconds': service.maxDurationSeconds,
         'videoTutorialUrl': service.videoTutorialUrl,
         'audioGuideUrl': service.audioGuideUrl,
         'adminInstructions': service.adminInstructions,
@@ -281,7 +299,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
           !service.id.startsWith('mock_');
 
       if (isExistingServerService) {
-        // UPDATE existing service on server
+        // UPDATE existing service on server (Only recognized columns in ServiceCatalog entity)
         await dioClient!.patch('/admin/services/${service.id}', data: {
           'name': service.name,
           'description': service.description,
@@ -293,13 +311,10 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
           'elements': elementsJson,
           'reviewMode': service.reviewMode,
           'workerLimit': service.workerLimit,
-          'workerLimitOptions': service.workerLimitOptions,
           'minCompleteHours': service.minCompleteHours,
           'maxCompleteHours': service.maxCompleteHours,
           'minAcceptHours': service.minAcceptHours,
           'maxAcceptHours': service.maxAcceptHours,
-          'minDurationSeconds': service.minDurationSeconds,
-          'maxDurationSeconds': service.maxDurationSeconds,
           'videoTutorialUrl': service.videoTutorialUrl,
           'audioGuideUrl': service.audioGuideUrl,
           'adminInstructions': service.adminInstructions,
@@ -309,13 +324,17 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
           'textFieldPlaceholder': service.textFieldPlaceholder,
           'watchtimeSeconds': service.watchtimeSeconds,
         });
-        if (dynamicBuyerUnitPrice > 0) {
-          await dioClient!.post('/admin/services/${service.id}/pricing', data: {
-            'buyerUnitPrice': dynamicBuyerUnitPrice,
-            'marginType': service.pricing.marginType,
-            'marginValue': service.pricing.adminMarginPercent,
-            'workerReward': service.pricing.workerReward,
-          });
+
+        if (cleanBuyerUnitPrice > 0) {
+          final pricingPayload = <String, dynamic>{
+            'buyerUnitPrice': cleanBuyerUnitPrice,
+            'marginType': cleanMarginType,
+            'marginValue': cleanMarginValue,
+          };
+          if (finalWorkerReward > 0) {
+            pricingPayload['workerReward'] = finalWorkerReward;
+          }
+          await dioClient!.post('/admin/services/${service.id}/pricing', data: pricingPayload);
         }
 
         // Update local cache

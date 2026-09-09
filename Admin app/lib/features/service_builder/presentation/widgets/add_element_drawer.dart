@@ -114,7 +114,7 @@ class AddElementDrawer extends StatelessWidget {
                             final Map<String, dynamic> initialProps = type == ElementType.youtube
                                 ? {'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'videoUrl': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'}
                                 : (type == ElementType.audio
-                                    ? {'url': 'https://earnpost-media-worker.aawuazer.workers.dev/audio/sample_voice_guide.m4a', 'audioUrl': 'https://earnpost-media-worker.aawuazer.workers.dev/audio/sample_voice_guide.m4a'}
+                                    ? {'url': 'https://earnpost-media-worker.zestbizar.workers.dev/audio/sample_voice_guide.m4a', 'audioUrl': 'https://earnpost-media-worker.zestbizar.workers.dev/audio/sample_voice_guide.m4a'}
                                     : {});
 
                             final element = TemplateElement(

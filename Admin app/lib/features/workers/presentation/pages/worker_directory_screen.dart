@@ -102,6 +102,9 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
 
             final int activeCount = allWorkers.where((w) => w.status.toUpperCase() == 'ACTIVE').length;
             final int kycCount = allWorkers.where((w) => w.kycStatus == 'VERIFIED').length;
+            final double avgRating = allWorkers.isNotEmpty
+                ? (allWorkers.map((w) => w.rating).reduce((a, b) => a + b) / allWorkers.length)
+                : 5.0;
 
             return Column(
               children: [
@@ -134,7 +137,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                       Container(height: 24, width: 1, color: const Color(0xFF7DD3FC)),
                       _buildMetricItem('KYC Verified', '$kycCount', const Color(0xFF0284C7)),
                       Container(height: 24, width: 1, color: const Color(0xFF7DD3FC)),
-                      _buildMetricItem('Platform Rating', '4.9 ★', const Color(0xFFD97706)),
+                      _buildMetricItem('Platform Rating', '${avgRating > 0 ? avgRating.toStringAsFixed(1) : '5.0'} ★', const Color(0xFFD97706)),
                     ],
                   ),
                 ),
@@ -246,12 +249,12 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                                 email: w.email,
                                 phone: w.phone,
                                 rating: w.rating,
-                                score: 92.0,
+                                score: w.score,
                                 totalTasks: w.completedTasks,
                                 kycVerified: w.kycStatus == 'VERIFIED' || w.kycStatus == 'APPROVED',
                                 status: w.status,
                                 totalEarned: w.totalEarnings,
-                                availableBalance: w.totalEarnings,
+                                availableBalance: w.availableBalance,
                                 onTap: () {
                                   Navigator.push(
                                     context,

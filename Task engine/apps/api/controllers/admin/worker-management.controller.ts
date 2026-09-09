@@ -15,6 +15,7 @@ import { EarningRepository } from '../../../../shared/database/repositories/earn
 import { TaskRepository } from '../../../../shared/database/repositories/task.repository';
 import { WithdrawalRepository } from '../../../../shared/database/repositories/withdrawal.repository';
 import { RatingRepository } from '../../../../shared/database/repositories/rating.repository';
+import { WalletRepository } from '../../../../shared/database/repositories/wallet.repository';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, UserStatus } from '../../../../shared/database/entities/user.entity';
 
@@ -31,6 +32,7 @@ export class AdminWorkerManagementController {
         private readonly taskRepo: TaskRepository,
         private readonly withdrawalRepo: WithdrawalRepository,
         private readonly ratingRepo: RatingRepository,
+        private readonly walletRepo: WalletRepository,
     ) { }
 
     @Get()
@@ -49,6 +51,9 @@ export class AdminWorkerManagementController {
             const earnings = await this.earningRepo.findByWorker(u.id);
             const totalEarned = earnings.reduce((sum, e) => sum + Number(e.amount || 0), 0);
             const tasks = await this.taskRepo.findByWorkerAndStatus(u.id, 'completed');
+            const wallet = await this.walletRepo.findByUserId(u.id);
+            const scoreRecord = w ? await this.scoreRepo.findByWorker(w.id) : null;
+            const score = scoreRecord ? Number(scoreRecord.totalScore) : Math.round(Number(w?.averageRating || 4.8) * 20);
 
             return {
                 id: w?.id || u.id,
@@ -61,6 +66,8 @@ export class AdminWorkerManagementController {
                 rating: Number(w?.averageRating || 0),
                 completedTasks: tasks.length || Number(w?.totalTasksCompleted || 0),
                 totalEarnings: totalEarned || Number(w?.totalEarnings || 0),
+                availableBalance: wallet ? Number(wallet.availableBalance || 0) : 0,
+                score,
                 tier: (Number(w?.totalTasksCompleted || 0) >= 25 ? 'Gold' : (Number(w?.totalTasksCompleted || 0) >= 10 ? 'Silver' : (Number(w?.totalTasksCompleted || 0) > 0 ? 'Bronze' : 'New'))),
                 createdAt: u.createdAt || w?.createdAt,
             };
@@ -97,6 +104,7 @@ export class AdminWorkerManagementController {
         const tasks = userId ? await this.taskRepo.findByWorkerAndStatus(userId, 'completed') : [];
         const ratings = worker ? await this.ratingRepo.findByWorkerId(worker.id) : [];
         const score = worker ? await this.scoreRepo.findByWorker(worker.id) : null;
+        const wallet = userId ? await this.walletRepo.findByUserId(userId) : null;
         const totalEarningsRecorded = earnings.reduce((a, b) => a + Number(b.amount || 0), 0);
 
         const formattedWorker = {
@@ -110,6 +118,8 @@ export class AdminWorkerManagementController {
             rating: Number(worker?.averageRating || 0),
             completedTasks: tasks.length || Number(worker?.totalTasksCompleted || 0),
             totalEarnings: totalEarningsRecorded || Number(worker?.totalEarnings || 0),
+            availableBalance: wallet ? Number(wallet.availableBalance || 0) : 0,
+            score: score ? Number(score.totalScore) : Math.round(Number(worker?.averageRating || 4.8) * 20),
             tier: (Number(worker?.totalTasksCompleted || 0) >= 25 ? 'Gold' : (Number(worker?.totalTasksCompleted || 0) >= 10 ? 'Silver' : (Number(worker?.totalTasksCompleted || 0) > 0 ? 'Bronze' : 'New'))),
             createdAt: user?.createdAt || worker?.createdAt,
         };

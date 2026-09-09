@@ -11,6 +11,7 @@ abstract class BuyersRemoteDataSource {
   Future<List<dynamic>> getBuyerPayments(String buyerId);
   Future<List<dynamic>> getBuyerActivity(String buyerId);
   Future<Map<String, dynamic>> getBuyerAnalytics(String buyerId);
+  Future<List<dynamic>> getBuyerRatings(String buyerId);
   Future<void> adjustBuyerBalance(String buyerId, double amount, String reason);
 }
 
@@ -73,6 +74,16 @@ class BuyersRemoteDataSourceImpl implements BuyersRemoteDataSource {
   Future<Map<String, dynamic>> getBuyerAnalytics(String buyerId) async {
     final response = await _dioClient.get('${ApiEndpoints.buyers}/$buyerId/analytics');
     return Map<String, dynamic>.from(response.data['analytics'] ?? response.data ?? {});
+  }
+
+  @override
+  Future<List<dynamic>> getBuyerRatings(String buyerId) async {
+    try {
+      final response = await _dioClient.get('${ApiEndpoints.buyers}/$buyerId/ratings');
+      return (response.data['ratings'] as List?) ?? [];
+    } catch (_) {
+      return [];
+    }
   }
 
   @override

@@ -10,6 +10,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRepository } from '../../../../shared/database/repositories/user.repository';
 import { OrderRepository } from '../../../../shared/database/repositories/order.repository';
 import { TaskRepository } from '../../../../shared/database/repositories/task.repository';
+import { RatingRepository } from '../../../../shared/database/repositories/rating.repository';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, UserStatus } from '../../../../shared/database/entities/user.entity';
 
@@ -22,6 +23,7 @@ export class AdminBuyerManagementController {
         private readonly userRepo: UserRepository,
         private readonly orderRepo: OrderRepository,
         private readonly taskRepo: TaskRepository,
+        private readonly ratingRepo: RatingRepository,
     ) { }
 
     @Get()
@@ -154,6 +156,13 @@ export class AdminBuyerManagementController {
                 totalCommittedBudget: orders.reduce((acc, o) => acc + (o.totalAmount || 0), 0),
             },
         };
+    }
+
+    @Get(':id/ratings')
+    @ApiOperation({ summary: 'Get ratings and feedback submitted by buyer' })
+    async getBuyerRatings(@Param('id') buyerId: string) {
+        const ratings = await this.ratingRepo.findByBuyerId(buyerId);
+        return { success: true, ratings, total: ratings.length };
     }
 
     @Post(':id/status')

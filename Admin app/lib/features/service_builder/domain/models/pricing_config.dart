@@ -117,9 +117,11 @@ class PricingConfig {
     String marginType = 'PERCENTAGE',
     List<PriceChipModel> chips = const [],
   }) {
+    final String cleanMarginType =
+        marginType.toUpperCase().contains('FIXED') ? 'FIXED' : 'PERCENTAGE';
     final double calculatedReward;
-    if (workerReward != null && workerReward >= 0) {
-      calculatedReward = workerReward;
+    if (workerReward != null && workerReward > 0) {
+      calculatedReward = double.parse(workerReward.toStringAsFixed(2));
     } else {
       final double effectivePrice;
       if (modelType == PricingModelType.countBased) {
@@ -129,8 +131,8 @@ class PricingConfig {
       } else {
         effectivePrice = buyerPrice;
       }
-          
-      if (marginType.toUpperCase() == 'FIXED') {
+
+      if (cleanMarginType == 'FIXED') {
         calculatedReward = effectivePrice - adminMarginPercent;
       } else {
         final marginFraction = adminMarginPercent / 100.0;
@@ -138,15 +140,19 @@ class PricingConfig {
       }
     }
 
+    final double sanitizedReward = calculatedReward < 0
+        ? 0.0
+        : double.parse(calculatedReward.toStringAsFixed(2));
+
     return PricingConfig(
       modelType: modelType,
-      buyerPrice: buyerPrice,
-      unitPrice: unitPrice,
+      buyerPrice: double.parse(buyerPrice.toStringAsFixed(2)),
+      unitPrice: double.parse(unitPrice.toStringAsFixed(2)),
       minQuantity: minQuantity,
       maxQuantity: maxQuantity,
-      adminMarginPercent: adminMarginPercent,
-      marginType: marginType,
-      workerReward: calculatedReward < 0 ? 0 : calculatedReward,
+      adminMarginPercent: double.parse(adminMarginPercent.toStringAsFixed(2)),
+      marginType: cleanMarginType,
+      workerReward: sanitizedReward,
       chips: chips,
     );
   }
@@ -175,17 +181,29 @@ class PricingConfig {
     );
   }
 
-  /// Validation engine rule: Margin % must be valid, worker reward > 0
+  /// Validation engine rule: Margin must be valid, worker reward > 0
   bool get isValid {
-    return buyerPrice >= 0 &&
-        adminMarginPercent >= 0 &&
-        adminMarginPercent <= 100 &&
-        workerReward >= 0;
+    final bool marginValid = marginType == 'FIXED'
+        ? (adminMarginPercent >= 0 && adminMarginPercent < buyerPrice)
+        : (adminMarginPercent >= 0 && adminMarginPercent < 100);
+    return buyerPrice > 0 && marginValid && workerReward > 0;
   }
 
   String? get validationError {
-    if (adminMarginPercent < 0 || adminMarginPercent > 100) {
-      return 'Margin percentage must be between 0% and 100%';
+    if (buyerPrice <= 0) {
+      return 'Buyer unit price must be greater than 0';
+    }
+    if (adminMarginPercent < 0) {
+      return 'Admin margin cannot be negative';
+    }
+    if (marginType == 'FIXED' && adminMarginPercent >= buyerPrice) {
+      return 'Fixed margin (₹${adminMarginPercent.toStringAsFixed(2)}) cannot exceed buyer price (₹${buyerPrice.toStringAsFixed(2)})';
+    }
+    if (marginType != 'FIXED' && adminMarginPercent >= 100) {
+      return 'Margin percentage must be less than 100%';
+    }
+    if (workerReward <= 0) {
+      return 'Worker reward must be greater than 0';
     }
     return null;
   }

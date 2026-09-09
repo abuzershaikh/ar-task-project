@@ -14,7 +14,40 @@ class QualityScoreTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final qualityScore = (worker.rating * 20).toStringAsFixed(1);
+    final double scoreValue = worker.score > 0 ? worker.score : (worker.rating * 20).clamp(0.0, 100.0);
+    final qualityScore = scoreValue.toStringAsFixed(1);
+
+    final String badgeText;
+    final Color badgeColor;
+    final Color badgeBg;
+    if (worker.status.toUpperCase() == 'BANNED' || worker.status.toUpperCase() == 'SUSPENDED') {
+      badgeText = 'Account Restricted / Quality Suspended 🔴';
+      badgeColor = const Color(0xFFDC2626);
+      badgeBg = const Color(0xFFFEE2E2);
+    } else if (scoreValue >= 85) {
+      badgeText = 'Top Performer & Elite Quality 🟢';
+      badgeColor = const Color(0xFF16A34A);
+      badgeBg = const Color(0xFFDCFCE7);
+    } else if (scoreValue >= 70) {
+      badgeText = 'Good Standing & Verified Quality 🟡';
+      badgeColor = const Color(0xFFD97706);
+      badgeBg = const Color(0xFFFEF3C7);
+    } else {
+      badgeText = 'Under Quality Monitoring 🟠';
+      badgeColor = const Color(0xFFEA580C);
+      badgeBg = const Color(0xFFFFEDD5);
+    }
+
+    // Dynamic quality parameters based on real worker metrics
+    final double accuracyRate = (worker.rating / 5.0).clamp(0.0, 1.0);
+    final double turnaroundSpeed = worker.tier == 'Gold'
+        ? 0.96
+        : (worker.tier == 'Silver'
+            ? 0.88
+            : (worker.tier == 'Bronze' ? 0.78 : (worker.completedTasks > 0 ? 0.72 : 0.60)));
+    final double compliance = worker.status.toUpperCase() == 'ACTIVE'
+        ? 1.0
+        : (worker.status.toUpperCase() == 'SUSPENDED' ? 0.50 : 0.10);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(14),
@@ -69,16 +102,16 @@ class QualityScoreTab extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
+                      color: badgeBg,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF16A34A).withOpacity(0.3)),
+                      border: Border.all(color: badgeColor.withOpacity(0.3)),
                     ),
-                    child: const Text(
-                      'High Reputation & Verified Quality 🟢',
+                    child: Text(
+                      badgeText,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF16A34A),
+                        color: badgeColor,
                       ),
                     ),
                   ),
@@ -122,11 +155,11 @@ class QualityScoreTab extends StatelessWidget {
                   const SizedBox(height: 12),
                   const Divider(color: Color(0xFFE2E8F0), height: 1),
                   const SizedBox(height: 12),
-                  _buildMetricProgress('Approval Accuracy Rate', 0.98, '98%'),
+                  _buildMetricProgress('Approval Accuracy Rate', accuracyRate, '${(accuracyRate * 100).toStringAsFixed(0)}%'),
                   const SizedBox(height: 10),
-                  _buildMetricProgress('Task Turnaround Speed', 0.92, '92%'),
+                  _buildMetricProgress('Task Turnaround Speed', turnaroundSpeed, '${(turnaroundSpeed * 100).toStringAsFixed(0)}%'),
                   const SizedBox(height: 10),
-                  _buildMetricProgress('Platform Compliance', 1.0, '100%'),
+                  _buildMetricProgress('Platform Compliance', compliance, '${(compliance * 100).toStringAsFixed(0)}%'),
                 ],
               ),
             ),

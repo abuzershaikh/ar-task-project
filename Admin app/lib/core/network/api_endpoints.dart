@@ -51,7 +51,8 @@ class ApiEndpoints {
   // ==================== Services & Pricing ====================
   static const String services = '/admin/services';
   static String serviceById(String id) => '/admin/services/$id';
-  static String servicePricingHistory(String id) => '/admin/services/$id/pricing-history';
+  static String servicePricing(String id) => '/admin/services/$id/pricing';
+  static String servicePricingHistory(String id) => '/admin/services/$id/pricing/history';
   static String serviceActivate(String id) => '/admin/services/$id/activate';
   static String serviceDeactivate(String id) => '/admin/services/$id/deactivate';
   

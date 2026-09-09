@@ -188,7 +188,7 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
                 OrdersTab(buyer: detailState.buyer, orders: detailState.orders),
                 TasksTab(tasks: detailState.tasks),
                 PaymentsTab(buyer: detailState.buyer, payments: detailState.payments),
-                ReviewsTab(buyer: detailState.buyer),
+                ReviewsTab(buyer: detailState.buyer, reviews: detailState.reviews),
                 AnalyticsTab(buyer: detailState.buyer, orders: detailState.orders),
                 ActivityTab(activity: detailState.activity),
                 RiskTab(buyer: detailState.buyer),

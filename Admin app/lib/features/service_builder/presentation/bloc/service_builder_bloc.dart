@@ -339,6 +339,7 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         minQuantity: event.minQuantity ?? currentP.minQuantity,
         maxQuantity: event.maxQuantity ?? currentP.maxQuantity,
         adminMarginPercent: event.adminMarginPercent ?? currentP.adminMarginPercent,
+        marginType: event.marginType ?? currentP.marginType,
         workerReward: event.workerReward ?? currentP.workerReward,
         chips: event.chips ?? currentP.chips,
       );

@@ -35,7 +35,22 @@ export class ServiceCatalogRepository {
     }
 
     async update(id: string, data: Partial<ServiceCatalog>): Promise<ServiceCatalog | null> {
-        await this.repository.update(id, data);
+        // Filter only recognized columns to protect against EntityPropertyNotFoundError
+        const allowedKeys: (keyof ServiceCatalog)[] = [
+            'name', 'description', 'category', 'serviceType', 'isActive',
+            'aiGeneratorEnabled', 'aiGeneratorConfig', 'elements', 'reviewMode',
+            'workerLimit', 'minAcceptHours', 'maxAcceptHours', 'minCompleteHours',
+            'maxCompleteHours', 'watchtimeSeconds', 'videoTutorialUrl', 'audioGuideUrl',
+            'adminInstructions', 'linkFieldLabel', 'linkFieldPlaceholder',
+            'textFieldLabel', 'textFieldPlaceholder', 'watchTimeOptions', 'version'
+        ];
+        const cleanData: any = {};
+        for (const key of allowedKeys) {
+            if (data[key] !== undefined) {
+                cleanData[key] = data[key];
+            }
+        }
+        await this.repository.update(id, cleanData);
         return this.findById(id);
     }
 
