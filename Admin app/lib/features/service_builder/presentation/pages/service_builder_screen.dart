@@ -64,6 +64,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
   String _reviewMode = 'buyer';
   bool _isPercentageMargin = false;
   bool _isFormPopulated = false;
+  ServiceModel? _currentService;
 
   // AI Generator Settings
   bool _aiGeneratorEnabled = false;
@@ -162,6 +163,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
   }
 
   void _populateFromService(ServiceModel service) {
+    _currentService = service;
     _codeController.text = service.code;
     _nameController.text = service.name;
     _descController.text = service.description;
@@ -648,8 +650,8 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                             Text(
                               _nameController.text.isNotEmpty
                                   ? _nameController.text
-                                  : (service?.name.isNotEmpty == true
-                                      ? service!.name
+                                  : (_currentService?.name.isNotEmpty == true
+                                      ? _currentService!.name
                                       : (widget.draftName?.isNotEmpty == true
                                           ? widget.draftName!
                                           : 'Service Title')),
