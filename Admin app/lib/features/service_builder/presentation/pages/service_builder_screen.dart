@@ -63,7 +63,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
   int _watchtimeSeconds = 0;
   String _reviewMode = 'buyer';
   bool _isPercentageMargin = false;
-  bool _bootstrapped = false;
+  bool _isFormPopulated = false;
 
   // AI Generator Settings
   bool _aiGeneratorEnabled = false;
@@ -117,8 +117,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     _minRetentionHoursController = TextEditingController(text: '24');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _bootstrapped) return;
-      _bootstrapped = true;
+      if (!mounted) return;
 
       final bloc = context.read<ServiceBuilderBloc>();
       if (widget.serviceId != null && widget.serviceId!.isNotEmpty) {
@@ -163,10 +162,9 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
   }
 
   void _populateFromService(ServiceModel service) {
-    if (_codeController.text.isEmpty) _codeController.text = service.code;
-    if (service.name.isNotEmpty) _nameController.text = service.name;
-    if (_descController.text.isEmpty)
-      _descController.text = service.description;
+    _codeController.text = service.code;
+    _nameController.text = service.name;
+    _descController.text = service.description;
     _buyerPriceController.text = service.pricing.buyerPrice.toString();
     _marginController.text = service.pricing.adminMarginPercent.toString();
     _isPercentageMargin =
@@ -205,6 +203,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
           service.aiGeneratorConfig!['unique'] == true ||
           service.aiGeneratorConfig!['uniqueness'] == null;
     }
+    setState(() {});
   }
 
   double _getCalculatedWorkerReward() {
@@ -223,13 +222,16 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     final bloc = context.read<ServiceBuilderBloc>();
 
     // 1. Update Info
+    final serviceName = _nameController.text.trim().isNotEmpty
+        ? _nameController.text.trim()
+        : (widget.draftName?.trim().isNotEmpty == true
+            ? widget.draftName!.trim()
+            : (bloc.state is ServiceEditingState
+                ? (bloc.state as ServiceEditingState).serviceDraft.name
+                : 'Service'));
     bloc.add(
       UpdateServiceInfoEvent(
-        name: _nameController.text.trim().isNotEmpty
-            ? _nameController.text.trim()
-            : (widget.draftName?.trim().isNotEmpty == true
-                ? widget.draftName!.trim()
-                : 'Service'),
+        name: serviceName,
         description: _descController.text.trim(),
         category:
             _codeController.text.startsWith('YOUTUBE') ? 'YouTube' : 'General',
@@ -321,7 +323,8 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     return BlocConsumer<ServiceBuilderBloc, ServiceBuilderState>(
       listener: (context, state) {
         if (state is ServiceEditingState) {
-          if (!_bootstrapped) {
+          if (!_isFormPopulated) {
+            _isFormPopulated = true;
             _populateFromService(state.serviceDraft);
           }
           if (state.successMessage != null) {
@@ -373,7 +376,11 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                 Text(
                   _nameController.text.isNotEmpty
                       ? _nameController.text
-                      : 'Configure Service',
+                      : (service?.name.isNotEmpty == true
+                          ? service!.name
+                          : (widget.draftName?.isNotEmpty == true
+                              ? widget.draftName!
+                              : 'Configure Service')),
                   style: const TextStyle(
                     color: textPrimary,
                     fontSize: 16,
@@ -385,7 +392,11 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                 Text(
                   _codeController.text.isNotEmpty
                       ? _codeController.text
-                      : 'NEW SERVICE',
+                      : (service?.code.isNotEmpty == true
+                          ? service!.code
+                          : (widget.draftCode?.isNotEmpty == true
+                              ? widget.draftCode!
+                              : 'NEW SERVICE')),
                   style: const TextStyle(
                     color: accentBlue,
                     fontSize: 11,
@@ -637,9 +648,11 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                             Text(
                               _nameController.text.isNotEmpty
                                   ? _nameController.text
-                                  : (widget.draftName?.isNotEmpty == true
-                                      ? widget.draftName!
-                                      : 'Service Title'),
+                                  : (service?.name.isNotEmpty == true
+                                      ? service!.name
+                                      : (widget.draftName?.isNotEmpty == true
+                                          ? widget.draftName!
+                                          : 'Service Title')),
                               style: const TextStyle(
                                 color: textPrimary,
                                 fontSize: 14,

@@ -255,8 +255,12 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         return el;
       }).toList();
 
+      final newName = (event.name.trim().isNotEmpty)
+          ? event.name.trim()
+          : currentState.serviceDraft.name;
+
       final updatedDraft = currentState.serviceDraft.copyWith(
-        name: event.name,
+        name: newName,
         description: event.description,
         category: event.category ?? currentState.serviceDraft.category,
         serviceType: event.serviceType ?? currentState.serviceDraft.serviceType,
