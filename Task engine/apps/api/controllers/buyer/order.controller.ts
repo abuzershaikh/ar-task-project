@@ -93,16 +93,18 @@ export class BuyerOrderController {
     async previewAiComments(
         @Body() body: {
             topic?: string;
+            prompt?: string;
             language?: string;
             tone?: string;
             count?: number;
             serviceCode?: string;
             targetUrl?: string;
             appName?: string;
+            videoTitle?: string;
             appDescription?: string;
         },
     ) {
-        const topic = body.topic?.trim() || '';
+        const topic = body.topic?.trim() || body.prompt?.trim() || '';
         const language = body.language || 'English';
         const tone = body.tone || 'natural';
         const requestedTotal = body.count || 10;
@@ -113,6 +115,8 @@ export class BuyerOrderController {
         const isInstagram = serviceCode.includes('insta') || serviceCode.includes('ig');
         const generatorType = isPlayStore ? 'playstore_review' : isInstagram ? 'instagram_comment' : 'youtube_comment';
 
+        const videoTitle = body.videoTitle?.trim() || (!isPlayStore && body.appName?.trim() ? body.appName.trim() : '');
+
         const sampleComments = await this.aiGeneratorService.generateContentBatch(
             generatorType,
             previewCount,
@@ -121,7 +125,7 @@ export class BuyerOrderController {
                 language,
                 tone,
                 uniqueness: true,
-                videoTitle: body.targetUrl,
+                videoTitle,
                 appName: body.appName,
                 isAppReview: isPlayStore,
                 generatorType,

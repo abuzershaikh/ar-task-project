@@ -196,12 +196,14 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             '/buyer/orders/ai-preview-comments',
             data: {
               'topic': userPrompt,
+              'prompt': userPrompt,
               'language': _selectedLanguage,
               'tone': _selectedTone,
               'count': _selectedQuantity,
               'serviceCode': _selectedService?.code,
               'targetUrl': _targetUrlController.text.trim(),
               'appName': cleanBrand,
+              'videoTitle': cleanBrand,
             },
           );
           if ((res.statusCode == 200 || res.statusCode == 201) && res.data != null && res.data['sampleComments'] != null) {
@@ -221,7 +223,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         }
       }
 
-      // Instant Organic Fallback Generation
+      // Instant Organic Fallback Generation with Semantic Intent Matching
       final targetCount = _selectedQuantity < 5 ? (_selectedQuantity > 0 ? _selectedQuantity : 1) : 5;
       final isReview = _selectedService?.code.toUpperCase().contains('PLAY') == true ||
           _selectedService?.code.toUpperCase().contains('REVIEW') == true ||
@@ -230,9 +232,70 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           _selectedService?.name.toUpperCase().contains('REVIEW') == true;
 
       final isHindi = _selectedLanguage.toLowerCase().contains('hindi') || _selectedLanguage.toLowerCase().contains('hinglish');
+      final lowerPrompt = userPrompt.toLowerCase();
 
-      final fallbacks = isReview
-          ? (isHindi
+      final isPart2 = RegExp(r'part\s*2|part\s*two|next\s*part|next\s*video|sequel|agla\s*part|doosra\s*part|part2', caseSensitive: false).hasMatch(lowerPrompt);
+      final isAudio = RegExp(r'audio|mic|voice|sound|clarity|awaz|aawaz|noise', caseSensitive: false).hasMatch(lowerPrompt);
+      final isTrading = RegExp(r'trading|stock|market|crypto|forex|chart|candle|indicator|profit', caseSensitive: false).hasMatch(lowerPrompt);
+      final isTutorial = RegExp(r'explain|tutorial|guide|sikha|samjh|concept|sikhao|trick', caseSensitive: false).hasMatch(lowerPrompt);
+      final isPayment = RegExp(r'pay|upi|money|transaction|wallet|paisa|cash|billing', caseSensitive: false).hasMatch(lowerPrompt);
+      final isDelivery = RegExp(r'deliver|pickup|speed|fast|doorstep|service|courier', caseSensitive: false).hasMatch(lowerPrompt);
+      final isUi = RegExp(r'ui|design|interface|clean|navigation|simple|layout', caseSensitive: false).hasMatch(lowerPrompt);
+      final isSupport = RegExp(r'support|help|service|care|team|contact', caseSensitive: false).hasMatch(lowerPrompt);
+
+      List<String> fallbacks = [];
+
+      if (isReview) {
+        if (isPayment) {
+          fallbacks = isHindi
+              ? [
+                  "Payment process ekdum instant aur secure hai, wallet me turant reflect hota hai.",
+                  "Transactions super fast hain aur koi deduction error nahi aata, very reliable.",
+                  cleanBrand.isNotEmpty ? "$cleanBrand me payment bohot smooth hai, trustworthy app." : "Bohot safe aur dependable payment system mila mujhe.",
+                ]
+              : [
+                  "Instant and reliable payment processing, haven't faced a single glitch.",
+                  "Transactions are super quick and secure, very transparent billing.",
+                  cleanBrand.isNotEmpty ? "Payments on $cleanBrand are seamless and instantaneous." : "Very safe checkout experience with fast transactions.",
+                ];
+        } else if (isDelivery) {
+          fallbacks = isHindi
+              ? [
+                  "Doorstep pickup aur service timing bohot fast aur punctual hai.",
+                  "Bohot jaldi pickup ho gaya, staff ka behavior bhi kaafi polite tha.",
+                  cleanBrand.isNotEmpty ? "$cleanBrand ki doorstep service ekdum fast hai." : "Quick and punctual execution, completely hassle-free.",
+                ]
+              : [
+                  "Doorstep pickup and handling was remarkably fast and punctual.",
+                  "Order fulfillment and quick response exceeded my expectations.",
+                  cleanBrand.isNotEmpty ? "The pickup service from $cleanBrand was swift and professional." : "Extremely fast service, completed well ahead of schedule.",
+                ];
+        } else if (isUi) {
+          fallbacks = isHindi
+              ? [
+                  "UI bohot clean aur modern hai, navigation ekdum smooth hai.",
+                  "Sabhi features aasan hain, koi bhi bina confuse hue chala sakta hai.",
+                  cleanBrand.isNotEmpty ? "$cleanBrand ka interface kaafi lightweight aur stylish hai." : "Bohot pyara design hai, har option seedha samajh aata hai.",
+                ]
+              : [
+                  "The user interface is sleek, modern, and clutter-free.",
+                  "Clean design and fluid page transitions, truly top tier UI.",
+                  cleanBrand.isNotEmpty ? "Navigating $cleanBrand is effortless and intuitive." : "Minimalist layout that makes daily tasks enjoyable.",
+                ];
+        } else if (isSupport) {
+          fallbacks = isHindi
+              ? [
+                  "Customer support ne turant meri query resolve kar di, bohot helpful team hai.",
+                  "Help center ka response time kaafi fast hai, polite behavior.",
+                  cleanBrand.isNotEmpty ? "$cleanBrand support team genuinely listens and helps out." : "Very prompt customer assistance, super happy with the response.",
+                ]
+              : [
+                  "Customer support was very prompt and resolved my query in minutes.",
+                  "Help desk is super responsive, polite, and genuinely helpful.",
+                  cleanBrand.isNotEmpty ? "The support team behind $cleanBrand is outstanding." : "Quick resolution from support, very dependable assistance.",
+                ];
+        } else {
+          fallbacks = isHindi
               ? [
                   cleanBrand.isNotEmpty ? "$cleanBrand use karke maza aa gaya, UI ekdum smooth aur fast hai." : "Bohot hi smooth chal raha hai, UI ekdum clean aur fast hai.",
                   "Kamaal ka application hai, use karna bohot aasan aur convenient hai.",
@@ -246,14 +309,87 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   cleanBrand.isNotEmpty ? "$cleanBrand makes everyday tasks so much easier and convenient." : "Super fast, lightweight and intuitive. Very happy with the overall performance.",
                   "Simple, clean, and gets the job done quickly. Exactly what I was looking for.",
                   cleanBrand.isNotEmpty ? "Really glad I installed $cleanBrand. Fast responses and zero lag." : "One of the best apps in this category. Works like a charm and saves me so much time.",
-                ])
-          : [
-              userPrompt.isNotEmpty ? "Great insights regarding $userPrompt! Really enjoyed the video." : "Very informative and well presented! Keep it up.",
-              userPrompt.isNotEmpty ? "Super helpful content on $userPrompt. Thanks for explaining so clearly!" : "Awesome content, learned a lot from this video.",
-              userPrompt.isNotEmpty ? "The points made about $userPrompt are spot on. Subscribed!" : "Clear, concise, and super helpful. Highly recommended!",
-              userPrompt.isNotEmpty ? "Loved the practical tips shared for $userPrompt." : "Quality explanation and great pacing. Thanks for sharing!",
-              userPrompt.isNotEmpty ? "Fantastic video on $userPrompt, looking forward to the next one!" : "Really well explained and easy to follow.",
-            ];
+                ];
+        }
+      } else {
+        // YouTube / Social Video Comments
+        if (isPart2) {
+          fallbacks = isHindi
+              ? [
+                  "Bhai iska Part 2 kab aayega? Jaldi upload karo please!",
+                  "Part 2 ka besabri se intezar rahega, bohot zabardast explanation tha.",
+                  "Bhai next part zaroor lana, aage ka concept bhi dekhna hai.",
+                  "Part 2 jaldi lao bhai, poora topic explore karna hai!",
+                  "Channel subscribe kar diya hai, agle part ka wait hai bhai!",
+                ]
+              : [
+                  "Really hope there is a Part 2 coming out soon! Left me wanting more.",
+                  "Can you please drop Part 2 as soon as possible? Super excited for what is next!",
+                  "Waiting eagerly for part 2, this explanation was crystal clear.",
+                  "Bro we need Part 2 on this immediately, loved the breakdown!",
+                  "Subscribed just for Part 2! Please do not keep us waiting too long.",
+                ];
+        } else if (isAudio) {
+          fallbacks = isHindi
+              ? [
+                  "Bhai audio quality ekdum crystal clear hai, sunne me maza aa gaya.",
+                  "Aapki voice clarity aur sound setup bohot badhiya hai bhai.",
+                  "Ekdum saaf aawaz hai, har ek point clearly samajh aaya.",
+                  "Mic quality aur explanation dono top tier hain bhai!",
+                ]
+              : [
+                  "The audio quality and mic clarity are top notch, super easy to listen to.",
+                  "Loved the clear sound quality and voiceover, made following along effortless.",
+                  "Voice clarity is 10/10 in this video, great production quality!",
+                  "Super crisp audio! Really appreciate creators who care about clear sound.",
+                ];
+        } else if (isTrading) {
+          fallbacks = isHindi
+              ? [
+                  "Trading strategy ekdum solid hai bhai, risk management bohot sahi bataya.",
+                  "Chart reading ka tareeka bohot badhiya sikhaya aapne, shukriya!",
+                  "Aapka market analysis hamesha accurate hota hai bhai, keep it up!",
+                  "Bohot kaam ka setup bataya bhai, intraday ke liye best guide hai.",
+                ]
+              : [
+                  "Solid risk management strategy explained here, definitely taking notes.",
+                  "The way you analyzed the market setup in this video is pure gold.",
+                  "Best trading breakdown I have watched this month, super practical insights.",
+                  "Clear price action analysis without confusing indicators, loved it!",
+                ];
+        } else if (isTutorial) {
+          fallbacks = isHindi
+              ? [
+                  "Aapka samjhane ka tareeka sabse best hai bhai, ek baar me clear ho gaya.",
+                  "Point to point baat ki hai bina time waste kiye, bohot helpful raha.",
+                  "Itne aasan tareeke se samjhaya aapne, shukriya bhai!",
+                  "Bohot informative aur valuable tutorial, poora doubt clear ho gaya.",
+                ]
+              : [
+                  "Finally someone who explains this concept straight to the point without wasting time.",
+                  "The breakdown at each step was so clean and easy to follow.",
+                  "This cleared up so much confusion for me, thanks for sharing!",
+                  "One of the best tutorials on this topic on YouTube, bookmarked!",
+                ];
+        } else {
+          fallbacks = isHindi
+              ? [
+                  "Bohot hi badhiya aur useful video! Point to point explanation.",
+                  "Ekdum clear content bhai, aage bhi aise helpful videos banate rahiye.",
+                  "Shaandar video, bohot helpful raha. Full support!",
+                  "Video like and subscribe dono kar diya bhai, keep shining!",
+                  "Top class presentation, maza aa gaya dekh kar.",
+                ]
+              : [
+                  "Straight to the point with zero fluff, high value content delivered simply.",
+                  "The breakdown at each step was fantastic, learned a lot from this video.",
+                  "Solid points covered throughout, definitely sharing this with friends.",
+                  "Very well presented and easy to follow. Subscribed and liked!",
+                  "Deserves way more views and recognition, top notch content!",
+                ];
+        }
+      }
+
       setState(() {
         _sampleComments = fallbacks.map((f) => _sanitizeCommentText(f)).take(targetCount).toList();
       });

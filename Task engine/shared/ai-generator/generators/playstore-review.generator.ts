@@ -38,13 +38,6 @@ export class PlayStoreReviewGenerator implements IContentGenerator {
         '{brand} has become my go-to app for this. Super dependable and hassle-free.'
     ];
 
-    private readonly keywordEn = [
-        'Particularly like the {keyword} feature, works smoothly and reliably.',
-        'The {keyword} process is super fast and straightforward.',
-        'Very pleased with how {keyword} is handled. Quick and without any hassle.',
-        'Everything regarding {keyword} is well thought out and polished.'
-    ];
-
     private readonly generalHi = [
         'Bohot hi smooth chal raha hai, UI ekdum clean aur fast hai.',
         'Kamaal ka application hai, use karna bohot aasan aur convenient hai.',
@@ -74,55 +67,130 @@ export class PlayStoreReviewGenerator implements IContentGenerator {
         '{brand} application bohot acche se optimize kiya gaya hai. Zero lag aur quick response.'
     ];
 
-    private readonly keywordHi = [
-        'Khas taur par iska {keyword} feature bohot badhiya kaam kar raha hai.',
-        '{keyword} ka process ekdum fast aur bina kisi dikkat ke ho gaya.',
-        'Isme {keyword} use karna bohot simple aur convenient laga mujhe.'
+    // Targeted intent-based reviews (English)
+    private readonly paymentEn = [
+        'Instant and reliable payment processing, haven\'t faced a single deduction glitch.',
+        'Transactions are super quick and secure, very transparent billing.',
+        'Wallet and payment workflow is seamless, money reflects instantly.',
+        'Very safe and fast checkout experience. Great payment security.'
+    ];
+
+    private readonly deliveryEn = [
+        'Doorstep pickup and fast handling is incredible, highly punctual team.',
+        'Delivery was swift and handled with care, great speed of service.',
+        'Order tracking and quick fulfillment exceeded my expectations.',
+        'Super fast execution, got everything sorted well ahead of time.'
+    ];
+
+    private readonly uiEn = [
+        'The user interface is sleek and clutter-free, very intuitive to navigate.',
+        'Minimalist layout and clean fonts, makes using the app a delight.',
+        'Everything is neatly organized, finding what you need takes two taps.',
+        'Modern aesthetics and fluid page transitions, truly top tier design.'
+    ];
+
+    private readonly supportEn = [
+        'Customer support was very prompt and resolved my query within minutes.',
+        'Help desk is super responsive and polite, genuinely care about users.',
+        'Quick resolution from the support team, very satisfied with their service.',
+        'Great after-service assistance, dependable help whenever needed.'
+    ];
+
+    private readonly lightweightEn = [
+        'Super lightweight on phone storage and zero battery drain experienced.',
+        'Runs buttery smooth even on low RAM devices, exceptionally well optimized.',
+        'Zero lags, zero freezes, and app opens in a split second.',
+        'Extremely stable performance with no unexpected crashes or battery hogging.'
+    ];
+
+    // Targeted intent-based reviews (Hindi)
+    private readonly paymentHi = [
+        'Payment process ekdum instant aur safe hai, wallet me turant reflect hota hai.',
+        'Bina kisi transaction error ke payments smooth ho jati hain, bohot reliable hai.',
+        'Transactions super fast hain aur koi hidden charges nahi hain, genuine service.'
+    ];
+
+    private readonly deliveryHi = [
+        'Doorstep pickup aur service timing bohot fast aur punctual hai.',
+        'Bohot jaldi delivery mil gayi, staff bhi bohot polite aur helpful tha.',
+        'Tracking system aur fast execution bohot accha laga mujhe.'
+    ];
+
+    private readonly uiHi = [
+        'UI bohot clean aur modern hai, koi bhi aaram se bina confuse hue chala sakta hai.',
+        'Sabhi options seedhe aur aasan hain, navigation ekdum smooth hai.',
+        'Bina kisi clutter ke sleek design banaya hai, daily use ke liye best hai.'
+    ];
+
+    private readonly supportHi = [
+        'Customer support ne turant meri problem solve kar di, bohot acchi team hai.',
+        'Help center ka response time kaafi fast hai, bohot polite tareeke se guide kiya.',
+        'Support team genuinely helpful hai, query instant resolve ho gayi.'
+    ];
+
+    private readonly lightweightHi = [
+        'Phone me bilkul bhi space nahi leta aur battery bhi waste nahi hoti.',
+        'Bilkul smooth chalta hai bina kisi lag ya hang ke, lightweight app hai.',
+        'Speed bohot fast hai aur application bina kisi issue ke open ho jata hai.'
     ];
 
     async generateBatch(count: number, options?: GenerationOptions): Promise<string[]> {
         const brand = cleanBrandName(options?.appName);
-        const keyword = cleanTopic(options?.topic, brand);
+        const rawPrompt = (options?.topic || '').toLowerCase().trim();
         const language = (options?.language || 'English').toLowerCase();
         const isHindi = language.includes('hindi') || language.includes('hinglish');
 
+        const isPayment = /pay|upi|money|transaction|wallet|paisa|cash|billing|checkout/i.test(rawPrompt);
+        const isDelivery = /deliver|pickup|speed|fast|doorstep|service|courier|timing|punctual/i.test(rawPrompt);
+        const isUi = /ui|design|interface|clean|navigation|simple|layout|modern/i.test(rawPrompt);
+        const isSupport = /support|help|service|care|team|contact|query|assist/i.test(rawPrompt);
+        const isLightweight = /lag|slow|battery|light|size|smooth|performance|bug|hang|ram/i.test(rawPrompt);
+
+        let targetedPool: string[] = [];
+        if (isPayment) targetedPool.push(...(isHindi ? this.paymentHi : this.paymentEn));
+        if (isDelivery) targetedPool.push(...(isHindi ? this.deliveryHi : this.deliveryEn));
+        if (isUi) targetedPool.push(...(isHindi ? this.uiHi : this.uiEn));
+        if (isSupport) targetedPool.push(...(isHindi ? this.supportHi : this.supportEn));
+        if (isLightweight) targetedPool.push(...(isHindi ? this.lightweightHi : this.lightweightEn));
+
         const generalPool = isHindi ? [...this.generalHi] : [...this.generalEn];
         const brandPool = isHindi ? [...this.brandHi] : [...this.brandEn];
-        const keywordPool = isHindi ? [...this.keywordHi] : [...this.keywordEn];
 
-        // Shuffle arrays
         this.shuffle(generalPool);
         this.shuffle(brandPool);
-        this.shuffle(keywordPool);
+        this.shuffle(targetedPool);
 
         const results = new Set<string>();
         let generalIdx = 0;
         let brandIdx = 0;
-        let keywordIdx = 0;
+        let targetedIdx = 0;
 
         let attempts = 0;
-        const maxAttempts = count * 20;
+        const maxAttempts = count * 25;
 
         while (results.size < count && attempts < maxAttempts) {
             attempts++;
             let reviewText = '';
             const roll = Math.random();
 
-            if (brand && roll < 0.35 && brandPool.length > 0) {
+            if (targetedPool.length > 0 && roll < 0.6) {
+                reviewText = targetedPool[targetedIdx % targetedPool.length];
+                targetedIdx++;
+                // Optionally prefix brand name if available
+                if (brand && Math.random() < 0.4) {
+                    reviewText = isHindi ? `${brand} me ` + reviewText.charAt(0).toLowerCase() + reviewText.slice(1) : reviewText;
+                }
+            } else if (brand && roll < 0.85 && brandPool.length > 0) {
                 const template = brandPool[brandIdx % brandPool.length];
                 brandIdx++;
                 reviewText = template.replace('{brand}', brand);
-            } else if (keyword && roll >= 0.35 && roll < 0.6 && keywordPool.length > 0) {
-                const template = keywordPool[keywordIdx % keywordPool.length];
-                keywordIdx++;
-                reviewText = template.replace('{keyword}', keyword);
             } else {
                 reviewText = generalPool[generalIdx % generalPool.length];
                 generalIdx++;
             }
 
             const clean = sanitizeReviewText(reviewText);
-            if (clean && clean.length > 10) {
+            if (clean && clean.length > 10 && !results.has(clean)) {
                 results.add(clean);
             }
         }

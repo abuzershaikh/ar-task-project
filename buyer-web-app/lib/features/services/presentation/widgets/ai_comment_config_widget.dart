@@ -159,24 +159,42 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
           ),
           const Divider(color: Color(0xFFBBF7D0), height: 20),
 
-          // App Name Input (User enters or edits app name)
-          if (widget.isAppReview && widget.appNameController != null) ...[
-            const Text(
-              'App Name:',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1E293B),
-              ),
+          // App Name / Video Title Input
+          if (widget.appNameController != null) ...[
+            Row(
+              children: [
+                Icon(
+                  widget.isAppReview ? Icons.apps_rounded : Icons.video_collection_rounded,
+                  size: 16,
+                  color: widget.isAppReview ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  widget.isAppReview
+                      ? 'App Name:'
+                      : 'Video Title / Topic (Detected or Enter Manually):',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
             TextFormField(
               controller: widget.appNameController,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               decoration: InputDecoration(
-                hintText: 'e.g. Cashify, PhonePe, WhatsApp',
+                hintText: widget.isAppReview
+                    ? 'e.g. Cashify, PhonePe, WhatsApp'
+                    : 'e.g. Trading Strategy Masterclass, Tech Vlog, Python Tutorial',
                 hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                prefixIcon: const Icon(Icons.apps_rounded, size: 18, color: Color(0xFF16A34A)),
+                prefixIcon: Icon(
+                  widget.isAppReview ? Icons.apps_rounded : Icons.play_circle_outline_rounded,
+                  size: 18,
+                  color: widget.isAppReview ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                ),
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -193,25 +211,50 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
             const SizedBox(height: 12),
           ],
 
-          // Topic / Keywords / Custom Prompt (User enters review instructions)
-          Text(
-            widget.isAppReview ? 'Review Focus / Custom Prompt (Optional):' : 'Video Topic / Keywords (Optional):',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1E293B),
-            ),
+          // Dedicated AI Prompt Field
+          Row(
+            children: [
+              Icon(
+                widget.isAppReview ? Icons.rate_review_rounded : Icons.psychology_rounded,
+                size: 16,
+                color: widget.isAppReview ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                widget.isAppReview
+                    ? 'Review Focus / Custom Prompt (Optional):'
+                    : 'AI Prompt / Comment Instructions (Optional):',
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
+          Text(
+            widget.isAppReview
+                ? 'Specify what specific features or feedback AI should focus on.'
+                : 'Enter a prompt or custom instructions for AI on what kind of comments to generate.',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 8),
           TextFormField(
             controller: widget.topicController,
+            maxLines: 2,
+            minLines: 1,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
               hintText: widget.isAppReview
                   ? 'e.g. Fast pickup, quick payment, smooth delivery (or leave blank for natural praise)'
-                  : 'e.g. Great trading strategy, helpful tutorial, tech vlog...',
+                  : 'e.g. Praise the video, ask for part 2, ask insightful questions, highlight key tips...',
               hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-              prefixIcon: const Icon(Icons.edit_note_rounded, size: 20, color: Color(0xFF16A34A)),
+              prefixIcon: Icon(
+                Icons.auto_awesome,
+                size: 18,
+                color: widget.isAppReview ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+              ),
               filled: true,
               fillColor: Colors.white,
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -223,6 +266,54 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                 borderRadius: BorderRadius.circular(10),
                 borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
               ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Quick Prompt Suggestion Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: (widget.isAppReview
+                      ? [
+                          'Smooth & Fast UI',
+                          'Excellent Support',
+                          'Very Useful App',
+                          'Recommended to All',
+                        ]
+                      : [
+                          'Praise & Support',
+                          'Ask for Part 2',
+                          'Insightful Tutorial',
+                          'Great Explanation',
+                          'Subscribed & Liked',
+                        ])
+                  .map((suggestion) => Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: ActionChip(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          side: const BorderSide(color: Color(0xFFE2E8F0)),
+                          label: Text(
+                            '+ $suggestion',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF334155),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          onPressed: () {
+                            final current = widget.topicController.text.trim();
+                            if (current.isEmpty) {
+                              widget.topicController.text = suggestion;
+                            } else if (!current.contains(suggestion)) {
+                              widget.topicController.text = '$current, $suggestion';
+                            }
+                          },
+                        ),
+                      ))
+                  .toList(),
             ),
           ),
           const SizedBox(height: 12),

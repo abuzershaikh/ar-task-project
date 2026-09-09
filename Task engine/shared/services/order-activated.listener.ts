@@ -170,7 +170,7 @@ export class OrderActivatedListener {
                                 uniqueness: true,
                                 isAppReview: isPlayStore,
                                 appName,
-                                videoTitle: targetUrl,
+                                videoTitle: order?.requirements?.videoTitle || (!isPlayStore ? (appName || '') : ''),
                                 generatorType,
                             } as any,
                         );

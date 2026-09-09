@@ -64,22 +64,24 @@ export function cleanBrandName(rawName?: string): string {
 }
 
 /**
- * Validates and cleans a topic/keyword phrase.
- * If topic is long (like a pasted description) or matches app title, it returns empty string
- * to prevent injecting entire descriptions into reviews!
+ * Cleans and preserves a user's prompt or review instructions.
+ * Normalizes whitespace and strips dangerous characters while preserving multi-word directions.
  */
 export function cleanTopic(topic?: string, brandName?: string): string {
     if (!topic) return '';
-    const clean = topic.trim();
+    let clean = topic.trim();
 
-    // If topic is longer than 35 characters, it's a description/slogan, not a keyword
-    if (clean.length > 35) return '';
+    // Normalize whitespace and remove newlines
+    clean = clean.replace(/\r\n/g, ' ').replace(/\n/g, ' ').replace(/\s{2,}/g, ' ');
 
-    // If topic has multiple sentences, URLs, or line breaks, drop it
-    if (clean.includes('.') || clean.includes('\n') || clean.includes('http')) return '';
+    // Allow full instructions up to 600 characters
+    if (clean.length > 600) {
+        clean = clean.substring(0, 600).trim();
+    }
 
-    // If topic is identical to brand name, drop it to avoid repetition
+    // If prompt is identical to brand name, drop it to avoid redundant self-reference
     if (brandName && clean.toLowerCase() === brandName.toLowerCase()) return '';
 
     return clean;
 }
+

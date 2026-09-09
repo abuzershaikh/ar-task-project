@@ -21,44 +21,22 @@ export class YouTubeCommentGenerator implements IContentGenerator {
         'Really appreciate the effort put into this video',
         'Solid points covered throughout',
         'Extremely well made and easy to follow',
-        'This gave me a lot of clarity',
-        'Top notch content right here',
         'Straight to the point with zero fluff',
         'Bookmarking this for future reference',
         'Hands down one of the most useful videos',
         'Keep up the great work',
-        'Loved every minute of this',
         'Practical, concise and very actionable',
-        'Very well researched and articulated',
-        'The details you highlighted made all the difference',
-        'Super clear and to the point',
-        'Really good breakdown of the whole process',
-        'This helped me a ton today',
         'High value content delivered simply'
-    ];
-
-    private readonly topicFollowUpsEn = [
-        'especially regarding {topic}',
-        'particularly the points on {topic}',
-        'the practical insights about {topic} were spot on',
-        'learned a lot about {topic}',
-        'the way you explained {topic} made it effortless to understand',
-        'the step-by-step guidance on {topic} was super clear',
-        'glad you touched upon {topic}',
-        'the practical approach to {topic} is genuinely appreciated',
-        'really liked the real-world perspective on {topic}',
-        'the key takeaway on {topic} was awesome'
     ];
 
     private readonly closersEn = [
         'Keep making more videos like this!',
         'Subscribed and waiting for the next upload!',
-        'Looking forward to your upcoming tutorials!',
+        'Looking forward to your upcoming videos!',
         'Definitely sharing this with friends.',
         'Much love and respect for this channel.',
         'Deserves way more views and recognition!',
         'Great work, keep it going!',
-        'Can you make a follow up video soon?',
         'Subscribed! Highly recommended.',
         'Keep dropping these gems!',
         'Subbed and notifications turned on!',
@@ -90,63 +68,159 @@ export class YouTubeCommentGenerator implements IContentGenerator {
         'Shaandar presentation, shukriya!'
     ];
 
+    private readonly part2En = [
+        'Really hope there is a Part 2 coming out soon! Left me wanting more.',
+        'Can you please drop Part 2 as soon as possible? Super excited for what is next!',
+        'Waiting eagerly for part 2, this explanation was crystal clear.',
+        'Bro we need Part 2 on this immediately, loved the breakdown!',
+        'Please make a follow-up video covering the next steps soon!',
+        'Subscribed just for Part 2! Please do not keep us waiting too long.',
+        'Eagerly anticipating the next part, fantastic delivery!'
+    ];
+
+    private readonly part2Hi = [
+        'Bhai iska Part 2 kab aayega? Jaldi upload karo please!',
+        'Part 2 ka besabri se intezar rahega, bohot zabardast explanation tha.',
+        'Bhai next part zaroor lana, aage ka concept bhi detail me dekhna hai.',
+        'Part 2 jaldi lao bhai, poora topic explore karna hai!',
+        'Channel subscribe kar diya hai, agle part ka wait hai bhai!',
+        'Bhai agla part kab drop kar rahe ho? Intezar rahega!'
+    ];
+
+    private readonly audioEn = [
+        'The audio quality and mic clarity are top notch, super easy to listen to.',
+        'Loved the clear sound quality and voiceover, made following along effortless.',
+        'Voice clarity is 10/10 in this video, great production quality!',
+        'Super crisp audio! Really appreciate creators who care about clear sound.',
+        'The clear voiceover and background sound were balanced perfectly.'
+    ];
+
+    private readonly audioHi = [
+        'Bhai audio quality ekdum crystal clear hai, sunne me maza aa gaya.',
+        'Aapki voice clarity aur sound setup bohot badhiya hai bhai.',
+        'Ekdum saaf aawaz hai, har ek point clearly samajh aaya bina kisi noise ke.',
+        'Mic quality aur explanation dono top tier hain bhai!'
+    ];
+
+    private readonly tradingEn = [
+        'Solid risk management strategy explained here, definitely taking notes.',
+        'The way you analyzed the market setup in this video is pure gold.',
+        'Best trading breakdown I have watched this month, super practical insights.',
+        'Clear price action analysis without confusing fluff, loved it!',
+        'Very disciplined approach to trading, thank you for sharing.'
+    ];
+
+    private readonly tradingHi = [
+        'Trading strategy ekdum solid hai bhai, risk management bohot sahi bataya.',
+        'Chart reading ka tareeka bohot badhiya sikhaya aapne, shukriya!',
+        'Aapka market analysis hamesha accurate hota hai bhai, keep it up!',
+        'Bohot kaam ka setup bataya bhai, intraday ke liye best guide hai.'
+    ];
+
+    private readonly tutorialEn = [
+        'Finally someone who explains this concept straight to the point without wasting time.',
+        'The breakdown at each step was so clean and easy to follow.',
+        'This cleared up so much confusion for me, thanks for sharing!',
+        'One of the best tutorials on this topic on YouTube, bookmarked!',
+        'Hands down the most practical guide I have watched all week.'
+    ];
+
+    private readonly tutorialHi = [
+        'Aapka samjhane ka tareeka sabse best hai bhai, ek baar me clear ho gaya.',
+        'Point to point baat ki hai bina time waste kiye, bohot helpful raha.',
+        'Itne aasan tareeke se samjhaya aapne, shukriya bhai!',
+        'Bohot informative aur valuable tutorial, poora doubt clear ho gaya.'
+    ];
+
+    private readonly questionsEn = [
+        'Quick question: does this approach still work with the latest update?',
+        'One doubt regarding the step shown in the middle, what setting was that?',
+        'Curious about your setup, what tools do you recommend for beginners?',
+        'Can you share more details on how to scale this over time?'
+    ];
+
+    private readonly questionsHi = [
+        'Bhai ek chota sa doubt tha, kya ye naye update me bhi chalega?',
+        'Bhai aapne jo tool use kiya hai uska naam kya hai?',
+        'Kya beginners bhi is tareeke ko easily follow kar sakte hain?'
+    ];
+
     async generateBatch(count: number, options?: GenerationOptions): Promise<string[]> {
-        const topic = options?.topic?.trim() || '';
+        const topic = (options?.topic || '').toLowerCase().trim();
         const language = (options?.language || 'English').toLowerCase();
         const tone = (options?.tone || 'natural').toLowerCase();
 
         const isHindi = language.includes('hindi') || language.includes('hinglish');
         const results = new Set<string>();
         let attempts = 0;
-        const maxAttempts = count * 20;
+        const maxAttempts = count * 25;
+
+        const isPart2 = /part\s*2|part\s*two|next\s*part|next\s*video|sequel|agla\s*part|doosra\s*part|part2/i.test(topic);
+        const isAudio = /audio|mic|voice|sound|clarity|awaz|aawaz|noise/i.test(topic);
+        const isTrading = /trading|stock|market|crypto|forex|chart|candle|indicator|profit|nifty|banknifty/i.test(topic);
+        const isTutorial = /explain|tutorial|guide|sikha|samjh|concept|sikhao|trick|step/i.test(topic);
+        const isQuestion = tone === 'questioning' || /question|doubt|kaise|query|sawal|why|how|setting/i.test(topic);
+
+        // Assemble targeted pool based on detected user prompt intent
+        let targetedPool: string[] = [];
+        if (isPart2) {
+            targetedPool.push(...(isHindi ? this.part2Hi : this.part2En));
+        }
+        if (isAudio) {
+            targetedPool.push(...(isHindi ? this.audioHi : this.audioEn));
+        }
+        if (isTrading) {
+            targetedPool.push(...(isHindi ? this.tradingHi : this.tradingEn));
+        }
+        if (isTutorial) {
+            targetedPool.push(...(isHindi ? this.tutorialHi : this.tutorialEn));
+        }
+        if (isQuestion) {
+            targetedPool.push(...(isHindi ? this.questionsHi : this.questionsEn));
+        }
 
         const openers = isHindi ? this.openersHi : this.openersEn;
         const closers = isHindi ? this.closersHi : this.closersEn;
 
+        // Shuffle arrays
+        const shuffledTargeted = [...targetedPool].sort(() => Math.random() - 0.5);
+        let targetedIdx = 0;
+
         while (results.size < count && attempts < maxAttempts) {
             attempts++;
-            const opener = openers[Math.floor(Math.random() * openers.length)];
-            const closer = closers[Math.floor(Math.random() * closers.length)];
-
             let comment = '';
-            const roll = Math.random();
 
-            if (topic && roll > 0.4) {
-                const topicPhrase = isHindi
-                    ? `khas taur par ${topic} ke baare me detail bohot achhi thi.`
-                    : this.topicFollowUpsEn[Math.floor(Math.random() * this.topicFollowUpsEn.length)].replace('{topic}', topic) + '.';
-                comment = `${opener}, ${topicPhrase} ${closer}`;
-            } else if (roll > 0.2) {
-                comment = `${opener}! ${closer}`;
+            // If user specified an intent that matched a targeted pool, prioritize it
+            if (shuffledTargeted.length > 0 && Math.random() < 0.65) {
+                comment = shuffledTargeted[targetedIdx % shuffledTargeted.length];
+                targetedIdx++;
             } else {
-                comment = `${opener}.`;
+                const opener = openers[Math.floor(Math.random() * openers.length)];
+                const closer = closers[Math.floor(Math.random() * closers.length)];
+                comment = Math.random() > 0.4 ? `${opener}! ${closer}` : `${opener}. ${closer}`;
             }
 
-            // Adjust tone nuances
-            if (tone === 'enthusiastic' && !comment.includes('!')) {
-                comment += ' Really loved this!';
-            } else if (tone === 'questioning' && roll > 0.6) {
-                comment += isHindi
-                    ? ' Is topic par ek aur detailed part 2 bana sakte ho kya?'
-                    : ' Could you cover an advanced part 2 on this soon?';
+            // Adjust tone nuances naturally
+            if (tone === 'enthusiastic' && !comment.includes('!') && !comment.includes('?')) {
+                comment += isHindi ? ' Full support bhai!' : ' Really loved this!';
             }
 
-            // Uniqueness check
             if (!results.has(comment) && comment.length >= 10) {
                 results.add(comment);
             }
         }
 
-        // If count not yet fully filled due to large batch, generate indexed variations
-        let fallbackIndex = 1;
-        while (results.size < count) {
-            const opener = openers[fallbackIndex % openers.length];
-            const closer = closers[(fallbackIndex * 3) % closers.length];
-            const uniqueComment = `${opener}! (#${fallbackIndex}) ${closer}`;
-            results.add(uniqueComment);
-            fallbackIndex++;
+        // Fill remainder if needed
+        const list = Array.from(results);
+        let fillIdx = 0;
+        while (list.length < count) {
+            const opener = openers[fillIdx % openers.length];
+            const closer = closers[(fillIdx * 2) % closers.length];
+            const fallback = `${opener}! ${closer}`;
+            list.push(fallback);
+            fillIdx++;
         }
 
-        return Array.from(results).slice(0, count);
+        return list.slice(0, count);
     }
 }
