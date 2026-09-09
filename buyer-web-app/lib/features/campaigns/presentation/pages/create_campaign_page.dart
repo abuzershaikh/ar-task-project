@@ -203,7 +203,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               'serviceCode': _selectedService?.code,
               'targetUrl': _targetUrlController.text.trim(),
               'appName': cleanBrand,
-              'videoTitle': cleanBrand,
+              'videoTitle': userAppName,
             },
           );
           if ((res.statusCode == 200 || res.statusCode == 201) && res.data != null && res.data['sampleComments'] != null) {
@@ -242,6 +242,19 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       final isDelivery = RegExp(r'deliver|pickup|speed|fast|doorstep|service|courier', caseSensitive: false).hasMatch(lowerPrompt);
       final isUi = RegExp(r'ui|design|interface|clean|navigation|simple|layout', caseSensitive: false).hasMatch(lowerPrompt);
       final isSupport = RegExp(r'support|help|service|care|team|contact', caseSensitive: false).hasMatch(lowerPrompt);
+
+      // Extract clean subject from video title or prompt
+      String subject = cleanBrand.isNotEmpty ? cleanBrand : userPrompt;
+      subject = subject
+          .replaceAll(RegExp(r'https?://\S+', caseSensitive: false), '')
+          .replaceAll(RegExp(r'[\[\(][^\]\)]*(?:official|music|video|4k|hd|1080p|full|ep\s*\d+|part\s*\d+)[^\]\)]*[\]\)]', caseSensitive: false), '')
+          .replaceAll(RegExp(r'\|\s*[^|]+$'), '')
+          .replaceAll(RegExp(r'[-–—]\s*[^–—]+$'), '')
+          .replaceAll(RegExp(r'#\w+'), '')
+          .replaceAll(RegExp(r'\b(202[0-9]|hindi|urdu|english|full\s*video|watch\s*now)\b', caseSensitive: false), '')
+          .trim();
+      if (subject.contains(':')) subject = subject.split(':')[0].trim();
+      if (subject.isEmpty) subject = 'is video';
 
       List<String> fallbacks = [];
 
@@ -312,21 +325,21 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                 ];
         }
       } else {
-        // YouTube / Social Video Comments
+        // YouTube / Social Video Comments (Contextual with Subject & Video Title)
         if (isPart2) {
           fallbacks = isHindi
               ? [
                   "Bhai iska Part 2 kab aayega? Jaldi upload karo please!",
-                  "Part 2 ka besabri se intezar rahega, bohot zabardast explanation tha.",
-                  "Bhai next part zaroor lana, aage ka concept bhi dekhna hai.",
-                  "Part 2 jaldi lao bhai, poora topic explore karna hai!",
-                  "Channel subscribe kar diya hai, agle part ka wait hai bhai!",
+                  "$subject ka next part besabri se wait kar raha hu, bohot zabardast explanation tha.",
+                  "Bhai agla part zaroor lana, aage ka concept bhi detail me dekhna hai!",
+                  "$subject ka Part 2 jaldi lao bhai, poora topic complete dekhna hai!",
+                  "Subscribed! Please agla part jaldi drop karna bhai, can't wait!",
                 ]
               : [
                   "Really hope there is a Part 2 coming out soon! Left me wanting more.",
-                  "Can you please drop Part 2 as soon as possible? Super excited for what is next!",
+                  "Can you please drop Part 2 on $subject as soon as possible? Super excited!",
                   "Waiting eagerly for part 2, this explanation was crystal clear.",
-                  "Bro we need Part 2 on this immediately, loved the breakdown!",
+                  "Bro we need Part 2 on this immediately, loved the breakdown of $subject!",
                   "Subscribed just for Part 2! Please do not keep us waiting too long.",
                 ];
         } else if (isAudio) {
@@ -346,46 +359,48 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         } else if (isTrading) {
           fallbacks = isHindi
               ? [
-                  "Trading strategy ekdum solid hai bhai, risk management bohot sahi bataya.",
-                  "Chart reading ka tareeka bohot badhiya sikhaya aapne, shukriya!",
-                  "Aapka market analysis hamesha accurate hota hai bhai, keep it up!",
-                  "Bohot kaam ka setup bataya bhai, intraday ke liye best guide hai.",
+                  "$subject ka market setup aur risk management bohot practical bataya aapne!",
+                  "Chart analysis aur price action ka tareeka ekdum accurate hai bhai, taking notes!",
+                  "$subject sikhne ke liye sabse best aur disciplined video hai ye.",
+                  "Aapka chart reading aur SL lagane ka tareeka bohot safe hai, shukriya bhai!",
                 ]
               : [
-                  "Solid risk management strategy explained here, definitely taking notes.",
-                  "The way you analyzed the market setup in this video is pure gold.",
+                  "The risk management and chart strategy explained for $subject are top notch!",
+                  "Super insightful breakdown of $subject, price action analysis was on point.",
                   "Best trading breakdown I have watched this month, super practical insights.",
                   "Clear price action analysis without confusing indicators, loved it!",
                 ];
         } else if (isTutorial) {
           fallbacks = isHindi
               ? [
-                  "Aapka samjhane ka tareeka sabse best hai bhai, ek baar me clear ho gaya.",
-                  "Point to point baat ki hai bina time waste kiye, bohot helpful raha.",
-                  "Itne aasan tareeke se samjhaya aapne, shukriya bhai!",
-                  "Bohot informative aur valuable tutorial, poora doubt clear ho gaya.",
+                  "$subject ko itne simple tareeke se samjhaya aapne, poora doubt clear ho gaya.",
+                  "Point to point baat ki hai $subject par bina time waste kiye, bohot helpful raha.",
+                  "Aapka samjhane ka tareeka sabse best hai bhai, ek baar me $subject clear ho gaya.",
+                  "Bohot informative aur valuable guide on $subject, shukriya bhai!",
                 ]
               : [
-                  "Finally someone who explains this concept straight to the point without wasting time.",
-                  "The breakdown at each step was so clean and easy to follow.",
-                  "This cleared up so much confusion for me, thanks for sharing!",
-                  "One of the best tutorials on this topic on YouTube, bookmarked!",
+                  "The step-by-step breakdown of $subject was so clean and easy to follow.",
+                  "Finally someone who explains $subject straight to the point without wasting time.",
+                  "This cleared up so much confusion regarding $subject, thanks for sharing!",
+                  "One of the best tutorials on $subject on YouTube, bookmarked!",
                 ];
         } else {
           fallbacks = isHindi
               ? [
-                  "Bohot hi badhiya aur useful video! Point to point explanation.",
-                  "Ekdum clear content bhai, aage bhi aise helpful videos banate rahiye.",
-                  "Shaandar video, bohot helpful raha. Full support!",
-                  "Video like and subscribe dono kar diya bhai, keep shining!",
-                  "Top class presentation, maza aa gaya dekh kar.",
+                  "$subject ke baare me bohot hi aasan aur saral tareeke se samjhaya aapne bhai!",
+                  "$subject par bohot saare doubts the mere, is video ke baad sab clear ho gaya.",
+                  "Aapka $subject ka breakdown bohot informative aur valuable raha, full support bhai!",
+                  "Seedha point to point baat ki hai $subject par bina time waste kiye, keep it up!",
+                  "$subject sikhne ke liye YouTube par sabse best video hai ye, maza aa gaya dekh kar.",
+                  "Content quality top class hai bhai, $subject par aur bhi videos banate rahiye!",
                 ]
               : [
-                  "Straight to the point with zero fluff, high value content delivered simply.",
-                  "The breakdown at each step was fantastic, learned a lot from this video.",
-                  "Solid points covered throughout, definitely sharing this with friends.",
-                  "Very well presented and easy to follow. Subscribed and liked!",
-                  "Deserves way more views and recognition, top notch content!",
+                  "The way you explained $subject was exceptionally clear and easy to follow!",
+                  "This cleared up all my confusion regarding $subject, really appreciate the depth!",
+                  "Straight to the point with zero fluff, one of the best videos on $subject.",
+                  "Super informative and actionable breakdown of $subject, keep up the great work!",
+                  "Genuinely one of the most well-structured guides on $subject out there, bookmarked!",
+                  "Appreciate the effort and depth put into this video on $subject, highly valuable!",
                 ];
         }
       }

@@ -20,6 +20,10 @@ async function deployAiPromptFixes() {
         remote: '/opt/task-engine/shared/ai-generator/review-sanitizer.ts'
       },
       {
+        local: path.join(localBase, 'shared', 'ai-generator', 'generators', 'generator.interface.ts'),
+        remote: '/opt/task-engine/shared/ai-generator/generators/generator.interface.ts'
+      },
+      {
         local: path.join(localBase, 'shared', 'ai-generator', 'generators', 'deepseek-comment.generator.ts'),
         remote: '/opt/task-engine/shared/ai-generator/generators/deepseek-comment.generator.ts'
       },

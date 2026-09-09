@@ -102,6 +102,8 @@ export class BuyerOrderController {
             appName?: string;
             videoTitle?: string;
             appDescription?: string;
+            model?: string;
+            apiKey?: string;
         },
     ) {
         const topic = body.topic?.trim() || body.prompt?.trim() || '';
@@ -116,6 +118,8 @@ export class BuyerOrderController {
         const generatorType = isPlayStore ? 'playstore_review' : isInstagram ? 'instagram_comment' : 'youtube_comment';
 
         const videoTitle = body.videoTitle?.trim() || (!isPlayStore && body.appName?.trim() ? body.appName.trim() : '');
+        const configuredModel = (body.model || process.env.DEEPSEEK_MODEL || 'deepseek-chat').trim();
+        const isKeyConfigured = !!(body.apiKey || process.env.DEEPSEEK_API_KEY);
 
         const sampleComments = await this.aiGeneratorService.generateContentBatch(
             generatorType,
@@ -129,6 +133,8 @@ export class BuyerOrderController {
                 appName: body.appName,
                 isAppReview: isPlayStore,
                 generatorType,
+                model: configuredModel,
+                apiKey: body.apiKey,
             } as any,
         );
 
@@ -138,7 +144,9 @@ export class BuyerOrderController {
             totalRequested: requestedTotal,
             previewCount: sampleComments.length,
             remainingToGenerate: Math.max(0, requestedTotal - sampleComments.length),
-            message: `Generated ${sampleComments.length} sample comments via DeepSeek AI. Remaining comments will be generated upon order placement.`,
+            modelUsed: configuredModel,
+            isDeepSeekApiKeyConfigured: isKeyConfigured,
+            message: `Generated ${sampleComments.length} sample comments via DeepSeek AI (${configuredModel}). Remaining comments will be generated upon order placement.`,
         };
     }
 

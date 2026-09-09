@@ -6,9 +6,9 @@ async function testPrompts() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: `test_prompt_${rnd}@test.com`,
+      email: `test_title_${rnd}@test.com`,
       password: 'BuyerSecret@123',
-      fullName: `Prompt Tester ${rnd}`,
+      fullName: `Title Tester ${rnd}`,
       role: 'BUYER'
     })
   });
@@ -21,39 +21,35 @@ async function testPrompts() {
 
   const testCases = [
     {
-      title: 'YouTube: Ask for Part 2 (Hindi)',
+      title: 'YouTube: Biryani Recipe with Video Title (Hindi)',
       serviceCode: 'YOUTUBE_COMMENT',
-      topic: 'Bhai please part 2 jaldi lao, adha concept samajh aaya aage ka dekhna hai',
+      videoTitle: 'Hyderabadi Chicken Dum Biryani Authentic Restaurant Recipe',
+      topic: 'Masala ratio aur taste bohot accha hai',
       language: 'Hindi',
       tone: 'natural'
     },
     {
-      title: 'YouTube: Praise Audio / Mic Clarity (English)',
+      title: 'YouTube: Python Coding Tutorial with Video Title (English)',
       serviceCode: 'YOUTUBE_COMMENT',
-      topic: 'Praise the audio clarity and clear microphone voiceover',
+      videoTitle: 'Master Python Programming in 30 Days - Full Beginner Course',
+      topic: 'Real world examples and clear code breakdown',
       language: 'English',
-      tone: 'enthusiastic'
+      tone: 'natural'
     },
     {
-      title: 'YouTube: Trading Strategy & Indicators (Hindi)',
+      title: 'YouTube: iPhone 16 Camera Test with Part 2 Request (Hindi)',
       serviceCode: 'YOUTUBE_COMMENT',
-      topic: 'Intraday chart analysis and trading indicators bohot sahi hain',
+      videoTitle: 'iPhone 16 Pro Max Full Real-World Camera Review',
+      topic: 'Bhai part 2 jaldi lana low light testing ka',
       language: 'Hindi',
-      tone: 'natural'
-    },
-    {
-      title: 'Play Store: Fast Payment & Cashout (Hindi)',
-      serviceCode: 'APP_REVIEW',
-      appName: 'Cashify',
-      topic: 'Instant payment and quick money transfer in wallet',
-      language: 'Hindi',
-      tone: 'natural'
+      tone: 'enthusiastic'
     }
   ];
 
   for (const tc of testCases) {
     console.log(`\n======================================================`);
     console.log(`TEST: ${tc.title}`);
+    console.log(`VIDEO TITLE: "${tc.videoTitle}"`);
     console.log(`INPUT PROMPT: "${tc.topic}"`);
     console.log(`======================================================`);
 
@@ -70,18 +66,17 @@ async function testPrompts() {
         tone: tc.tone,
         count: 5,
         serviceCode: tc.serviceCode,
-        appName: tc.appName || ''
+        videoTitle: tc.videoTitle,
+        appName: tc.appName || tc.videoTitle
       })
     });
 
-    const json = await res.json();
-    if (json.sampleComments) {
-      json.sampleComments.forEach((c, idx) => {
-        console.log(`  [${idx + 1}] ${c}`);
-      });
-    } else {
-      console.log('Error / No comments:', json);
-    }
+    const data = await res.json();
+    console.log('API STATUS:', res.status);
+    console.log('GENERATED COMMENTS:');
+    (data.sampleComments || []).forEach((c, i) => {
+      console.log(`  [${i + 1}] "${c}"`);
+    });
   }
 }
 

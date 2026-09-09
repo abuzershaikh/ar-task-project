@@ -9,6 +9,8 @@ export interface GenerationOptions {
     appDescription?: string;
     isAppReview?: boolean;
     generatorType?: string;
+    model?: string;
+    apiKey?: string;
 }
 
 export interface IContentGenerator {

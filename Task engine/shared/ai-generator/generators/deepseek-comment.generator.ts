@@ -8,12 +8,33 @@ import * as https from 'https';
 @Injectable()
 export class DeepSeekCommentGenerator implements IContentGenerator {
     private readonly logger = new Logger(DeepSeekCommentGenerator.name);
-    private readonly apiKey = process.env.DEEPSEEK_API_KEY || '';
 
     constructor(
         private readonly templateFallbackGen: YouTubeCommentGenerator,
         private readonly playStoreFallbackGen: PlayStoreReviewGenerator,
     ) { }
+
+    private getApiKey(options?: GenerationOptions): string {
+        return (options?.apiKey || process.env.DEEPSEEK_API_KEY || '').trim();
+    }
+
+    private normalizeModel(rawModel: string): string {
+        const m = rawModel.trim().toLowerCase();
+        if (m === 'deepseek-v3' || m === 'v3' || m === 'deepseek-v3.0' || m === 'latest') {
+            return 'deepseek-chat';
+        }
+        if (m === 'deepseek-r1' || m === 'r1' || m === 'deepseek-r1.0') {
+            return 'deepseek-reasoner';
+        }
+        return rawModel.trim();
+    }
+
+    private getModel(options?: GenerationOptions): string {
+        // DeepSeek's official chat model identifier: 'deepseek-chat' (DeepSeek-V3 flagship 671B)
+        // DeepSeek's reasoning model identifier: 'deepseek-reasoner' (DeepSeek-R1)
+        const requested = options?.model || process.env.DEEPSEEK_MODEL || 'deepseek-chat';
+        return this.normalizeModel(requested);
+    }
 
     async generateBatch(count: number, options?: GenerationOptions): Promise<string[]> {
         const brand = cleanBrandName(options?.appName);
@@ -26,11 +47,15 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
         const contextType = isAppReview ? 'Google Play Store Android App (Natural Human Review)' : 'social media / YouTube video';
         const fallbackGen = isAppReview ? this.playStoreFallbackGen : this.templateFallbackGen;
 
-        this.logger.log(`🤖 Requesting DeepSeek AI for ${count} items (Type: ${contextType}, Brand: "${brand}", Prompt: "${userPrompt}", Lang: ${language}, Tone: ${tone})`);
+        const apiKey = this.getApiKey(options);
+        const model = this.getModel(options);
+        const isReasoner = model.toLowerCase().includes('reasoner') || model.toLowerCase().includes('r1');
+
+        this.logger.log(`🤖 Requesting AI for ${count} items (Type: ${contextType}, Model: ${model} [${isReasoner ? 'Reasoning/R1' : 'Chat/V3'}], Title: "${videoTitle}", Brand: "${brand}", Prompt: "${userPrompt}", Lang: ${language}, Tone: ${tone})`);
 
         try {
-            if (!this.apiKey) {
-                this.logger.warn('DEEPSEEK_API_KEY not configured, falling back to template generator');
+            if (!apiKey) {
+                this.logger.warn(`DEEPSEEK_API_KEY is not configured in .env or request. Using smart contextual generator. Model configured: ${model}`);
                 return fallbackGen.generateBatch(count, options);
             }
 
@@ -40,63 +65,69 @@ Generate exactly ${count} completely distinct, authentic, natural, human-written
 
 App Information:
 ${brand ? `- Target App Name: "${brand}"` : '- Target App: Android mobile application'}
-${userPrompt ? `- Buyer's Prompt / Instructions: "${userPrompt}"\n  CRITICAL DIRECTIVE: Follow the buyer's instructions above to shape what the reviews praise or focus on (e.g., if the buyer asked for fast delivery, smooth UI, quick customer support, or hassle-free experience, reflect that naturally in the reviews). DO NOT repeat or quote the buyer's prompt verbatim! Express the requested points naturally as if you experienced them personally.` : '- Review Focus: Everyday user experience, smooth performance, intuitive interface, reliable stability'}
+${userPrompt ? `- Buyer's Prompt / Instructions: "${userPrompt}"\n  CRITICAL DIRECTIVE: Follow the buyer's instructions above to shape what the reviews praise or focus on. DO NOT repeat or quote the buyer's prompt verbatim! Express the requested points naturally as if you experienced them personally.` : '- Review Focus: Everyday user experience, smooth performance, intuitive interface, reliable stability'}
 - Language: "${language}" (write naturally as real everyday users write in this language; if Hindi or Hinglish, write in natural conversational Roman Hindi as commonly seen on Play Store reviews)
 - Tone: "${tone}" (natural, casual, honest everyday user)
 
 CRITICAL RULES:
-1. ABSOLUTELY NO star symbols (like ⭐, ★, 🌟, ✨), NO emojis, and NO rating numbers (e.g. do NOT write '5 stars', '5/5', '5-star rating'). Real users tap stars in Google Play's rating dialog; they do NOT write stars in the review text!
-2. Tone MUST be 100% human, casual, and authentic. Write like real people sharing their real 1-2 sentence experience. Avoid marketing jargon, slogans, or robotic praise.
-3. If an App Name is provided, mention it naturally or refer to it simply as "the app" or "this app". Do NOT repeat the name awkwardly in every sentence.
-4. Every review MUST be completely distinct in vocabulary, sentence structure, length, and perspective.
-5. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
+1. ABSOLUTELY NO star symbols (like ⭐, ★, 🌟, ✨), NO emojis, and NO rating numbers.
+2. Tone MUST be 100% human, casual, and authentic. Write like real people sharing their real experience.
+3. Every review MUST be completely distinct in vocabulary, sentence structure, and perspective.
+4. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
-["The app is surprisingly smooth and makes daily tasks effortless.", "Really like how quickly it opens and handles navigation without lagging."]`
+["First authentic review", "Second authentic review"]`
                 : `You are an authentic community member and active viewer writing comments on a YouTube video.
-Generate exactly ${count} completely distinct, authentic, natural, human-written comments.
+Generate exactly ${count} completely distinct, authentic, natural, human-written comments tailored directly to this video.
 
 Video Details:
-${videoTitle ? `- Video Title / Subject: "${videoTitle}"` : '- Context: Informative, engaging video'}
-${userPrompt ? `- Buyer's Custom Prompt / Instructions: "${userPrompt}"\n  CRITICAL DIRECTIVE: The text above is the buyer's INSTRUCTIONS for what the comments should say or request. Fulfill these instructions creatively and naturally across the generated comments (e.g., if the prompt says "praise the explanation and ask for part 2", have comments naturally praise the clarity and ask when part 2 is coming out; if the prompt says "highlight the audio clarity", naturally praise the audio). DO NOT quote, copy-paste, or treat the prompt as literal text! Express the intent with diverse, human phrasing.` : '- Topic: High-value video tutorial / presentation'}
+${videoTitle ? `- Video Title: "${videoTitle}"` : '- Context: Engaging, high-value YouTube video'}
+${userPrompt ? `- Buyer's Custom Prompt / Topic Instructions: "${userPrompt}"\n  CRITICAL DIRECTIVE: The text above provides custom instructions for what the comments should say or request. Fulfill these instructions creatively and naturally across the generated comments (e.g., if asking for Part 2, request Part 2; if praising audio or specific tips, highlight that). DO NOT quote or copy-paste the prompt text verbatim! Express the intent with diverse, natural human phrasing.` : '- Topic: High-value video tutorial / presentation'}
 - Language: "${language}" (write naturally as real active YouTube viewers write in this language; if Hindi or Hinglish, write in natural conversational Roman Hindi or Devanagari as commonly used by viewers)
 - Tone: "${tone}" (e.g. natural, enthusiastic, insightful, questioning)
 
 CRITICAL RULES:
-1. Every comment MUST be distinct in wording, structure, length, and sentiment from all other comments.
-2. Comments must sound like genuine human community members and active viewers (use casual phrasing, natural reactions, and authentic viewer sentiment), NOT robotic bots.
-3. ABSOLUTELY NO star symbols or rating symbols.
-4. DO NOT copy-paste the prompt text into the comments. Follow its instructions naturally!
-5. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
+1. Comments MUST be directly relevant to the video title and topic.
+2. Every comment MUST be distinct in wording, structure, length, and sentiment from all other comments.
+3. Comments must sound like genuine human community members and active viewers, NOT robotic bots.
+4. ABSOLUTELY NO star symbols or rating symbols.
+5. DO NOT copy-paste the prompt text into the comments. Follow its instructions naturally!
+6. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
 ["First unique natural comment here", "Second unique natural comment here"]`;
 
-            const payload = JSON.stringify({
-                model: 'deepseek-chat',
+            const payloadObj: any = {
+                model: model,
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are an authentic everyday human user and community member writing genuine, natural, conversational comments and reviews. You carefully follow custom user instructions to craft authentic reactions. You NEVER use star symbols (⭐, ★), emojis, or text star ratings. You NEVER repeat or echo the user prompt literally—you always express the intended points with varied, authentic human words. Return ONLY a raw JSON array of strings.',
+                        content: 'You are an authentic everyday human user and community member writing genuine, natural, conversational comments and reviews. You tailor comments specifically to the video title and topic provided. You carefully follow custom user instructions. You NEVER use star symbols (⭐, ★), emojis, or text star ratings. You NEVER repeat or echo the user prompt literally—you always express the intended points with varied, authentic human words. Return ONLY a raw JSON array of strings.',
                     },
                     {
                         role: 'user',
                         content: prompt,
                     },
                 ],
-                temperature: 0.88,
-                max_tokens: Math.max(500, count * 85),
-            });
+                max_tokens: isReasoner ? Math.max(2500, count * 350) : Math.max(600, count * 100),
+            };
 
-            const rawContent = await this.callDeepSeekHttps(payload);
+            // Note: Temperature parameter is not supported by deepseek-reasoner (DeepSeek-R1) and triggers a 400 error
+            if (!isReasoner) {
+                payloadObj.temperature = 0.88;
+            }
+
+            const payload = JSON.stringify(payloadObj);
+            const timeoutMs = isReasoner ? 45000 : 25000;
+            const rawContent = await this.callDeepSeekHttps(payload, apiKey, timeoutMs);
             if (!rawContent) {
                 throw new Error('Empty response from DeepSeek API');
             }
 
             const parsedComments = this.parseComments(rawContent, count);
             if (parsedComments.length >= count) {
-                this.logger.log(`✓ DeepSeek AI successfully generated ${parsedComments.length} unique comments`);
+                this.logger.log(`✓ DeepSeek AI (${model}) successfully generated ${parsedComments.length} unique comments`);
                 return parsedComments.slice(0, count);
             } else if (parsedComments.length > 0) {
-                this.logger.log(`DeepSeek returned partial set (${parsedComments.length}/${count}), filling remainder with template generator`);
+                this.logger.log(`DeepSeek returned partial set (${parsedComments.length}/${count}), filling remainder with contextual generator`);
                 const remaining = count - parsedComments.length;
                 const fallbackItems = await fallbackGen.generateBatch(remaining, options);
                 return [...parsedComments, ...fallbackItems].slice(0, count);
@@ -104,23 +135,23 @@ Example format:
                 throw new Error('Could not parse comments from DeepSeek response');
             }
         } catch (error: any) {
-            this.logger.error(`DeepSeek API error: ${error.message}. Falling back to template generator.`, error.stack);
+            this.logger.error(`DeepSeek API error: ${error.message}. Using contextual generator.`, error.stack);
             return fallbackGen.generateBatch(count, options);
         }
     }
 
-    private callDeepSeekHttps(payload: string): Promise<string> {
+    private callDeepSeekHttps(payload: string, apiKey: string, timeoutMs: number = 25000): Promise<string> {
         return new Promise((resolve, reject) => {
             const options: https.RequestOptions = {
                 hostname: 'api.deepseek.com',
                 path: '/chat/completions',
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
+                    'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json',
                     'Content-Length': Buffer.byteLength(payload),
                 },
-                timeout: 25000,
+                timeout: timeoutMs,
             };
 
             const req = https.request(options, (res) => {
@@ -133,7 +164,8 @@ Example format:
                             reject(new Error(`DeepSeek API error: ${JSON.stringify(json.error)}`));
                             return;
                         }
-                        const content = json.choices?.[0]?.message?.content?.trim();
+                        const choice = json.choices?.[0]?.message;
+                        const content = choice?.content?.trim() || choice?.reasoning_content?.trim();
                         resolve(content || '');
                     } catch (e: any) {
                         reject(new Error(`Failed to parse DeepSeek response JSON: ${e.message}`));
