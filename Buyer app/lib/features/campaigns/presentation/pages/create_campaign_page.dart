@@ -671,6 +671,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     for (var s in _publishedServices) {
       final codeUpper = s.code.toUpperCase();
       final nameUpper = s.name.toUpperCase();
+      if (codeUpper.contains('TELEGRAM') || nameUpper.contains('TELEGRAM')) {
+        continue; // Exclude Telegram services
+      }
       String cat = s.category.trim();
 
       if (codeUpper.contains('PLAY') || codeUpper.contains('RATING') || (codeUpper.contains('REVIEW') && !codeUpper.contains('INSTA') && !codeUpper.contains('YT')) || nameUpper.contains('PLAY STORE')) {
@@ -681,8 +684,6 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         cat = 'YouTube';
       } else if (codeUpper.contains('INSTA') || nameUpper.contains('INSTAGRAM')) {
         cat = 'Instagram';
-      } else if (codeUpper.contains('TELEGRAM') || codeUpper.contains('TG') || nameUpper.contains('TELEGRAM')) {
-        cat = 'Telegram';
       } else if (codeUpper.contains('WEB') || codeUpper.contains('TRAFFIC') || codeUpper.contains('VISIT') || nameUpper.contains('WEBSITE')) {
         cat = 'Website Traffic';
       } else if (cat.isEmpty || cat == 'General') {
@@ -713,10 +714,6 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         'icon': Icons.android_rounded,
         'color': const Color(0xFF7C3AED), // App Violet
       },
-      'Telegram': {
-        'icon': Icons.send_rounded,
-        'color': const Color(0xFF0284C7), // Telegram Sky Blue
-      },
       'Website Traffic': {
         'icon': Icons.language_rounded,
         'color': const Color(0xFFD97706), // Web Amber
@@ -728,7 +725,6 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       'YouTube',
       'Instagram',
       'App Install & Review',
-      'Telegram',
       'Website Traffic',
     ];
     final sortedEntries = grouped.entries.toList()
@@ -843,7 +839,6 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     if (code.contains('PLAY') || code.contains('GOOGLE')) return 'assets/icons/google-play.png';
     if (code.contains('YT') || code.contains('YOUTUBE')) return 'assets/icons/youtube.png';
     if (code.contains('INSTA') || code.contains('IG')) return 'assets/icons/instagram.png';
-    if (code.contains('TELEGRAM') || code.contains('TG')) return 'assets/icons/mobile-chatting.png';
     return null;
   }
 

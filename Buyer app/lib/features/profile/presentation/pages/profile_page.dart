@@ -248,7 +248,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         iconData: Icons.support_agent_rounded,
                         iconColor: const Color(0xFFEC4899),
                         title: '24/7 Dedicated VIP Support',
-                        subtitle: 'WhatsApp desk, Telegram & priority tickets',
+                        subtitle: 'WhatsApp VIP desk & priority tickets',
                         tag: 'VIP 24/7',
                         tagColor: const Color(0xFFEC4899),
                         onTap: () => Navigator.pushNamed(context, AppRouter.support),

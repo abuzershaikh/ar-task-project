@@ -209,8 +209,6 @@ class ServiceModel {
         derivedCategory = 'App Install & Review';
       } else if (codeUpper.startsWith('YOUTUBE') || codeUpper.startsWith('YT') || nameUpper.contains('YOUTUBE')) {
         derivedCategory = 'YouTube';
-      } else if (codeUpper.startsWith('TELEGRAM') || codeUpper.startsWith('TG') || nameUpper.contains('TELEGRAM')) {
-        derivedCategory = 'Telegram';
       } else if (codeUpper.startsWith('INSTA') || nameUpper.contains('INSTAGRAM')) {
         derivedCategory = 'Instagram';
       } else if (codeUpper.startsWith('WEB') || codeUpper.contains('TRAFFIC') || nameUpper.contains('WEBSITE')) {

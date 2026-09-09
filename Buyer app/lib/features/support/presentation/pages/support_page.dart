@@ -163,13 +163,13 @@ class _SupportPageState extends State<SupportPage> {
                 ),
                 const SizedBox(width: 12),
                 _buildChannelCard(
-                  title: 'Telegram Desk',
-                  detail: '@EarnPostVIP',
-                  icon: Icons.send_rounded,
-                  color: const Color(0xFF38BDF8),
+                  title: 'Email Support',
+                  detail: 'support@earnpost.com',
+                  icon: Icons.alternate_email_rounded,
+                  color: const Color(0xFF6366F1),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Opening Telegram Desk: @EarnPostVIP')),
+                      const SnackBar(content: Text('Contact Email: support@earnpost.com')),
                     );
                   },
                 ),

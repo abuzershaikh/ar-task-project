@@ -44,7 +44,12 @@ class ServiceRepositoryImpl implements ServiceRepository {
             for (var s in remoteServices) {
               merged[s.code] = s;
             }
-            return merged.values.toList();
+            return merged.values.where((s) {
+              final c = s.code.toUpperCase();
+              final cat = s.category.toUpperCase();
+              final n = s.name.toUpperCase();
+              return !c.contains('TELEGRAM') && !cat.contains('TELEGRAM') && !n.contains('TELEGRAM');
+            }).toList();
           }
         }
       } catch (_) {
@@ -52,7 +57,12 @@ class ServiceRepositoryImpl implements ServiceRepository {
       }
     }
 
-    return fallback;
+    return fallback.where((s) {
+      final c = s.code.toUpperCase();
+      final cat = s.category.toUpperCase();
+      final n = s.name.toUpperCase();
+      return !c.contains('TELEGRAM') && !cat.contains('TELEGRAM') && !n.contains('TELEGRAM');
+    }).toList();
   }
 
   @override
@@ -503,30 +513,6 @@ class ServiceRepositoryImpl implements ServiceRepository {
           maxQuantity: 5000,
           adminMarginPercent: 20.0,
           workerReward: 8.0,
-        ),
-        elements: const [],
-        updatedAt: DateTime.now(),
-      ),
-      // ── TELEGRAM SERVICES ──
-      ServiceModel(
-        id: 'srv_tg_join',
-        code: 'TELEGRAM_JOIN',
-        name: 'Telegram Channel & Group Members',
-        description: 'Active, verified Telegram members to expand community size and group engagement.',
-        category: 'Telegram',
-        serviceType: 'join',
-        isActive: true,
-        currentVersion: 1,
-        linkFieldLabel: 'Telegram Channel or Group Link',
-        linkFieldPlaceholder: 'https://t.me/your_channel',
-        pricing: const PricingConfig(
-          modelType: PricingModelType.countBased,
-          buyerPrice: 1.50,
-          unitPrice: 1.50,
-          minQuantity: 10,
-          maxQuantity: 10000,
-          adminMarginPercent: 20.0,
-          workerReward: 1.20,
         ),
         elements: const [],
         updatedAt: DateTime.now(),

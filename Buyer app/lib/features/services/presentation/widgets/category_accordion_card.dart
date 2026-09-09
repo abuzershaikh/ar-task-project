@@ -112,24 +112,6 @@ class CategoryCardPalette {
       );
     }
 
-    // 5. Telegram -> Light Pastel Sky / Cyan Blue
-    if (cat.contains('TELEGRAM') ||
-        cat.contains('TG') ||
-        cat.contains('CHANNEL')) {
-      return const CategoryCardPalette(
-        primary: Color(0xFF0284C7),
-        primaryLight: Color(0xFF38BDF8),
-        primaryDeep: Color(0xFF0369A1),
-        cardBgStart: Color(0xFFF0F9FF),
-        cardBgEnd: Color(0xFFE0F2FE),
-        cardBorder: Color(0xFFBAE6FD),
-        subCardBgStart: Colors.white,
-        subCardBgEnd: Color(0xFFF8FAFC),
-        iconBg: Color(0xFFF0F9FF),
-        selectBtnStart: Color(0xFF38BDF8),
-        selectBtnEnd: Color(0xFF0284C7),
-      );
-    }
 
     // 6. Website / Traffic / SEO / Web -> Light Pastel Amber / Gold
     if (cat.contains('WEB') ||
@@ -302,7 +284,7 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
         (cat.contains('INSTA') && !cat.contains('INSTALL'))) {
       return 'assets/icons/instagram.png';
     }
-    if (cat.contains('TELEGRAM') || cat.contains('TG') || cat.contains('CHAT')) {
+    if (cat.contains('CHAT')) {
       return 'assets/icons/mobile-chatting.png';
     }
     if (cat.contains('WEB') ||
@@ -360,9 +342,6 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     }
     if (code.contains('INSTA') || code.contains('IG')) {
       return 'assets/icons/instagram.png';
-    }
-    if (code.contains('TELEGRAM') || code.contains('TG')) {
-      return 'assets/icons/mobile-chatting.png';
     }
     return null;
   }
