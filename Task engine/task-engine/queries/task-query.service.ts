@@ -118,21 +118,23 @@ export class TaskQueryService {
             }
         } catch (_) {}
 
-        // (d) From submissions table
+        // (d) From submissions table (batch fetched to prevent N+1 query overhead)
         try {
             const subs = await this.submissionRepo.findByWorker(allWorkerIds);
-            for (const s of subs) {
-                if (s.taskId) {
-                    excludedTaskIds.add(s.taskId.toString());
-                    const t = await this.taskRepository.findById(s.taskId);
+            const subTaskIds = Array.from(new Set(subs.map((s) => s.taskId).filter(Boolean)));
+            for (const sId of subTaskIds) {
+                excludedTaskIds.add(sId.toString());
+            }
+
+            if (subTaskIds.length > 0) {
+                const subTasks = await this.taskRepository.findByIds(subTaskIds);
+                for (const t of subTasks) {
                     if (t?.campaignId) excludedCampaignIds.add(t.campaignId.toString());
                     if (t?.orderId) excludedCampaignIds.add(t.orderId.toString());
                     if (t?.orderUnitId) excludedOrderUnitIds.add(t.orderUnitId.toString());
-                    if (t) {
-                        const { packageId, normalizedUrl } = this.extractTaskIdentity(t);
-                        if (packageId) excludedPackageIds.add(packageId);
-                        if (normalizedUrl) excludedTargetUrls.add(normalizedUrl);
-                    }
+                    const { packageId, normalizedUrl } = this.extractTaskIdentity(t);
+                    if (packageId) excludedPackageIds.add(packageId);
+                    if (normalizedUrl) excludedTargetUrls.add(normalizedUrl);
                 }
             }
         } catch (_) {}

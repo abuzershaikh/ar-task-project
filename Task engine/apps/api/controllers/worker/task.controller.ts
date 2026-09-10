@@ -111,14 +111,14 @@ export class WorkerTaskController {
     @Get('rejected')
     @ApiOperation({ summary: 'Get worker rejected tasks' })
     async getRejectedTasks(@CurrentUser() user: User) {
-        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'rejected');
+        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'rejected', user.email);
         return { success: true, tasks };
     }
 
     @Get('completed')
     @ApiOperation({ summary: 'Get worker completed tasks' })
     async getCompletedTasks(@CurrentUser() user: User) {
-        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'completed');
+        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'completed', user.email);
         return { success: true, tasks };
     }
 
@@ -136,15 +136,15 @@ export class WorkerTaskController {
     @ApiOperation({ summary: 'Get worker active app install tasks being tracked for retention' })
     async getRetentionTrackedTasks(@CurrentUser() user: User) {
         const worker = await this.workerRepo.findWorker(user.id);
-        const workerId = worker ? worker.id : user.id;
+        const normEmail = (user.email || '').toLowerCase().trim();
+        const searchIds = [user.id, worker?.id, normEmail].filter(Boolean) as string[];
 
-        // Fetch tasks assigned to this worker (checking both user.id and worker.id)
-        const userTasks = await this.taskRepo.findByWorker(user.id);
-        const workerProfileTasks = worker ? await this.taskRepo.findByWorker(worker.id) : [];
+        // Fetch tasks assigned to this worker (checking user.id, worker.id and email)
+        const userTasks = await this.taskRepo.findByWorker(searchIds);
 
         // Deduplicate by task ID
         const taskMap = new Map<string, any>();
-        for (const t of [...userTasks, ...workerProfileTasks]) {
+        for (const t of userTasks) {
             taskMap.set(t.id, t);
         }
 
@@ -254,8 +254,10 @@ export class WorkerTaskController {
             const task = await this.taskRepo.findById(taskId);
             if (!task) continue;
 
-            // Verify worker ownership
-            if (task.assignedTo && task.assignedTo !== user.id && task.assignedTo !== workerId) {
+            // Verify worker ownership (matching user.id, workerId, or email)
+            const normEmail = (user.email || '').toLowerCase().trim();
+            const myIds = [user.id, workerId, normEmail].filter(Boolean);
+            if (task.assignedTo && !myIds.includes(task.assignedTo)) {
                 continue;
             }
 
@@ -369,7 +371,9 @@ export class WorkerTaskController {
     async getTaskTimeline(@Param('id') taskId: string, @CurrentUser() user: User) {
         const task = await this.taskEngine.getTaskById(taskId);
         const worker = await this.workerRepo.findWorker(user.id);
-        const isAssigned = task && (!task.assignedTo || task.assignedTo === user.id || (worker && task.assignedTo === worker.id));
+        const normEmail = (user.email || '').toLowerCase().trim();
+        const myIds = [user.id, worker?.id, normEmail].filter(Boolean);
+        const isAssigned = task && (!task.assignedTo || myIds.includes(task.assignedTo));
         if (!task || !isAssigned) {
             throw new NotFoundException('Task not found');
         }
@@ -516,7 +520,7 @@ export class WorkerTaskController {
     @Post(':id/start')
     @ApiOperation({ summary: 'Start work on accepted task' })
     async startTask(@Param('id') taskId: string, @CurrentUser() user: User) {
-        await this.executionEngine.startTaskExecution(taskId, user.id);
+        await this.executionEngine.startTaskExecution(taskId, user.id, user.email);
         return {
             success: true,
             message: 'Task started',
@@ -534,7 +538,7 @@ export class WorkerTaskController {
             throw new BadRequestException('Invalid submission format. Expected { data: {}, proofs: [] }');
         }
 
-        await this.executionEngine.submitTaskExecution(taskId, user.id, body);
+        await this.executionEngine.submitTaskExecution(taskId, user.id, body, user.email);
 
         return {
             success: true,
@@ -549,7 +553,7 @@ export class WorkerTaskController {
         @Body() body: { data: any; proofs: { fileId: string; url: string }[]; resubmissionNotes?: string },
         @CurrentUser() user: User,
     ) {
-        await this.executionEngine.resubmitTaskExecution(taskId, user.id, body);
+        await this.executionEngine.resubmitTaskExecution(taskId, user.id, body, user.email);
 
         return {
             success: true,

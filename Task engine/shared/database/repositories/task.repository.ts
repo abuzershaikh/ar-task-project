@@ -56,6 +56,12 @@ export class TaskRepository {
         return this.repository.findOne({ where: { id } });
     }
 
+    async findByIds(ids: string[]): Promise<Task[]> {
+        const validIds = ids.filter(Boolean);
+        if (validIds.length === 0) return [];
+        return this.repository.find({ where: { id: In(validIds) } });
+    }
+
     async findByStatus(status: string): Promise<Task[]> {
         const statuses = this.resolveStatuses(status);
         const allVariations = Array.from(new Set([

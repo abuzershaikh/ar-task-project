@@ -13,9 +13,9 @@ export class ExecutionEngineService {
         private readonly taskRepo: TaskRepository,
     ) { }
 
-    async startTaskExecution(taskId: string, workerId: string) {
+    async startTaskExecution(taskId: string, workerId: string, workerEmail?: string) {
         // Delegate state transition
-        await this.taskEngine.startTask({ taskId, workerId });
+        await this.taskEngine.startTask({ taskId, workerId, workerEmail });
 
         // Record telemetry/execution start time
         const task = await this.taskRepo.findById(taskId);
@@ -32,7 +32,8 @@ export class ExecutionEngineService {
     async submitTaskExecution(
         taskId: string,
         workerId: string,
-        payload: { data: any; proofs: { fileId: string; url: string }[] }
+        payload: { data: any; proofs: { fileId: string; url: string }[] },
+        workerEmail?: string,
     ) {
         if (!payload.data || !payload.proofs) {
             throw new BadRequestException('Invalid submission format. Expected { data: {}, proofs: [] }');
@@ -69,6 +70,7 @@ export class ExecutionEngineService {
         await this.taskEngine.submitTask({
             taskId,
             workerId,
+            workerEmail,
             data: {
                 ...payload.data,
                 proofs: payload.proofs,
@@ -105,7 +107,8 @@ export class ExecutionEngineService {
     async resubmitTaskExecution(
         taskId: string,
         workerId: string,
-        payload: { data: any; proofs: { fileId: string; url: string }[]; resubmissionNotes?: string }
+        payload: { data: any; proofs: { fileId: string; url: string }[]; resubmissionNotes?: string },
+        workerEmail?: string,
     ) {
         let submission = await this.submissionRepo.findByTaskId(taskId);
         if (!submission || submission.workerId !== workerId) {
@@ -125,6 +128,7 @@ export class ExecutionEngineService {
         await this.taskEngine.submitTask({
             taskId,
             workerId,
+            workerEmail,
             data: {
                 ...payload.data,
                 proofs: payload.proofs || submission.proofs,

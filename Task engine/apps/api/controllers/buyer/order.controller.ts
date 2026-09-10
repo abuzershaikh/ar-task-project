@@ -208,7 +208,7 @@ export class BuyerOrderController {
         if (!catalog) {
             catalog = await this.serviceCatalogRepo.findByCode(serviceIdentifier);
         }
-        
+
         const catalogReviewMode = (catalog?.reviewMode || 'buyer').toString().trim().toLowerCase();
         // Enforce catalog reviewMode if it's explicitly set to something other than 'buyer' by admin
         // Otherwise, allow buyer to specify it, defaulting to 'buyer'
@@ -480,7 +480,7 @@ export class BuyerOrderController {
             if (o.status !== computedStatus) {
                 try {
                     await this.orderRepo.update(o.id, { status: computedStatus, tasksCompleted: completed });
-                } catch (_) {}
+                } catch (_) { }
             }
 
             return {
@@ -542,7 +542,7 @@ export class BuyerOrderController {
         if (order.status !== computedStatus) {
             try {
                 await this.orderRepo.update(order.id, { status: computedStatus, tasksCompleted: completed });
-            } catch (_) {}
+            } catch (_) { }
         }
 
         return {
@@ -646,7 +646,7 @@ export class BuyerOrderController {
             let submission: any = null;
             try {
                 submission = await this.submissionRepo.findByTaskId(t.id);
-            } catch (_) {}
+            } catch (_) { }
 
             let proofUrl = '';
             let proofText = '';

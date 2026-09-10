@@ -344,7 +344,8 @@ export class TaskCommandService {
     async startTask(command: StartTaskCommand) {
         return this.dataSource.transaction(async (manager) => {
             const task = await this.ensureTaskTransactional(manager, command.taskId);
-            this.validationService.ensureWorkerOwnership(task, command.workerId, command.workerEmail);
+            const { allIds } = await this.resolveWorkerIdentifiers(manager, command.workerId, command.workerEmail);
+            this.validationService.ensureWorkerOwnership(task, command.workerId, command.workerEmail, allIds);
 
             if (task.status === TaskStatus.IN_PROGRESS) return task;
 
@@ -359,6 +360,13 @@ export class TaskCommandService {
                 actor: { id: command.workerId, type: 'worker' },
             });
 
+            const activeAssignment = await this.findActiveAssignmentTransactional(manager, task.id);
+            if (activeAssignment) {
+                activeAssignment.startedAt = new Date();
+                activeAssignment.status = TaskAssignmentStatus.STARTED;
+                await manager.save(activeAssignment);
+            }
+
             task.status = TaskStatus.IN_PROGRESS;
             task.startedAt = new Date();
             return manager.save(task);
@@ -368,7 +376,8 @@ export class TaskCommandService {
     async submitTask(command: SubmitTaskCommand) {
         return this.dataSource.transaction(async (manager) => {
             const task = await this.ensureTaskTransactional(manager, command.taskId);
-            this.validationService.ensureWorkerOwnership(task, command.workerId, command.workerEmail);
+            const { allIds } = await this.resolveWorkerIdentifiers(manager, command.workerId, command.workerEmail);
+            this.validationService.ensureWorkerOwnership(task, command.workerId, command.workerEmail, allIds);
 
             if (task.status === TaskStatus.UNDER_REVIEW) return task;
 
@@ -382,6 +391,13 @@ export class TaskCommandService {
                 timestamp: new Date(),
                 actor: { id: command.workerId, type: 'worker' },
             });
+
+            const activeAssignment = await this.findActiveAssignmentTransactional(manager, task.id);
+            if (activeAssignment) {
+                activeAssignment.submittedAt = new Date();
+                activeAssignment.status = TaskAssignmentStatus.SUBMITTED;
+                await manager.save(activeAssignment);
+            }
 
             task.status = TaskStatus.UNDER_REVIEW;
             task.submittedAt = new Date();
