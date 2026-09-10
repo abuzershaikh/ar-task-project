@@ -1115,9 +1115,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   children: [
                     Text(
                       _isYouTubeCombo(s)
-                          ? 'YouTube Video Link (Is video par Watch, Like, Sub aur Comment honge)'
+                          ? 'YouTube Video Link (Target for Watch, Like, Subscribe & Comment)'
                           : (_isInstagramCombo(s)
-                              ? 'Instagram Profile Link (Follower & Like ke liye)'
+                              ? 'Instagram Profile Link (Target for Follower & Like)'
                               : (s.linkFieldLabel ?? 'Target Link / Video URL')),
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
@@ -1135,7 +1135,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                       },
                       decoration: InputDecoration(
                         hintText: _isYouTubeCombo(s)
-                            ? 'https://www.youtube.com/watch?v=... ya youtu.be/...'
+                            ? 'https://www.youtube.com/watch?v=... or youtu.be/...'
                             : (_isInstagramCombo(s)
                                 ? 'https://www.instagram.com/your_username'
                                 : (s.linkFieldPlaceholder ?? 'https://...')),
@@ -1587,11 +1587,11 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                                     size: 13,
                                     color: Color(0xFF16A34A),
                                   ),
-                                  const SizedBox(width: 6),
+                                  SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
                                       'Worker must watch complete video before submit unlocks',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 10.5,
                                         fontWeight: FontWeight.w600,
                                         color: Color(0xFF166534),
@@ -1916,8 +1916,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           const SizedBox(height: 12),
           Text(
             isYt
-                ? 'Har 1 Worker se aapki video ko yeh CHAARON (4) actions milenge:'
-                : 'Har 1 Worker se aapke Instagram ko yeh DONO (2) actions milenge:',
+                ? 'Every 1 Worker executes all FOUR (4) actions on your video:'
+                : 'Every 1 Worker executes BOTH (2) actions on your profile:',
             style: GoogleFonts.outfit(
               color: const Color(0xFF0F172A),
               fontSize: 13,
@@ -1930,42 +1930,42 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               icon: Icons.timer_outlined,
               iconColor: const Color(0xFFDC2626),
               title: 'Full Video Watch Time',
-              desc: 'Worker aapki puri video dekhega (Complete watch guaranteed)',
+              desc: 'Worker watches complete video (100% full retention guaranteed)',
             ),
             const SizedBox(height: 6),
             _buildActionPerkTile(
               icon: Icons.thumb_up_alt_rounded,
               iconColor: const Color(0xFFEA580C),
               title: 'Video Like',
-              desc: 'Video par authentic genuine thumbs-up like',
+              desc: 'Authentic thumbs-up like from real active user',
             ),
             const SizedBox(height: 6),
             _buildActionPerkTile(
               icon: Icons.notifications_active_rounded,
               iconColor: const Color(0xFF7C3AED),
               title: 'Channel Subscribe',
-              desc: 'Permanent active channel subscriber (Non-drop)',
+              desc: 'Permanent active channel subscriber (Non-drop guaranteed)',
             ),
             const SizedBox(height: 6),
             _buildActionPerkTile(
               icon: Icons.mode_comment_rounded,
               iconColor: const Color(0xFF2563EB),
               title: 'Video Comment',
-              desc: 'Video par natural genuine positive comment',
+              desc: 'Authentic, topic-relevant positive comment posted on video',
             ),
           ] else ...[
             _buildActionPerkTile(
               icon: Icons.person_add_alt_1_rounded,
               iconColor: const Color(0xFFDB2777),
               title: 'Profile Follower',
-              desc: 'Real active profile se permanent follow',
+              desc: 'Permanent follow from authentic real active profile',
             ),
             const SizedBox(height: 6),
             _buildActionPerkTile(
               icon: Icons.favorite_rounded,
               iconColor: const Color(0xFFE11D48),
               title: 'Post / Reel Like',
-              desc: 'Latest post ya reel par genuine engagement like',
+              desc: 'Genuine engagement like on latest post or reel',
             ),
           ],
           const SizedBox(height: 10),
