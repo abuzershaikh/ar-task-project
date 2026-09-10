@@ -1580,23 +1580,21 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: const Color(0xFFFECACA)),
                               ),
-                              child: Row(
+                              child: const Row(
                                 children: [
                                   Icon(
-                                    _ytIsCappedAt5Min ? Icons.timer_outlined : Icons.check_circle_outline_rounded,
+                                    Icons.check_circle_outline_rounded,
                                     size: 13,
-                                    color: _ytIsCappedAt5Min ? const Color(0xFFD97706) : const Color(0xFF16A34A),
+                                    color: Color(0xFF16A34A),
                                   ),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      _ytIsCappedAt5Min
-                                          ? '5-Minute Cap Rule: Worker must watch 5 minutes before submit unlocks'
-                                          : 'Worker must watch complete video before submit unlocks',
-                                      style: TextStyle(
+                                      'Worker must watch complete video before submit unlocks',
+                                      style: const TextStyle(
                                         fontSize: 10.5,
                                         fontWeight: FontWeight.w600,
-                                        color: _ytIsCappedAt5Min ? const Color(0xFF92400E) : const Color(0xFF166534),
+                                        color: Color(0xFF166534),
                                       ),
                                     ),
                                   ),
@@ -1931,8 +1929,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             _buildActionPerkTile(
               icon: Icons.timer_outlined,
               iconColor: const Color(0xFFDC2626),
-              title: 'Watch Time Guaranteed',
-              desc: 'Puri video dekhega (maximum 5 minute tak watch time)',
+              title: 'Full Video Watch Time',
+              desc: 'Worker aapki puri video dekhega (Complete watch guaranteed)',
             ),
             const SizedBox(height: 6),
             _buildActionPerkTile(
@@ -1952,15 +1950,15 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             _buildActionPerkTile(
               icon: Icons.mode_comment_rounded,
               iconColor: const Color(0xFF2563EB),
-              title: 'Relevant AI Comment',
-              desc: 'Video topic se perfectly matched unique comment',
+              title: 'Video Comment',
+              desc: 'Video par natural genuine positive comment',
             ),
           ] else ...[
             _buildActionPerkTile(
               icon: Icons.person_add_alt_1_rounded,
               iconColor: const Color(0xFFDB2777),
               title: 'Profile Follower',
-              desc: 'Real active Indian profile se permanent follow',
+              desc: 'Real active profile se permanent follow',
             ),
             const SizedBox(height: 6),
             _buildActionPerkTile(

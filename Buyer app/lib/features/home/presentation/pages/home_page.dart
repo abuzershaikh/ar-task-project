@@ -171,14 +171,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'tag': 'ALL-IN-ONE COMBO',
       'tagColor': const Color(0xFFEF4444),
       'description':
-          'Full-funnel viral booster: Real workers watch video, like, subscribe, and leave unique AI-generated comments.',
+          'Full-funnel viral booster: Real workers watch video, like, subscribe, and leave genuine positive comments.',
       'price': 'From ₹8.00 / combo',
       'gradient': [const Color(0xFF991B1B), const Color(0xFFDC2626)],
       'iconType': 'youtube_combo',
       'features': [
         'Watch + Like + Sub + Comment',
-        'Contextual AI Comments',
-        '5-Min Watch Retention'
+        'Genuine Video Comments',
+        'Full Video Watch Retention'
       ],
       'route': AppRouter.services,
     },

@@ -72,7 +72,7 @@ class ServiceUnitHelper {
     final s = (serviceCodeOrName ?? '').toLowerCase();
     if (s.contains('combo') || s.contains('bundle') || s.contains('all-in-one')) {
       if (s.contains('yt') || s.contains('youtube')) {
-        return '1 Combo = Full Watch Time + Like + Subscribe + AI Comment';
+        return '1 Combo = Full Watch Time + Like + Subscribe + Comment';
       } else if (s.contains('insta') || s.contains('ig')) {
         return '1 Combo = Real Profile Follower + Post/Reel Like';
       }

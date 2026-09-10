@@ -480,12 +480,12 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
       return {
         'badge': '🚀 4-IN-1 ALL-IN-ONE VIRAL BUNDLE',
         'overview':
-            'Complete YouTube viral package: Every worker watches your video (duration-synced up to 5 min), likes the video, subscribes to your channel, and posts a relevant contextual AI comment.',
+            'Complete YouTube viral package: Every worker watches your full video, likes the video, subscribes to your channel, and posts an engaging comment.',
         'features': [
-          '⏱️ Video Watch Time (Full video up to 5 min)',
+          '⏱️ Full Video Watch Time (Complete watch guaranteed)',
           '👍 Genuine Thumbs-Up Like on Video',
           '🔔 Permanent Channel Subscription',
-          '💬 Relevant Contextual AI Comment',
+          '💬 Engaging Video Comment',
           '⚡ Triggers YouTube Browse & Suggested Recommendations',
           '100% Real Active Google / YouTube Accounts',
         ],
