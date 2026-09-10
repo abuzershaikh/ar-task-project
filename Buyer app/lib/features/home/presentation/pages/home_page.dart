@@ -154,7 +154,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'tagColor': const Color(0xFFEC4899),
       'description':
           'Accelerate algorithm reach. Workers follow your profile and like recent reels/posts with genuine engagement.',
-      'price': 'From ₹2.50 / engagement',
+      'price': 'From ₹2.50 / combo',
       'gradient': [const Color(0xFFBE185D), const Color(0xFFE11D48)],
       'iconType': 'insta_combo',
       'features': [
@@ -172,7 +172,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'tagColor': const Color(0xFFEF4444),
       'description':
           'Full-funnel viral booster: Real workers watch video, like, subscribe, and leave unique AI-generated comments.',
-      'price': 'From ₹8.00 / bundle',
+      'price': 'From ₹8.00 / combo',
       'gradient': [const Color(0xFF991B1B), const Color(0xFFDC2626)],
       'iconType': 'youtube_combo',
       'features': [
@@ -1421,6 +1421,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         'glow': const Color(0xFFEC4899),
         'emoji': '📸',
       },
+      'youtube_combo': {
+        'bg': const [Color(0xFF250808), Color(0xFF3B0D0D), Color(0xFF4E1212)],
+        'glow': const Color(0xFFEF4444),
+        'emoji': '🚀',
+      },
       'youtube_comment': {
         'bg': const [Color(0xFF200A0A), Color(0xFF331414), Color(0xFF401A1A)],
         'glow': const Color(0xFFEF4444),
@@ -1749,7 +1754,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           height: 28,
           fit: BoxFit.contain,
         );
-        miniLabel = 'VIP';
+        miniLabel = 'COMBO';
+        break;
+      case 'youtube_combo':
+        iconWidget = Image.asset(
+          'assets/icons/marketing.png',
+          width: 28,
+          height: 28,
+          fit: BoxFit.contain,
+        );
+        miniLabel = 'COMBO';
         break;
       case 'insta_follow':
         iconWidget = Image.asset(

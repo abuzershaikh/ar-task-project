@@ -13,7 +13,13 @@ class ServiceUnitHelper {
     String singular = 'Task';
     String plural = 'Tasks';
 
-    if (s.contains('sub') || s.contains('subscriber')) {
+    // CRITICAL: Check combo FIRST before 'sub', 'like', 'comment', 'follow'
+    // so that combo services (e.g. 'YouTube Growth Combo (Watch + Like + Sub + Comment)')
+    // are labeled as 'Combos' and not mistaken as single 'Subscribers'!
+    if (s.contains('combo') || s.contains('all-in-one') || s.contains('bundle')) {
+      singular = 'Combo';
+      plural = 'Combos';
+    } else if (s.contains('sub') || s.contains('subscriber')) {
       singular = 'Subscriber';
       plural = 'Subscribers';
     } else if (s.contains('like')) {
@@ -37,7 +43,7 @@ class ServiceUnitHelper {
     } else if (s.contains('share') || s.contains('repost')) {
       singular = 'Share';
       plural = 'Shares';
-    } else if (s.contains('combo') || s.contains('engagement')) {
+    } else if (s.contains('engagement')) {
       singular = 'Engagement';
       plural = 'Engagements';
     }
@@ -47,22 +53,32 @@ class ServiceUnitHelper {
   }
 
   /// Returns rate display per single unit.
-  /// Example: '₹2.00 / subscriber' or '₹1.50 / like'
+  /// Example: '₹8.00 / combo' or '₹2.00 / subscriber' or '₹1.50 / like'
   static String getRateLabel(String? serviceCodeOrName, double rate) {
     final singular = getUnitName(serviceCodeOrName, count: 1);
     return '₹${rate.toStringAsFixed(2)} / ${singular.toLowerCase()}';
   }
 
   /// Returns header title for order quantity selector.
-  /// Example: 'Order Quantity (Subscribers)' or 'Order Quantity (Likes)'
+  /// Example: 'Order Quantity (Combos)' or 'Order Quantity (Subscribers)'
   static String getQuantityHeader(String? serviceCodeOrName) {
     final plural = getUnitName(serviceCodeOrName, count: 2);
     return 'Order Quantity ($plural)';
   }
 
   /// Returns dynamic subtitle for service details.
-  /// Example: '1 Subscriber = 1 Real Channel Subscriber'
+  /// Example: '1 Combo = Watch Time + Like + Subscribe + Relevant AI Comment'
   static String getUnitExplanation(String? serviceCodeOrName) {
+    final s = (serviceCodeOrName ?? '').toLowerCase();
+    if (s.contains('combo') || s.contains('bundle') || s.contains('all-in-one')) {
+      if (s.contains('yt') || s.contains('youtube')) {
+        return '1 Combo = Full Watch Time + Like + Subscribe + AI Comment';
+      } else if (s.contains('insta') || s.contains('ig')) {
+        return '1 Combo = Real Profile Follower + Post/Reel Like';
+      }
+      return '1 Combo = Complete Multi-Action Engagement Bundle';
+    }
+
     final singular = getUnitName(serviceCodeOrName, count: 1);
     if (singular == 'Subscriber') {
       return '1 Subscriber = 1 Real Channel Subscription';

@@ -6,6 +6,7 @@ import '../../../../core/routes/app_router.dart';
 import '../../../../core/di/injection.dart';
 import '../bloc/campaigns_list_bloc.dart';
 import '../../domain/entities/campaign_detail.dart';
+import '../../../../core/utils/service_unit_helper.dart';
 
 class CampaignsPage extends StatelessWidget {
   const CampaignsPage({super.key});
@@ -643,9 +644,9 @@ class _CampaignsViewState extends State<_CampaignsView> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const Text(
-                                'Per Task',
-                                style: TextStyle(
+                              Text(
+                                'Per ${ServiceUnitHelper.getUnitName(campaign.serviceName.isNotEmpty ? campaign.serviceName : campaign.name, count: 1)}',
+                                style: const TextStyle(
                                   color: Color(0xFF64748B),
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
@@ -711,7 +712,25 @@ class _CampaignsViewState extends State<_CampaignsView> {
         nameLower.contains('special') ||
         nameLower.contains('pro');
 
-    if (nameLower.contains('comment')) {
+    if (nameLower.contains('combo') || nameLower.contains('all-in-one') || nameLower.contains('bundle')) {
+      // Combo Marketing / Growth bundle
+      gradientColors = const [Color(0xFFFEF2F2), Color(0xFFFFEDD5)];
+      mainAsset = nameLower.contains('insta') ? 'assets/icons/instagram.png' : 'assets/icons/marketing.png';
+      mainSize = 34;
+      badgeTopLeft = true;
+      customBadge = Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: const Color(0xFFDC2626),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 1.5),
+        ),
+        child: const Center(
+          child: Icon(Icons.bolt_rounded, color: Colors.white, size: 12),
+        ),
+      );
+    } else if (nameLower.contains('comment')) {
       // Lavender / Purple gradient
       gradientColors = const [Color(0xFFF3E8FF), Color(0xFFE9D5FF)];
       mainAsset = 'assets/icons/comment.png';
@@ -1049,7 +1068,14 @@ class _CampaignsViewState extends State<_CampaignsView> {
   // ── Helper Utilities ───────────────────────────────────────────────────────
   String _getCampaignTagline(CampaignDetail campaign) {
     final nameLower = '${campaign.name} ${campaign.serviceName}'.toLowerCase();
-    if (nameLower.contains('subscribe')) {
+    if (nameLower.contains('combo') || nameLower.contains('all-in-one') || nameLower.contains('bundle')) {
+      if (nameLower.contains('yt') || nameLower.contains('youtube')) {
+        return '4-in-1 Viral Boost: Watch, Like, Subscribe & Comment';
+      } else if (nameLower.contains('insta')) {
+        return '2-in-1 Growth: Real Followers & Post Likes';
+      }
+      return 'All-in-one multi-action engagement combo';
+    } else if (nameLower.contains('subscribe')) {
       return 'Grow your channel with real subscribers';
     } else if (nameLower.contains('play') ||
         nameLower.contains('rating') ||

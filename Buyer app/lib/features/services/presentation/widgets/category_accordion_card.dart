@@ -300,6 +300,10 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
 
+    // Check COMBO first so combo services get marketing icon and not single subscribe icon!
+    if (code.contains('COMBO') || name.contains('COMBO')) {
+      return 'assets/icons/marketing.png';
+    }
     if (code.contains('REVIEW') || name.contains('REVIEW')) {
       return 'assets/icons/review.png';
     }
@@ -311,9 +315,6 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     }
     if (code.contains('SUB') || name.contains('SUB') || name.contains('SUBSCRIBE')) {
       return 'assets/icons/subscribe.png';
-    }
-    if (code.contains('COMBO') || name.contains('COMBO')) {
-      return 'assets/icons/marketing.png';
     }
     if (code.contains('FOLLOW') || name.contains('FOLLOW')) {
       return 'assets/icons/instagram.png';
@@ -350,6 +351,10 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
   IconData _getServiceSubIcon(ServiceModel s) {
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
+    // Check COMBO first so combo services never get mistaken for single sub/like
+    if (code.contains('COMBO') || name.contains('COMBO')) {
+      return Icons.auto_awesome_rounded;
+    }
     if (code.contains('REVIEW')) return Icons.rate_review_rounded;
     if (code.contains('RATING')) return Icons.star_rounded;
     if (code.contains('COMMENT') || name.contains('COMMENT')) {
@@ -360,9 +365,6 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     }
     if (code.contains('FOLLOW') || name.contains('FOLLOW')) {
       return Icons.person_add_alt_1_rounded;
-    }
-    if (code.contains('COMBO') || name.contains('COMBO')) {
-      return Icons.auto_awesome_rounded;
     }
     if (code.contains('INSTALL') || name.contains('INSTALL')) {
       return Icons.install_mobile_rounded;
@@ -380,15 +382,15 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     if (code.contains('INSTA') || name.contains('INSTA') || s.category.toUpperCase().contains('INSTA')) {
       if (code.contains('COMBO') || name.contains('COMBO')) {
         return {
-          'badge': '👑 ALL-IN-ONE VIRAL ACCELERATOR',
+          'badge': '🔥 2-IN-1 INSTAGRAM GROWTH COMBO',
           'overview':
-              'The ultimate Instagram growth bundle: Real users follow your profile, like your latest post/reel, and leave topic-relevant comments. Signals immense engagement velocity to the explore algorithm.',
+              'Dual-action profile accelerator: Real active users follow your Instagram profile and like your latest post or reel from authentic mobile devices.',
           'features': [
-            'Simultaneous Follow + Like + Comment',
-            'Triggers Instagram Explore & Reel Recommendations',
-            'Topic-Relevant Discussions',
-            '100% Real Active Mobile Devices',
-            'Cost-Efficient Growth Bundle Pricing',
+            '👤 1 Real Profile Follower Included',
+            '❤️ 1 Genuine Post / Reel Like Included',
+            '⚡ Rapidly Boosts Explore & Reel Recommendations',
+            '100% Real Active Mobile Device Accounts',
+            'Permanent Non-Drop Protection',
           ],
         };
       }
@@ -469,6 +471,23 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
           'Lower Cost Per Rating (Maximum Cost Efficiency)',
           'Real Verified Google Accounts',
           'Permanent Non-Drop Protection',
+        ],
+      };
+    }
+
+    if ((code.contains('YT') || code.contains('YOUTUBE') || s.category.toUpperCase().contains('YOUTUBE')) &&
+        (code.contains('COMBO') || name.contains('COMBO'))) {
+      return {
+        'badge': '🚀 4-IN-1 ALL-IN-ONE VIRAL BUNDLE',
+        'overview':
+            'Complete YouTube viral package: Every worker watches your video (duration-synced up to 5 min), likes the video, subscribes to your channel, and posts a relevant contextual AI comment.',
+        'features': [
+          '⏱️ Video Watch Time (Full video up to 5 min)',
+          '👍 Genuine Thumbs-Up Like on Video',
+          '🔔 Permanent Channel Subscription',
+          '💬 Relevant Contextual AI Comment',
+          '⚡ Triggers YouTube Browse & Suggested Recommendations',
+          '100% Real Active Google / YouTube Accounts',
         ],
       };
     }
@@ -684,7 +703,7 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Price per Task',
+                      'Price per ${ServiceUnitHelper.getUnitName(service.name, count: 1)}',
                       style: GoogleFonts.outfit(
                         fontSize: 12.5,
                         color: textSecondary,
@@ -1090,12 +1109,87 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
               ),
             ],
           ),
+
+          // ── Dedicated Combo Inclusions Pill (Highlights Watch + Like + Sub + Comment) ──
+          if (service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO')) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: (service.code.toUpperCase().contains('YT') || service.name.toUpperCase().contains('YT') || service.category.toUpperCase().contains('YOUTUBE'))
+                    ? const Color(0xFFFEF2F2)
+                    : const Color(0xFFFDF2F8),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: (service.code.toUpperCase().contains('YT') || service.name.toUpperCase().contains('YT') || service.category.toUpperCase().contains('YOUTUBE'))
+                      ? const Color(0xFFFECACA)
+                      : const Color(0xFFFBCFE8),
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 11,
+                    color: (service.code.toUpperCase().contains('YT') || service.name.toUpperCase().contains('YT') || service.category.toUpperCase().contains('YOUTUBE'))
+                        ? const Color(0xFFDC2626)
+                        : const Color(0xFFDB2777),
+                  ),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      (service.code.toUpperCase().contains('YT') || service.name.toUpperCase().contains('YT') || service.category.toUpperCase().contains('YOUTUBE'))
+                          ? 'Includes: Watch Time + Like + Subscribe + Comment'
+                          : 'Includes: Profile Follow + Post/Reel Like',
+                      style: GoogleFonts.outfit(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: (service.code.toUpperCase().contains('YT') || service.name.toUpperCase().contains('YT') || service.category.toUpperCase().contains('YOUTUBE'))
+                            ? const Color(0xFFB91C1C)
+                            : const Color(0xFF9D174D),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
 
-          // ── Row 2: Clean Select Button Aligned Right with Category Gradient ──
+          // ── Row 2: Rate Badge on Left + Clean Select Button Aligned Right ──
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Price badge with unit: e.g. "₹8.00 / combo" or "₹2.00 / subscriber"
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                decoration: BoxDecoration(
+                  color: (service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO'))
+                      ? const Color(0xFFEFF6FF)
+                      : _palette.iconBg,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: (service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO'))
+                        ? const Color(0xFFBFDBFE)
+                        : _palette.cardBorder,
+                    width: 0.8,
+                  ),
+                ),
+                child: Text(
+                  ServiceUnitHelper.getRateLabel(service.name, service.pricing.buyerPrice),
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: (service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO'))
+                        ? const Color(0xFF1D4ED8)
+                        : _palette.primaryDeep,
+                  ),
+                ),
+              ),
               GestureDetector(
                 onTap: () => widget.onSelectService(service),
                 child: Container(

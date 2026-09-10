@@ -290,6 +290,29 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         type.contains('COMMENT');
   }
 
+  bool _isComboService(ServiceModel? s) {
+    if (s == null) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    return code.contains('COMBO') || name.contains('COMBO');
+  }
+
+  bool _isYouTubeCombo(ServiceModel? s) {
+    if (s == null) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    return (code.contains('COMBO') || name.contains('COMBO')) &&
+        (code.contains('YT') || code.contains('YOUTUBE') || s.category.toUpperCase().contains('YOUTUBE'));
+  }
+
+  bool _isInstagramCombo(ServiceModel? s) {
+    if (s == null) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    return (code.contains('COMBO') || name.contains('COMBO')) &&
+        (code.contains('INSTA') || code.contains('IG') || s.category.toUpperCase().contains('INSTA'));
+  }
+
   Future<void> _generateSampleComments() async {
     setState(() => _isGeneratingPreview = true);
     final userAppName = _appNameController.text.trim().isNotEmpty
@@ -1073,6 +1096,12 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── SPECIAL COMBO INCLUSIONS PERKS CARD ──
+              if (_isComboService(s)) ...[
+                _buildComboInclusionsCard(s),
+                const SizedBox(height: 16),
+              ],
+
               // Target URL Card
               Container(
                 padding: const EdgeInsets.all(16),
@@ -1085,7 +1114,11 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      s.linkFieldLabel ?? 'Target Link / Video URL',
+                      _isYouTubeCombo(s)
+                          ? 'YouTube Video Link (Is video par Watch, Like, Sub aur Comment honge)'
+                          : (_isInstagramCombo(s)
+                              ? 'Instagram Profile Link (Follower & Like ke liye)'
+                              : (s.linkFieldLabel ?? 'Target Link / Video URL')),
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                     ),
@@ -1101,7 +1134,11 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                         return null;
                       },
                       decoration: InputDecoration(
-                        hintText: s.linkFieldPlaceholder ?? 'https://www.youtube.com/watch?v=...',
+                        hintText: _isYouTubeCombo(s)
+                            ? 'https://www.youtube.com/watch?v=... ya youtu.be/...'
+                            : (_isInstagramCombo(s)
+                                ? 'https://www.instagram.com/your_username'
+                                : (s.linkFieldPlaceholder ?? 'https://...')),
                         hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                         prefixIcon: const Icon(Icons.link_rounded, color: Color(0xFF2563EB)),
                         suffixIcon: Row(
@@ -1791,6 +1828,255 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Combo Perks & Inclusions Widget (Explains WatchTime + Like + Sub + Comment) ──
+  Widget _buildComboInclusionsCard(ServiceModel s) {
+    final isYt = _isYouTubeCombo(s);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isYt
+              ? [const Color(0xFFFEF2F2), const Color(0xFFFFF7ED)]
+              : [const Color(0xFFFDF2F8), const Color(0xFFFAF5FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isYt ? const Color(0xFFFECACA) : const Color(0xFFFBCFE8),
+          width: 1.2,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isYt
+                        ? [const Color(0xFFDC2626), const Color(0xFFEA580C)]
+                        : [const Color(0xFFDB2777), const Color(0xFF7C3AED)],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isYt ? Icons.auto_awesome_rounded : Icons.star_rounded,
+                      size: 13,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      isYt ? '4-IN-1 VIRAL BUNDLE' : '2-IN-1 GROWTH BUNDLE',
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isYt ? const Color(0xFFFECACA) : const Color(0xFFFBCFE8),
+                  ),
+                ),
+                child: Text(
+                  'Per 1 Unit Combo',
+                  style: GoogleFonts.outfit(
+                    color: isYt ? const Color(0xFFB91C1C) : const Color(0xFF9D174D),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            isYt
+                ? 'Har 1 Worker se aapki video ko yeh CHAARON (4) actions milenge:'
+                : 'Har 1 Worker se aapke Instagram ko yeh DONO (2) actions milenge:',
+            style: GoogleFonts.outfit(
+              color: const Color(0xFF0F172A),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (isYt) ...[
+            _buildActionPerkTile(
+              icon: Icons.timer_outlined,
+              iconColor: const Color(0xFFDC2626),
+              title: 'Watch Time Guaranteed',
+              desc: 'Puri video dekhega (maximum 5 minute tak watch time)',
+            ),
+            const SizedBox(height: 6),
+            _buildActionPerkTile(
+              icon: Icons.thumb_up_alt_rounded,
+              iconColor: const Color(0xFFEA580C),
+              title: 'Video Like',
+              desc: 'Video par authentic genuine thumbs-up like',
+            ),
+            const SizedBox(height: 6),
+            _buildActionPerkTile(
+              icon: Icons.notifications_active_rounded,
+              iconColor: const Color(0xFF7C3AED),
+              title: 'Channel Subscribe',
+              desc: 'Permanent active channel subscriber (Non-drop)',
+            ),
+            const SizedBox(height: 6),
+            _buildActionPerkTile(
+              icon: Icons.mode_comment_rounded,
+              iconColor: const Color(0xFF2563EB),
+              title: 'Relevant AI Comment',
+              desc: 'Video topic se perfectly matched unique comment',
+            ),
+          ] else ...[
+            _buildActionPerkTile(
+              icon: Icons.person_add_alt_1_rounded,
+              iconColor: const Color(0xFFDB2777),
+              title: 'Profile Follower',
+              desc: 'Real active Indian profile se permanent follow',
+            ),
+            const SizedBox(height: 6),
+            _buildActionPerkTile(
+              icon: Icons.favorite_rounded,
+              iconColor: const Color(0xFFE11D48),
+              title: 'Post / Reel Like',
+              desc: 'Latest post ya reel par genuine engagement like',
+            ),
+          ],
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: isYt
+                  ? const Color(0xFFFEE2E2).withValues(alpha: 0.7)
+                  : const Color(0xFFFCE7F3).withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.verified_rounded,
+                  size: 15,
+                  color: isYt ? const Color(0xFFB91C1C) : const Color(0xFFBE185D),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    isYt
+                        ? '1 Combo = 1 Watch + 1 Like + 1 Subscribe + 1 Comment (All-in-One)'
+                        : '1 Combo = 1 Profile Follow + 1 Post Like (All-in-One)',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: isYt ? const Color(0xFF991B1B) : const Color(0xFF9D174D),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionPerkTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String desc,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 15, color: iconColor),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                Text(
+                  desc,
+                  style: GoogleFonts.outfit(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCFCE7),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_rounded, size: 10, color: Color(0xFF16A34A)),
+                SizedBox(width: 2),
+                Text(
+                  'Included',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF16A34A),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
