@@ -40,7 +40,11 @@ class _MarqueeTextState extends State<MarqueeText> {
   }
 
   void _checkOverflowAndStart() async {
-    if (_isDisposed || !mounted || !_scrollController.hasClients) return;
+    if (_isDisposed || !mounted) return;
+    if (!_scrollController.hasClients) {
+      await Future.delayed(const Duration(milliseconds: 150));
+      if (_isDisposed || !mounted || !_scrollController.hasClients) return;
+    }
 
     try {
       final maxScroll = _scrollController.position.maxScrollExtent;

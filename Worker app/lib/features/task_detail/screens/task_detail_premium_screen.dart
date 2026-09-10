@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers/task_provider.dart';
 import '../../../shared/widgets/platform_logo.dart';
+import '../../../shared/widgets/marquee_text.dart';
 import '../../../core/services/package_tracker_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -2174,11 +2175,15 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                         overflow: TextOverflow.ellipsis,
                       ),
                       SizedBox(height: 2),
-                      Text(
-                        'Complete task & submit proof below',
-                        style: TextStyle(color: Colors.white70, fontSize: 11),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      SizedBox(
+                        width: double.infinity,
+                        child: MarqueeText(
+                          text: 'Complete task & submit proof below',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                          ),
+                        ),
                       ),
                     ],
                   ),
