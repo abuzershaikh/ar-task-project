@@ -54,7 +54,9 @@ export class YouTubeMetadataService {
     }
 
     /**
-     * Fetch video duration and metadata directly from YouTube public HTML.
+     * Fetch video duration and metadata directly.
+     * Uses YouTube Innertube Player API as primary (bypasses datacenter bot-checks),
+     * and oEmbed + HTML parsing as fallback.
      * Enforces the 5-Minute Cap Rule:
      * - If video duration > 300s (5 min), required watch time is 300s (5 minutes).
      * - If video duration <= 300s, required watch time is the full video duration.
@@ -65,113 +67,37 @@ export class YouTubeMetadataService {
             return { success: false, error: 'Invalid YouTube link or video ID' };
         }
 
-        return new Promise<YouTubeVideoInfo>((resolve) => {
-            const url = `https://www.youtube.com/watch?v=${videoId}`;
-            this.logger.log(`Fetching YouTube video metadata for videoId: ${videoId}`);
+        this.logger.log(`Fetching YouTube video metadata for videoId: ${videoId}`);
 
-            const options: https.RequestOptions = {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                },
-                timeout: 8000,
-            };
+        // 1. Primary: YouTube Innertube API (ANDROID_TESTSUITE) - fast & reliably returns lengthSeconds
+        let innertubeData = await this.fetchInnertube(videoId, 'ANDROID_TESTSUITE', '1.9');
 
-            const req = https.get(url, options, (res) => {
-                let html = '';
-                res.setEncoding('utf8');
+        // 2. Secondary Innertube fallback if primary did not return duration
+        if (!innertubeData || !innertubeData.durationSeconds) {
+            innertubeData = await this.fetchInnertube(videoId, 'TVHTML5_SIMPLY_EMBEDDED_PLAYER', '2.0');
+        }
 
-                res.on('data', (chunk) => {
-                    html += chunk;
-                    // Optimistic early abort if both duration and title have been found
-                    if (html.includes('"lengthSeconds":') && html.includes('og:title')) {
-                        res.destroy();
-                    }
-                });
+        // 3. Complement / fallback with oEmbed for title, author, and thumbnail
+        let title = innertubeData?.title;
+        let thumbnail = innertubeData?.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
-                res.on('end', () => {
-                    resolve(this.parseHtmlMetadata(videoId, html));
-                });
-
-                res.on('close', () => {
-                    resolve(this.parseHtmlMetadata(videoId, html));
-                });
-            });
-
-            req.on('error', (err) => {
-                this.logger.warn(`Failed to fetch YouTube page for ${videoId}: ${err.message}`);
-                // Fallback gracefully with default HQ thumbnail
-                resolve({
-                    success: true,
-                    videoId,
-                    title: 'YouTube Video',
-                    thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-                    durationSeconds: 300,
-                    durationFormatted: '5m 0s',
-                    requiredWatchSeconds: 300,
-                    requiredWatchFormatted: '5m 0s',
-                    isCappedAt5Min: true,
-                });
-            });
-
-            req.on('timeout', () => {
-                req.destroy();
-                this.logger.warn(`Timeout fetching YouTube page for ${videoId}`);
-                resolve({
-                    success: true,
-                    videoId,
-                    title: 'YouTube Video',
-                    thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-                    durationSeconds: 300,
-                    durationFormatted: '5m 0s',
-                    requiredWatchSeconds: 300,
-                    requiredWatchFormatted: '5m 0s',
-                    isCappedAt5Min: true,
-                });
-            });
-        });
-    }
-
-    private parseHtmlMetadata(videoId: string, html: string): YouTubeVideoInfo {
-        // 1. Duration extraction
-        let durationSeconds = 0;
-        const lengthMatch = html.match(/"lengthSeconds":"(\d+)"/);
-        if (lengthMatch) {
-            durationSeconds = parseInt(lengthMatch[1], 10);
-        } else {
-            const metaDuration = html.match(/itemprop="duration" content="PT(?:(\d+)M)?(?:(\d+)S)?"/);
-            if (metaDuration) {
-                const mins = parseInt(metaDuration[1] || '0', 10);
-                const secs = parseInt(metaDuration[2] || '0', 10);
-                durationSeconds = (mins * 60) + secs;
+        if (!title || !thumbnail || thumbnail.includes('hqdefault')) {
+            const oembed = await this.fetchOembed(videoId);
+            if (oembed) {
+                if (!title || title === 'YouTube Video') title = oembed.title;
+                if (oembed.thumbnail) thumbnail = oembed.thumbnail;
             }
         }
 
-        // 2. Title extraction
-        let title = '';
-        const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/);
-        if (titleMatch) {
-            title = titleMatch[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-        } else {
-            const pageTitle = html.match(/<title>([^<]+)<\/title>/);
-            if (pageTitle) {
-                title = pageTitle[1].replace(/\s*-\s*YouTube$/, '').trim();
-            }
+        // 4. If duration is still missing, attempt web page scrape as fallback
+        let durationSeconds = innertubeData?.durationSeconds || 0;
+        if (durationSeconds <= 0) {
+            durationSeconds = await this.scrapeHtmlDuration(videoId);
         }
+
         if (!title) title = 'YouTube Video';
 
-        // 3. Thumbnail extraction
-        let thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-        const thumbMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
-        if (thumbMatch && thumbMatch[1].startsWith('http')) {
-            thumbnail = thumbMatch[1];
-        }
-
-        // 4. 5-Minute Cap Rule Logic
-        // If duration > 300s (5 min), required watch time is capped at 300 seconds (5 min)
-        // If duration <= 300s and > 0, full video must be watched
-        // Fallback: 60s if duration could not be extracted
+        // 5. 5-Minute Cap Rule Logic
         let requiredWatchSeconds = durationSeconds;
         let isCappedAt5Min = false;
 
@@ -182,6 +108,8 @@ export class YouTubeMetadataService {
             durationSeconds = 60;
             requiredWatchSeconds = 60;
         }
+
+        this.logger.log(`Metadata for ${videoId}: duration=${durationSeconds}s, requiredWatch=${requiredWatchSeconds}s, capped=${isCappedAt5Min}, title="${title}"`);
 
         return {
             success: true,
@@ -194,5 +122,139 @@ export class YouTubeMetadataService {
             requiredWatchFormatted: this.formatDuration(requiredWatchSeconds),
             isCappedAt5Min,
         };
+    }
+
+    private async fetchInnertube(videoId: string, clientName: string, clientVersion: string): Promise<{
+        title?: string;
+        author?: string;
+        durationSeconds?: number;
+        thumbnail?: string;
+    } | null> {
+        return new Promise((resolve) => {
+            const postData = JSON.stringify({
+                context: {
+                    client: {
+                        clientName,
+                        clientVersion,
+                        hl: 'en',
+                        gl: 'US'
+                    }
+                },
+                videoId
+            });
+
+            const req = https.request({
+                hostname: 'www.youtube.com',
+                port: 443,
+                path: '/youtubei/v1/player?prettyPrint=false',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(postData),
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                },
+                timeout: 5000
+            }, (res) => {
+                let body = '';
+                res.on('data', chunk => body += chunk);
+                res.on('end', () => {
+                    try {
+                        const json = JSON.parse(body);
+                        const details = json.videoDetails;
+                        if (details && details.lengthSeconds) {
+                            const secs = parseInt(details.lengthSeconds, 10);
+                            if (secs > 0) {
+                                const thumbs = details.thumbnail?.thumbnails;
+                                const thumb = (thumbs && thumbs.length > 0)
+                                    ? thumbs[thumbs.length - 1].url
+                                    : `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+                                resolve({
+                                    title: details.title,
+                                    author: details.author,
+                                    durationSeconds: secs,
+                                    thumbnail: thumb
+                                });
+                                return;
+                            }
+                        }
+                    } catch (_) {}
+                    resolve(null);
+                });
+            });
+
+            req.on('error', () => resolve(null));
+            req.on('timeout', () => {
+                req.destroy();
+                resolve(null);
+            });
+            req.write(postData);
+            req.end();
+        });
+    }
+
+    private async fetchOembed(videoId: string): Promise<{
+        title?: string;
+        author?: string;
+        thumbnail?: string;
+    } | null> {
+        return new Promise((resolve) => {
+            const url = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+            https.get(url, { timeout: 4000 }, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                    try {
+                        const json = JSON.parse(data);
+                        if (json.title) {
+                            resolve({
+                                title: json.title,
+                                author: json.author_name,
+                                thumbnail: json.thumbnail_url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+                            });
+                            return;
+                        }
+                    } catch (_) {}
+                    resolve(null);
+                });
+            }).on('error', () => resolve(null))
+              .on('timeout', () => resolve(null));
+        });
+    }
+
+    private async scrapeHtmlDuration(videoId: string): Promise<number> {
+        return new Promise((resolve) => {
+            const url = `https://www.youtube.com/watch?v=${videoId}`;
+            const options: https.RequestOptions = {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                },
+                timeout: 5000,
+            };
+
+            https.get(url, options, (res) => {
+                let html = '';
+                res.on('data', chunk => {
+                    html += chunk;
+                    if (html.includes('"lengthSeconds":')) res.destroy();
+                });
+                res.on('end', () => {
+                    const lengthMatch = html.match(/"lengthSeconds":"(\d+)"/);
+                    if (lengthMatch) {
+                        return resolve(parseInt(lengthMatch[1], 10));
+                    }
+                    const metaDuration = html.match(/itemprop="duration" content="PT(?:(\d+)M)?(?:(\d+)S)?"/);
+                    if (metaDuration) {
+                        const mins = parseInt(metaDuration[1] || '0', 10);
+                        const secs = parseInt(metaDuration[2] || '0', 10);
+                        return resolve((mins * 60) + secs);
+                    }
+                    resolve(0);
+                });
+                res.on('close', () => resolve(0));
+            }).on('error', () => resolve(0))
+              .on('timeout', () => resolve(0));
+        });
     }
 }

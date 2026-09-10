@@ -31,8 +31,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'badge': '⭐ TOP RATED • GOOGLE PLAY',
       'title': 'Dominate Google Play Store',
       'highlight': '5-Star Ratings & Reviews',
-      'description': 'Rank #1 on search keywords with genuine user downloads & authentic reviews from verified Android devices.',
-      'gradientColors': [const Color(0xFF0F172A), const Color(0xFF0284C7), const Color(0xFF0D9488)],
+      'description':
+          'Rank #1 on search keywords with genuine user downloads & authentic reviews from verified Android devices.',
+      'gradientColors': [
+        const Color(0xFF0F172A),
+        const Color(0xFF0284C7),
+        const Color(0xFF0D9488)
+      ],
       'accentColor': const Color(0xFF38BDF8),
       'buttonText': 'Boost Play Store →',
       'platform': 'playstore',
@@ -42,8 +47,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'badge': '🚀 VIRAL ENGINE • YOUTUBE',
       'title': 'Ignite YouTube Algorithm',
       'highlight': 'High Retention & Discussions',
-      'description': 'Real video watch time, organic likes & intelligent niche-relevant comments that push videos to recommendations.',
-      'gradientColors': [const Color(0xFF1E1B4B), const Color(0xFF991B1B), const Color(0xFFBE123C)],
+      'description':
+          'Real video watch time, organic likes & intelligent niche-relevant comments that push videos to recommendations.',
+      'gradientColors': [
+        const Color(0xFF1E1B4B),
+        const Color(0xFF991B1B),
+        const Color(0xFFBE123C)
+      ],
       'accentColor': const Color(0xFFFB7185),
       'buttonText': 'Supercharge Video →',
       'platform': 'youtube',
@@ -53,8 +63,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'badge': '🔥 VIRAL REACH • INSTAGRAM',
       'title': 'Explode Instagram Reach',
       'highlight': 'Followers, Likes & Comments',
-      'description': 'Boost your Instagram reels, posts & profile with verified followers, instant likes & custom comments.',
-      'gradientColors': [const Color(0xFF831843), const Color(0xFFBE185D), const Color(0xFFDB2777)],
+      'description':
+          'Boost your Instagram reels, posts & profile with verified followers, instant likes & custom comments.',
+      'gradientColors': [
+        const Color(0xFF831843),
+        const Color(0xFFBE185D),
+        const Color(0xFFDB2777)
+      ],
       'accentColor': const Color(0xFFF472B6),
       'buttonText': 'Boost Instagram →',
       'platform': 'instagram',
@@ -64,8 +79,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'badge': '🛡️ ZERO BOTS • 100% REAL',
       'title': '10,000+ Verified Workers',
       'highlight': 'Real Hardware & Screenshots',
-      'description': 'Every task is completed by real Indian users on active smartphones with rigorous screenshot proof auditing.',
-      'gradientColors': [const Color(0xFF064E3B), const Color(0xFF047857), const Color(0xFF0F766E)],
+      'description':
+          'Every task is completed by real Indian users on active smartphones with rigorous screenshot proof auditing.',
+      'gradientColors': [
+        const Color(0xFF064E3B),
+        const Color(0xFF047857),
+        const Color(0xFF0F766E)
+      ],
       'accentColor': const Color(0xFF34D399),
       'buttonText': 'Launch Campaign →',
       'platform': 'verify',
@@ -75,8 +95,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'badge': '⚡ MASSIVE SCALE • RAPID DISPATCH',
       'title': 'Scale to 10,000 Tasks',
       'highlight': 'Instant Automated Allocation',
-      'description': 'Deploy high-volume campaigns in 60 seconds with live real-time progress analytics and escrow safety.',
-      'gradientColors': [const Color(0xFF312E81), const Color(0xFF4338CA), const Color(0xFF6D28D9)],
+      'description':
+          'Deploy high-volume campaigns in 60 seconds with live real-time progress analytics and escrow safety.',
+      'gradientColors': [
+        const Color(0xFF312E81),
+        const Color(0xFF4338CA),
+        const Color(0xFF6D28D9)
+      ],
       'accentColor': const Color(0xFFA78BFA),
       'buttonText': 'Create Custom Order →',
       'platform': 'scale',
@@ -91,11 +116,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'title': 'Play Store 5-Star Rating & Review',
       'tag': 'MOST POPULAR',
       'tagColor': const Color(0xFFF59E0B),
-      'description': 'Boost keyword ranking & app conversion. Workers download, test for 30s, give 5★ rating & post authentic keyword-rich reviews.',
+      'description':
+          'Boost keyword ranking & app conversion. Workers download, test for 30s, give 5★ rating & post authentic keyword-rich reviews.',
       'price': 'From ₹25 / review',
       'gradient': [const Color(0xFF047857), const Color(0xFF059669)],
       'iconType': 'playstore',
-      'features': ['100% Real Android Devices', 'Keyword Placement', 'Verified Badges'],
+      'features': [
+        '100% Real Android Devices',
+        'Keyword Placement',
+        'Verified Badges'
+      ],
       'route': AppRouter.services,
     },
     {
@@ -104,11 +134,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'title': 'Play Store Keyword Search & Install',
       'tag': 'ASO RANK BOOST',
       'tagColor': const Color(0xFF10B981),
-      'description': 'Targeted users search your app with exact keywords, install & open for 2 mins to elevate search visibility and store rankings.',
+      'description':
+          'Targeted users search your app with exact keywords, install & open for 2 mins to elevate search visibility and store rankings.',
       'price': 'From ₹12 / install',
       'gradient': [const Color(0xFF065F46), const Color(0xFF047857)],
       'iconType': 'playstore',
-      'features': ['Organic Keyword Simulation', '2-Min Retention Verification', 'Anti-Fraud Shield'],
+      'features': [
+        'Organic Keyword Simulation',
+        '2-Min Retention Verification',
+        'Anti-Fraud Shield'
+      ],
       'route': AppRouter.services,
     },
     {
@@ -117,11 +152,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'title': 'Instagram Engagement Combo (Like + Follow)',
       'tag': 'LIKE + FOLLOW COMBO',
       'tagColor': const Color(0xFFEC4899),
-      'description': 'Accelerate algorithm reach. Workers follow your profile and like recent reels/posts with genuine engagement.',
+      'description':
+          'Accelerate algorithm reach. Workers follow your profile and like recent reels/posts with genuine engagement.',
       'price': 'From ₹2.50 / engagement',
       'gradient': [const Color(0xFFBE185D), const Color(0xFFE11D48)],
       'iconType': 'insta_combo',
-      'features': ['Profile Follow + Post Like', 'Real Active Accounts', 'High Retention'],
+      'features': [
+        'Profile Follow + Post Like',
+        'Real Active Accounts',
+        'High Retention'
+      ],
       'route': AppRouter.services,
     },
     {
@@ -130,11 +170,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'title': 'YouTube Growth Combo (Watch + Like + Sub + Comment)',
       'tag': 'ALL-IN-ONE COMBO',
       'tagColor': const Color(0xFFEF4444),
-      'description': 'Full-funnel viral booster: Real workers watch video, like, subscribe, and leave unique AI-generated comments.',
+      'description':
+          'Full-funnel viral booster: Real workers watch video, like, subscribe, and leave unique AI-generated comments.',
       'price': 'From ₹8.00 / bundle',
       'gradient': [const Color(0xFF991B1B), const Color(0xFFDC2626)],
       'iconType': 'youtube_combo',
-      'features': ['Watch + Like + Sub + Comment', 'Contextual AI Comments', '5-Min Watch Retention'],
+      'features': [
+        'Watch + Like + Sub + Comment',
+        'Contextual AI Comments',
+        '5-Min Watch Retention'
+      ],
       'route': AppRouter.services,
     },
     {
@@ -143,11 +188,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'title': 'YouTube Targeted Comments',
       'tag': 'VIRAL ALGORITHM',
       'tagColor': const Color(0xFFEF4444),
-      'description': 'Trigger the YouTube recommendation algorithm with context-aware, topic-specific comments and natural active discussions.',
+      'description':
+          'Trigger the YouTube recommendation algorithm with context-aware, topic-specific comments and natural active discussions.',
       'price': 'From ₹5 / comment',
       'gradient': [const Color(0xFFBE123C), const Color(0xFFE11D48)],
       'iconType': 'youtube_comment',
-      'features': ['Custom Topics & Prompts', 'High Retention', 'Spam-Free Accounts'],
+      'features': [
+        'Custom Topics & Prompts',
+        'High Retention',
+        'Spam-Free Accounts'
+      ],
       'route': AppRouter.services,
     },
     {
@@ -156,11 +206,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'title': 'Instagram Profile Followers & Likes',
       'tag': 'RAPID GROWTH',
       'tagColor': const Color(0xFFF43F5E),
-      'description': 'Gain active Indian followers and boost like count on posts and reels from verified worker accounts.',
+      'description':
+          'Gain active Indian followers and boost like count on posts and reels from verified worker accounts.',
       'price': 'From ₹2.00 / follower',
       'gradient': [const Color(0xFF9F1239), const Color(0xFFBE123C)],
       'iconType': 'insta_follow',
-      'features': ['Non-Drop Accounts', 'Fast Organic Delivery', 'Algorithm Safe'],
+      'features': [
+        'Non-Drop Accounts',
+        'Fast Organic Delivery',
+        'Algorithm Safe'
+      ],
       'route': AppRouter.services,
     },
     {
@@ -169,11 +224,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'title': 'YouTube Likes & Channel Subscribers',
       'tag': 'AUTHORITY BUILDER',
       'tagColor': const Color(0xFF8B5CF6),
-      'description': 'Permanent channel subscribers and genuine video likes from unique IP addresses to establish instant social proof.',
+      'description':
+          'Permanent channel subscribers and genuine video likes from unique IP addresses to establish instant social proof.',
       'price': 'From ₹3 / like',
       'gradient': [const Color(0xFF6D28D9), const Color(0xFF7C3AED)],
       'iconType': 'youtube_sub',
-      'features': ['Permanent Subscribers', 'Fast Delivery', 'Safe for Monetization'],
+      'features': [
+        'Permanent Subscribers',
+        'Fast Delivery',
+        'Safe for Monetization'
+      ],
       'route': AppRouter.services,
     },
     {
@@ -182,11 +242,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'title': 'Android App Install & Open',
       'tag': 'DOWNLOADS SURGE',
       'tagColor': const Color(0xFF0284C7),
-      'description': 'Drive massive direct installs to your app from active Android users. Guaranteed installation and open verification.',
+      'description':
+          'Drive massive direct installs to your app from active Android users. Guaranteed installation and open verification.',
       'price': 'From ₹15 / install',
       'gradient': [const Color(0xFF0369A1), const Color(0xFF0284C7)],
       'iconType': 'app_install',
-      'features': ['Unique Device IDs', 'Open App Verification', 'Organic Search Surge'],
+      'features': [
+        'Unique Device IDs',
+        'Open App Verification',
+        'Organic Search Surge'
+      ],
       'route': AppRouter.services,
     },
     {
@@ -195,11 +260,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'title': 'App Registration & Signup Flow',
       'tag': 'USER ACQUISITION',
       'tagColor': const Color(0xFF0EA5E9),
-      'description': 'Verified Indian users download your application and register an account with SMS/OTP authentication verified by audit logs.',
+      'description':
+          'Verified Indian users download your application and register an account with SMS/OTP authentication verified by audit logs.',
       'price': 'From ₹20 / signup',
       'gradient': [const Color(0xFF0284C7), const Color(0xFF2563EB)],
       'iconType': 'app_install',
-      'features': ['OTP / SMS Verification', 'Real Phone Numbers', 'Anti-Duplicate Safety'],
+      'features': [
+        'OTP / SMS Verification',
+        'Real Phone Numbers',
+        'Anti-Duplicate Safety'
+      ],
       'route': AppRouter.services,
     },
   ];
@@ -297,7 +367,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     context.read<DashboardBloc>().add(LoadDashboardDataEvent());
                   },
                   child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics()),
                     padding: EdgeInsets.zero,
                     children: [
                       // Header
@@ -317,7 +388,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       const SizedBox(height: 24),
 
                       // Bottom safe area padding
-                      SizedBox(height: MediaQuery.of(context).padding.bottom + 80),
+                      SizedBox(
+                          height: MediaQuery.of(context).padding.bottom + 80),
                     ],
                   ),
                 ),
@@ -425,7 +497,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               height: 44,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF38BDF8), Color(0xFF4F46E5), Color(0xFF9333EA)],
+                  colors: [
+                    Color(0xFF38BDF8),
+                    Color(0xFF4F46E5),
+                    Color(0xFF9333EA)
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -448,8 +524,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
                     child: () {
-                      final googlePhoto = FirebaseAuth.instance.currentUser?.photoURL
-                          ?? getIt<LocalStorageService>().getUserPhoto();
+                      final googlePhoto =
+                          FirebaseAuth.instance.currentUser?.photoURL ??
+                              getIt<LocalStorageService>().getUserPhoto();
                       if (googlePhoto != null && googlePhoto.isNotEmpty) {
                         return Image.network(
                           googlePhoto,
@@ -502,11 +579,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             GestureDetector(
               onTap: () => Navigator.pushNamed(context, AppRouter.wallet),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E293B).withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.35)),
+                  border: Border.all(
+                      color: const Color(0xFF38BDF8).withValues(alpha: 0.35)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -534,19 +613,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
             // Notification Center with Glow
             GestureDetector(
-              onTap: () => Navigator.pushNamed(context, AppRouter.notifications),
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRouter.notifications),
               child: Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E293B).withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 20),
+                    const Icon(Icons.notifications_none_rounded,
+                        color: Colors.white, size: 20),
                     Positioned(
                       top: 10,
                       right: 10,
@@ -558,7 +640,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFEF4444).withValues(alpha: 0.8),
+                              color: const Color(0xFFEF4444)
+                                  .withValues(alpha: 0.8),
                               blurRadius: 6,
                             ),
                           ],
@@ -642,7 +725,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.18), width: 1.2),
+          border: Border.all(
+              color: Colors.white.withValues(alpha: 0.18), width: 1.2),
           boxShadow: [
             BoxShadow(
               color: gradientColors.last.withValues(alpha: 0.35),
@@ -671,7 +755,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             Positioned(
               right: 14,
               bottom: 14,
-              child: _build3DPlatformIllustration(slide['platform'], accentColor),
+              child:
+                  _build3DPlatformIllustration(slide['platform'], accentColor),
             ),
 
             // Content
@@ -683,11 +768,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 children: [
                   // Badge Tag
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: accentColor.withValues(alpha: 0.5)),
+                      border:
+                          Border.all(color: accentColor.withValues(alpha: 0.5)),
                     ),
                     child: Text(
                       slide['badge'],
@@ -742,7 +829,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       Navigator.pushNamed(context, slide['route'] as String);
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 7),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
@@ -801,7 +889,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   color: const Color(0xFF10B981),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Text('5★', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900)),
+                child: const Text('5★',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900)),
               ),
             ),
           ],
@@ -903,7 +995,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFF334155).withValues(alpha: 0.7), width: 1.2),
+          border: Border.all(
+              color: const Color(0xFF334155).withValues(alpha: 0.7),
+              width: 1.2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.4),
@@ -947,7 +1041,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF38BDF8).withValues(alpha: 0.12),
+                              color: const Color(0xFF38BDF8)
+                                  .withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Image.asset(
@@ -969,16 +1064,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                          color:
+                              const Color(0xFF10B981).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                          border: Border.all(
+                              color: const Color(0xFF10B981)
+                                  .withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.verified_rounded, color: Color(0xFF34D399), size: 12),
+                            const Icon(Icons.verified_rounded,
+                                color: Color(0xFF34D399), size: 12),
                             const SizedBox(width: 4),
                             Text(
                               'LIVE ESCROW',
@@ -1047,9 +1147,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
                       // Glowing 3D Launch Button
                       GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, AppRouter.services),
+                        onTap: () =>
+                            Navigator.pushNamed(context, AppRouter.services),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [Color(0xFF38BDF8), Color(0xFF2563EB)],
@@ -1059,7 +1161,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             borderRadius: BorderRadius.circular(14),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF2563EB).withValues(alpha: 0.45),
+                                color: const Color(0xFF2563EB)
+                                    .withValues(alpha: 0.45),
                                 blurRadius: 14,
                                 offset: const Offset(0, 4),
                               ),
@@ -1068,7 +1171,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.add_rounded, color: Colors.white, size: 18),
+                              const Icon(Icons.add_rounded,
+                                  color: Colors.white, size: 18),
                               const SizedBox(width: 4),
                               Text(
                                 'New Campaign',
@@ -1087,17 +1191,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   const SizedBox(height: 16),
 
                   // Divider Line
-                  Container(height: 1, color: Colors.white.withValues(alpha: 0.07)),
+                  Container(
+                      height: 1, color: Colors.white.withValues(alpha: 0.07)),
                   const SizedBox(height: 14),
 
                   // 3 Key Stats Pills (No complicated graphs)
                   Row(
                     children: [
-                      _buildMetricBox('Active', '${d.activeCampaigns}', const Color(0xFF10B981), 'assets/icons/marketing.png'),
+                      _buildMetricBox(
+                          'Active',
+                          '${d.activeCampaigns}',
+                          const Color(0xFF10B981),
+                          'assets/icons/marketing.png'),
                       const SizedBox(width: 8),
-                      _buildMetricBox('Completed', '${d.completedCampaigns}', const Color(0xFF6366F1), 'assets/icons/rating.png'),
+                      _buildMetricBox('Completed', '${d.completedCampaigns}',
+                          const Color(0xFF6366F1), 'assets/icons/rating.png'),
                       const SizedBox(width: 8),
-                      _buildMetricBox('Units Done', '${d.completedTasks}', const Color(0xFFF59E0B), 'assets/icons/star.png'),
+                      _buildMetricBox('Units Done', '${d.completedTasks}',
+                          const Color(0xFFF59E0B), 'assets/icons/star.png'),
                     ],
                   ),
                 ],
@@ -1109,7 +1220,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildMetricBox(String label, String val, Color color, String assetPath) {
+  Widget _buildMetricBox(
+      String label, String val, Color color, String assetPath) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
@@ -1236,15 +1348,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     final isSelected = _selectedCategory == title;
     final Widget chipIcon;
     if (title == 'Play Store') {
-      chipIcon = Image.asset('assets/icons/google-play.png', width: 14, height: 14, fit: BoxFit.contain);
+      chipIcon = Image.asset('assets/icons/google-play.png',
+          width: 14, height: 14, fit: BoxFit.contain);
     } else if (title == 'YouTube') {
-      chipIcon = Image.asset('assets/icons/youtube.png', width: 14, height: 14, fit: BoxFit.contain);
+      chipIcon = Image.asset('assets/icons/youtube.png',
+          width: 14, height: 14, fit: BoxFit.contain);
     } else if (title == 'Instagram') {
-      chipIcon = Image.asset('assets/icons/instagram.png', width: 14, height: 14, fit: BoxFit.contain);
+      chipIcon = Image.asset('assets/icons/instagram.png',
+          width: 14, height: 14, fit: BoxFit.contain);
     } else if (title == 'Mobile Apps') {
-      chipIcon = Image.asset('assets/icons/smartphone.png', width: 14, height: 14, fit: BoxFit.contain);
+      chipIcon = Image.asset('assets/icons/smartphone.png',
+          width: 14, height: 14, fit: BoxFit.contain);
     } else {
-      chipIcon = Icon(Icons.auto_awesome_rounded, size: 13, color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF38BDF8));
+      chipIcon = Icon(Icons.auto_awesome_rounded,
+          size: 13,
+          color:
+              isSelected ? const Color(0xFF0F172A) : const Color(0xFF38BDF8));
     }
 
     return GestureDetector(
@@ -1323,11 +1442,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         'emoji': '📲',
       },
     };
-    final theme = cardThemes[iconType] ?? {
-      'bg': const [Color(0xFF0F172A), Color(0xFF1E293B)],
-      'glow': const Color(0xFF38BDF8),
-      'emoji': '🚀',
-    };
+    final theme = cardThemes[iconType] ??
+        {
+          'bg': const [Color(0xFF0F172A), Color(0xFF1E293B)],
+          'glow': const Color(0xFF38BDF8),
+          'emoji': '🚀',
+        };
     final cardBg = theme['bg'] as List<Color>;
     final glowColor = theme['glow'] as Color;
     final cartoonEmoji = theme['emoji'] as String;
@@ -1342,7 +1462,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: glowColor.withValues(alpha: 0.25), width: 1.5),
+        border:
+            Border.all(color: glowColor.withValues(alpha: 0.25), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: glowColor.withValues(alpha: 0.15),
@@ -1421,7 +1542,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               height: 50,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: glowColor.withValues(alpha: 0.08), width: 1.5),
+                border: Border.all(
+                    color: glowColor.withValues(alpha: 0.08), width: 1.5),
               ),
             ),
           ),
@@ -1449,11 +1571,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             children: [
                               Flexible(
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 7, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: tagColor.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: tagColor.withValues(alpha: 0.4), width: 0.8),
+                                    border: Border.all(
+                                        color: tagColor.withValues(alpha: 0.4),
+                                        width: 0.8),
                                   ),
                                   child: Text(
                                     s['tag'],
@@ -1470,7 +1595,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               ),
                               const SizedBox(width: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(8),
@@ -1520,16 +1646,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   runSpacing: 6,
                   children: (s['features'] as List<String>).map((feat) {
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: glowColor.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: glowColor.withValues(alpha: 0.12)),
+                        border: Border.all(
+                            color: glowColor.withValues(alpha: 0.12)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check_circle_rounded, color: glowColor, size: 11),
+                          Icon(Icons.check_circle_rounded,
+                              color: glowColor, size: 11),
                           const SizedBox(width: 5),
                           Flexible(
                             child: Text(
@@ -1584,7 +1713,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 15),
+                          const Icon(Icons.arrow_forward_rounded,
+                              color: Colors.white, size: 15),
                         ],
                       ),
                     ),
@@ -1677,7 +1807,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1),
         boxShadow: [
           BoxShadow(
             color: gradient.first.withValues(alpha: 0.55),
@@ -1704,11 +1835,15 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 0.5),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3), width: 0.5),
                 ),
                 child: Text(
                   miniLabel,
-                  style: const TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.w900),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 7,
+                      fontWeight: FontWeight.w900),
                 ),
               ),
             ),
@@ -1720,7 +1855,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // ─────────────────────────────────────────────────────────────────────────────
   // 6. RECENT CAMPAIGNS LIVE MONITOR
   // ─────────────────────────────────────────────────────────────────────────────
-  Widget _buildRecentCampaignsSection(BuildContext context, List<CampaignSummary> campaigns) {
+  Widget _buildRecentCampaignsSection(
+      BuildContext context, List<CampaignSummary> campaigns) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
@@ -1767,7 +1903,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
           // Campaigns List
           ...campaigns.take(3).map((c) {
-            final progress = c.totalTasks > 0 ? c.completedTasks / c.totalTasks : 0.0;
+            final progress =
+                c.totalTasks > 0 ? c.completedTasks / c.totalTasks : 0.0;
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
@@ -1795,9 +1932,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                          color:
+                              const Color(0xFF10B981).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -1823,7 +1962,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             value: progress,
                             minHeight: 6,
                             backgroundColor: const Color(0xFF1E293B),
-                            valueColor: const AlwaysStoppedAnimation(Color(0xFF38BDF8)),
+                            valueColor:
+                                const AlwaysStoppedAnimation(Color(0xFF38BDF8)),
                           ),
                         ),
                       ),
@@ -1982,23 +2122,28 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 color: const Color(0xFFEF4444).withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.wifi_off_rounded, size: 36, color: Color(0xFFEF4444)),
+              child: const Icon(Icons.wifi_off_rounded,
+                  size: 36, color: Color(0xFFEF4444)),
             ),
             const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13),
+              style: GoogleFonts.outfit(
+                  color: const Color(0xFF94A3B8), fontSize: 13),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.read<DashboardBloc>().add(LoadDashboardDataEvent()),
+              onPressed: () =>
+                  context.read<DashboardBloc>().add(LoadDashboardDataEvent()),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF38BDF8),
                 foregroundColor: const Color(0xFF0F172A),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Retry Connection', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Retry Connection',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
