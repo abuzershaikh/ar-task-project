@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { CampaignWorkerParticipationRepository } from '../../shared/database/repositories/campaign-worker-participation.repository';
 import { SubmissionRepository } from '../../shared/database/repositories/submission.repository';
+import { TaskAssignmentRepository } from '../../shared/database/repositories/task-assignment.repository';
 import { UserRepository } from '../../shared/database/repositories/user.repository';
 import { Task } from '../../shared/database/entities/task.entity';
 
@@ -11,6 +12,7 @@ export class TaskQueryService {
         private readonly taskRepository: TaskRepository,
         private readonly participationRepo: CampaignWorkerParticipationRepository,
         private readonly submissionRepo: SubmissionRepository,
+        private readonly assignmentRepo: TaskAssignmentRepository,
         private readonly userRepo: UserRepository,
     ) {}
 
@@ -18,78 +20,160 @@ export class TaskQueryService {
         return this.taskRepository.findById(taskId);
     }
 
-    async getAvailableTasks(workerId: string): Promise<Task[]> {
-        // 1. Fetch all active unassigned tasks
-        const availableTasks = await this.taskRepository.findAvailableForAssignment();
+    private async resolveAllWorkerIdentifiers(workerId: string, workerEmail?: string): Promise<string[]> {
+        const ids = new Set<string>();
+        let resolvedEmail = (workerEmail || '').toLowerCase().trim();
 
-        // 2. Identify all worker identifiers (ID, Email, Firebase UID)
-        const workerIds = new Set<string>();
-        if (workerId) workerIds.add(workerId.toString());
-
-        try {
-            const user = await this.userRepo.findById(workerId);
-            if (user) {
-                if (user.id) workerIds.add(user.id);
-                if (user.email) workerIds.add(user.email);
-            } else {
-                const userByEmail = await this.userRepo.findByEmail(workerId);
-                if (userByEmail) {
-                    if (userByEmail.id) workerIds.add(userByEmail.id);
-                    if (userByEmail.email) workerIds.add(userByEmail.email);
-                }
+        if (workerId) {
+            ids.add(workerId);
+            if (workerId.includes('@')) {
+                resolvedEmail = workerId.toLowerCase().trim();
             }
-        } catch (_) {}
+        }
 
-        // 3. Identify campaigns the worker has already participated in
-        const excludedCampaignIds = new Set<string>();
-
-        for (const wId of workerIds) {
+        if (!resolvedEmail && workerId) {
             try {
-                const participations = await this.participationRepo.findCampaignIdsByWorker(wId);
-                for (const cId of participations) {
-                    if (cId) excludedCampaignIds.add(cId.toString());
-                }
-            } catch (_) {}
-
-            try {
-                const workerTasks = await this.taskRepository.findByWorker(wId);
-                for (const wt of workerTasks) {
-                    const cId = wt.campaignId || wt.orderId;
-                    if (cId) excludedCampaignIds.add(cId.toString());
-                }
-            } catch (_) {}
-
-            try {
-                const subs = await this.submissionRepo.findByWorker(wId);
-                for (const s of subs) {
-                    if (s.taskId) {
-                        const t = await this.taskRepository.findById(s.taskId);
-                        const cId = t?.campaignId || t?.orderId;
-                        if (cId) excludedCampaignIds.add(cId.toString());
-                    }
+                const user = await this.userRepo.findById(workerId);
+                if (user?.email) {
+                    resolvedEmail = user.email.toLowerCase().trim();
                 }
             } catch (_) {}
         }
 
-        // 4. Filter out campaigns already taken by this worker
-        const eligibleTasks = availableTasks.filter((task) => {
-            const campaignKey = (task.campaignId || task.orderId || '').toString();
-            if (campaignKey && excludedCampaignIds.has(campaignKey)) {
-                return false;
+        if (resolvedEmail) {
+            ids.add(resolvedEmail);
+            try {
+                const user = await this.userRepo.findByEmail(resolvedEmail);
+                if (user?.id) ids.add(user.id);
+            } catch (_) {}
+        }
+
+        return Array.from(ids);
+    }
+
+    private extractTaskIdentity(task: any): { packageId?: string; normalizedUrl?: string } {
+        const reqs = task?.requirements || {};
+        const meta = task?.metadata || {};
+        const pkg = (reqs.packageId || meta.packageId || '').toString().trim().toLowerCase();
+        let rawUrl = (reqs.targetUrl || meta.targetUrl || '').toString().trim().toLowerCase();
+        let normalizedUrl = '';
+        if (rawUrl) {
+            try {
+                const parsed = new URL(rawUrl);
+                normalizedUrl = `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '');
+            } catch (_) {
+                normalizedUrl = rawUrl.replace(/\/+$/, '');
             }
+        }
+        return {
+            packageId: pkg || undefined,
+            normalizedUrl: normalizedUrl || undefined,
+        };
+    }
+
+    async getAvailableTasks(workerId: string, workerEmail?: string): Promise<Task[]> {
+        // 1. Fetch all active unassigned tasks
+        const availableTasks = await this.taskRepository.findAvailableForAssignment();
+
+        // 2. Identify all worker identifiers (Gmail, UID, Worker profile ID)
+        const allWorkerIds = await this.resolveAllWorkerIdentifiers(workerId, workerEmail);
+
+        // 3. Collect all campaignIds, taskIds, orderUnitIds, packageIds, and targetUrls the worker has ever interacted with
+        const excludedCampaignIds = new Set<string>();
+        const excludedTaskIds = new Set<string>();
+        const excludedOrderUnitIds = new Set<string>();
+        const excludedPackageIds = new Set<string>();
+        const excludedTargetUrls = new Set<string>();
+
+        // (a) From campaign_worker_participation
+        try {
+            const participations = await this.participationRepo.findCampaignIdsByWorker(allWorkerIds);
+            for (const cId of participations) {
+                if (cId) excludedCampaignIds.add(cId.toString());
+            }
+        } catch (_) {}
+
+        // (b) From task_assignments
+        try {
+            const assignments = await this.assignmentRepo.findByWorker(allWorkerIds);
+            for (const a of assignments) {
+                if (a.campaignId) excludedCampaignIds.add(a.campaignId.toString());
+                if (a.orderId) excludedCampaignIds.add(a.orderId.toString());
+                if (a.taskId) excludedTaskIds.add(a.taskId.toString());
+                if (a.orderUnitId) excludedOrderUnitIds.add(a.orderUnitId.toString());
+            }
+        } catch (_) {}
+
+        // (c) From tasks table where assigned_to in allWorkerIds
+        try {
+            const workerTasks = await this.taskRepository.findByWorker(allWorkerIds);
+            for (const wt of workerTasks) {
+                if (wt.campaignId) excludedCampaignIds.add(wt.campaignId.toString());
+                if (wt.orderId) excludedCampaignIds.add(wt.orderId.toString());
+                if (wt.id) excludedTaskIds.add(wt.id.toString());
+                if (wt.orderUnitId) excludedOrderUnitIds.add(wt.orderUnitId.toString());
+                const { packageId, normalizedUrl } = this.extractTaskIdentity(wt);
+                if (packageId) excludedPackageIds.add(packageId);
+                if (normalizedUrl) excludedTargetUrls.add(normalizedUrl);
+            }
+        } catch (_) {}
+
+        // (d) From submissions table
+        try {
+            const subs = await this.submissionRepo.findByWorker(allWorkerIds);
+            for (const s of subs) {
+                if (s.taskId) {
+                    excludedTaskIds.add(s.taskId.toString());
+                    const t = await this.taskRepository.findById(s.taskId);
+                    if (t?.campaignId) excludedCampaignIds.add(t.campaignId.toString());
+                    if (t?.orderId) excludedCampaignIds.add(t.orderId.toString());
+                    if (t?.orderUnitId) excludedOrderUnitIds.add(t.orderUnitId.toString());
+                    if (t) {
+                        const { packageId, normalizedUrl } = this.extractTaskIdentity(t);
+                        if (packageId) excludedPackageIds.add(packageId);
+                        if (normalizedUrl) excludedTargetUrls.add(normalizedUrl);
+                    }
+                }
+            }
+        } catch (_) {}
+
+        // 4. Filter out any task matching excluded campaign, order, unit, taskId, packageId, or targetUrl
+        const eligibleTasks = availableTasks.filter((task) => {
+            const taskCampaign = (task.campaignId || '').toString();
+            const taskOrder = (task.orderId || '').toString();
+            const taskUnit = (task.orderUnitId || '').toString();
+            const taskId = (task.id || '').toString();
+            const { packageId, normalizedUrl } = this.extractTaskIdentity(task);
+
+            if (taskCampaign && excludedCampaignIds.has(taskCampaign)) return false;
+            if (taskOrder && excludedCampaignIds.has(taskOrder)) return false;
+            if (taskUnit && excludedOrderUnitIds.has(taskUnit)) return false;
+            if (taskId && excludedTaskIds.has(taskId)) return false;
+            if (packageId && excludedPackageIds.has(packageId)) return false;
+            if (normalizedUrl && excludedTargetUrls.has(normalizedUrl)) return false;
+
             return true;
         });
 
-        // 5. DISTINCT BY CAMPAIGN/ORDER: Exactly 1 task per campaign is offered to each worker
+        // 5. DISTINCT BY CAMPAIGN/ORDER & TARGET APP/URL: Exactly 1 task/unit per campaign is offered to each worker
         const seenCampaigns = new Set<string>();
+        const seenPackages = new Set<string>();
+        const seenUrls = new Set<string>();
         const distinctTasks: Task[] = [];
 
         for (const task of eligibleTasks) {
-            const campaignKey = (task.campaignId || task.orderId || task.id).toString();
-            if (!seenCampaigns.has(campaignKey)) {
-                seenCampaigns.add(campaignKey);
-                distinctTasks.push(task);
-            }
+            const campaignKey = (task.campaignId || task.orderId || task.id || '').toString();
+            const { packageId, normalizedUrl } = this.extractTaskIdentity(task);
+
+            if (seenCampaigns.has(campaignKey)) continue;
+            if (packageId && seenPackages.has(packageId)) continue;
+            if (normalizedUrl && seenUrls.has(normalizedUrl)) continue;
+
+            seenCampaigns.add(campaignKey);
+            if (packageId) seenPackages.add(packageId);
+            if (normalizedUrl) seenUrls.add(normalizedUrl);
+
+            distinctTasks.push(task);
         }
 
         // Guarantee newest tasks are always at the top
@@ -102,12 +186,13 @@ export class TaskQueryService {
         return distinctTasks;
     }
 
-    async getWorkerTasks(workerId: string, status?: string): Promise<Task[]> {
+    async getWorkerTasks(workerId: string, status?: string, workerEmail?: string): Promise<Task[]> {
+        const allWorkerIds = await this.resolveAllWorkerIdentifiers(workerId, workerEmail);
         let tasks: Task[];
         if (status) {
-            tasks = await this.taskRepository.findByWorkerAndStatus(workerId, status);
+            tasks = await this.taskRepository.findByWorkerAndStatus(allWorkerIds, status);
         } else {
-            tasks = await this.taskRepository.findByWorker(workerId);
+            tasks = await this.taskRepository.findByWorker(allWorkerIds);
         }
 
         // Guarantee newest tasks appear on top

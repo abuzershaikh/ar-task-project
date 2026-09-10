@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { CampaignWorkerParticipation, ParticipationStatus } from '../entities/campaign-worker-participation.entity';
 
 @Injectable()
@@ -14,10 +14,12 @@ export class CampaignWorkerParticipationRepository {
 
     async findByCampaignAndWorker(
         campaignId: string,
-        workerId: string,
+        workerId: string | string[],
     ): Promise<CampaignWorkerParticipation | null> {
+        const ids = Array.isArray(workerId) ? workerId.filter(Boolean) : [workerId];
+        if (ids.length === 0) return null;
         return this.repository.findOne({
-            where: { campaignId, workerId },
+            where: { campaignId, workerId: In(ids) },
         });
     }
 
@@ -29,9 +31,11 @@ export class CampaignWorkerParticipationRepository {
         return records.map((r) => r.workerId);
     }
 
-    async findCampaignIdsByWorker(workerId: string): Promise<string[]> {
+    async findCampaignIdsByWorker(workerId: string | string[]): Promise<string[]> {
+        const ids = Array.isArray(workerId) ? workerId.filter(Boolean) : [workerId];
+        if (ids.length === 0) return [];
         const records = await this.repository.find({
-            where: { workerId },
+            where: { workerId: In(ids) },
             select: ['campaignId'],
         });
 

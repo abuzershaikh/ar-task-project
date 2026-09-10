@@ -5,7 +5,7 @@ class AppConstants {
 
   // ── App Info ──────────────────────────────────────────────────────────
   static const String appName = 'Task Reward';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.0.3';
 
   // ── API ───────────────────────────────────────────────────────────────
   static const String apiBaseUrl = String.fromEnvironment(

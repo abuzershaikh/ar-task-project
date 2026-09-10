@@ -3,6 +3,7 @@ export interface CreateTaskCommand {
     campaignId: string;
     taskType: string;
     rewardAmount: number;
+    orderUnitId?: string;
     requirements?: any;
     metadata?: any;
     deadline?: Date;

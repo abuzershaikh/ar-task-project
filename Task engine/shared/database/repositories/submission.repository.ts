@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { TaskSubmission } from '../entities/submission.entity';
 
 @Injectable()
@@ -24,8 +24,10 @@ export class SubmissionRepository {
         });
     }
 
-    async findByWorker(workerId: string): Promise<TaskSubmission[]> {
-        return this.repository.find({ where: { workerId } });
+    async findByWorker(workerId: string | string[]): Promise<TaskSubmission[]> {
+        const ids = Array.isArray(workerId) ? workerId.filter(Boolean) : [workerId];
+        if (ids.length === 0) return [];
+        return this.repository.find({ where: { workerId: In(ids) } });
     }
 
     async create(data: Partial<TaskSubmission>): Promise<TaskSubmission> {

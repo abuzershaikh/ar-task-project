@@ -60,16 +60,36 @@ class TaskProvider extends ChangeNotifier {
     }
     try {
       final rawTasks = await ApiService.getAvailableTasks();
-      // Ensure distinct campaigns: Each worker can only see 1 task per campaign/order
+      // Ensure distinct campaigns: Each worker can only see 1 task per campaign/order/app/url
       final seenCampaigns = <String>{};
+      final seenPackages = <String>{};
+      final seenUrls = <String>{};
       final uniqueTasks = <dynamic>[];
       for (final t in rawTasks) {
         if (t is Map) {
-          final cId = (t['campaignId'] ?? t['orderId'] ?? t['id']).toString();
-          if (!seenCampaigns.contains(cId)) {
-            seenCampaigns.add(cId);
-            uniqueTasks.add(t);
+          final cId = (t['campaignId'] ?? t['orderId'] ?? t['id'] ?? '').toString();
+          final reqs = t['requirements'] is Map ? t['requirements'] as Map : {};
+          final meta = t['metadata'] is Map ? t['metadata'] as Map : {};
+          final pkg = (reqs['packageId'] ?? meta['packageId'] ?? '').toString().trim().toLowerCase();
+          String rawUrl = (reqs['targetUrl'] ?? meta['targetUrl'] ?? '').toString().trim().toLowerCase();
+          String normUrl = '';
+          if (rawUrl.isNotEmpty) {
+            try {
+              final uri = Uri.parse(rawUrl);
+              normUrl = '${uri.scheme}://${uri.host}${uri.path}'.replaceAll(RegExp(r'/+$'), '');
+            } catch (_) {
+              normUrl = rawUrl.replaceAll(RegExp(r'/+$'), '');
+            }
           }
+
+          if (seenCampaigns.contains(cId)) continue;
+          if (pkg.isNotEmpty && seenPackages.contains(pkg)) continue;
+          if (normUrl.isNotEmpty && seenUrls.contains(normUrl)) continue;
+
+          seenCampaigns.add(cId);
+          if (pkg.isNotEmpty) seenPackages.add(pkg);
+          if (normUrl.isNotEmpty) seenUrls.add(normUrl);
+          uniqueTasks.add(t);
         } else {
           uniqueTasks.add(t);
         }
@@ -171,21 +191,63 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> acceptTask(String taskId) async {
+  Future<bool> acceptTask(String taskId, {Map<String, dynamic>? taskData}) async {
     try {
       final res = await ApiService.acceptTask(taskId);
-      if (res['success'] == true || res['status'] == 'assigned' || res['status'] == 'ASSIGNED') {
+      if (res['success'] == true ||
+          res['status'] == 'assigned' ||
+          res['status'] == 'ASSIGNED' ||
+          res['status'] == 'accepted' ||
+          res['status'] == 'ACCEPTED') {
         _stageTasksCache.clear();
+
+        final acceptedTaskId = taskId.trim();
+        final campaignId = (taskData?['campaignId'] ??
+                taskData?['campaign_id'] ??
+                '')
+            .toString()
+            .trim();
+        final orderId = (taskData?['orderId'] ??
+                taskData?['order_id'] ??
+                '')
+            .toString()
+            .trim();
+        final orderUnitId = (taskData?['orderUnitId'] ??
+                taskData?['order_unit_id'] ??
+                '')
+            .toString()
+            .trim();
+
+        _availableTasks.removeWhere((t) {
+          final id = (t['id'] ?? '').toString().trim();
+          final taskCampaign =
+              (t['campaignId'] ?? t['campaign_id'] ?? '').toString().trim();
+          final taskOrder =
+              (t['orderId'] ?? t['order_id'] ?? '').toString().trim();
+          final taskUnit =
+              (t['orderUnitId'] ?? t['order_unit_id'] ?? '').toString().trim();
+
+          return id == acceptedTaskId ||
+              (campaignId.isNotEmpty && taskCampaign == campaignId) ||
+              (orderId.isNotEmpty && taskOrder == orderId) ||
+              (orderUnitId.isNotEmpty && taskUnit == orderUnitId);
+        });
+        notifyListeners();
+
         await fetchAvailableTasks();
         await fetchMyTasks('assigned', forceRefresh: true);
         return true;
+      } else {
+        _error = res['message']?.toString() ?? 'Failed to accept task';
+        notifyListeners();
+        return false;
       }
     } catch (e) {
       debugPrint('[TaskProvider ERROR] acceptTask: $e');
-      _error = e.toString();
+      _error = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
+      return false;
     }
-    return false;
   }
 
   Future<bool> startTask(String taskId) async {

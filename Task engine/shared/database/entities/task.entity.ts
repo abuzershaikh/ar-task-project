@@ -31,6 +31,9 @@ export class Task {
     @Column({ type: 'json', nullable: true })
     metadata: any;
 
+    @Column({ name: 'order_unit_id', nullable: true })
+    orderUnitId: string;
+
     @Column({ name: 'assigned_to', nullable: true })
     assignedTo: string;
 

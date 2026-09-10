@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { Task } from '../../shared/database/entities/task.entity';
 import { CampaignWorkerParticipation, ParticipationStatus } from '../../shared/database/entities/campaign-worker-participation.entity';
 import { TaskAssignment, TaskAssignmentStatus } from '../../shared/database/entities/task-assignment.entity';
 import { SystemSetting } from '../../shared/database/entities/system-settings.entity';
+import { User } from '../../shared/database/entities/user.entity';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { CampaignWorkerParticipationRepository } from '../../shared/database/repositories/campaign-worker-participation.repository';
 import { TaskAssignmentRepository } from '../../shared/database/repositories/task-assignment.repository';
@@ -33,10 +34,42 @@ export class TaskCommandService {
         private readonly stateMachine: TaskStateMachine,
     ) { }
 
+    private async resolveWorkerIdentifiers(manager: any, workerId: string, workerEmail?: string): Promise<{ email: string; allIds: string[] }> {
+        const ids = new Set<string>();
+        let resolvedEmail = (workerEmail || '').toLowerCase().trim();
+
+        if (workerId) {
+            ids.add(workerId);
+            if (workerId.includes('@')) {
+                resolvedEmail = workerId.toLowerCase().trim();
+            }
+        }
+
+        if (!resolvedEmail && workerId) {
+            try {
+                const user = await manager.findOne(User, { where: { id: workerId } });
+                if (user?.email) {
+                    resolvedEmail = user.email.toLowerCase().trim();
+                }
+            } catch (_) {}
+        }
+
+        if (resolvedEmail) {
+            ids.add(resolvedEmail);
+            try {
+                const user = await manager.findOne(User, { where: { email: resolvedEmail } });
+                if (user?.id) ids.add(user.id);
+            } catch (_) {}
+        }
+
+        return { email: resolvedEmail, allIds: Array.from(ids) };
+    }
+
     async createTask(command: CreateTaskCommand) {
         return this.taskRepository.create({
             orderId: command.orderId,
             campaignId: command.campaignId || command.orderId,
+            orderUnitId: command.orderUnitId || command.requirements?.orderUnitId || null,
             taskType: command.taskType,
             rewardAmount: command.rewardAmount,
             requirements: command.requirements,
@@ -50,14 +83,43 @@ export class TaskCommandService {
         return this.dataSource.transaction(async (manager) => {
             const task = await this.ensureTaskTransactional(manager, command.taskId);
             const campaignId = task.campaignId || task.orderId;
+            const orderId = task.orderId || task.campaignId;
+            const orderUnitId = task.orderUnitId || (command as any).orderUnitId || task.requirements?.orderUnitId || null;
 
-            const existingParticipation = await manager.findOne(CampaignWorkerParticipation, { where: { campaignId, workerId: command.workerId } });
+            const { email: workerEmail, allIds } = await this.resolveWorkerIdentifiers(manager, command.workerId, command.workerEmail);
+            const primaryWorkerKey = workerEmail || command.workerId;
+
+            // 1. Same campaign participation verification
+            const existingParticipation = await manager.findOne(CampaignWorkerParticipation, {
+                where: [
+                    { campaignId, workerId: In(allIds) },
+                    ...(orderId !== campaignId ? [{ campaignId: orderId, workerId: In(allIds) }] : [])
+                ]
+            });
             if (existingParticipation) {
-                this.logger.warn(`Worker '${command.workerId}' has ALREADY participated in Campaign '${campaignId}' (Status: ${existingParticipation.status}). Cannot reassign same campaign task.`);
-                throw new BadRequestException(`Worker has already participated in Campaign '${campaignId}'`);
+                this.logger.warn(`Worker '${primaryWorkerKey}' has ALREADY participated in Campaign '${campaignId}'. Cannot assign same campaign task.`);
+                throw new BadRequestException('You have already participated in this campaign.');
             }
 
-            if (task.assignedTo && task.assignedTo !== command.workerId) {
+            // 2. Same exact task protection
+            const existingTaskAssignment = await manager.findOne(TaskAssignment, {
+                where: { taskId: task.id, workerId: In(allIds) }
+            });
+            if (existingTaskAssignment) {
+                throw new BadRequestException('This task has already been assigned to you.');
+            }
+
+            // 3. Same unit protection
+            if (orderUnitId) {
+                const existingUnitAssignment = await manager.findOne(TaskAssignment, {
+                    where: { orderUnitId, workerId: In(allIds) }
+                });
+                if (existingUnitAssignment) {
+                    throw new BadRequestException('This task unit has already been assigned.');
+                }
+            }
+
+            if (task.assignedTo && !allIds.includes(task.assignedTo)) {
                 throw new BadRequestException('Task is already assigned to another worker');
             }
 
@@ -71,29 +133,36 @@ export class TaskCommandService {
                     currentStatus: task.status,
                     targetStatus: TaskStatus.ASSIGNED,
                     timestamp: new Date(),
-                    actor: { id: command.actorId || command.workerId, type: 'system' },
+                    actor: { id: command.actorId || primaryWorkerKey, type: 'system' },
                 });
 
                 try {
-                    const participation = manager.create(CampaignWorkerParticipation, { campaignId, workerId: command.workerId, status: ParticipationStatus.ASSIGNED });
+                    const participation = manager.create(CampaignWorkerParticipation, {
+                        campaignId,
+                        workerId: primaryWorkerKey,
+                        status: ParticipationStatus.ASSIGNED,
+                    });
                     await manager.save(participation);
                 } catch (err) {
-                    this.logger.warn(`DB UNIQUE CONFLICT: Worker '${command.workerId}' was assigned concurrently by another process in Campaign '${campaignId}'.`);
-                    throw new BadRequestException(`Worker '${command.workerId}' participation conflict in Campaign '${campaignId}'`);
+                    this.logger.warn(`DB UNIQUE CONFLICT: Worker '${primaryWorkerKey}' was assigned concurrently in Campaign '${campaignId}'.`);
+                    throw new BadRequestException('You have already participated in this campaign.');
                 }
 
                 const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
                 const assignment = manager.create(TaskAssignment, {
                     taskId: task.id,
                     campaignId,
-                    workerId: command.workerId,
+                    orderId,
+                    orderUnitId,
+                    workerId: primaryWorkerKey,
                     attemptNumber: attempts.length + 1,
                     status: TaskAssignmentStatus.ASSIGNED,
                     assignedAt: new Date(),
                 });
                 await manager.save(assignment);
 
-                task.assignedTo = command.workerId;
+                task.assignedTo = primaryWorkerKey;
+                task.orderUnitId = orderUnitId;
                 task.assignedAt = new Date();
                 task.status = TaskStatus.ASSIGNED;
                 task.metadata = { ...(task.metadata || {}), ...(command.metadata || {}) };
@@ -106,44 +175,94 @@ export class TaskCommandService {
     async acceptTask(command: AcceptTaskCommand) {
         return this.dataSource.transaction(async (manager) => {
             const task = await this.ensureTaskTransactional(manager, command.taskId);
-            this.validationService.ensureWorkerOwnership(task, command.workerId);
+            const { email: workerEmail, allIds } = await this.resolveWorkerIdentifiers(manager, command.workerId, command.workerEmail);
+            const primaryWorkerKey = workerEmail || command.workerId;
+            const campaignId = task.campaignId || task.orderId;
+            const orderId = task.orderId || task.campaignId;
+            const orderUnitId = task.orderUnitId || (command as any).orderUnitId || task.requirements?.orderUnitId || null;
 
-            if (task.status === TaskStatus.ACCEPTED && task.assignedTo === command.workerId) {
+            if (task.assignedTo && !allIds.includes(task.assignedTo)) {
+                throw new BadRequestException('Task is already assigned to another worker');
+            }
+
+            if (task.status === TaskStatus.ACCEPTED && allIds.includes(task.assignedTo || '')) {
                 return task;
             }
 
-            if (task.status === TaskStatus.ACTIVE && !task.assignedTo) {
-                const campaignId = task.campaignId || task.orderId;
-                
-                // 1. Verify worker has not already participated in this campaign
-                const existingParticipation = await manager.findOne(CampaignWorkerParticipation, { where: { campaignId, workerId: command.workerId } });
+            // Perform 3-level verification if task was unassigned or active
+            if (!task.assignedTo || task.status === TaskStatus.ACTIVE) {
+                // 1. Same campaign participation verification
+                const existingParticipation = await manager.findOne(CampaignWorkerParticipation, {
+                    where: [
+                        { campaignId, workerId: In(allIds) },
+                        ...(orderId !== campaignId ? [{ campaignId: orderId, workerId: In(allIds) }] : [])
+                    ]
+                });
                 if (existingParticipation) {
-                    throw new BadRequestException('You have already participated in this campaign. Each worker can only complete 1 task per campaign.');
+                    throw new BadRequestException('You have already participated in this campaign.');
                 }
 
-                // 2. Verify worker does not already hold another task for this campaign/order
+                // 2. Same exact task protection
+                const existingTaskAssignment = await manager.findOne(TaskAssignment, {
+                    where: { taskId: task.id, workerId: In(allIds) }
+                });
+                if (existingTaskAssignment) {
+                    throw new BadRequestException('This task has already been assigned to you.');
+                }
+
+                // 3. Same unit protection
+                if (orderUnitId) {
+                    const existingUnitAssignment = await manager.findOne(TaskAssignment, {
+                        where: { orderUnitId, workerId: In(allIds) }
+                    });
+                    if (existingUnitAssignment) {
+                        throw new BadRequestException('This task unit has already been assigned.');
+                    }
+
+                    // Check if another worker is actively holding this unit
+                    const activeUnitHolder = await manager.findOne(TaskAssignment, {
+                        where: [
+                            { orderUnitId, status: TaskAssignmentStatus.ASSIGNED },
+                            { orderUnitId, status: TaskAssignmentStatus.ACCEPTED },
+                            { orderUnitId, status: TaskAssignmentStatus.STARTED },
+                            { orderUnitId, status: TaskAssignmentStatus.SUBMITTED },
+                        ]
+                    });
+                    if (activeUnitHolder && !allIds.includes(activeUnitHolder.workerId)) {
+                        throw new BadRequestException('This task unit has already been assigned.');
+                    }
+                }
+
+                // Verify worker does not already hold another task for this campaign/order
                 const existingTask = await manager.findOne(Task, {
                     where: [
-                        { campaignId, assignedTo: command.workerId },
-                        { orderId: task.orderId, assignedTo: command.workerId },
+                        { campaignId, assignedTo: In(allIds) },
+                        { orderId, assignedTo: In(allIds) },
                     ],
                 });
                 if (existingTask && existingTask.id !== task.id) {
-                    throw new BadRequestException('You have already taken a task for this order. Each worker can only complete 1 task per campaign.');
+                    throw new BadRequestException('You have already participated in this campaign.');
                 }
 
                 try {
-                    const participation = manager.create(CampaignWorkerParticipation, { campaignId, workerId: command.workerId, status: ParticipationStatus.ASSIGNED });
+                    const participation = manager.create(CampaignWorkerParticipation, {
+                        campaignId,
+                        workerId: primaryWorkerKey,
+                        status: ParticipationStatus.ASSIGNED,
+                    });
                     await manager.save(participation);
                 } catch (partErr) {
-                    throw new BadRequestException('You have already participated in this campaign. Each worker can only complete 1 task per campaign.');
+                    this.logger.warn(`CampaignWorkerParticipation constraint conflict: ${partErr?.message}`);
+                    throw new BadRequestException('You have already participated in this campaign.');
                 }
 
                 const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
                 const assignment = manager.create(TaskAssignment, {
                     taskId: task.id,
                     campaignId,
-                    workerId: command.workerId,
+                    orderId,
+                    orderUnitId,
+                    workerId: primaryWorkerKey,
                     attemptNumber: attempts.length + 1,
                     status: TaskAssignmentStatus.ACCEPTED,
                     assignedAt: new Date(),
@@ -172,11 +291,13 @@ export class TaskCommandService {
                 task.status = TaskStatus.ACCEPTED;
                 task.acceptedAt = now;
                 task.assignedAt = now;
-                task.assignedTo = command.workerId;
+                task.assignedTo = primaryWorkerKey;
+                task.orderUnitId = orderUnitId;
                 task.deadline = deadline;
                 return manager.save(task);
             }
 
+            // If task was already assigned to this worker, transition to ACCEPTED
             this.stateMachine.validateTransition({
                 taskId: task.id,
                 orderId: task.orderId,
@@ -185,12 +306,13 @@ export class TaskCommandService {
                 currentStatus: task.status,
                 targetStatus: TaskStatus.ACCEPTED,
                 timestamp: new Date(),
-                actor: { id: command.workerId, type: 'worker' },
+                actor: { id: primaryWorkerKey, type: 'worker' },
             });
 
             const activeAssignment = await this.findActiveAssignmentTransactional(manager, task.id);
             if (activeAssignment) {
                 activeAssignment.acceptedAt = new Date();
+                activeAssignment.status = TaskAssignmentStatus.ACCEPTED;
                 await manager.save(activeAssignment);
             }
 
@@ -212,7 +334,8 @@ export class TaskCommandService {
             const now = new Date();
             task.status = TaskStatus.ACCEPTED;
             task.acceptedAt = now;
-            task.assignedTo = command.workerId;
+            task.assignedTo = primaryWorkerKey;
+            task.orderUnitId = orderUnitId;
             task.deadline = new Date(now.getTime() + executionHours * 3600 * 1000);
             return manager.save(task);
         });
@@ -221,7 +344,7 @@ export class TaskCommandService {
     async startTask(command: StartTaskCommand) {
         return this.dataSource.transaction(async (manager) => {
             const task = await this.ensureTaskTransactional(manager, command.taskId);
-            this.validationService.ensureWorkerOwnership(task, command.workerId);
+            this.validationService.ensureWorkerOwnership(task, command.workerId, command.workerEmail);
 
             if (task.status === TaskStatus.IN_PROGRESS) return task;
 
@@ -238,7 +361,6 @@ export class TaskCommandService {
 
             task.status = TaskStatus.IN_PROGRESS;
             task.startedAt = new Date();
-            task.assignedTo = command.workerId;
             return manager.save(task);
         });
     }
@@ -246,7 +368,7 @@ export class TaskCommandService {
     async submitTask(command: SubmitTaskCommand) {
         return this.dataSource.transaction(async (manager) => {
             const task = await this.ensureTaskTransactional(manager, command.taskId);
-            this.validationService.ensureWorkerOwnership(task, command.workerId);
+            this.validationService.ensureWorkerOwnership(task, command.workerId, command.workerEmail);
 
             if (task.status === TaskStatus.UNDER_REVIEW) return task;
 

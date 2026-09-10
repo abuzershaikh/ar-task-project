@@ -290,6 +290,7 @@ export class OrderActivatedListener {
                     await this.taskEngine.createTask({
                         orderId: payload.orderId,
                         campaignId: payload.orderId,
+                        orderUnitId: unit.id,
                         taskType,
                         requirements: taskReqs,
                         metadata: {

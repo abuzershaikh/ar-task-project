@@ -69,11 +69,11 @@ export class TaskEngineService {
         return this.queryService.getTaskById(taskId);
     }
 
-    async getAvailableTasks(workerId: string) {
-        return this.queryService.getAvailableTasks(workerId);
+    async getAvailableTasks(workerId: string, workerEmail?: string) {
+        return this.queryService.getAvailableTasks(workerId, workerEmail);
     }
 
-    async getWorkerTasks(workerId: string, status?: string) {
-        return this.queryService.getWorkerTasks(workerId, status);
+    async getWorkerTasks(workerId: string, status?: string, workerEmail?: string) {
+        return this.queryService.getWorkerTasks(workerId, status, workerEmail);
     }
 }

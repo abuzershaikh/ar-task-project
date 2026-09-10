@@ -69,9 +69,11 @@ export class TaskRepository {
         });
     }
 
-    async findByWorker(workerId: string): Promise<Task[]> {
+    async findByWorker(workerId: string | string[]): Promise<Task[]> {
+        const ids = Array.isArray(workerId) ? workerId.filter(Boolean) : [workerId];
+        if (ids.length === 0) return [];
         return this.repository.find({
-            where: { assignedTo: workerId },
+            where: { assignedTo: In(ids) },
             order: { createdAt: 'DESC' },
         });
     }
@@ -89,7 +91,9 @@ export class TaskRepository {
             .getMany();
     }
 
-    async findByWorkerAndStatus(workerId: string, status: string): Promise<Task[]> {
+    async findByWorkerAndStatus(workerId: string | string[], status: string): Promise<Task[]> {
+        const ids = Array.isArray(workerId) ? workerId.filter(Boolean) : [workerId];
+        if (ids.length === 0) return [];
         const statuses = this.resolveStatuses(status);
         const allVariations = Array.from(new Set([
             ...statuses,
@@ -97,7 +101,7 @@ export class TaskRepository {
             ...statuses.map(s => s.toUpperCase())
         ]));
         return this.repository.find({
-            where: { assignedTo: workerId, status: In(allVariations) },
+            where: { assignedTo: In(ids), status: In(allVariations) },
             order: { createdAt: 'DESC' },
         });
     }

@@ -1232,16 +1232,43 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
     setState(() => _isAccepting = true);
 
+    bool success = false;
+    String? errorMsg;
+
     try {
       if (taskId.isNotEmpty) {
-        await taskProvider.acceptTask(taskId);
-        await taskProvider.startTask(taskId);
-        await taskProvider.fetchAvailableTasks();
-        await taskProvider.fetchMyTasks('assigned');
+        final taskMap = widget.task is Map<String, dynamic>
+            ? (widget.task as Map<String, dynamic>)
+            : (widget.task is Map ? Map<String, dynamic>.from(widget.task) : null);
+        success = await taskProvider.acceptTask(taskId, taskData: taskMap);
+        if (success) {
+          await taskProvider.startTask(taskId);
+          await taskProvider.fetchAvailableTasks();
+          await taskProvider.fetchMyTasks('assigned');
+        } else {
+          errorMsg = (taskProvider.error != null && taskProvider.error!.isNotEmpty)
+              ? taskProvider.error!
+              : 'Failed to accept task';
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      errorMsg = e.toString().replaceAll('Exception: ', '');
+    }
 
     if (!mounted) return;
+
+    if (!success) {
+      setState(() => _isAccepting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMsg ?? 'You cannot accept this task.'),
+          backgroundColor: const Color(0xFFDC2626),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isAccepting = false;
       _isTaskAccepted = true;

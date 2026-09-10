@@ -51,18 +51,18 @@ export class WorkerTaskController {
     @ApiQuery({ name: 'status', required: false })
     async getTasks(@CurrentUser() user: User, @Query('status') status?: string) {
         if (status === 'available') {
-            const tasks = await this.taskEngine.getAvailableTasks(user.id);
+            const tasks = await this.taskEngine.getAvailableTasks(user.id, user.email);
             return { success: true, tasks };
         }
 
-        const tasks = await this.taskEngine.getWorkerTasks(user.id, status);
+        const tasks = await this.taskEngine.getWorkerTasks(user.id, status, user.email);
         return { success: true, tasks };
     }
 
     @Get('available')
     @ApiOperation({ summary: 'Get available tasks for worker' })
     async getAvailableTasks(@CurrentUser() user: User) {
-        const tasks = await this.taskEngine.getAvailableTasks(user.id);
+        const tasks = await this.taskEngine.getAvailableTasks(user.id, user.email);
         return {
             success: true,
             tasks,
@@ -73,7 +73,7 @@ export class WorkerTaskController {
     @Get('assigned')
     @ApiOperation({ summary: 'Get tasks assigned to worker' })
     async getAssignedTasks(@CurrentUser() user: User) {
-        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'assigned');
+        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'assigned', user.email);
         return {
             success: true,
             tasks,
@@ -90,21 +90,21 @@ export class WorkerTaskController {
     @Get('submitted')
     @ApiOperation({ summary: 'Get worker submitted tasks' })
     async getSubmittedTasks(@CurrentUser() user: User) {
-        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'submitted');
+        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'submitted', user.email);
         return { success: true, tasks };
     }
 
     @Get('under-review')
     @ApiOperation({ summary: 'Get worker tasks currently under review' })
     async getUnderReviewTasks(@CurrentUser() user: User) {
-        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'under_review');
+        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'under_review', user.email);
         return { success: true, tasks };
     }
 
     @Get('approved')
     @ApiOperation({ summary: 'Get worker approved tasks' })
     async getApprovedTasks(@CurrentUser() user: User) {
-        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'approved');
+        const tasks = await this.taskEngine.getWorkerTasks(user.id, 'approved', user.email);
         return { success: true, tasks };
     }
 
@@ -349,7 +349,9 @@ export class WorkerTaskController {
         const taskStatus = (task.status || '').toLowerCase();
         const isUnassigned = !task.assignedTo || task.assignedTo === '';
         const worker = await this.workerRepo.findWorker(user.id);
-        const isAssignedToMe = task.assignedTo === user.id || (worker && task.assignedTo === worker.id);
+        const normEmail = (user.email || '').toLowerCase().trim();
+        const myIds = [user.id, worker?.id, normEmail].filter(Boolean);
+        const isAssignedToMe = myIds.includes(task.assignedTo || '');
         const isAvailable = isUnassigned && (taskStatus === 'active' || taskStatus === 'available' || taskStatus === 'pending');
 
         if (!isAssignedToMe && !isAvailable) {
@@ -485,7 +487,9 @@ export class WorkerTaskController {
         }
 
         // 4. Verify task availability / ownership
-        if (task.assignedTo && task.assignedTo !== user.id && task.assignedTo !== worker.id) {
+        const normEmail = (user.email || '').toLowerCase().trim();
+        const myIds = [user.id, worker.id, normEmail].filter(Boolean);
+        if (task.assignedTo && !myIds.includes(task.assignedTo)) {
             throw new BadRequestException('Task is already assigned to another worker');
         }
 
@@ -494,13 +498,13 @@ export class WorkerTaskController {
             throw new BadRequestException(`Task is not available for acceptance (current status: ${task.status})`);
         }
 
-        // 4. Assign task if unassigned
-        if (!task.assignedTo || taskStatus === 'active') {
-            await this.taskEngine.assignTask({ taskId, workerId: user.id });
-        }
-
-        // 5. Accept task
-        await this.taskEngine.acceptTask({ taskId, workerId: user.id });
+        // 5. Accept task with workerEmail passed for 3-level verification & Gmail permanent lock
+        await this.taskEngine.acceptTask({
+            taskId,
+            workerId: user.id,
+            workerEmail: normEmail,
+            orderUnitId: task.orderUnitId,
+        });
 
         return {
             success: true,

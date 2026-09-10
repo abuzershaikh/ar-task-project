@@ -255,7 +255,16 @@ class ApiService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return jsonDecode(response.body);
     }
-    throw Exception('Accept task failed (${response.statusCode}): ${response.body}');
+    try {
+      final errBody = jsonDecode(response.body);
+      final msg = errBody['message'] ?? errBody['error'];
+      if (msg != null) {
+        throw Exception(msg is List ? msg.join(', ') : msg.toString());
+      }
+    } catch (e) {
+      if (e.toString().startsWith('Exception: ')) rethrow;
+    }
+    throw Exception('Accept task failed (${response.statusCode})');
   }
 
   static Future<Map<String, dynamic>> startTask(String taskId) async {

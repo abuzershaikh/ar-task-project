@@ -32,6 +32,12 @@ export class TaskAssignment {
     @Column({ name: 'campaign_id' })
     campaignId: string;
 
+    @Column({ name: 'order_id', nullable: true })
+    orderId: string;
+
+    @Column({ name: 'order_unit_id', nullable: true })
+    orderUnitId: string;
+
     @Column({ name: 'worker_id' })
     workerId: string;
 

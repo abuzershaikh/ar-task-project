@@ -15,11 +15,15 @@ export class TaskValidationService {
         return this.stateMachine.canTransition(from, to);
     }
 
-    ensureWorkerOwnership(task: { assignedTo?: string | null }, workerId: string): void {
+    ensureWorkerOwnership(task: { assignedTo?: string | null }, workerId: string, workerEmail?: string): void {
         if (!task.assignedTo) {
             throw new BadRequestException('Task is not assigned to any worker');
         }
-        if (task.assignedTo !== workerId) {
+        const assign = (task.assignedTo || '').toLowerCase().trim();
+        const wId = (workerId || '').toLowerCase().trim();
+        const wEmail = (workerEmail || '').toLowerCase().trim();
+
+        if (assign !== wId && (!wEmail || assign !== wEmail)) {
             throw new BadRequestException('Task is assigned to another worker');
         }
     }
