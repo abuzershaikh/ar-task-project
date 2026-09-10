@@ -481,16 +481,23 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final direct = _getAppIcon();
     if (direct.isNotEmpty && !direct.contains('/assets/icons/')) return;
     final url = _getTargetUrl();
-    if (url.contains('play.google.com') || url.contains('market://') || url.contains('id=')) {
+    if (url.contains('play.google.com') ||
+        url.contains('market://') ||
+        url.contains('id=')) {
       try {
-        final response = await http.post(
-          Uri.parse('http://65.20.77.112:3000/api/v1/buyer/orders/playstore-app-info'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'url': url}),
-        ).timeout(const Duration(seconds: 5));
+        final response = await http
+            .post(
+              Uri.parse(
+                'http://65.20.77.112:3000/api/v1/buyer/orders/playstore-app-info',
+              ),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'url': url}),
+            )
+            .timeout(const Duration(seconds: 5));
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          if (data['appIcon'] != null && data['appIcon'].toString().isNotEmpty) {
+          if (data['appIcon'] != null &&
+              data['appIcon'].toString().isNotEmpty) {
             if (mounted) {
               setState(() {
                 _fetchedAppIcon = data['appIcon'].toString().trim();
@@ -548,16 +555,21 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           p.contains('install') ||
           p.contains('app'))
         return 'playstore';
-      if (p.contains('instagram') || (p.contains('insta') && !p.contains('install'))) return 'instagram';
+      if (p.contains('instagram') ||
+          (p.contains('insta') && !p.contains('install')))
+        return 'instagram';
       return p;
     }
 
     // 2. YouTube
-    if (combined.contains('youtube') || combined.contains('yt_') || type.contains('yt'))
+    if (combined.contains('youtube') ||
+        combined.contains('yt_') ||
+        type.contains('yt'))
       return 'youtube';
 
     // 3. Instagram (Strict check: ensure word does not contain 'install')
-    if (combined.contains('instagram') || (combined.contains('insta') && !combined.contains('install')))
+    if (combined.contains('instagram') ||
+        (combined.contains('insta') && !combined.contains('install')))
       return 'instagram';
 
     // 4. Facebook
@@ -651,10 +663,16 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final t = widget.task;
     if (t == null) return 'Task Details';
     final appName = _getAppName();
-    final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? '').toString().toUpperCase();
-    final isInstall = type.contains('INSTALL') ||
+    final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? '')
+        .toString()
+        .toUpperCase();
+    final isInstall =
+        type.contains('INSTALL') ||
         (t['requirements'] is Map &&
-            t['requirements']['serviceName']?.toString().toLowerCase().contains('install') == true);
+            t['requirements']['serviceName']?.toString().toLowerCase().contains(
+                  'install',
+                ) ==
+                true);
 
     if (appName.isNotEmpty) {
       if (isInstall) {
@@ -753,7 +771,8 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
         type.contains('INSTALL') ||
         type.contains('APP_REVIEW') ||
         type.contains('RATING')) {
-      if (type.contains('INSTALL') || (t['title'] ?? '').toString().toLowerCase().contains('install')) {
+      if (type.contains('INSTALL') ||
+          (t['title'] ?? '').toString().toLowerCase().contains('install')) {
         return 'PLAY STORE APP';
       }
       return 'PLAY STORE REVIEW';
@@ -2156,7 +2175,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           Expanded(
             child: Row(
               children: [
-                const Icon(Icons.bolt_rounded, color: Color(0xFFFBBF24), size: 22),
+                const Icon(
+                  Icons.bolt_rounded,
+                  color: Color(0xFFFBBF24),
+                  size: 22,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -2179,10 +2202,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                         width: double.infinity,
                         child: MarqueeText(
                           text: 'Complete task & submit proof below',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                       ),
                     ],
@@ -2843,20 +2863,19 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final double maxSec = _audioDuration.inMilliseconds > 0
         ? _audioDuration.inMilliseconds.toDouble()
         : 1.0;
-    final double currentSec = _audioPosition.inMilliseconds
-        .toDouble()
-        .clamp(0.0, maxSec);
-    final double sliderValue =
-        (maxSec > 0) ? (currentSec / maxSec).clamp(0.0, 1.0) : 0.0;
+    final double currentSec = _audioPosition.inMilliseconds.toDouble().clamp(
+      0.0,
+      maxSec,
+    );
+    final double sliderValue = (maxSec > 0)
+        ? (currentSec / maxSec).clamp(0.0, 1.0)
+        : 0.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFF1E1B4B),
-            Color(0xFF0F172A),
-          ],
+          colors: [Color(0xFF1E1B4B), Color(0xFF0F172A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -2935,8 +2954,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                         height: 8,
                         child: CircularProgressIndicator(
                           strokeWidth: 1.5,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFF38BDF8),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 5),
@@ -2988,8 +3008,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                             height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.5,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : Icon(
@@ -3078,7 +3099,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       }
     }
 
-    if (steps.isEmpty && widget.task != null && widget.task['requirements'] is Map) {
+    if (steps.isEmpty &&
+        widget.task != null &&
+        widget.task['requirements'] is Map) {
       final req = widget.task['requirements'] as Map;
       for (int i = 1; i <= 10; i++) {
         if (req['heading_$i'] != null &&

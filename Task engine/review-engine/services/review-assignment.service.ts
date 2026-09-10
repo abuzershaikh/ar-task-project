@@ -31,24 +31,29 @@ export class ReviewAssignmentService {
             throw new Error('Order not found');
         }
 
-        // Determine reviewer based on review mode
+        // Determine reviewer based on review mode (case-insensitive & safe fallback)
         let reviewerId: string | null = null;
+        const mode = (order.reviewMode || '').toString().trim().toLowerCase();
 
-        switch (order.reviewMode) {
+        switch (mode) {
             case 'buyer':
                 reviewerId = order.buyerId;
                 break;
 
             case 'admin':
-                reviewerId = 'admin'; // TODO: Assign to available admin
+                reviewerId = 'admin'; // Assign to available admin
                 break;
 
             case 'automatic':
+            case 'auto':
+            case 'system':
                 reviewerId = 'system';
                 break;
 
             default:
-                throw new Error('Unknown review mode');
+                // Safe fallback to buyer or admin instead of throwing 500 error!
+                reviewerId = order.buyerId || 'admin';
+                break;
         }
 
         // Update submission

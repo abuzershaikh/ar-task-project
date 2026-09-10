@@ -114,7 +114,7 @@ export class AdminServiceCatalogController {
             aiGeneratorEnabled: body.aiGeneratorEnabled,
             aiGeneratorConfig: body.aiGeneratorConfig,
             elements: body.elements,
-            reviewMode: body.reviewMode,
+            reviewMode: body.reviewMode?.toLowerCase(),
             workerLimit: body.workerLimit,
             videoTutorialUrl: body.videoTutorialUrl,
             audioGuideUrl: body.audioGuideUrl,

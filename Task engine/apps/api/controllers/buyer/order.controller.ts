@@ -209,10 +209,11 @@ export class BuyerOrderController {
             catalog = await this.serviceCatalogRepo.findByCode(serviceIdentifier);
         }
         
-        const catalogReviewMode = catalog?.reviewMode || 'buyer';
+        const catalogReviewMode = (catalog?.reviewMode || 'buyer').toString().trim().toLowerCase();
         // Enforce catalog reviewMode if it's explicitly set to something other than 'buyer' by admin
         // Otherwise, allow buyer to specify it, defaulting to 'buyer'
-        const finalReviewMode = catalog?.reviewMode && catalog.reviewMode !== 'buyer' ? catalog.reviewMode : (data.reviewMode || 'buyer');
+        const buyerReviewMode = (data.reviewMode || '').toString().trim().toLowerCase();
+        const finalReviewMode = catalogReviewMode && catalogReviewMode !== 'buyer' ? catalogReviewMode : (buyerReviewMode || 'buyer');
 
         const title = data.title || `${snapshot.serviceCode || serviceIdentifier} Campaign (${quantity} tasks)`;
 
