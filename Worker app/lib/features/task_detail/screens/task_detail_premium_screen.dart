@@ -341,7 +341,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Aapne video pura nahi dekha hai! Task proof submit karne ke liye please pura video complete dekhein.',
+              'You have not finished watching the video yet! To unlock and submit your task proof, please watch the complete video.',
               style: TextStyle(
                 fontSize: 13.5,
                 color: Color(0xFF334155),
@@ -367,7 +367,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Submit Proof tab tak locked rahega jab tak aap pura video complete nahi dekhenge.',
+                      'Proof submission remains locked until you finish watching the complete video.',
                       style: TextStyle(
                         fontSize: 12,
                         color: Color(0xFF9F1239),
@@ -2151,47 +2151,58 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.bolt_rounded, color: Color(0xFFFBBF24), size: 22),
-              SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'TASK IN PROGRESS',
-                    style: TextStyle(
-                      color: Color(0xFFFDE047),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.8,
-                    ),
+          Expanded(
+            child: Row(
+              children: [
+                const Icon(Icons.bolt_rounded, color: Color(0xFFFBBF24), size: 22),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        'TASK IN PROGRESS',
+                        style: TextStyle(
+                          color: Color(0xFFFDE047),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Complete task & submit proof below',
+                        style: TextStyle(color: Colors.white70, fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
-                  Text(
-                    'Complete task & submit proof below',
-                    style: TextStyle(color: Colors.white70, fontSize: 11),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFF59E0B)),
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
                   Icons.timer_outlined,
                   color: Color(0xFFFDE047),
-                  size: 16,
+                  size: 15,
                 ),
-                const SizedBox(width: 5),
+                const SizedBox(width: 4),
                 Text(
                   _secondsRemaining > 0
                       ? _formatTimer(_secondsRemaining)
@@ -2199,7 +2210,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
-                    fontSize: 13,
+                    fontSize: 12.5,
                   ),
                 ),
               ],
@@ -3051,8 +3062,6 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final List<String> steps = [];
     final bool isPlayStore = _getPlatform() == 'playstore';
     final adminInstructions = _extractAdminInstructions();
-    bool hasCustomAdminInstructions = false;
-
     if (adminInstructions.isNotEmpty) {
       final customLines = adminInstructions
           .split(RegExp(r'\r?\n'))
@@ -3061,7 +3070,6 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           .toList();
       if (customLines.isNotEmpty) {
         steps.addAll(customLines);
-        hasCustomAdminInstructions = true;
       }
     }
 
@@ -3704,7 +3712,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Pura video complete dekhein. Video complete hone ke baad hi proof attachment aur submission unlock hoga.',
+                    'Please watch the full video. Proof attachment and submission will be unlocked after watching.',
                     style: TextStyle(
                       color: Color(0xFF475569),
                       fontSize: 12,
@@ -3878,7 +3886,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                   ),
                   const SizedBox(height: 5),
                   const Text(
-                    'Pura video complete dekhne ke baad hi proof attachment aur submission unlock hoga.',
+                    'Watch the complete video to unlock proof attachment and submission.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Color(0xFFCBD5E1),
@@ -4927,13 +4935,17 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                                     size: 20,
                                   ),
                                   SizedBox(width: 8),
-                                  Text(
-                                    'Watch Video on YouTube',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14.5,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.3,
+                                  Flexible(
+                                    child: Text(
+                                      'Watch Video on YouTube',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.3,
+                                      ),
                                     ),
                                   ),
                                 ],
