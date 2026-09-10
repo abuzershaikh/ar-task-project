@@ -213,7 +213,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     // If video <= 5 minutes (300s) and > 0, required watch time is the complete video.
     if (duration > 300) return 300;
     if (duration > 0) return duration;
-    return 60; // minimum fallback 60 seconds
+    return 120; // fallback 2 minutes (120 seconds)
   }
 
   Future<void> _loadWatchTimeState() async {

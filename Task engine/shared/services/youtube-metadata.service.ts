@@ -105,8 +105,8 @@ export class YouTubeMetadataService {
             requiredWatchSeconds = 300;
             isCappedAt5Min = true;
         } else if (durationSeconds <= 0) {
-            durationSeconds = 60;
-            requiredWatchSeconds = 60;
+            durationSeconds = 120; // fallback to 2 minutes (120s) if duration undetectable
+            requiredWatchSeconds = 120;
         }
 
         this.logger.log(`Metadata for ${videoId}: duration=${durationSeconds}s, requiredWatch=${requiredWatchSeconds}s, capped=${isCappedAt5Min}, title="${title}"`);

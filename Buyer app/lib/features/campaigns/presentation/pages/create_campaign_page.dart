@@ -713,8 +713,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           'watchTimeSeconds': _ytRequiredWatchSeconds ??
               (_ytDurationSeconds != null
                   ? (_ytDurationSeconds! > 300 ? 300 : _ytDurationSeconds!)
-                  : 0),
-          'videoDurationSeconds': _ytDurationSeconds ?? 0,
+                  : (_isYouTubeService(_selectedService) ? 120 : 0)),
+          'videoDurationSeconds': _ytDurationSeconds ?? (_isYouTubeService(_selectedService) ? 120 : 0),
           'videoTitle': _ytTitle ?? '',
           'videoThumbnail': _ytThumbnail ?? '',
         },
