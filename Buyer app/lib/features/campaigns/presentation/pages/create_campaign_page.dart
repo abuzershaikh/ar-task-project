@@ -74,8 +74,26 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     super.dispose();
   }
 
-  bool _isPlayStoreService(ServiceModel? s) {
+  bool _isGoogleBusinessService(ServiceModel? s) {
     if (s == null) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    final desc = s.description.toUpperCase();
+    final cat = s.category.toUpperCase();
+    return code.contains('GOOGLE_BUSINESS') ||
+        code.contains('GOOGLE_MAPS') ||
+        code.contains('GMB') ||
+        cat.contains('GOOGLE BUSINESS') ||
+        cat.contains('GOOGLE MAPS') ||
+        cat.contains('MAPS') ||
+        name.contains('GOOGLE BUSINESS') ||
+        name.contains('GOOGLE MAPS') ||
+        desc.contains('GOOGLE MAPS') ||
+        desc.contains('GOOGLE BUSINESS');
+  }
+
+  bool _isPlayStoreService(ServiceModel? s) {
+    if (s == null || _isGoogleBusinessService(s)) return false;
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     final desc = s.description.toUpperCase();
@@ -862,7 +880,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       }
       String cat = s.category.trim();
 
-      if (codeUpper.contains('PLAY') || codeUpper.contains('RATING') || (codeUpper.contains('REVIEW') && !codeUpper.contains('INSTA') && !codeUpper.contains('YT')) || nameUpper.contains('PLAY STORE')) {
+      if (codeUpper.contains('GOOGLE_BUSINESS') || codeUpper.contains('GOOGLE_MAP') || codeUpper.contains('GMB') || nameUpper.contains('GOOGLE BUSINESS') || nameUpper.contains('GOOGLE MAP') || cat.toLowerCase().contains('google business') || cat.toLowerCase().contains('google maps')) {
+        cat = 'Google Business';
+      } else if (codeUpper.contains('PLAY') || codeUpper.contains('RATING') || (codeUpper.contains('REVIEW') && !codeUpper.contains('INSTA') && !codeUpper.contains('YT')) || nameUpper.contains('PLAY STORE')) {
         cat = 'Google Play Store';
       } else if (codeUpper.contains('APP') || codeUpper.contains('INSTALL') || nameUpper.contains('INSTALL')) {
         cat = 'App Install & Review';
@@ -880,6 +900,14 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
 
     // Category visual themes
     final Map<String, Map<String, dynamic>> categoryMeta = {
+      'Google Business': {
+        'icon': Icons.location_on_rounded,
+        'color': const Color(0xFF4285F4), // Google Blue
+      },
+      'Google Maps': {
+        'icon': Icons.location_on_rounded,
+        'color': const Color(0xFF4285F4),
+      },
       'Google Play Store': {
         'icon': Icons.star_rate_rounded,
         'color': const Color(0xFF059669), // Emerald Green
@@ -907,6 +935,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     };
 
     final priorityOrder = [
+      'Google Business',
+      'Google Maps',
       'Google Play Store',
       'YouTube',
       'Instagram',
@@ -1009,6 +1039,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   String? _getServiceAsset(ServiceModel s) {
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
+    if (code.contains('GOOGLE_BUSINESS') || code.contains('GOOGLE_MAP') || name.contains('GOOGLE BUSINESS') || name.contains('GOOGLE MAP')) {
+      return (code.contains('REVIEW') || name.contains('REVIEW')) ? 'assets/icons/review.png' : 'assets/icons/rating.png';
+    }
     if (code.contains('COMBO') || name.contains('COMBO')) return 'assets/icons/marketing.png';
     if (code.contains('FOLLOW') || name.contains('FOLLOW')) return 'assets/icons/instagram.png';
     if (code.contains('REVIEW') || name.contains('REVIEW')) return 'assets/icons/review.png';

@@ -113,11 +113,23 @@ export class BuyerOrderController {
         const previewCount = Math.min(5, requestedTotal > 0 ? requestedTotal : 5);
 
         const serviceCode = (body.serviceCode || '').toLowerCase();
-        const isPlayStore = serviceCode.includes('play') || serviceCode.includes('review') || serviceCode.includes('rating') || (serviceCode.includes('app') && !serviceCode.includes('insta'));
-        const isInstagram = serviceCode.includes('insta') || serviceCode.includes('ig');
-        const generatorType = isPlayStore ? 'playstore_review' : isInstagram ? 'instagram_comment' : 'youtube_comment';
+        const isGoogleBusiness = serviceCode.includes('google_business') ||
+            serviceCode.includes('gmb') ||
+            serviceCode.includes('google_maps') ||
+            serviceCode.includes('gmap') ||
+            serviceCode.includes('business');
+        const isPlayStore = !isGoogleBusiness && (
+            serviceCode.includes('play') ||
+            serviceCode.includes('app_review') ||
+            serviceCode.includes('rating') ||
+            (serviceCode.includes('app') && !serviceCode.includes('insta'))
+        );
+        const isInstagram = !isGoogleBusiness && (serviceCode.includes('insta') || serviceCode.includes('ig'));
+        const generatorType = isGoogleBusiness
+            ? 'google_business_review'
+            : (isPlayStore ? 'playstore_review' : isInstagram ? 'instagram_comment' : 'youtube_comment');
 
-        const videoTitle = body.videoTitle?.trim() || (!isPlayStore && body.appName?.trim() ? body.appName.trim() : '');
+        const videoTitle = body.videoTitle?.trim() || (!isPlayStore && !isGoogleBusiness && body.appName?.trim() ? body.appName.trim() : '');
         const configuredModel = (body.model || process.env.DEEPSEEK_MODEL || 'deepseek-chat').trim();
         const isKeyConfigured = !!(body.apiKey || process.env.DEEPSEEK_API_KEY);
 
@@ -131,7 +143,9 @@ export class BuyerOrderController {
                 uniqueness: true,
                 videoTitle,
                 appName: body.appName,
+                businessName: body.appName,
                 isAppReview: isPlayStore,
+                isGoogleBusiness,
                 generatorType,
                 model: configuredModel,
                 apiKey: body.apiKey,

@@ -252,6 +252,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
 
   IconData _getServiceIcon(String name) {
     final lower = name.toLowerCase();
+    if (lower.contains('google') || lower.contains('business') || lower.contains('maps') || lower.contains('gmb')) {
+      return Icons.location_on_rounded;
+    }
     if (lower.contains('playstore') || lower.contains('play store') || lower.contains('play_store')) {
       return Icons.shop_two_rounded;
     }
@@ -269,6 +272,9 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
 
   Color _getServiceColor(String name) {
     final lower = name.toLowerCase();
+    if (lower.contains('google') || lower.contains('business') || lower.contains('maps') || lower.contains('gmb')) {
+      return const Color(0xFF4285F4);
+    }
     if (lower.contains('playstore') || lower.contains('play store') || lower.contains('play_store')) {
       return const Color(0xFF10B981);
     }
@@ -382,10 +388,28 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                     s.name.toLowerCase().contains(q) ||
                     s.description.toLowerCase().contains(q);
                 if (_selectedFilter == 'All') return matchesQuery;
+                if (_selectedFilter == 'Google Maps') {
+                  final lowerName = s.name.toLowerCase();
+                  final lowerCode = s.code.toLowerCase();
+                  return matchesQuery &&
+                      (lowerName.contains('google') ||
+                          lowerName.contains('business') ||
+                          lowerName.contains('maps') ||
+                          lowerName.contains('gmb') ||
+                          lowerCode.contains('google_business') ||
+                          lowerCode.contains('google_maps') ||
+                          lowerCode.contains('gmb'));
+                }
                 if (_selectedFilter == 'YouTube') return matchesQuery && s.name.toLowerCase().contains('youtube');
                 if (_selectedFilter == 'PlayStore') {
                   final lowerName = s.name.toLowerCase();
                   final lowerCode = s.code.toLowerCase();
+                  if (lowerName.contains('google') ||
+                      lowerName.contains('business') ||
+                      lowerCode.contains('google_business') ||
+                      lowerCode.contains('gmb')) {
+                    return false;
+                  }
                   return matchesQuery &&
                       (lowerName.contains('playstore') ||
                           lowerName.contains('play store') ||
@@ -489,6 +513,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                     child: Row(
                       children: [
                         {'name': 'All', 'icon': Icons.apps_rounded},
+                        {'name': 'Google Maps', 'icon': Icons.location_on_rounded},
                         {'name': 'YouTube', 'icon': Icons.play_circle_fill_rounded},
                         {'name': 'PlayStore', 'icon': Icons.shop_two_rounded},
                         {'name': 'Social', 'icon': Icons.camera_alt_rounded},
@@ -497,7 +522,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                         final icon = chip['icon'] as IconData;
                         final isSelected = _selectedFilter == filter;
                         return Padding(
-                          padding: const EdgeInsets.only(right: 8),
+                           padding: const EdgeInsets.only(right: 8),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(20),
                             onTap: () => setState(() => _selectedFilter = filter),
@@ -528,13 +553,15 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                                     size: 14,
                                     color: isSelected
                                         ? Colors.white
-                                        : (filter == 'PlayStore'
-                                            ? const Color(0xFF10B981)
-                                            : (filter == 'YouTube'
-                                                ? const Color(0xFFEF4444)
-                                                : (filter == 'Social'
-                                                    ? const Color(0xFFEC4899)
-                                                    : accentBlue))),
+                                        : (filter == 'Google Maps'
+                                            ? const Color(0xFF4285F4)
+                                            : (filter == 'PlayStore'
+                                                ? const Color(0xFF10B981)
+                                                : (filter == 'YouTube'
+                                                    ? const Color(0xFFEF4444)
+                                                    : (filter == 'Social'
+                                                        ? const Color(0xFFEC4899)
+                                                        : accentBlue)))),
                                   ),
                                   const SizedBox(width: 5),
                                   Text(

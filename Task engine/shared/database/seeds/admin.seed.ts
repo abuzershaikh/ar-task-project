@@ -122,6 +122,24 @@ export async function seedAdminAndServices(dataSource: DataSource) {
       marginValue: 2.00,
       workerReward: 6.00,
     },
+    {
+      code: 'GOOGLE_BUSINESS_REVIEW',
+      name: 'Google Business 5-Star Rating & Review',
+      description: 'Authentic 5-star rating with custom AI review on Google Maps / Business listing',
+      buyerUnitPrice: 10.00,
+      marginType: MarginType.FIXED,
+      marginValue: 3.00,
+      workerReward: 7.00,
+    },
+    {
+      code: 'GOOGLE_BUSINESS_RATING',
+      name: 'Google Business 5-Star Rating (Only)',
+      description: 'Authentic 5-star rating on Google Maps / Business listing',
+      buyerUnitPrice: 5.00,
+      marginType: MarginType.FIXED,
+      marginValue: 1.50,
+      workerReward: 3.50,
+    },
   ];
 
   for (const item of defaultServices) {

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { IContentGenerator, GenerationOptions } from './generator.interface';
 import { YouTubeCommentGenerator } from './youtube-comment.generator';
 import { PlayStoreReviewGenerator } from './playstore-review.generator';
+import { GoogleBusinessReviewGenerator } from './google-business-review.generator';
 import { sanitizeReviewText, cleanBrandName, cleanTopic } from '../review-sanitizer';
 import * as https from 'https';
 
@@ -12,6 +13,7 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
     constructor(
         private readonly templateFallbackGen: YouTubeCommentGenerator,
         private readonly playStoreFallbackGen: PlayStoreReviewGenerator,
+        private readonly googleBusinessFallbackGen: GoogleBusinessReviewGenerator,
     ) { }
 
     private getApiKey(options?: GenerationOptions): string {
@@ -43,9 +45,14 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
         const tone = options?.tone || 'natural';
         const videoTitle = options?.videoTitle || '';
 
-        const isAppReview = (options as any)?.isAppReview || (options as any)?.generatorType?.includes('review') || (options as any)?.generatorType?.includes('play');
-        const contextType = isAppReview ? 'Google Play Store Android App (Natural Human Review)' : 'social media / YouTube video';
-        const fallbackGen = isAppReview ? this.playStoreFallbackGen : this.templateFallbackGen;
+        const isGoogleBusiness = (options as any)?.isGoogleBusiness || (options as any)?.generatorType?.includes('google_business') || (options as any)?.generatorType?.includes('google_maps') || (options as any)?.generatorType?.includes('gmb');
+        const isAppReview = !isGoogleBusiness && ((options as any)?.isAppReview || (options as any)?.generatorType?.includes('review') || (options as any)?.generatorType?.includes('play'));
+        const contextType = isGoogleBusiness
+            ? 'Google Business / Google Maps (Natural Customer Review)'
+            : (isAppReview ? 'Google Play Store Android App (Natural Human Review)' : 'social media / YouTube video');
+        const fallbackGen = isGoogleBusiness
+            ? this.googleBusinessFallbackGen
+            : (isAppReview ? this.playStoreFallbackGen : this.templateFallbackGen);
 
         const apiKey = this.getApiKey(options);
         const model = this.getModel(options);
@@ -59,8 +66,26 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
                 return fallbackGen.generateBatch(count, options);
             }
 
-            const prompt = isAppReview
-                ? `You are an authentic everyday user writing a genuine review for an Android application on Google Play Store.
+            const prompt = isGoogleBusiness
+                ? `You are an authentic local customer writing a genuine 5-star review for a business on Google Maps / Google Business.
+Generate exactly ${count} completely distinct, authentic, natural, human-written 5-star Google reviews.
+
+Business Details:
+${brand ? `- Target Business Name: "${brand}"` : '- Target: Local Business / Store / Service'}
+${userPrompt ? `- Customer Experience / Review Focus: "${userPrompt}"\n  CRITICAL DIRECTIVE: Follow the buyer's instructions above to shape what the reviews praise or highlight (e.g., great service, polite staff, fast delivery, quality products, clean ambiance, prompt communication). DO NOT repeat or quote the buyer's prompt verbatim! Express the requested points naturally as if you visited or used their service personally.` : '- Review Focus: Outstanding customer service, polite staff, high quality, smooth experience, and great overall satisfaction'}
+- Language: "${language}" (write naturally as real everyday customers write on Google Maps; if Hindi or Hinglish, write in natural conversational Roman Hindi)
+- Tone: "${tone}" (natural, polite, authentic customer sharing genuine positive feedback)
+
+CRITICAL RULES:
+1. ABSOLUTELY NO star symbols (like ⭐, ★, 🌟, ✨), NO emojis, and NO rating numbers.
+2. Tone MUST be 100% human, casual, and authentic. Write like real customers who had a great real-world experience.
+3. Every review MUST be completely distinct in vocabulary, sentence structure, length, and perspective.
+4. DO NOT quote or copy-paste the prompt text verbatim!
+5. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
+Example format:
+["First authentic customer review", "Second authentic customer review"]`
+                : (isAppReview
+                    ? `You are an authentic everyday user writing a genuine review for an Android application on Google Play Store.
 Generate exactly ${count} completely distinct, authentic, natural, human-written 5-star reviews.
 
 App Information:
@@ -76,7 +101,7 @@ CRITICAL RULES:
 4. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
 ["First authentic review", "Second authentic review"]`
-                : `You are an authentic community member and active viewer writing comments on a YouTube video.
+                    : `You are an authentic community member and active viewer writing comments on a YouTube video.
 Generate exactly ${count} completely distinct, authentic, natural, human-written comments tailored directly to this video.
 
 Video Details:
@@ -93,7 +118,7 @@ CRITICAL RULES:
 5. DO NOT copy-paste the prompt text into the comments. Follow its instructions naturally!
 6. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
-["First unique natural comment here", "Second unique natural comment here"]`;
+["First unique natural comment here", "Second unique natural comment here"]`);
 
             const payloadObj: any = {
                 model: model,

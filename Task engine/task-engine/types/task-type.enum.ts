@@ -31,6 +31,12 @@ export enum TaskType {
     GOOGLE_PLAY_REVIEW = 'google_play_review',
     GOOGLE_PLAY_RATING = 'google_play_rating',
 
+    // Google Business / Maps Tasks
+    GOOGLE_BUSINESS_REVIEW = 'google_business_review',
+    GOOGLE_BUSINESS_RATING = 'google_business_rating',
+    GOOGLE_MAPS_REVIEW = 'google_maps_review',
+    GOOGLE_MAPS_RATING = 'google_maps_rating',
+
     // Generic Tasks
     SURVEY = 'survey',
     APP_INSTALL = 'app_install',
@@ -42,6 +48,8 @@ export enum TaskCategory {
     YOUTUBE = 'youtube',
     GOOGLE_PLAY = 'google_play',
     PLAYSTORE = 'playstore',
+    GOOGLE_BUSINESS = 'google_business',
+    GOOGLE_MAPS = 'google_maps',
     INSTAGRAM = 'instagram',
     TWITTER = 'twitter',
     FACEBOOK = 'facebook',

@@ -82,7 +82,12 @@ class TaskFeedCard extends StatelessWidget {
     final rawType = (task['taskType'] ?? task['type'] ?? 'Task').toString();
     final plat = _getPlatform(task);
     if (isInstall) return 'Install & Open App';
-    if (plat == 'google' || plat == 'playstore') return '5-Star Rating & Review';
+    if (plat == 'google_business' || plat == 'google_maps' || plat == 'google') {
+      final rtLower = rawType.toLowerCase();
+      if (rtLower.contains('review')) return '5-Star Google Business Review';
+      return '5-Star Google Rating';
+    }
+    if (plat == 'playstore') return '5-Star Rating & Review';
     if (plat == 'youtube') {
       final rtLower = rawType.toLowerCase();
       if (rtLower.contains('combo')) return 'Like, Sub & Comment on YouTube';
@@ -141,6 +146,9 @@ class TaskFeedCard extends StatelessWidget {
       return task['category'].toString().trim();
     }
     switch (platform) {
+      case 'google_business':
+      case 'google_maps':
+        return 'Rate & Review on Google Maps';
       case 'google':
       case 'playstore':
         return '5-Star App Review & Rating';
@@ -188,7 +196,7 @@ class TaskFeedCard extends StatelessWidget {
   }
 
   String _getDuration(dynamic task, String platform) {
-    if (platform == 'google' || platform == 'playstore') return '~ 2 Min';
+    if (platform == 'google_business' || platform == 'google_maps' || platform == 'google' || platform == 'playstore') return '~ 2 Min';
     return '~ 1 Min';
   }
 
@@ -201,6 +209,11 @@ class TaskFeedCard extends StatelessWidget {
     }
     final titleStr = (task['title'] ?? task['serviceTitle'] ?? task['serviceName'] ?? '').toString().toLowerCase();
     final combined = '$type $reqStr $titleStr';
+
+    // 0. Google Business / Maps
+    if (type.contains('google_business') || type.contains('google_maps') || combined.contains('google business') || combined.contains('google maps') || combined.contains('maps.google') || combined.contains('goo.gl/maps') || combined.contains('gmb')) {
+      return 'google_business';
+    }
 
     // 1. App Install & Play Store takes priority over raw platform tag
     if (type.contains('app_install') || type.contains('install') || combined.contains('install & open') || combined.contains('app install') || combined.contains('playstore') || combined.contains('play.google')) {
@@ -215,7 +228,7 @@ class TaskFeedCard extends StatelessWidget {
       return 'instagram';
     }
     // 4. Google
-    if (type.contains('google') || combined.contains('google maps') || combined.contains('g_map')) {
+    if (type.contains('google') || combined.contains('g_map')) {
       return 'google';
     }
 

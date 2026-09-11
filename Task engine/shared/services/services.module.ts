@@ -24,6 +24,7 @@ import { ServiceVersionService } from '../modules/service-catalog/services/servi
 import { YouTubeCommentGenerator } from '../ai-generator/generators/youtube-comment.generator';
 import { DeepSeekCommentGenerator } from '../ai-generator/generators/deepseek-comment.generator';
 import { PlayStoreReviewGenerator } from '../ai-generator/generators/playstore-review.generator';
+import { GoogleBusinessReviewGenerator } from '../ai-generator/generators/google-business-review.generator';
 import { AiGeneratorService } from '../ai-generator/ai-generator.service';
 
 // Order State Machine & Event Listeners
@@ -63,6 +64,7 @@ const providers = [
     YouTubeCommentGenerator,
     DeepSeekCommentGenerator,
     PlayStoreReviewGenerator,
+    GoogleBusinessReviewGenerator,
     AiGeneratorService,
     OrderStateMachineService,
     OrderActivatedListener,

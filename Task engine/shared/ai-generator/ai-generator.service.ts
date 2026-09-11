@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { DeepSeekCommentGenerator } from './generators/deepseek-comment.generator';
 import { YouTubeCommentGenerator } from './generators/youtube-comment.generator';
 import { PlayStoreReviewGenerator } from './generators/playstore-review.generator';
+import { GoogleBusinessReviewGenerator } from './generators/google-business-review.generator';
 import { GenerationOptions, IContentGenerator } from './generators/generator.interface';
 import { sanitizeReviewText } from './review-sanitizer';
 
@@ -14,6 +15,7 @@ export class AiGeneratorService {
         private readonly deepSeekGen: DeepSeekCommentGenerator,
         private readonly youtubeCommentGen: YouTubeCommentGenerator,
         private readonly playStoreReviewGen: PlayStoreReviewGenerator,
+        private readonly googleBusinessReviewGen: GoogleBusinessReviewGenerator,
     ) {
         this.generators.set('youtube_comment', this.deepSeekGen);
         this.generators.set('youtube_combo', this.deepSeekGen);
@@ -24,8 +26,14 @@ export class AiGeneratorService {
         this.generators.set('google_play_review', this.deepSeekGen);
         this.generators.set('playstore_rating', this.playStoreReviewGen);
         this.generators.set('app_review', this.playStoreReviewGen);
+        this.generators.set('google_business_review', this.deepSeekGen);
+        this.generators.set('google_business_rating', this.googleBusinessReviewGen);
+        this.generators.set('google_maps_review', this.deepSeekGen);
+        this.generators.set('google_maps_rating', this.googleBusinessReviewGen);
+        this.generators.set('gmb_review', this.deepSeekGen);
         this.generators.set('template_comment', this.youtubeCommentGen);
         this.generators.set('template_review', this.playStoreReviewGen);
+        this.generators.set('template_google_review', this.googleBusinessReviewGen);
     }
 
     async generateContentBatch(

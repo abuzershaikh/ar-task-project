@@ -176,14 +176,24 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
       return 'instagram';
     }
 
-    // 5. Google (Maps / Local Reviews)
-    if (type.startsWith('GOOGLE') ||
+    // 5. Google (Maps / Local Reviews / Business)
+    if (type.contains('GOOGLE_BUSINESS') ||
+        serviceCode.contains('GOOGLE_BUSINESS') ||
+        type.contains('GOOGLE_MAPS') ||
+        serviceCode.contains('GOOGLE_MAPS') ||
+        type.startsWith('GOOGLE') ||
         serviceCode.startsWith('GOOGLE') ||
         title.contains('google maps') ||
         title.contains('google review') ||
+        title.contains('google business') ||
         reqServiceName.contains('google maps') ||
         reqServiceName.contains('google review') ||
-        reqCategory.contains('google')) {
+        reqServiceName.contains('google business') ||
+        reqCategory.contains('google business') ||
+        reqCategory.contains('google maps') ||
+        reqCategory.contains('google') ||
+        targetUrl.contains('maps.google.com') ||
+        targetUrl.contains('goo.gl/maps')) {
       return 'google';
     }
 
@@ -192,7 +202,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     if (rawPlatform == 'playstore') return 'playstore';
     if (rawPlatform == 'youtube' && !title.contains('install') && type != 'APP_INSTALL') return 'youtube';
     if (rawPlatform == 'instagram' && !title.contains('install') && type != 'APP_INSTALL') return 'instagram';
-    if (rawPlatform == 'google') return 'google';
+    if (rawPlatform == 'google' || rawPlatform == 'google_business' || rawPlatform == 'google_maps') return 'google';
 
     return 'other';
   }
@@ -214,6 +224,9 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     }
     if (filterKey == 'instagram') {
       return cat == 'instagram';
+    }
+    if (filterKey == 'google') {
+      return cat == 'google';
     }
 
     return cat == filterKey;
@@ -1405,6 +1418,8 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
 
   String _getSelectedCategoryLabel() {
     switch (_selectedPlatform) {
+      case 'google':
+        return 'Google Maps';
       case 'playstore':
         return 'Play Store';
       case 'app_install':
@@ -1422,6 +1437,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
   Widget _buildPlatformChips() {
     final chips = [
       {'label': 'All Tasks', 'icon': Icons.grid_view_rounded, 'key': 'All Tasks'},
+      {'label': 'Google Maps', 'asset': 'assets/icons/rating.png', 'key': 'google'},
       {'label': 'Play Store', 'asset': 'assets/icons/google-play.png', 'key': 'playstore'},
       {'label': 'App Install', 'asset': 'assets/icons/smartphone.png', 'key': 'app_install'},
       {'label': 'YouTube', 'asset': 'assets/icons/youtube.png', 'key': 'youtube'},

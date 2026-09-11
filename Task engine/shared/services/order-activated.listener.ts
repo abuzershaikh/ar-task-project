@@ -84,7 +84,19 @@ export class OrderActivatedListener {
 
             const targetUrl = order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '';
 
-            const isPlayStore = serviceIdentifier.includes('PLAY') ||
+            const isGoogleBusiness = serviceIdentifier.includes('GOOGLE_BUSINESS') ||
+                serviceIdentifier.includes('GMB') ||
+                serviceIdentifier.includes('GOOGLE_MAP') ||
+                serviceIdentifier.includes('GMAP') ||
+                (serviceCatalog?.category || '').toLowerCase().includes('google business') ||
+                (serviceCatalog?.category || '').toLowerCase().includes('google maps') ||
+                (serviceCatalog?.category || '').toLowerCase().includes('maps') ||
+                (serviceCatalog?.name || '').toLowerCase().includes('google business') ||
+                (serviceCatalog?.name || '').toLowerCase().includes('google maps') ||
+                (targetUrl && (targetUrl.includes('maps.google.com') || targetUrl.includes('goo.gl/maps') || targetUrl.includes('maps.app.goo.gl') || targetUrl.includes('search.google.com/local')));
+
+            const isPlayStore = !isGoogleBusiness && (
+                serviceIdentifier.includes('PLAY') ||
                 serviceIdentifier.includes('APP_REVIEW') ||
                 serviceIdentifier.includes('GOOGLE_PLAY') ||
                 serviceIdentifier.includes('INSTALL') ||
@@ -95,10 +107,11 @@ export class OrderActivatedListener {
                 (serviceCatalog?.name || '').toLowerCase().includes('play store') ||
                 (serviceCatalog?.name || '').toLowerCase().includes('app install') ||
                 (serviceCatalog?.name || '').toLowerCase().includes('install') ||
-                (targetUrl && (targetUrl.includes('play.google.com') || targetUrl.includes('market://')));
+                (targetUrl && (targetUrl.includes('play.google.com') || targetUrl.includes('market://')))
+            );
 
             // CRITICAL: Ensure 'isInstagram' does NOT match 'APP_INSTALL' or words containing 'install'!!
-            const isInstagram = !isPlayStore && (
+            const isInstagram = !isPlayStore && !isGoogleBusiness && (
                 serviceIdentifier.includes('INSTAGRAM') ||
                 serviceIdentifier === 'INSTA' ||
                 serviceIdentifier.startsWith('INSTA_') ||
@@ -110,19 +123,29 @@ export class OrderActivatedListener {
             const isInstagramCombo = isInstagram && serviceIdentifier.includes('COMBO');
             const isYouTubeCombo = (serviceIdentifier.includes('YT') || serviceIdentifier.includes('YOUTUBE')) && serviceIdentifier.includes('COMBO');
 
-            const isCommentRequired = !isInstagramCombo && (
-                Boolean(serviceCatalog?.aiGeneratorEnabled) ||
-                serviceIdentifier.includes('COMMENT') ||
-                isYouTubeCombo ||
+            const isGoogleBusinessReview = isGoogleBusiness && (
                 serviceIdentifier.includes('REVIEW') ||
+                (serviceCatalog?.name || '').toLowerCase().includes('review') ||
+                Boolean(serviceCatalog?.aiGeneratorEnabled) ||
                 Boolean(order?.requirements?.aiGeneratorEnabled)
+            );
+
+            const isCommentRequired = !isInstagramCombo && (
+                isGoogleBusinessReview ||
+                (!isGoogleBusiness && (
+                    Boolean(serviceCatalog?.aiGeneratorEnabled) ||
+                    serviceIdentifier.includes('COMMENT') ||
+                    isYouTubeCombo ||
+                    serviceIdentifier.includes('REVIEW') ||
+                    Boolean(order?.requirements?.aiGeneratorEnabled)
+                ))
             );
 
             const count = payload.totalTasksRequired;
             const topic = order?.requirements?.topic || order?.requirements?.customText || order?.requirements?.comment || '';
             const language = order?.requirements?.language || 'English';
             const tone = order?.requirements?.tone || 'natural';
-            let appName = order?.requirements?.appName || '';
+            let appName = order?.requirements?.appName || order?.requirements?.businessName || '';
             let appIcon = order?.requirements?.appIcon || '';
             let packageId = order?.requirements?.packageId || '';
 
@@ -149,7 +172,9 @@ export class OrderActivatedListener {
                 ? rawSampleComments.filter((c: any) => typeof c === 'string' && c.trim().length > 0) 
                 : [];
 
-            const generatorType = isPlayStore ? 'playstore_review' : (isInstagram ? 'instagram_comment' : 'youtube_comment');
+            const generatorType = isGoogleBusiness
+                ? 'google_business_review'
+                : (isPlayStore ? 'playstore_review' : (isInstagram ? 'instagram_comment' : 'youtube_comment'));
 
             let generatedComments: string[] = [];
             if (isCommentRequired) {
@@ -157,7 +182,7 @@ export class OrderActivatedListener {
                     generatedComments = sampleComments.slice(0, count);
                 } else {
                     const remainingNeeded = count - sampleComments.length;
-                    this.logger.log(`🤖 Generating ${remainingNeeded} ${isPlayStore ? 'Play Store reviews' : (isInstagram ? 'Instagram comments' : 'comments')} for Order '${payload.orderId}' (App: "${appName}", Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
+                    this.logger.log(`🤖 Generating ${remainingNeeded} ${isGoogleBusiness ? 'Google Business reviews' : (isPlayStore ? 'Play Store reviews' : (isInstagram ? 'Instagram comments' : 'comments'))} for Order '${payload.orderId}' (App: "${appName}", Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
                     let newlyGenerated: string[] = [];
                     try {
                         newlyGenerated = await this.aiGeneratorService.generateContentBatch(
@@ -169,8 +194,10 @@ export class OrderActivatedListener {
                                 tone,
                                 uniqueness: true,
                                 isAppReview: isPlayStore,
+                                isGoogleBusiness,
                                 appName,
-                                videoTitle: order?.requirements?.videoTitle || (!isPlayStore ? (appName || '') : ''),
+                                businessName: appName,
+                                videoTitle: order?.requirements?.videoTitle || (!isPlayStore && !isGoogleBusiness ? (appName || '') : ''),
                                 generatorType,
                             } as any,
                         );
@@ -181,46 +208,61 @@ export class OrderActivatedListener {
                 }
             }
 
-            const fallbackTemplates = isPlayStore
+            const fallbackTemplates = isGoogleBusiness
                 ? [
-                    'Very smooth and responsive app. Does exactly what it promises without clutter.',
-                    'Clean UI and great user experience. Everything works seamlessly right from the start.',
-                    'Super fast, lightweight and intuitive. Very happy with the overall performance.',
-                    'Simple, clean, and gets the job done quickly. Exactly what I was looking for.',
-                    'One of the best apps in this category. Works like a charm and saves so much time.',
-                    'Really impressed with how fast and reliable it is. Zero lags or crashes experienced.',
-                    'Top notch user experience! Everything is neat, intuitive, and works as advertised.',
-                    'Works effortlessly. Very stable and dependable on every device.',
-                    'Terrific app! Smooth performance, no bugs or glitches encountered so far.',
-                    'Clean design, fast loading speeds, and very intuitive navigation throughout.',
+                    'Outstanding customer service and very welcoming atmosphere. Highly recommended!',
+                    'Had a wonderful experience here. The staff was extremely professional and polite.',
+                    'Top notch service and great attention to detail. Will definitely be visiting again.',
+                    'Extremely satisfied with the overall experience. Very efficient and reliable team.',
+                    'One of the best places in town. Prompt response, clean environment, and great support.',
+                    'Very impressed with the quality and friendliness. Everything exceeded my expectations.',
+                    'Smooth and hassle-free service from start to finish. Truly a 5-star experience.',
+                    'Professionalism at its best. They genuinely care about customer satisfaction.',
+                    'Neat, organized, and very well managed. Highly satisfied with my experience here.',
+                    'Exceptional quality and timely service. I will definitely recommend them to friends and family.',
                 ]
-                : (isInstagram
+                : (isPlayStore
                     ? [
-                        topic ? `Loving the aesthetic and vibe of ${topic}! 🔥` : 'Love the aesthetic and vibe of this post! 🔥',
-                        topic ? `Such valuable points on ${topic}. Definitely saving this! 🙌` : 'Such valuable content! Definitely saving this. 🙌',
-                        topic ? `Top quality post regarding ${topic}. Keep up the great work! ✨` : 'Top quality content! Keep inspiring. ✨',
-                        topic ? `The details about ${topic} are spot on. Really well done!` : 'Pure gold! Really well done! 👏',
-                        topic ? `Great insights on ${topic}. Following for more!` : 'Amazing post! Following for more updates. 💯',
-                        'Incredible visual style and great caption! ❤️',
-                        'This deserves so much more reach! Great work. 🚀',
-                        'Super helpful and inspiring post! Thanks for sharing. 🙌',
+                        'Very smooth and responsive app. Does exactly what it promises without clutter.',
+                        'Clean UI and great user experience. Everything works seamlessly right from the start.',
+                        'Super fast, lightweight and intuitive. Very happy with the overall performance.',
+                        'Simple, clean, and gets the job done quickly. Exactly what I was looking for.',
+                        'One of the best apps in this category. Works like a charm and saves so much time.',
+                        'Really impressed with how fast and reliable it is. Zero lags or crashes experienced.',
+                        'Top notch user experience! Everything is neat, intuitive, and works as advertised.',
+                        'Works effortlessly. Very stable and dependable on every device.',
+                        'Terrific app! Smooth performance, no bugs or glitches encountered so far.',
+                        'Clean design, fast loading speeds, and very intuitive navigation throughout.',
                     ]
-                    : [
-                        topic ? `Really good points made on ${topic}, very informative!` : 'Great video, keep up the fantastic work!',
-                        topic ? `Loved the breakdown about ${topic}. Very helpful!` : 'Awesome explanation, really enjoyed this video!',
-                        topic ? `Super informative video regarding ${topic}. Thanks for sharing!` : 'Very helpful and well explained!',
-                        topic ? `The explanation on ${topic} is so clear and precise.` : 'Thanks for sharing this, learned a lot!',
-                        topic ? `Great insights on ${topic}. Subscribed for more!` : 'Nicely done! Looking forward to more content.',
-                    ]);
+                    : (isInstagram
+                        ? [
+                            topic ? `Loving the aesthetic and vibe of ${topic}! 🔥` : 'Love the aesthetic and vibe of this post! 🔥',
+                            topic ? `Such valuable points on ${topic}. Definitely saving this! 🙌` : 'Such valuable content! Definitely saving this. 🙌',
+                            topic ? `Top quality post regarding ${topic}. Keep up the great work! ✨` : 'Top quality content! Keep inspiring. ✨',
+                            topic ? `The details about ${topic} are spot on. Really well done!` : 'Pure gold! Really well done! 👏',
+                            topic ? `Great insights on ${topic}. Following for more!` : 'Amazing post! Following for more updates. 💯',
+                            'Incredible visual style and great caption! ❤️',
+                            'This deserves so much more reach! Great work. 🚀',
+                            'Super helpful and inspiring post! Thanks for sharing. 🙌',
+                        ]
+                        : [
+                            topic ? `Really good points made on ${topic}, very informative!` : 'Great video, keep up the fantastic work!',
+                            topic ? `Loved the breakdown about ${topic}. Very helpful!` : 'Awesome explanation, really enjoyed this video!',
+                            topic ? `Super informative video regarding ${topic}. Thanks for sharing!` : 'Very helpful and well explained!',
+                            topic ? `The explanation on ${topic} is so clear and precise.` : 'Thanks for sharing this, learned a lot!',
+                            topic ? `Great insights on ${topic}. Subscribed for more!` : 'Nicely done! Looking forward to more content.',
+                        ]));
 
-            const detectedPlatform = isPlayStore
-                ? 'playstore'
-                : (isInstagram ? 'instagram' : (serviceIdentifier.includes('FACEBOOK') || serviceIdentifier.includes('FB') ? 'facebook' : (serviceIdentifier.includes('TELEGRAM') ? 'telegram' : 'youtube')));
+            const detectedPlatform = isGoogleBusiness
+                ? 'google_business'
+                : (isPlayStore
+                    ? 'playstore'
+                    : (isInstagram ? 'instagram' : (serviceIdentifier.includes('FACEBOOK') || serviceIdentifier.includes('FB') ? 'facebook' : (serviceIdentifier.includes('TELEGRAM') ? 'telegram' : 'youtube'))));
 
             const combinedRequirements = {
                 ...(order?.requirements || {}),
                 platform: detectedPlatform,
-                serviceName: serviceCatalog?.name || order?.taskType || (isPlayStore ? 'Play Store Review' : 'Task'),
+                serviceName: serviceCatalog?.name || order?.taskType || (isGoogleBusiness ? (isGoogleBusinessReview ? 'Google Business Review' : 'Google Business Rating') : (isPlayStore ? 'Play Store Review' : 'Task')),
                 serviceDescription: serviceCatalog?.description || '',
                 videoTutorialUrl: serviceCatalog?.videoTutorialUrl || order?.requirements?.videoTutorialUrl || '',
                 audioGuideUrl: serviceCatalog?.audioGuideUrl || order?.requirements?.audioGuideUrl || '',
@@ -230,10 +272,12 @@ export class OrderActivatedListener {
                 videoDurationSeconds: Number(order?.requirements?.videoDurationSeconds || 0),
                 proofType: order?.requirements?.proofType || 'SCREENSHOT',
                 actions: {
-                    rating5Star: isPlayStore || serviceIdentifier.includes('RATING') || serviceIdentifier.includes('REVIEW'),
-                    review: isPlayStore && isCommentRequired,
+                    rating5Star: isPlayStore || isGoogleBusiness || serviceIdentifier.includes('RATING') || serviceIdentifier.includes('REVIEW'),
+                    review: (isPlayStore || isGoogleBusiness) && isCommentRequired,
+                    googleRating: isGoogleBusiness,
+                    googleReview: isGoogleBusiness && isCommentRequired,
                     like: serviceIdentifier.includes('LIKE') || serviceIdentifier.includes('COMBO'),
-                    subscribe: !isInstagram && (serviceIdentifier.includes('SUBSCRIBE') || isYouTubeCombo),
+                    subscribe: !isInstagram && !isGoogleBusiness && (serviceIdentifier.includes('SUBSCRIBE') || isYouTubeCombo),
                     follow: isInstagram && (serviceIdentifier.includes('FOLLOW') || isInstagramCombo),
                     comment: isCommentRequired,
                 },
@@ -330,6 +374,8 @@ export class OrderActivatedListener {
                 const assetBaseUrl = (process.env.APP_URL || 'http://65.20.77.112:3000') + '/api/v1/assets/icons';
                 if (specificAppIcon && specificAppIcon.startsWith('http')) {
                     notificationIcon = specificAppIcon;
+                } else if (isGoogleBusiness || sLower.includes('business') || sLower.includes('maps')) {
+                    notificationIcon = `${assetBaseUrl}/google_maps`;
                 } else if (isPlayStore || sLower.includes('install') || sLower.includes('app') || sLower.includes('playstore') || sLower.includes('google')) {
                     notificationIcon = `${assetBaseUrl}/playstore`;
                 } else if (isInstagram || (sLower.includes('instagram') && !sLower.includes('install'))) {

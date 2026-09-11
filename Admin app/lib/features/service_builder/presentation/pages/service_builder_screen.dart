@@ -245,8 +245,14 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     final cat = (_currentService?.category ?? '').toUpperCase();
     final sType = (_currentService?.serviceType ?? '').toUpperCase();
 
-    // YouTube and Instagram services should never show app install retention field
-    if (_isYouTube(code, name, cat) || _isInstagram(code, name, cat)) {
+    // YouTube, Instagram, and Google Business services should never show app install retention field
+    if (_isYouTube(code, name, cat) ||
+        _isInstagram(code, name, cat) ||
+        code.contains('GOOGLE_BUSINESS') ||
+        code.contains('GOOGLE_MAPS') ||
+        code.contains('GMB') ||
+        name.contains('GOOGLE BUSINESS') ||
+        name.contains('GOOGLE MAPS')) {
       return false;
     }
 
@@ -725,7 +731,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                 _buildTextField(
                   controller: _codeController,
                   label: 'Service Code (Unique System Key)',
-                  hint: 'e.g. YOUTUBE_LIKE, INSTA_FOLLOW, PLAYSTORE_RATING',
+                  hint: 'e.g. YOUTUBE_LIKE, GOOGLE_BUSINESS_REVIEW, PLAYSTORE_RATING',
                   icon: Icons.key_rounded,
                 ),
                 const SizedBox(height: 16),

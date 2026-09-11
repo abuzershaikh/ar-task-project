@@ -180,6 +180,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     if (type.contains('COMMENT') || type.contains('REVIEW')) return true;
 
     final p = _getPlatform();
+    if (p == 'google_business') {
+      if (type.contains('RATING') && !type.contains('REVIEW')) return false;
+      return true;
+    }
     if (p == 'playstore') {
       if (type.contains('INSTALL') || type.contains('RATING')) return false;
       return true;
@@ -478,6 +482,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   // ── Helper Extractors ──────────────────────────────────────────────────────
   void _fetchPlayStoreIconIfNeeded() async {
+    if (_getPlatform() == 'google_business') return;
     final direct = _getAppIcon();
     if (direct.isNotEmpty && !direct.contains('/assets/icons/')) return;
     final url = _getTargetUrl();
@@ -531,6 +536,25 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
         .toLowerCase();
     final targetUrl = _getTargetUrl().toLowerCase();
     final combined = '$type $reqStr $metaStr $titleStr $descStr $targetUrl';
+
+    // 0. Google Business / Maps MUST take priority before Play Store
+    if (type.contains('google_business') ||
+        type.contains('google_maps') ||
+        type.contains('gmb') ||
+        titleStr.contains('google business') ||
+        titleStr.contains('google maps') ||
+        titleStr.contains('business review') ||
+        targetUrl.contains('maps.google') ||
+        targetUrl.contains('goo.gl/maps') ||
+        targetUrl.contains('maps.app.goo.gl') ||
+        combined.contains('google_business') ||
+        combined.contains('google_maps') ||
+        combined.contains('gmb_') ||
+        (t['platform'] != null &&
+            (t['platform'].toString().toLowerCase().contains('business') ||
+                t['platform'].toString().toLowerCase().contains('maps')))) {
+      return 'google_business';
+    }
 
     // 1. Play Store & App Install MUST ALWAYS take priority over raw platform tag
     if (type.contains('install') ||
@@ -708,6 +732,19 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       }
     }
     final p = _getPlatform();
+    if (p == 'google_business') {
+      final tUpper =
+          (widget.task['taskType'] ??
+                  widget.task['type'] ??
+                  widget.task['serviceCode'] ??
+                  '')
+              .toString()
+              .toUpperCase();
+      if (tUpper.contains('REVIEW')) {
+        return '5-Star Rating & Review on Google Maps ⭐⭐⭐⭐⭐';
+      }
+      return '5-Star Rating on Google Maps ⭐⭐⭐⭐⭐';
+    }
     if (p == 'playstore') {
       final tUpper =
           (widget.task['taskType'] ??
@@ -764,6 +801,12 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? 'COMMENT')
         .toString()
         .toUpperCase();
+    if (p == 'google_business') {
+      if (type.contains('REVIEW')) {
+        return 'GOOGLE MAPS REVIEW';
+      }
+      return 'GOOGLE MAPS RATING';
+    }
     if (p == 'playstore' ||
         type.contains('PLAYSTORE') ||
         type.contains('GOOGLE_PLAY') ||
@@ -801,7 +844,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       final p = _getPlatform();
       final prefix = p == 'youtube'
           ? 'YT'
-          : (p == 'instagram' ? 'IG' : (p == 'playstore' ? 'GP' : 'TS'));
+          : (p == 'instagram'
+              ? 'IG'
+              : (p == 'google_business'
+                  ? 'GM'
+                  : (p == 'playstore' ? 'GP' : 'TS')));
       return '#$prefix${id.substring(id.length - 4).toUpperCase()}';
     }
     return '#$id'.toUpperCase();
@@ -878,6 +925,19 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       }
     }
     final p = _getPlatform();
+    if (p == 'google_business') {
+      final tUpper =
+          (widget.task['taskType'] ??
+                  widget.task['type'] ??
+                  widget.task['serviceCode'] ??
+                  '')
+              .toString()
+              .toUpperCase();
+      if (tUpper.contains('REVIEW')) {
+        return 'Open Google Maps listing, give 5-star rating ⭐⭐⭐⭐⭐ and write the copied genuine review.';
+      }
+      return 'Open Google Maps listing and give a 5-star rating ⭐⭐⭐⭐⭐.';
+    }
     if (p == 'playstore') {
       return 'Open the App on Google Play Store, give 5-star rating ⭐⭐⭐⭐⭐ and submit genuine review text.';
     }
@@ -936,6 +996,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       }
     }
     final p = _getPlatform();
+    if (p == 'google_business') {
+      return 'Excellent service and great experience! Very polite and professional staff.';
+    }
     if (p == 'playstore') {
       return 'Super smooth app with fantastic UI! Very fast and helpful.';
     }
@@ -1009,6 +1072,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       return rawUrl;
     }
     final p = _getPlatform();
+    if (p == 'google_business') return 'https://maps.google.com';
     if (p == 'instagram') return 'https://instagram.com';
     if (p == 'facebook') return 'https://facebook.com';
     if (p == 'playstore' || p == 'google')
@@ -1792,12 +1856,16 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   String _getPlatformDisplayName() {
     final p = _getPlatform();
     switch (p) {
+      case 'google_business':
+      case 'google_maps':
+        return 'Google Maps';
       case 'youtube':
         return 'YouTube';
       case 'instagram':
         return 'Instagram';
       case 'facebook':
         return 'Facebook';
+      case 'playstore':
       case 'google':
         return 'Play Store';
       case 'x':
@@ -3179,6 +3247,26 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           'Post your review and take a clear screenshot showing your 5-star rating & review.',
           'Return to this app and upload the screenshot proof to receive your instant reward.',
         ]);
+      } else if (_getPlatform() == 'google_business') {
+        final bool isReview = type.contains('REVIEW');
+        if (isReview) {
+          steps.addAll([
+            'Click on the "Open Google Maps" button below.',
+            'Locate the business profile on Google Maps.',
+            'Give a 5-Star Rating (⭐⭐⭐⭐⭐) to the business.',
+            'Copy the provided genuine review text and paste it in the review box.',
+            'Post your review and take a clear screenshot showing your rating & review.',
+            'Return to this app and upload the screenshot proof to receive your instant reward.',
+          ]);
+        } else {
+          steps.addAll([
+            'Click on the "Open Google Maps" button below.',
+            'Locate the business profile on Google Maps.',
+            'Give a 5-Star Rating (⭐⭐⭐⭐⭐) to the business.',
+            'Take a clear screenshot showing your 5-star rating.',
+            'Return to this app and upload the screenshot proof to receive your instant reward.',
+          ]);
+        }
       } else {
         steps.addAll([
           'Click on the "Open $platformName" button below.',
@@ -3288,9 +3376,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                         ? 'Make sure you have followed the profile and liked the post/reel before submitting proof.'
                         : (isYtCombo
                               ? 'Make sure you watch the video, like, subscribe, and post the assigned comment.'
-                              : (isPlayStore
-                                    ? 'Ensure your 5-star rating and review are posted on the app page before submitting proof.'
-                                    : 'Make sure your submission is genuine. Spam or incomplete tasks will get rejected.')),
+                              : (_getPlatform() == 'google_business'
+                                    ? 'Ensure your 5-star rating and review are posted on Google Maps before submitting proof.'
+                                    : (isPlayStore
+                                          ? 'Ensure your 5-star rating and review are posted on the app page before submitting proof.'
+                                          : 'Make sure your submission is genuine. Spam or incomplete tasks will get rejected.'))),
                     style: const TextStyle(
                       color: Color(0xFF065F46),
                       fontSize: 11,
@@ -3308,7 +3398,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   // ── 5. Comment Text (Copy & Paste) ─────────────────────────────────────────
   Widget _buildCommentCopySection(String customText) {
+    final bool isGoogleBusiness = _getPlatform() == 'google_business';
     final bool isPlayStore = _getPlatform() == 'playstore';
+    final bool isReview = isPlayStore || isGoogleBusiness;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -3332,17 +3425,19 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
               Row(
                 children: [
                   Icon(
-                    isPlayStore
+                    isReview
                         ? Icons.star_rate_rounded
                         : Icons.chat_bubble_rounded,
-                    color: isPlayStore
-                        ? const Color(0xFFF59E0B)
-                        : const Color(0xFF7C3AED),
-                    size: isPlayStore ? 20 : 18,
+                    color: isGoogleBusiness
+                        ? const Color(0xFF2563EB)
+                        : (isPlayStore
+                            ? const Color(0xFFF59E0B)
+                            : const Color(0xFF7C3AED)),
+                    size: isReview ? 20 : 18,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    isPlayStore ? '5-Star Review Text' : 'Comment Text',
+                    isReview ? '5-Star Review Text' : 'Comment Text',
                     style: const TextStyle(
                       color: Color(0xFF0F172A),
                       fontSize: 14.5,
@@ -3351,9 +3446,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    isPlayStore
-                        ? '(Copy & Paste into Play Store)'
-                        : '(Copy & Paste)',
+                    isGoogleBusiness
+                        ? '(Copy & Paste into Google Maps)'
+                        : (isPlayStore
+                            ? '(Copy & Paste into Play Store)'
+                            : '(Copy & Paste)'),
                     style: const TextStyle(
                       color: Color(0xFF94A3B8),
                       fontSize: 11.5,
@@ -3363,7 +3460,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                 ],
               ),
               Text(
-                isPlayStore ? '⭐' : '💬',
+                isReview ? '⭐' : '💬',
                 style: const TextStyle(fontSize: 16),
               ),
             ],
@@ -3399,11 +3496,13 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          isPlayStore
+                          isReview
                               ? '✓ 5-Star review text copied to clipboard!'
                               : '✓ Comment text copied to clipboard!',
                         ),
-                        backgroundColor: const Color(0xFF059669),
+                        backgroundColor: isGoogleBusiness
+                            ? const Color(0xFF2563EB)
+                            : const Color(0xFF059669),
                       ),
                     );
                   },
@@ -3418,17 +3517,21 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color:
-                            (isPlayStore
-                                    ? const Color(0xFF059669)
-                                    : const Color(0xFF7C3AED))
+                            (isGoogleBusiness
+                                    ? const Color(0xFF2563EB)
+                                    : (isPlayStore
+                                        ? const Color(0xFF059669)
+                                        : const Color(0xFF7C3AED)))
                                 .withOpacity(0.3),
                       ),
                       boxShadow: [
                         BoxShadow(
                           color:
-                              (isPlayStore
-                                      ? const Color(0xFF059669)
-                                      : const Color(0xFF7C3AED))
+                              (isGoogleBusiness
+                                      ? const Color(0xFF2563EB)
+                                      : (isPlayStore
+                                          ? const Color(0xFF059669)
+                                          : const Color(0xFF7C3AED)))
                                   .withOpacity(0.08),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
@@ -3440,18 +3543,22 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                       children: [
                         Icon(
                           Icons.copy_rounded,
-                          color: isPlayStore
-                              ? const Color(0xFF059669)
-                              : const Color(0xFF7C3AED),
+                          color: isGoogleBusiness
+                              ? const Color(0xFF2563EB)
+                              : (isPlayStore
+                                  ? const Color(0xFF059669)
+                                  : const Color(0xFF7C3AED)),
                           size: 16,
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Copy',
                           style: TextStyle(
-                            color: isPlayStore
-                                ? const Color(0xFF059669)
-                                : const Color(0xFF7C3AED),
+                            color: isGoogleBusiness
+                                ? const Color(0xFF2563EB)
+                                : (isPlayStore
+                                    ? const Color(0xFF059669)
+                                    : const Color(0xFF7C3AED)),
                             fontSize: 9.5,
                             fontWeight: FontWeight.bold,
                           ),
@@ -3475,9 +3582,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  isPlayStore
-                      ? "Give 5-Star rating ⭐⭐⭐⭐⭐ and paste this review text as it is."
-                      : "Don't change the text. Copy and paste as it is.",
+                  isGoogleBusiness
+                      ? "Give 5-Star rating ⭐⭐⭐⭐⭐ and paste this review on Google Maps as it is."
+                      : (isPlayStore
+                          ? "Give 5-Star rating ⭐⭐⭐⭐⭐ and paste this review text as it is."
+                          : "Don't change the text. Copy and paste as it is."),
                   style: const TextStyle(
                     color: Color(0xFF64748B),
                     fontSize: 11,
@@ -3493,6 +3602,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   // ── 6. Where to Perform Action & Open Platform (Overflow-Proof Layout) ─────
   Widget _buildWhereToCommentSection(String platformName, String targetUrl) {
+    final bool isGoogleBusiness = _getPlatform() == 'google_business';
     final bool isPlayStore = _getPlatform() == 'playstore';
     final bool isCommentReq = _isCommentRequiredTask();
     final type =
@@ -3509,7 +3619,14 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     String iconEmoji = '🔗';
     Color iconBg = const Color(0xFFEFF6FF);
 
-    if (isPlayStore) {
+    if (isGoogleBusiness) {
+      headerText = isCommentReq
+          ? 'Where to Rate & Review'
+          : 'Where to Rate Business';
+      subText = 'On Google Maps Business Profile';
+      iconEmoji = '📍';
+      iconBg = const Color(0xFFE0F2FE);
+    } else if (isPlayStore) {
       headerText = isCommentReq
           ? 'Where to Rate & Review'
           : 'Where to Rate App';
@@ -3599,9 +3716,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: isPlayStore
-                      ? const [Color(0xFF059669), Color(0xFF10B981)]
-                      : const [Color(0xFFEA580C), Color(0xFFF97316)],
+                  colors: isGoogleBusiness
+                      ? const [Color(0xFF2563EB), Color(0xFF3B82F6)]
+                      : (isPlayStore
+                          ? const [Color(0xFF059669), Color(0xFF10B981)]
+                          : const [Color(0xFFEA580C), Color(0xFFF97316)]),
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -3609,9 +3728,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                 boxShadow: [
                   BoxShadow(
                     color:
-                        (isPlayStore
-                                ? const Color(0xFF10B981)
-                                : const Color(0xFFF97316))
+                        (isGoogleBusiness
+                                ? const Color(0xFF3B82F6)
+                                : (isPlayStore
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFFF97316)))
                             .withValues(alpha: 0.35),
                     blurRadius: 6,
                     offset: const Offset(0, 2),

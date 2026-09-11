@@ -28,6 +28,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   final List<Map<String, dynamic>> _carouselSlides = [
     {
+      'badge': '📍 LOCAL SEO • GOOGLE MAPS',
+      'title': 'Dominate Google Business',
+      'highlight': '5-Star Ratings & Reviews',
+      'description':
+          'Boost your local business ranking on Google Maps & Search with authentic 5-star ratings & verified customer reviews.',
+      'gradientColors': [
+        const Color(0xFF0F172A),
+        const Color(0xFF1D4ED8),
+        const Color(0xFF2563EB)
+      ],
+      'accentColor': const Color(0xFF60A5FA),
+      'buttonText': 'Boost Business →',
+      'platform': 'google_business',
+      'route': AppRouter.services,
+    },
+    {
       'badge': '⭐ TOP RATED • GOOGLE PLAY',
       'title': 'Dominate Google Play Store',
       'highlight': '5-Star Ratings & Reviews',
@@ -862,6 +878,45 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _build3DPlatformIllustration(String platform, Color accent) {
+    if (platform == 'google_business' || platform == 'google_maps') {
+      return Container(
+        width: 86,
+        height: 86,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Image.asset(
+              'assets/icons/rating.png',
+              width: 48,
+              height: 48,
+              fit: BoxFit.contain,
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2563EB),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text('MAPS',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (platform == 'playstore') {
       return Container(
         width: 86,
@@ -1411,6 +1466,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     // ── Unique visual identity per service category ──
     final cardThemes = <String, Map<String, dynamic>>{
+      'google_business': {
+        'bg': const [Color(0xFF081A3A), Color(0xFF0C2754), Color(0xFF103672)],
+        'glow': const Color(0xFF3B82F6),
+        'emoji': '📍',
+      },
+      'google_maps': {
+        'bg': const [Color(0xFF081A3A), Color(0xFF0C2754), Color(0xFF103672)],
+        'glow': const Color(0xFF3B82F6),
+        'emoji': '📍',
+      },
       'playstore': {
         'bg': const [Color(0xFF061F16), Color(0xFF0A3024), Color(0xFF0E3F30)],
         'glow': const Color(0xFF10B981),
@@ -1738,6 +1803,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     String miniLabel = '';
 
     switch (iconType) {
+      case 'google_business':
+      case 'google_maps':
+        iconWidget = Image.asset(
+          'assets/icons/rating.png',
+          width: 28,
+          height: 28,
+          fit: BoxFit.contain,
+        );
+        miniLabel = 'MAPS';
+        break;
       case 'playstore':
         iconWidget = Image.asset(
           'assets/icons/google-play.png',
