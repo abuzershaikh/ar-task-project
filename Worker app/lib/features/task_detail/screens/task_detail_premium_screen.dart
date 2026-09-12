@@ -14,6 +14,7 @@ import '../../../shared/widgets/marquee_text.dart';
 import '../../../core/services/package_tracker_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
+import '../../keyboard/keyboard.dart';
 
 /// Premium 3D Realistic Task Detail & Execution Screen
 /// - Exact visual layout matching reference UI image
@@ -67,6 +68,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _fetchPlayStoreIconIfNeeded();
+    _syncReviewToKeyboard();
     final status = _getTaskStatus();
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
@@ -109,6 +111,21 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     _audioPlayer?.stop();
     _audioPlayer?.dispose();
     super.dispose();
+  }
+
+  void _syncReviewToKeyboard() {
+    final p = _getPlatform();
+    if (ReviewKeyboardService.instance.isEligiblePlatform(p) && _isCommentRequiredTask()) {
+      final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
+      final reviewText = _sanitizeWorkerReview(_getRawCustomText());
+      if (reviewText.isNotEmpty) {
+        ReviewKeyboardService.instance.setActiveReview(
+          taskId: taskId,
+          reviewText: reviewText,
+          platform: p,
+        );
+      }
+    }
   }
 
   @override
@@ -1836,6 +1853,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       _isSubmitted = true;
       _isTaskAccepted = false;
     });
+
+    // Clean active review from keyboard upon successful proof submission
+    ReviewKeyboardService.instance.clearActiveReview(taskId: taskId);
 
     try {
       await taskProvider.fetchMyTasks('under_review', forceRefresh: true);
@@ -3595,6 +3615,15 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
               ),
             ],
           ),
+
+          // ── Keyboard Auto-Typing Tile for Google Business & Play Store Review ──
+          if (isReview && (isGoogleBusiness || isPlayStore)) ...[
+            KeyboardReviewTile(
+              customText: customText,
+              platform: _getPlatform(),
+              taskId: (widget.task['id'] ?? widget.task['_id'] ?? '').toString(),
+            ),
+          ],
         ],
       ),
     );

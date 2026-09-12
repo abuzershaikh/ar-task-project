@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/keyboard_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#E2E8F0"
+    android:paddingBottom="6dp">
+
+    <!-- ── REVIEW ACTION BAR (At Top of Keyboard) ── -->
+    <LinearLayout
+        android:id="@+id/review_action_bar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#0F172A"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
+
+        <!-- Review / Task Icon + Status Text -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_vertical"
+            android:paddingEnd="6dp">
+
+            <TextView
+                android:id="@+id/tv_review_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⭐ Google Review Ready"
+                android:textColor="#38BDF8"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/tv_review_preview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Tap 'Write Review' to auto-type..."
+                android:textColor="#94A3B8"
+                android:textSize="10sp"
+                android:singleLine="true"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <!-- Write Review Button -->
+        <Button
+            android:id="@+id/btn_write_review"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="✍️ Write Review"
+            android:textColor="#FFFFFF"
+            android:textSize="11.5sp"
+            android:textStyle="bold"
+            android:textAllCaps="false"
+            android:background="@drawable/btn_write_review_bg"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp" />
+
+        <!-- Stop Typing Button (Visible while typing) -->
+        <Button
+            android:id="@+id/btn_stop_review"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="⏹️ Stop"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textAllCaps="false"
+            android:background="@drawable/btn_stop_review_bg"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:visibility="gone"
+            android:layout_marginStart="4dp" />
+
+        <!-- Quick Paste Button -->
+        <Button
+            android:id="@+id/btn_paste_review"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="📋"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:background="@drawable/key_action_background"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
+
+    <!-- ── KEYBOARD CONTAINER (QWERTY & SYMBOLS) ── -->
+    <LinearLayout
+        android:id="@+id/keys_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="2dp"
+        android:paddingEnd="2dp"
+        android:paddingTop="4dp">
+
+        <!-- ROW 1 (Q W E R T Y U I O P) -->
+        <LinearLayout
+            android:id="@+id/row_1"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:orientation="horizontal"
+            android:weightSum="10" />
+
+        <!-- ROW 2 (A S D F G H J K L) -->
+        <LinearLayout
+            android:id="@+id/row_2"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:orientation="horizontal"
+            android:weightSum="9"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="14dp"
+            android:layout_marginTop="4dp" />
+
+        <!-- ROW 3 (Shift, Z X C V B N M, Backspace) -->
+        <LinearLayout
+            android:id="@+id/row_3"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <Button
+                android:id="@+id/btn_shift"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.5"
+                android:text="⇧"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#1E293B"
+                android:background="@drawable/key_action_background"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp" />
+
+            <LinearLayout
+                android:id="@+id/row_3_letters"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="7"
+                android:orientation="horizontal"
+                android:weightSum="7" />
+
+            <Button
+                android:id="@+id/btn_backspace"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.5"
+                android:text="⌫"
+                android:textSize="18sp"
+                android:textColor="#1E293B"
+                android:background="@drawable/key_action_background"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp" />
+        </LinearLayout>
+
+        <!-- ROW 4 (Symbols, Switch IME, Spacebar, Dot, Enter) -->
+        <LinearLayout
+            android:id="@+id/row_4"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+
+            <!-- Symbol toggle (?123 / ABC) -->
+            <Button
+                android:id="@+id/btn_symbols"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.5"
+                android:text="?123"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="#1E293B"
+                android:background="@drawable/key_action_background"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp" />
+
+            <!-- Switch to System Keyboard (🌐) -->
+            <Button
+                android:id="@+id/btn_switch_ime"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.0"
+                android:text="🌐"
+                android:textSize="16sp"
+                android:textColor="#1E293B"
+                android:background="@drawable/key_action_background"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp" />
+
+            <!-- Spacebar -->
+            <Button
+                android:id="@+id/btn_space"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="4.5"
+                android:text="Space"
+                android:textSize="12sp"
+                android:textColor="#64748B"
+                android:background="@drawable/key_background"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp" />
+
+            <!-- Dot / Period key -->
+            <Button
+                android:id="@+id/btn_period"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1.0"
+                android:text="."
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#0F172A"
+                android:background="@drawable/key_background"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp" />
+
+            <!-- Enter / Action key -->
+            <Button
+                android:id="@+id/btn_enter"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="2.0"
+                android:text="↵"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:background="@drawable/btn_write_review_bg"
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="0dp" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

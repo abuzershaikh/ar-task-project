@@ -7,6 +7,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.taskearning.earning.money.app/package_tracker"
+    private val KEYBOARD_CHANNEL = "com.taskearning.earning.money.app/review_keyboard"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -31,6 +32,66 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     result.success(statusMap)
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, KEYBOARD_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setActiveReview" -> {
+                    val taskId = call.argument<String>("taskId") ?: ""
+                    val reviewText = call.argument<String>("reviewText") ?: ""
+                    val platform = call.argument<String>("platform") ?: ""
+
+                    val prefs = getSharedPreferences("FlutterSharedPreferences", android.content.Context.MODE_PRIVATE)
+                    prefs.edit()
+                        .putString("flutter.active_task_id", taskId)
+                        .putString("flutter.active_review_text", reviewText)
+                        .putString("flutter.active_platform", platform)
+                        .putString("active_task_id", taskId)
+                        .putString("active_review_text", reviewText)
+                        .putString("active_platform", platform)
+                        .apply()
+
+                    result.success(true)
+                }
+                "clearActiveReview" -> {
+                    val prefs = getSharedPreferences("FlutterSharedPreferences", android.content.Context.MODE_PRIVATE)
+                    prefs.edit()
+                        .remove("flutter.active_task_id")
+                        .remove("flutter.active_review_text")
+                        .remove("flutter.active_platform")
+                        .remove("active_task_id")
+                        .remove("active_review_text")
+                        .remove("active_platform")
+                        .apply()
+
+                    result.success(true)
+                }
+                "isKeyboardEnabled" -> {
+                    val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+                    val enabledList = imm?.enabledInputMethodList ?: emptyList()
+                    val isEnabled = enabledList.any { it.packageName == packageName }
+                    result.success(isEnabled)
+                }
+                "isKeyboardSelected" -> {
+                    val defaultIme = android.provider.Settings.Secure.getString(contentResolver, android.provider.Settings.Secure.DEFAULT_INPUT_METHOD) ?: ""
+                    result.success(defaultIme.contains(packageName))
+                }
+                "openKeyboardSettings" -> {
+                    val intent = android.content.Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS).apply {
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(intent)
+                    result.success(true)
+                }
+                "openInputMethodPicker" -> {
+                    val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+                    imm?.showInputMethodPicker()
+                    result.success(true)
                 }
                 else -> {
                     result.notImplemented()

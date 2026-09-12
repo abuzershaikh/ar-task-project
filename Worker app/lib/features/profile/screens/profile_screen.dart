@@ -12,6 +12,7 @@ import 'edit_profile_screen.dart';
 import 'day_streak_screen.dart';
 import 'quality_score_screen.dart';
 import 'kyc_bank_details_screen.dart';
+import '../../keyboard/keyboard.dart';
 
 /// 🌿 3D Realistic Mayan Jungle Profile Screen
 /// - Full Emerald & Mayan Gold color theme
@@ -963,6 +964,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             subtitle: email,
             trailing: const Icon(Icons.check_circle_rounded, color: Color(0xFF059669), size: 20),
             onTap: () {},
+          ),
+          _buildDivider(),
+          _buildListTile(
+            icon: Icons.keyboard_rounded,
+            iconColor: const Color(0xFF7C3AED),
+            title: 'Task Review Keyboard',
+            subtitle: '1-click auto-typing for Google & Play Store reviews',
+            trailing: _buildPill('Setup', const Color(0xFF7C3AED)),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const KeyboardSettingsScreen()),
+              );
+            },
           ),
         ],
       ),
