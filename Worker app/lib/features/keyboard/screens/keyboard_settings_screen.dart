@@ -12,7 +12,6 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
     with WidgetsBindingObserver {
   bool _isEnabled = false;
   bool _isSelected = false;
-  bool _isLoading = true;
   final TextEditingController _testController = TextEditingController();
 
   @override
@@ -55,7 +54,6 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
       setState(() {
         _isEnabled = enabled;
         _isSelected = selected;
-        _isLoading = false;
       });
     }
   }
@@ -407,7 +405,7 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            height: 44,
+            height: 48,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: isComplete
@@ -417,14 +415,18 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
                     ? const Color(0xFF15803D)
                     : Colors.white,
                 elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               onPressed: buttonAction,
-              child: Text(
-                buttonText,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  buttonText,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),

@@ -206,13 +206,14 @@ class _KeyboardReviewTileState extends State<KeyboardReviewTile>
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
-              height: 40,
+              height: 48,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   elevation: 0,
                 ),
@@ -220,10 +221,13 @@ class _KeyboardReviewTileState extends State<KeyboardReviewTile>
                   await ReviewKeyboardService.instance.openKeyboardSettings();
                   _pollStatusAfterAction();
                 },
-                icon: const Icon(Icons.settings_suggest_rounded, size: 16),
-                label: const Text(
-                  '1. Enable Task Keyboard in Settings',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                icon: const Icon(Icons.settings_suggest_rounded, size: 18),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '1. Enable Task Keyboard in Settings',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ),
@@ -257,13 +261,14 @@ class _KeyboardReviewTileState extends State<KeyboardReviewTile>
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
-              height: 40,
+              height: 48,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   elevation: 0,
                 ),
@@ -271,10 +276,13 @@ class _KeyboardReviewTileState extends State<KeyboardReviewTile>
                   await ReviewKeyboardService.instance.openInputMethodPicker();
                   _pollStatusAfterAction();
                 },
-                icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-                label: const Text(
-                  '2. Switch to Task Keyboard',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '2. Switch to Task Keyboard',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ),
