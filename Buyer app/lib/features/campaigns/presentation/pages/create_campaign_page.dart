@@ -659,8 +659,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     _urlDebounceTimer?.cancel();
     setState(() {
       _selectedService = service;
-      _selectedQuantity = 10;
-      _quantityController.text = '10';
+      final minQ = service.pricing.minQuantity > 0 ? service.pricing.minQuantity : 10;
+      _selectedQuantity = minQ > 10 ? minQ : 10;
+      _quantityController.text = '$_selectedQuantity';
       _targetUrlController.clear();
       _appNameController.clear();
       _topicController.clear();
@@ -783,6 +784,11 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           'appName': _appNameController.text.trim().isNotEmpty
               ? _appNameController.text.trim()
               : (_isYouTubeService(_selectedService) ? (_ytTitle ?? '') : (_appName ?? '')),
+          'businessName': _isGoogleBusinessService(_selectedService)
+              ? (_appNameController.text.trim().isNotEmpty
+                  ? _appNameController.text.trim()
+                  : (_appName ?? ''))
+              : '',
           'appIcon': _appIcon,
           'packageId': _packageId,
           'watchTimeSeconds': _ytRequiredWatchSeconds ??
@@ -823,7 +829,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Successfully created ${_selectedService!.name} campaign for ${ServiceUnitHelper.getUnitName(_selectedService!.name, count: _selectedQuantity, includeCount: true)}.',
+                'Successfully created ${_selectedService!.name} campaign for ${ServiceUnitHelper.getUnitName(_selectedService!.name, serviceCode: _selectedService!.code, count: _selectedQuantity, includeCount: true)}.',
                 style: const TextStyle(fontSize: 13, color: Color(0xFF334155)),
               ),
               const SizedBox(height: 12),
@@ -1146,7 +1152,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    ServiceUnitHelper.getRateLabel(s.name, s.pricing.buyerPrice),
+                    ServiceUnitHelper.getRateLabel(s.name, s.pricing.buyerPrice, serviceCode: s.code),
                     style: const TextStyle(
                         color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.w600),
                   ),
@@ -1166,6 +1172,12 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               // ── SPECIAL COMBO INCLUSIONS PERKS CARD ──
               if (_isComboService(s)) ...[
                 _buildComboInclusionsCard(s),
+                const SizedBox(height: 16),
+              ],
+
+              // ── SPECIAL GOOGLE BUSINESS PERKS CARD ──
+              if (_isGoogleBusinessService(s)) ...[
+                _buildGoogleBusinessInclusionsCard(s),
                 const SizedBox(height: 16),
               ],
 
@@ -1733,13 +1745,13 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      ServiceUnitHelper.getQuantityHeader(s.name),
+                      ServiceUnitHelper.getQuantityHeader(s.name, serviceCode: s.code),
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      ServiceUnitHelper.getUnitExplanation(s.name),
+                      ServiceUnitHelper.getUnitExplanation(s.name, serviceCode: s.code),
                       style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                     ),
                     const SizedBox(height: 12),
@@ -1750,7 +1762,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                         IconButton(
                           icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF2563EB)),
                           onPressed: () {
-                            if (_selectedQuantity > 1) {
+                            final minQ = s.pricing.minQuantity > 0 ? s.pricing.minQuantity : 1;
+                            if (_selectedQuantity > minQ) {
                               setState(() {
                                 _selectedQuantity--;
                                 _quantityController.text = '$_selectedQuantity';
@@ -1766,8 +1779,9 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                             style: const TextStyle(
                                 fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
                             onChanged: (val) {
-                              final num = int.tryParse(val) ?? 1;
-                              setState(() => _selectedQuantity = num > 0 ? num : 1);
+                              final minQ = s.pricing.minQuantity > 0 ? s.pricing.minQuantity : 1;
+                              final num = int.tryParse(val) ?? minQ;
+                              setState(() => _selectedQuantity = num >= minQ ? num : minQ);
                             },
                             decoration: InputDecoration(
                               filled: true,
@@ -1783,10 +1797,13 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                         IconButton(
                           icon: const Icon(Icons.add_circle_outline, color: Color(0xFF2563EB)),
                           onPressed: () {
-                            setState(() {
-                              _selectedQuantity++;
-                              _quantityController.text = '$_selectedQuantity';
-                            });
+                            final maxQ = s.pricing.maxQuantity > 0 ? s.pricing.maxQuantity : 99999;
+                            if (_selectedQuantity < maxQ) {
+                              setState(() {
+                                _selectedQuantity++;
+                                _quantityController.text = '$_selectedQuantity';
+                              });
+                            }
                           },
                         ),
                       ],
@@ -1796,10 +1813,19 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                     // Quick presets
                     Wrap(
                       spacing: 8,
-                      children: [10, 25, 50, 100, 500, 1000].map((qty) {
+                      children: [
+                        if (s.pricing.minQuantity <= 5) 5,
+                        10,
+                        25,
+                        50,
+                        100,
+                        if (s.pricing.maxQuantity >= 250) 250,
+                        if (s.pricing.maxQuantity >= 500) 500,
+                        if (s.pricing.maxQuantity >= 1000) 1000,
+                      ].toSet().map((qty) {
                         final isSelected = _selectedQuantity == qty;
                         return ChoiceChip(
-                          label: Text(ServiceUnitHelper.getUnitName(s.name, count: qty, includeCount: true)),
+                          label: Text(ServiceUnitHelper.getUnitName(s.name, serviceCode: s.code, count: qty, includeCount: true)),
                           selected: isSelected,
                           selectedColor: const Color(0xFF2563EB),
                           labelStyle: TextStyle(
@@ -1834,7 +1860,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Quantity:', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                        Text(ServiceUnitHelper.getUnitName(s.name, count: _selectedQuantity, includeCount: true),
+                        Text(ServiceUnitHelper.getUnitName(s.name, serviceCode: s.code, count: _selectedQuantity, includeCount: true),
                             style: const TextStyle(
                                 color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                       ],
@@ -1843,7 +1869,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Rate per ${ServiceUnitHelper.getUnitName(s.name, count: 1)}:',
+                        Text('Rate per ${ServiceUnitHelper.getUnitName(s.name, serviceCode: s.code, count: 1)}:',
                             style: const TextStyle(color: Colors.white70, fontSize: 13)),
                         Text('₹${s.pricing.buyerPrice.toStringAsFixed(2)}',
                             style: const TextStyle(
@@ -2140,6 +2166,159 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                     fontSize: 9.5,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF16A34A),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Google Business Perks Card (Explains Organic Google Maps Ranking & Reviews) ──
+  Widget _buildGoogleBusinessInclusionsCard(ServiceModel s) {
+    final bool isReview = s.code.toUpperCase().contains('REVIEW') || s.name.toUpperCase().contains('REVIEW');
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEFF6FF), Color(0xFFF0FDF4)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFFBFDBFE),
+          width: 1.2,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.location_on_rounded,
+                      size: 13,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      isReview ? '5-STAR RATING & REVIEW' : '5-STAR RATING GUARANTEE',
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFBFDBFE),
+                  ),
+                ),
+                child: Text(
+                  '100% Real Customers',
+                  style: GoogleFonts.outfit(
+                    color: const Color(0xFF1D4ED8),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Authentic Local Business Growth for your Google Maps Listing:',
+            style: GoogleFonts.outfit(
+              color: const Color(0xFF0F172A),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildActionPerkTile(
+            icon: Icons.person_pin_circle_rounded,
+            iconColor: const Color(0xFF2563EB),
+            title: 'Real Local Accounts',
+            desc: 'Real active Google users with genuine Indian Google profiles',
+          ),
+          const SizedBox(height: 6),
+          _buildActionPerkTile(
+            icon: Icons.star_rounded,
+            iconColor: const Color(0xFFF59E0B),
+            title: 'Guaranteed 5-Star Rating',
+            desc: 'Permanent 5-star rating directly on your Google Business page',
+          ),
+          if (isReview) ...[
+            const SizedBox(height: 6),
+            _buildActionPerkTile(
+              icon: Icons.reviews_rounded,
+              iconColor: const Color(0xFF10B981),
+              title: 'Detailed Positive Review',
+              desc: 'Customized review highlighting your staff, service quality & experience',
+            ),
+          ],
+          const SizedBox(height: 6),
+          _buildActionPerkTile(
+            icon: Icons.trending_up_rounded,
+            iconColor: const Color(0xFF059669),
+            title: 'Local SEO Boost',
+            desc: 'Helps improve your Google Maps and local search prominence',
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDBEAFE).withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.verified_rounded,
+                  size: 15,
+                  color: Color(0xFF1D4ED8),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    isReview
+                        ? '1 Unit = 1 Authentic 5-Star Google Rating + 1 Unique Custom Review'
+                        : '1 Unit = 1 Authentic 5-Star Google Maps Rating',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1E40AF),
+                    ),
                   ),
                 ),
               ],
