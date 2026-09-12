@@ -74,12 +74,17 @@ class MainActivity : FlutterActivity() {
                 "isKeyboardEnabled" -> {
                     val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
                     val enabledList = imm?.enabledInputMethodList ?: emptyList()
-                    val isEnabled = enabledList.any { it.packageName == packageName }
+                    val isEnabled = enabledList.any {
+                        it.packageName == packageName ||
+                        it.serviceName.contains("TaskReviewInputMethodService") ||
+                        it.id.contains("TaskReviewInputMethodService")
+                    }
                     result.success(isEnabled)
                 }
                 "isKeyboardSelected" -> {
                     val defaultIme = android.provider.Settings.Secure.getString(contentResolver, android.provider.Settings.Secure.DEFAULT_INPUT_METHOD) ?: ""
-                    result.success(defaultIme.contains(packageName))
+                    val isSelected = defaultIme.contains(packageName) || defaultIme.contains("TaskReviewInputMethodService")
+                    result.success(isSelected)
                 }
                 "openKeyboardSettings" -> {
                     val intent = android.content.Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS).apply {

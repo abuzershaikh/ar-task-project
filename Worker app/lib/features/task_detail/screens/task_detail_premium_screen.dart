@@ -62,6 +62,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   bool _isAudioBuffering = false;
 
   String? _fetchedAppIcon;
+  bool _isKeyboardReady = false;
 
   @override
   void initState() {
@@ -69,6 +70,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     WidgetsBinding.instance.addObserver(this);
     _fetchPlayStoreIconIfNeeded();
     _syncReviewToKeyboard();
+    _checkKeyboardReadiness();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkFirstTimeKeyboardNotice();
+    });
     final status = _getTaskStatus();
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
@@ -113,6 +118,61 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     super.dispose();
   }
 
+  bool _isKeyboardEligibleTask() {
+    final p = _getPlatform();
+    final isEligible = p == 'google_business' || p == 'playstore';
+    return isEligible && _isCommentRequiredTask();
+  }
+
+  Future<void> _checkKeyboardReadiness() async {
+    if (!_isKeyboardEligibleTask()) return;
+    final isReady = await ReviewKeyboardService.instance.isKeyboardFullyReady();
+    if (mounted) {
+      setState(() {
+        _isKeyboardReady = isReady;
+      });
+    }
+  }
+
+  Future<void> _checkFirstTimeKeyboardNotice() async {
+    if (!mounted || !_isKeyboardEligibleTask()) return;
+    final hasSeen = await ReviewKeyboardService.instance.hasSeenKeyboardOnboarding();
+
+    if (!hasSeen) {
+      await ReviewKeyboardService.instance.markKeyboardOnboardingSeen();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.keyboard_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '💡 Tip: Task Review Keyboard available at top for auto-typing or copy review manually.',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF1E293B),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Keyboard Setup',
+            textColor: const Color(0xFF60A5FA),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const KeyboardSettingsScreen(),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+  }
+
   void _syncReviewToKeyboard() {
     final p = _getPlatform();
     if (ReviewKeyboardService.instance.isEligiblePlatform(p) && _isCommentRequiredTask()) {
@@ -130,10 +190,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed &&
-        _isWatchingOnYouTube &&
-        !_isWatchCompleted) {
-      _handleReturnFromYouTube();
+    if (state == AppLifecycleState.resumed) {
+      _checkKeyboardReadiness();
+      if (_isWatchingOnYouTube && !_isWatchCompleted) {
+        _handleReturnFromYouTube();
+      }
     }
   }
 
@@ -1856,6 +1917,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
     // Clean active review from keyboard upon successful proof submission
     ReviewKeyboardService.instance.clearActiveReview(taskId: taskId);
+    _checkKeyboardReadiness();
 
     try {
       await taskProvider.fetchMyTasks('under_review', forceRefresh: true);
@@ -1865,10 +1927,19 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('🎉 Task Proof Submitted! It is now Under Review.'),
-        backgroundColor: Color(0xFF059669),
-        duration: Duration(seconds: 3),
+      SnackBar(
+        content: const Text('🎉 Task Proof Submitted! It is now Under Review.'),
+        backgroundColor: const Color(0xFF059669),
+        duration: const Duration(seconds: 4),
+        action: _isKeyboardEligibleTask()
+            ? SnackBarAction(
+                label: 'Default Keyboard',
+                textColor: Colors.white,
+                onPressed: () {
+                  ReviewKeyboardService.instance.openInputMethodPicker();
+                },
+              )
+            : null,
       ),
     );
   }
@@ -2090,6 +2161,75 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
         ],
       ),
       actions: [
+        if (_isKeyboardEligibleTask()) ...[
+          Padding(
+            padding: const EdgeInsets.only(right: 6, top: 10, bottom: 10),
+            child: InkWell(
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const KeyboardSettingsScreen(),
+                  ),
+                );
+                _checkKeyboardReadiness();
+                _syncReviewToKeyboard();
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _isKeyboardReady
+                      ? const Color(0xFFEFF6FF)
+                      : const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: _isKeyboardReady
+                        ? const Color(0xFF93C5FD)
+                        : const Color(0xFFFCD34D),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_isKeyboardReady ? const Color(0xFF2563EB) : const Color(0xFFD97706)).withValues(alpha: 0.12),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.keyboard_rounded,
+                      color: _isKeyboardReady
+                          ? const Color(0xFF2563EB)
+                          : const Color(0xFFD97706),
+                      size: 15,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _isKeyboardReady ? 'Keyboard' : 'Keyboard Setup',
+                      style: TextStyle(
+                        color: _isKeyboardReady
+                            ? const Color(0xFF1E40AF)
+                            : const Color(0xFF92400E),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Icon(
+                      Icons.settings_rounded,
+                      color: _isKeyboardReady
+                          ? const Color(0xFF2563EB)
+                          : const Color(0xFFD97706),
+                      size: 12,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
         Padding(
           padding: const EdgeInsets.only(right: 14, top: 10, bottom: 10),
           child: InkWell(

@@ -60,7 +60,29 @@ export class TaskQueryService {
         if (rawUrl) {
             try {
                 const parsed = new URL(rawUrl);
-                normalizedUrl = `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '');
+                // Strip common tracking and referrer params
+                ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'si', 'fbclid', 'igsh', 'feature', 'ref', 'source'].forEach((p) => {
+                    parsed.searchParams.delete(p);
+                });
+
+                if (parsed.hostname.includes('google.com') && parsed.pathname.includes('/store/apps/details')) {
+                    // Google Play app listings must be distinct by app package id
+                    const idParam = (parsed.searchParams.get('id') || pkg || '').toLowerCase().trim();
+                    normalizedUrl = idParam ? `${parsed.origin}${parsed.pathname}?id=${idParam}` : `${parsed.origin}${parsed.pathname}`;
+                } else if (parsed.hostname.includes('youtube.com') && parsed.pathname.includes('/watch')) {
+                    // YouTube video watch URLs must be distinct by video id
+                    const vParam = (parsed.searchParams.get('v') || '').trim();
+                    normalizedUrl = vParam ? `${parsed.origin}${parsed.pathname}?v=${vParam}` : `${parsed.origin}${parsed.pathname}`;
+                } else if (parsed.hostname.includes('youtu.be')) {
+                    // Short YouTube video links: youtu.be/<id>
+                    normalizedUrl = `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '');
+                } else {
+                    // Other URLs (e.g. Google Maps, websites, Instagram posts)
+                    const cleanSearch = parsed.searchParams.toString();
+                    normalizedUrl = cleanSearch
+                        ? `${parsed.origin}${parsed.pathname.replace(/\/+$/, '')}?${cleanSearch}`
+                        : `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '');
+                }
             } catch (_) {
                 normalizedUrl = rawUrl.replace(/\/+$/, '');
             }

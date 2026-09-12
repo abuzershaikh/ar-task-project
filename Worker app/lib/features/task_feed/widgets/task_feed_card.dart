@@ -21,6 +21,23 @@ class TaskFeedCard extends StatelessWidget {
 
     final isInstall = _isAppInstall(task);
 
+    final plat = _getPlatform(task);
+
+    // Check for business name first for Google Business / Maps tasks
+    if (plat == 'google_business' || plat == 'google_maps') {
+      String? bName;
+      if (task['businessName'] != null && task['businessName'].toString().trim().isNotEmpty) {
+        bName = task['businessName'].toString().trim();
+      } else if (task['requirements'] is Map &&
+          task['requirements']['businessName'] != null &&
+          task['requirements']['businessName'].toString().trim().isNotEmpty) {
+        bName = task['requirements']['businessName'].toString().trim();
+      }
+      if (bName != null && bName.isNotEmpty) {
+        return 'Rate & Review: $bName';
+      }
+    }
+
     // 1. Extract app name if available
     String? appName;
     if (task['appName'] != null && task['appName'].toString().trim().isNotEmpty) {
@@ -80,7 +97,6 @@ class TaskFeedCard extends StatelessWidget {
       }
     }
     final rawType = (task['taskType'] ?? task['type'] ?? 'Task').toString();
-    final plat = _getPlatform(task);
     if (isInstall) return 'Install & Open App';
     if (plat == 'google_business' || plat == 'google_maps' || plat == 'google') {
       final rtLower = rawType.toLowerCase();
@@ -130,6 +146,9 @@ class TaskFeedCard extends StatelessWidget {
   String _getSubtitle(dynamic task, String platform) {
     if (_isAppInstall(task)) {
       return 'Install App & Open for 30 Seconds';
+    }
+    if (platform == 'google_business' || platform == 'google_maps') {
+      return '5-Star Google Business / Maps Review';
     }
     if (task != null && task['requirements'] is Map && (task['requirements']['appName'] != null && task['requirements']['appName'].toString().trim().isNotEmpty)) {
       return '5-Star Google Play Store Review';

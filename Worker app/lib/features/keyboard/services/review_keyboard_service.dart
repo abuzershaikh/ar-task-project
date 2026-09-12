@@ -115,6 +115,32 @@ class ReviewKeyboardService {
     } catch (_) {}
   }
 
+  /// Checks if the keyboard is both enabled and actively selected.
+  Future<bool> isKeyboardFullyReady() async {
+    final enabled = await isKeyboardEnabled();
+    if (!enabled) return false;
+    final selected = await isKeyboardSelected();
+    return selected;
+  }
+
+  /// Checks if the user has already seen the first-time keyboard setup onboarding.
+  Future<bool> hasSeenKeyboardOnboarding() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool('has_seen_keyboard_onboarding') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Marks that the user has completed or seen the keyboard setup onboarding.
+  Future<void> markKeyboardOnboardingSeen() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_seen_keyboard_onboarding', true);
+    } catch (_) {}
+  }
+
   /// Gets the currently loaded review text if any.
   Future<String?> getActiveReview() async {
     try {

@@ -33,12 +33,24 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _checkStatus();
+      _pollStatusAfterAction();
+    }
+  }
+
+  void _pollStatusAfterAction() {
+    _checkStatus();
+    final delays = [400, 800, 1500, 2500, 4000];
+    for (final ms in delays) {
+      Future.delayed(Duration(milliseconds: ms), () {
+        if (mounted) _checkStatus();
+      });
     }
   }
 
   Future<void> _checkStatus() async {
     final enabled = await ReviewKeyboardService.instance.isKeyboardEnabled();
     final selected = await ReviewKeyboardService.instance.isKeyboardSelected();
+    await ReviewKeyboardService.instance.markKeyboardOnboardingSeen();
     if (mounted) {
       setState(() {
         _isEnabled = enabled;
@@ -67,6 +79,23 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF0F172A)),
+            tooltip: 'Refresh Status',
+            onPressed: () async {
+              await _checkStatus();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Status refreshed!'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -139,7 +168,7 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
               buttonText: _isEnabled ? '✓ Enabled' : 'Enable in Settings',
               buttonAction: () async {
                 await ReviewKeyboardService.instance.openKeyboardSettings();
-                _checkStatus();
+                _pollStatusAfterAction();
               },
             ),
             const SizedBox(height: 14),
@@ -154,7 +183,22 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
               buttonText: _isSelected ? '✓ Currently Active' : 'Switch Keyboard',
               buttonAction: () async {
                 await ReviewKeyboardService.instance.openInputMethodPicker();
-                _checkStatus();
+                _pollStatusAfterAction();
+              },
+            ),
+            const SizedBox(height: 14),
+
+            // Step 3: Switch back to default keyboard
+            _buildStepCard(
+              step: '3',
+              title: 'Default Keyboard (Gboard / Samsung)',
+              desc:
+                  'Finished review tasks? You can switch back to your normal daily keyboard anytime with 1 tap.',
+              isComplete: !_isSelected,
+              buttonText: !_isSelected ? '✓ Default Keyboard Active' : 'Switch to Default Keyboard',
+              buttonAction: () async {
+                await ReviewKeyboardService.instance.openInputMethodPicker();
+                _pollStatusAfterAction();
               },
             ),
             const SizedBox(height: 24),
@@ -180,10 +224,99 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Tap the input box below to open the keyboard and test the "✍️ Write Review" button:',
+                    'Load a demo review to see the keyboard top bar and test the "✍️ Write Review" auto-typing:',
                     style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
                   ),
                   const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0284C7),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.star_rounded, size: 16),
+                        label: const Text('Google Maps Review', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        onPressed: () async {
+                          await ReviewKeyboardService.instance.setActiveReview(
+                            taskId: 'demo_maps_123',
+                            reviewText: 'Outstanding service and very polite staff! Everything was handled smoothly and professionally.',
+                            platform: 'google_maps',
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('⭐ Google Maps review loaded! Tap the test box below.'),
+                                backgroundColor: Color(0xFF0284C7),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF059669),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.play_arrow_rounded, size: 16),
+                        label: const Text('Play Store Review', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        onPressed: () async {
+                          await ReviewKeyboardService.instance.setActiveReview(
+                            taskId: 'demo_play_456',
+                            reviewText: 'Super smooth app with great UI and reliable features. Highly recommended for daily use!',
+                            platform: 'playstore',
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('📱 Play Store review loaded! Tap the test box below.'),
+                                backgroundColor: Color(0xFF059669),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFEF4444),
+                          side: const BorderSide(color: Color(0xFFFCA5A5)),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        icon: const Icon(Icons.cleaning_services_rounded, size: 16),
+                        label: const Text('Clear Review', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        onPressed: () async {
+                          await ReviewKeyboardService.instance.clearActiveReview();
+                          _testController.clear();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('🧹 Keyboard review cleared!'),
+                                backgroundColor: Color(0xFF64748B),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Tap the box below to open the keyboard and press "✍️ Write Review":',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
                   TextField(
                     controller: _testController,
                     maxLines: 4,
@@ -248,8 +381,8 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
                         step,
                         style: const TextStyle(
                           color: Colors.white,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          fontSize: 12,
                         ),
                       ),
               ),
@@ -274,7 +407,7 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            height: 38,
+            height: 44,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: isComplete
@@ -291,7 +424,7 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
               onPressed: buttonAction,
               child: Text(
                 buttonText,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
               ),
             ),
           ),

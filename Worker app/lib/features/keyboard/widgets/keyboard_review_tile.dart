@@ -45,6 +45,17 @@ class _KeyboardReviewTileState extends State<KeyboardReviewTile>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _checkKeyboardStatus();
+      _pollStatusAfterAction();
+    }
+  }
+
+  void _pollStatusAfterAction() {
+    _checkKeyboardStatus();
+    final delays = [400, 800, 1500, 2500, 4000];
+    for (final ms in delays) {
+      Future.delayed(Duration(milliseconds: ms), () {
+        if (mounted) _checkKeyboardStatus();
+      });
     }
   }
 
@@ -207,7 +218,7 @@ class _KeyboardReviewTileState extends State<KeyboardReviewTile>
                 ),
                 onPressed: () async {
                   await ReviewKeyboardService.instance.openKeyboardSettings();
-                  _checkKeyboardStatus();
+                  _pollStatusAfterAction();
                 },
                 icon: const Icon(Icons.settings_suggest_rounded, size: 16),
                 label: const Text(
@@ -258,7 +269,7 @@ class _KeyboardReviewTileState extends State<KeyboardReviewTile>
                 ),
                 onPressed: () async {
                   await ReviewKeyboardService.instance.openInputMethodPicker();
-                  _checkKeyboardStatus();
+                  _pollStatusAfterAction();
                 },
                 icon: const Icon(Icons.swap_horiz_rounded, size: 16),
                 label: const Text(

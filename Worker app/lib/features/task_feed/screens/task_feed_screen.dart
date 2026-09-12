@@ -142,41 +142,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
       return 'app_install';
     }
 
-    // 2. Play Store Review & Rating
-    if (type.contains('PLAYSTORE') ||
-        serviceCode.contains('PLAYSTORE') ||
-        title.contains('play store') ||
-        reqServiceName.contains('play store') ||
-        reqCategory.contains('play store') ||
-        reqPlatform == 'playstore' ||
-        targetUrl.contains('play.google.com')) {
-      return 'playstore';
-    }
-
-    // 3. YouTube (Only if NOT an App Install!)
-    if (type.startsWith('YOUTUBE') ||
-        serviceCode.startsWith('YOUTUBE') ||
-        serviceCode.startsWith('YT_') ||
-        title.contains('youtube') ||
-        reqServiceName.contains('youtube') ||
-        reqCategory.contains('youtube') ||
-        targetUrl.contains('youtube.com') ||
-        targetUrl.contains('youtu.be')) {
-      return 'youtube';
-    }
-
-    // 4. Instagram
-    if (type.startsWith('INSTAGRAM') ||
-        serviceCode.startsWith('INSTAGRAM') ||
-        serviceCode.startsWith('IG_') ||
-        title.contains('instagram') ||
-        reqServiceName.contains('instagram') ||
-        reqCategory.contains('instagram') ||
-        targetUrl.contains('instagram.com')) {
-      return 'instagram';
-    }
-
-    // 5. Google (Maps / Local Reviews / Business)
+    // 2. Google (Maps / Local Reviews / Business) - Checked before generic URL matches
     if (type.contains('GOOGLE_BUSINESS') ||
         serviceCode.contains('GOOGLE_BUSINESS') ||
         type.contains('GOOGLE_MAPS') ||
@@ -195,6 +161,40 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
         targetUrl.contains('maps.google.com') ||
         targetUrl.contains('goo.gl/maps')) {
       return 'google';
+    }
+
+    // 3. Play Store Review & Rating
+    if (type.contains('PLAYSTORE') ||
+        serviceCode.contains('PLAYSTORE') ||
+        title.contains('play store') ||
+        reqServiceName.contains('play store') ||
+        reqCategory.contains('play store') ||
+        reqPlatform == 'playstore' ||
+        targetUrl.contains('play.google.com')) {
+      return 'playstore';
+    }
+
+    // 4. YouTube (Only if NOT an App Install!)
+    if (type.startsWith('YOUTUBE') ||
+        serviceCode.startsWith('YOUTUBE') ||
+        serviceCode.startsWith('YT_') ||
+        title.contains('youtube') ||
+        reqServiceName.contains('youtube') ||
+        reqCategory.contains('youtube') ||
+        targetUrl.contains('youtube.com') ||
+        targetUrl.contains('youtu.be')) {
+      return 'youtube';
+    }
+
+    // 5. Instagram
+    if (type.startsWith('INSTAGRAM') ||
+        serviceCode.startsWith('INSTAGRAM') ||
+        serviceCode.startsWith('IG_') ||
+        title.contains('instagram') ||
+        reqServiceName.contains('instagram') ||
+        reqCategory.contains('instagram') ||
+        targetUrl.contains('instagram.com')) {
+      return 'instagram';
     }
 
     // Fallback: check raw platform tag safely
