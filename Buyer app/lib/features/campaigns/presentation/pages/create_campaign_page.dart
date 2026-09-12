@@ -122,12 +122,13 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
 
   void _onTargetUrlChanged(String val) {
     final trimmed = val.trim();
+    final isGoogleBusiness = _isGoogleBusinessService(_selectedService);
     final isPlayStore = _isPlayStoreService(_selectedService);
     final isYouTube = _isYouTubeService(_selectedService) ||
         trimmed.contains('youtube.com') ||
         trimmed.contains('youtu.be');
 
-    if (!isPlayStore && !isYouTube) return;
+    if (isGoogleBusiness || (!isPlayStore && !isYouTube)) return;
     _urlDebounceTimer?.cancel();
 
     if (trimmed.isEmpty) {
@@ -353,6 +354,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               'serviceCode': _selectedService?.code,
               'targetUrl': _targetUrlController.text.trim(),
               'appName': cleanBrand,
+              'businessName': cleanBrand,
               'videoTitle': _isYouTubeService(_selectedService) ? (_ytTitle?.isNotEmpty == true ? _ytTitle! : userAppName) : '',
             },
           );
@@ -375,11 +377,11 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
 
       // Instant Organic Fallback Generation with Semantic Intent Matching
       final targetCount = _selectedQuantity < 5 ? (_selectedQuantity > 0 ? _selectedQuantity : 1) : 5;
-      final isReview = _selectedService?.code.toUpperCase().contains('PLAY') == true ||
+      final isGoogle = _isGoogleBusinessService(_selectedService);
+      final isReview = !isGoogle && (_selectedService?.code.toUpperCase().contains('PLAY') == true ||
           _selectedService?.code.toUpperCase().contains('REVIEW') == true ||
           _selectedService?.category.toUpperCase().contains('PLAY') == true ||
-          _selectedService?.name.toUpperCase().contains('PLAY') == true ||
-          _selectedService?.name.toUpperCase().contains('REVIEW') == true;
+          _selectedService?.name.toUpperCase().contains('PLAY') == true);
 
       final isHindi = _selectedLanguage.toLowerCase().contains('hindi') || _selectedLanguage.toLowerCase().contains('hinglish');
       final lowerPrompt = userPrompt.toLowerCase();
@@ -408,7 +410,39 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
 
       List<String> fallbacks = [];
 
-      if (isReview) {
+      if (isGoogle) {
+        fallbacks = isHindi
+            ? [
+                cleanBrand.isNotEmpty
+                    ? "$cleanBrand par visit karke bohot accha laga. Staff kaafi polite aur cooperative hai."
+                    : "Bohot hi acchi service aur staff ka behaviour kaafi polite aur helpful tha.",
+                cleanBrand.isNotEmpty
+                    ? "$cleanBrand ki service quality ekdum top-notch hai aur premises bohot clean aur well-maintained hai. 100% recommended!"
+                    : "Service quality ekdum top-notch hai aur premises bohot clean aur well-maintained hai. 100% recommended!",
+                cleanBrand.isNotEmpty
+                    ? "$cleanBrand is area me sabse best option hai. Mera experience bohot shandaar raha."
+                    : "Kamaal ka experience raha, har cheez time par aur bina kisi pareshani ke ho gayi.",
+                "Customer satisfaction par pura dhyan dete hain. Pricing bhi bohot reasonable aur genuine hai.",
+                cleanBrand.isNotEmpty
+                    ? "Mai $cleanBrand ko sabhi ko recommend karunga. Truly 5-star service aur fast response!"
+                    : "Bohot professional approach aur prompt support mila. Aage bhi yahi visit karunga.",
+              ]
+            : [
+                cleanBrand.isNotEmpty
+                    ? "Had a wonderful experience at $cleanBrand. The staff was polite, professional, and very welcoming."
+                    : "Outstanding customer service and very welcoming atmosphere. Highly recommended!",
+                cleanBrand.isNotEmpty
+                    ? "$cleanBrand provides top-notch service and very well-maintained setup. Everything exceeded my expectations."
+                    : "Top-notch service and very well-maintained setup. Everything exceeded my expectations.",
+                cleanBrand.isNotEmpty
+                    ? "$cleanBrand provides reliable service with great attention to detail. Will definitely visit again."
+                    : "Extremely satisfied with the overall experience. Prompt response and great guidance throughout.",
+                "Clean environment, courteous staff, and hassle-free service. A truly 5-star experience!",
+                cleanBrand.isNotEmpty
+                    ? "Highly recommend $cleanBrand to anyone looking for quality service and dependable support."
+                    : "One of the best places in town. Dedicated team and honest, dependable service.",
+              ];
+      } else if (isReview) {
         if (isPayment) {
           fallbacks = isHindi
               ? [
@@ -1151,27 +1185,34 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                           ? 'YouTube Video Link (Target for Watch, Like, Subscribe & Comment)'
                           : (_isInstagramCombo(s)
                               ? 'Instagram Profile Link (Target for Follower & Like)'
-                              : (s.linkFieldLabel ?? 'Target Link / Video URL')),
+                              : (_isGoogleBusinessService(s)
+                                  ? 'Google Maps Business Listing Link'
+                                  : (s.linkFieldLabel ?? 'Target Link / Video URL'))),
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _targetUrlController,
-                      keyboardType: TextInputType.url,
                       onChanged: _onTargetUrlChanged,
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) {
-                          return 'Please provide target URL';
+                          return 'Please enter a target link';
+                        }
+                        if (!val.trim().startsWith('http://') && !val.trim().startsWith('https://')) {
+                          return 'Please enter a valid URL (starting with https://)';
                         }
                         return null;
                       },
+                      style: const TextStyle(fontSize: 13),
                       decoration: InputDecoration(
                         hintText: _isYouTubeCombo(s)
                             ? 'https://www.youtube.com/watch?v=... or youtu.be/...'
                             : (_isInstagramCombo(s)
                                 ? 'https://www.instagram.com/your_username'
-                                : (s.linkFieldPlaceholder ?? 'https://...')),
+                                : (_isGoogleBusinessService(s)
+                                    ? 'https://maps.app.goo.gl/... or Google Maps listing link'
+                                    : (s.linkFieldPlaceholder ?? 'https://...'))),
                         hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                         prefixIcon: const Icon(Icons.link_rounded, color: Color(0xFF2563EB)),
                         suffixIcon: Row(
@@ -1307,7 +1348,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                     ],
 
                     // Play Store App Preview Card
-                    if (_appName != null && _appName!.isNotEmpty) ...[
+                    if (_isPlayStoreService(_selectedService) && _appName != null && _appName!.isNotEmpty) ...[
                       const SizedBox(height: 14),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -1665,11 +1706,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   appName: _appNameController.text.trim().isNotEmpty
                       ? _appNameController.text.trim()
                       : (_isYouTubeService(s) ? _ytTitle : _appName),
-                  isAppReview: s.code.toUpperCase().contains('PLAY') ||
-                      s.code.toUpperCase().contains('REVIEW') ||
-                      s.category.toUpperCase().contains('PLAY') ||
-                      s.name.toUpperCase().contains('PLAY') ||
-                      s.name.toUpperCase().contains('REVIEW'),
+                  isAppReview: _isPlayStoreService(s),
+                  isGoogleBusiness: _isGoogleBusinessService(s),
                   onGeneratePreview: _generateSampleComments,
                   onLanguageChanged: (lang) => setState(() {
                     _selectedLanguage = lang;

@@ -12,6 +12,7 @@ class AiCommentConfigWidget extends StatefulWidget {
   final bool isGeneratingPreview;
   final VoidCallback onGeneratePreview;
   final bool isAppReview;
+  final bool isGoogleBusiness;
   final String? appName;
 
   const AiCommentConfigWidget({
@@ -27,6 +28,7 @@ class AiCommentConfigWidget extends StatefulWidget {
     this.isGeneratingPreview = false,
     required this.onGeneratePreview,
     this.isAppReview = false,
+    this.isGoogleBusiness = false,
     this.appName,
   });
 
@@ -53,19 +55,129 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final previewTargetCount = widget.selectedQuantity < 5 ? (widget.selectedQuantity > 0 ? widget.selectedQuantity : 1) : 5;
-    final displayedComments = widget.sampleComments.take(previewTargetCount).toList();
+    final bool isGoogle = widget.isGoogleBusiness;
+    final bool isApp = widget.isAppReview && !isGoogle;
+
+    final previewTargetCount = widget.selectedQuantity < 5
+        ? (widget.selectedQuantity > 0 ? widget.selectedQuantity : 1)
+        : 5;
+    final displayedComments =
+        widget.sampleComments.take(previewTargetCount).toList();
     final hasSamples = displayedComments.isNotEmpty;
-    final remainingCount = (widget.selectedQuantity - displayedComments.length).clamp(0, 99999);
-    final unitType = widget.isAppReview ? (previewTargetCount == 1 ? "5-Star Review" : "5-Star Reviews") : (previewTargetCount == 1 ? "Comment" : "Comments");
+    final remainingCount =
+        (widget.selectedQuantity - displayedComments.length).clamp(0, 99999);
+
+    final String unitType = isGoogle
+        ? (previewTargetCount == 1 ? "5-Star Review" : "5-Star Reviews")
+        : (isApp
+            ? (previewTargetCount == 1 ? "5-Star Review" : "5-Star Reviews")
+            : (previewTargetCount == 1 ? "Comment" : "Comments"));
     final countLabel = '$previewTargetCount Sample $unitType';
+
+    final Color containerBg = isGoogle
+        ? const Color(0xFFEFF6FF)
+        : (isApp ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2));
+    final Color containerBorder = isGoogle
+        ? const Color(0xFF93C5FD)
+        : (isApp ? const Color(0xFF86EFAC) : const Color(0xFFFECACA));
+    final Color headerIconBg = isGoogle
+        ? const Color(0xFFDBEAFE)
+        : (isApp ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2));
+    final Color primaryColor = isGoogle
+        ? const Color(0xFF2563EB)
+        : (isApp ? const Color(0xFF16A34A) : const Color(0xFFDC2626));
+    final Color titleColor = isGoogle
+        ? const Color(0xFF1E40AF)
+        : (isApp ? const Color(0xFF166534) : const Color(0xFF991B1B));
+    final Color badgeBg = isGoogle
+        ? const Color(0xFFDBEAFE)
+        : (isApp ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2));
+    final Color badgeBorder = isGoogle
+        ? const Color(0xFFBFDBFE)
+        : (isApp ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA));
+    final Color badgeTextColor = isGoogle
+        ? const Color(0xFF1D4ED8)
+        : (isApp ? const Color(0xFF15803D) : const Color(0xFFB91C1C));
+    final Color dividerColor = isGoogle
+        ? const Color(0xFFBFDBFE)
+        : (isApp ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA));
+
+    final String widgetTitle = isGoogle
+        ? 'Custom Organic 5-Star Google Reviews'
+        : (isApp ? 'Custom Organic 5-Star Reviews' : 'Custom Organic Comments');
+
+    final String badgeLabel = isGoogle
+        ? '100% Real Local Customers'
+        : (isApp ? '100% Unique & Natural' : '100% Unique & Natural');
+
+    final String widgetDescription = isGoogle
+        ? 'Authentic, genuine 5-star business reviews crafted for individual workers to post on Google Maps / Google Business.'
+        : (isApp
+            ? 'Authentic, genuine 5-star app reviews crafted for individual workers to post on Google Play Store.'
+            : 'Authentic, context-relevant comments crafted for individual workers to post naturally.');
+
+    final String nameFieldLabel = isGoogle
+        ? 'Business / Place Name:'
+        : (isApp ? 'App Name:' : 'Video Title / Topic (Detected or Enter Manually):');
+
+    final String nameFieldHint = isGoogle
+        ? 'e.g. Royal Dental Clinic, Cafe Bistro, Sharma Automobiles'
+        : (isApp
+            ? 'e.g. Cashify, PhonePe, WhatsApp'
+            : 'e.g. Trading Strategy Masterclass, Tech Vlog, Python Tutorial');
+
+    final IconData nameFieldIcon = isGoogle
+        ? Icons.storefront_rounded
+        : (isApp ? Icons.apps_rounded : Icons.play_circle_outline_rounded);
+
+    final String promptFieldLabel = isGoogle
+        ? 'Review Focus / Service Highlights (Optional):'
+        : (isApp
+            ? 'Review Focus / Custom Prompt (Optional):'
+            : 'AI Prompt / Comment Instructions (Optional):');
+
+    final String promptFieldSubtext = isGoogle
+        ? 'Specify what services, staff behavior, cleanliness, or highlights AI should praise.'
+        : (isApp
+            ? 'Specify what specific features or feedback AI should focus on.'
+            : 'Enter a prompt or custom instructions for AI on what kind of comments to generate.');
+
+    final String promptFieldHint = isGoogle
+        ? 'e.g. Polite staff, quick service, clean environment, highly recommended'
+        : (isApp
+            ? 'e.g. Fast pickup, quick payment, smooth delivery (or leave blank for natural praise)'
+            : 'e.g. Praise the video, ask for part 2, ask insightful questions, highlight key tips...');
+
+    final List<String> suggestions = isGoogle
+        ? [
+            'Polite Staff & Fast Service',
+            'Highly Recommended',
+            'Great Experience',
+            'Neat & Clean Ambience',
+            'Professional & Punctual',
+            'Best in the Area',
+          ]
+        : (isApp
+            ? [
+                'Smooth & Fast UI',
+                'Excellent Support',
+                'Very Useful App',
+                'Recommended to All',
+              ]
+            : [
+                'Praise & Support',
+                'Ask for Part 2',
+                'Insightful Tutorial',
+                'Great Explanation',
+                'Subscribed & Liked',
+              ]);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
+        color: containerBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF86EFAC)),
+        border: Border.all(color: containerBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,19 +188,25 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
+                  color: headerIconBg,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 18),
+                child: Icon(
+                  isGoogle
+                      ? Icons.location_on_rounded
+                      : (isApp ? Icons.verified_rounded : Icons.mode_comment_rounded),
+                  color: primaryColor,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  widget.isAppReview ? 'Custom Organic 5-Star Reviews' : 'Custom Organic Comments',
-                  style: const TextStyle(
+                  widgetTitle,
+                  style: TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF166534),
+                    color: titleColor,
                   ),
                 ),
               ),
@@ -104,19 +222,23 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
+                  color: badgeBg,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                  border: Border.all(color: badgeBorder),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.shield_outlined, size: 12, color: Color(0xFF15803D)),
-                    SizedBox(width: 4),
+                    Icon(
+                      isGoogle ? Icons.place_rounded : Icons.shield_outlined,
+                      size: 12,
+                      color: badgeTextColor,
+                    ),
+                    const SizedBox(width: 4),
                     Text(
-                      '100% Unique & Natural',
+                      badgeLabel,
                       style: TextStyle(
-                        color: Color(0xFF15803D),
+                        color: badgeTextColor,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -143,7 +265,7 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            'Target: ${widget.appName}',
+                            isGoogle ? 'Business: ${widget.appName}' : 'Target: ${widget.appName}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -161,28 +283,24 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
           ),
           const SizedBox(height: 6),
           Text(
-            widget.isAppReview
-                ? 'Authentic, genuine 5-star app reviews crafted for individual workers to post on Google Play Store.'
-                : 'Authentic, context-relevant comments crafted for individual workers to post naturally.',
-            style: const TextStyle(fontSize: 11, color: Color(0xFF15803D), height: 1.3),
+            widgetDescription,
+            style: TextStyle(fontSize: 11, color: titleColor, height: 1.3),
           ),
-          const Divider(color: Color(0xFFBBF7D0), height: 20),
+          Divider(color: dividerColor, height: 20),
 
-          // App Name / Video Title Input
+          // App Name / Business Name / Video Title Input
           if (widget.appNameController != null) ...[
             Row(
               children: [
                 Icon(
-                  widget.isAppReview ? Icons.apps_rounded : Icons.video_collection_rounded,
+                  nameFieldIcon,
                   size: 16,
-                  color: widget.isAppReview ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                  color: primaryColor,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    widget.isAppReview
-                        ? 'App Name:'
-                        : 'Video Title / Topic (Detected or Enter Manually):',
+                    nameFieldLabel,
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -197,14 +315,12 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
               controller: widget.appNameController,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               decoration: InputDecoration(
-                hintText: widget.isAppReview
-                    ? 'e.g. Cashify, PhonePe, WhatsApp'
-                    : 'e.g. Trading Strategy Masterclass, Tech Vlog, Python Tutorial',
+                hintText: nameFieldHint,
                 hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                 prefixIcon: Icon(
-                  widget.isAppReview ? Icons.apps_rounded : Icons.play_circle_outline_rounded,
+                  nameFieldIcon,
                   size: 18,
-                  color: widget.isAppReview ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                  color: primaryColor,
                 ),
                 filled: true,
                 fillColor: Colors.white,
@@ -226,16 +342,16 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
           Row(
             children: [
               Icon(
-                widget.isAppReview ? Icons.rate_review_rounded : Icons.psychology_rounded,
+                isGoogle
+                    ? Icons.rate_review_rounded
+                    : (isApp ? Icons.rate_review_rounded : Icons.psychology_rounded),
                 size: 16,
-                color: widget.isAppReview ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                color: primaryColor,
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  widget.isAppReview
-                      ? 'Review Focus / Custom Prompt (Optional):'
-                      : 'AI Prompt / Comment Instructions (Optional):',
+                  promptFieldLabel,
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
@@ -247,9 +363,7 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
           ),
           const SizedBox(height: 4),
           Text(
-            widget.isAppReview
-                ? 'Specify what specific features or feedback AI should focus on.'
-                : 'Enter a prompt or custom instructions for AI on what kind of comments to generate.',
+            promptFieldSubtext,
             style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
           ),
           const SizedBox(height: 8),
@@ -259,14 +373,12 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
             minLines: 1,
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
-              hintText: widget.isAppReview
-                  ? 'e.g. Fast pickup, quick payment, smooth delivery (or leave blank for natural praise)'
-                  : 'e.g. Praise the video, ask for part 2, ask insightful questions, highlight key tips...',
+              hintText: promptFieldHint,
               hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
               prefixIcon: Icon(
                 Icons.auto_awesome,
                 size: 18,
-                color: widget.isAppReview ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                color: primaryColor,
               ),
               filled: true,
               fillColor: Colors.white,
@@ -287,20 +399,7 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: (widget.isAppReview
-                      ? [
-                          'Smooth & Fast UI',
-                          'Excellent Support',
-                          'Very Useful App',
-                          'Recommended to All',
-                        ]
-                      : [
-                          'Praise & Support',
-                          'Ask for Part 2',
-                          'Insightful Tutorial',
-                          'Great Explanation',
-                          'Subscribed & Liked',
-                        ])
+              children: suggestions
                   .map((suggestion) => Padding(
                         padding: const EdgeInsets.only(right: 6),
                         child: ActionChip(
@@ -341,13 +440,21 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                   children: [
                     const Text(
                       'Language:',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E293B),
+                      ),
                     ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       isExpanded: true,
                       value: widget.selectedLanguage,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF0F172A), fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.w600,
+                      ),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
@@ -357,10 +464,12 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                           borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                         ),
                       ),
-                      items: _languages.map((l) => DropdownMenuItem(
-                        value: l, 
-                        child: Text(l, overflow: TextOverflow.ellipsis, maxLines: 1),
-                      )).toList(),
+                      items: _languages
+                          .map((l) => DropdownMenuItem(
+                                value: l,
+                                child: Text(l, overflow: TextOverflow.ellipsis, maxLines: 1),
+                              ))
+                          .toList(),
                       onChanged: (val) => widget.onLanguageChanged(val ?? 'English'),
                     ),
                   ],
@@ -373,15 +482,23 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Comment Tone:',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                    Text(
+                      isGoogle || isApp ? 'Review Tone:' : 'Comment Tone:',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1E293B),
+                      ),
                     ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       isExpanded: true,
                       value: widget.selectedTone,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF0F172A), fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.w600,
+                      ),
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: Colors.white,
@@ -391,10 +508,13 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                           borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                         ),
                       ),
-                      items: _tones.map((t) => DropdownMenuItem(
-                        value: t['key'],
-                        child: Text(t['label'] ?? '', overflow: TextOverflow.ellipsis, maxLines: 1),
-                      )).toList(),
+                      items: _tones
+                          .map((t) => DropdownMenuItem(
+                                value: t['key'],
+                                child: Text(t['label'] ?? '',
+                                    overflow: TextOverflow.ellipsis, maxLines: 1),
+                              ))
+                          .toList(),
                       onChanged: (val) => widget.onToneChanged(val ?? 'natural'),
                     ),
                   ],
@@ -411,21 +531,30 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
               onPressed: widget.isGeneratingPreview ? null : widget.onGeneratePreview,
               style: OutlinedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF16A34A),
-                side: const BorderSide(color: Color(0xFF16A34A), width: 1.5),
+                foregroundColor: primaryColor,
+                side: BorderSide(color: primaryColor, width: 1.5),
                 padding: const EdgeInsets.symmetric(vertical: 11),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               icon: widget.isGeneratingPreview
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF16A34A)),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor),
                     )
-                  : Icon(widget.isAppReview ? Icons.star_rate_rounded : Icons.mode_comment_outlined, size: 18),
+                  : Icon(
+                      isGoogle
+                          ? Icons.location_on_rounded
+                          : (isApp ? Icons.star_rate_rounded : Icons.mode_comment_outlined),
+                      size: 18,
+                    ),
               label: Text(
                 widget.isGeneratingPreview
-                    ? (widget.isAppReview ? 'Crafting sample 5-star reviews...' : 'Crafting sample comments...')
+                    ? (isGoogle
+                        ? 'Crafting sample 5-star Google reviews...'
+                        : (isApp
+                            ? 'Crafting sample 5-star reviews...'
+                            : 'Crafting sample comments...'))
                     : (hasSamples ? '🔄 Regenerate $countLabel' : '✨ Generate $countLabel'),
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
               ),
@@ -440,7 +569,7 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFBBF7D0)),
+                border: Border.all(color: containerBorder),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,13 +579,15 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                     children: [
                       Expanded(
                         child: Text(
-                          widget.isAppReview
-                              ? 'Sample 5-Star Reviews (${displayedComments.length} of ${widget.selectedQuantity})'
-                              : (widget.selectedQuantity < 5
-                                  ? 'Generated Comments (${displayedComments.length} of ${widget.selectedQuantity})'
-                                  : 'Sample Preview (${displayedComments.length} of ${widget.selectedQuantity} Comments)'),
-                          style: const TextStyle(
-                            color: Color(0xFF166534),
+                          isGoogle
+                              ? 'Sample 5-Star Google Reviews (${displayedComments.length} of ${widget.selectedQuantity})'
+                              : (isApp
+                                  ? 'Sample 5-Star Reviews (${displayedComments.length} of ${widget.selectedQuantity})'
+                                  : (widget.selectedQuantity < 5
+                                      ? 'Generated Comments (${displayedComments.length} of ${widget.selectedQuantity})'
+                                      : 'Sample Preview (${displayedComments.length} of ${widget.selectedQuantity} Comments)')),
+                          style: TextStyle(
+                            color: titleColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -464,7 +595,7 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 16),
+                      Icon(Icons.check_circle_rounded, color: primaryColor, size: 16),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -486,13 +617,13 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE0F2FE),
+                              color: badgeBg,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               '#$index',
-                              style: const TextStyle(
-                                color: Color(0xFF0369A1),
+                              style: TextStyle(
+                                color: badgeTextColor,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -502,7 +633,8 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                           Expanded(
                             child: Text(
                               comment,
-                              style: const TextStyle(color: Color(0xFF334155), fontSize: 12, height: 1.3),
+                              style: const TextStyle(
+                                  color: Color(0xFF334155), fontSize: 12, height: 1.3),
                             ),
                           ),
                         ],
@@ -514,26 +646,30 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: containerBg,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                      border: Border.all(color: containerBorder),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFF2563EB)),
+                        Icon(Icons.info_outline_rounded, size: 15, color: primaryColor),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            widget.isAppReview
+                            isGoogle
                                 ? (widget.selectedQuantity > 5
-                                    ? 'Showing 5 sample preview 5-star reviews. The remaining $remainingCount unique reviews will be automatically prepared upon placing the order. Every worker receives their own distinct review to post.'
-                                    : 'All ${displayedComments.length} unique 5-star reviews are ready. Each worker will receive their own distinct review to post.')
-                                : (widget.selectedQuantity > 5
-                                    ? 'Showing 5 sample preview comments. The remaining $remainingCount unique comments will be automatically prepared upon placing the order. Every worker receives their own distinct comment to post.'
-                                    : 'All ${displayedComments.length} unique comments are ready. Each worker will receive their own distinct comment to post.'),
-                            style: const TextStyle(
-                              color: Color(0xFF1E40AF),
+                                    ? 'Showing 5 sample preview Google Maps reviews. The remaining $remainingCount unique reviews will be automatically prepared upon placing the order. Every worker receives their own distinct review to post.'
+                                    : 'All ${displayedComments.length} unique 5-star Google reviews are ready. Each worker will receive their own distinct review to post.')
+                                : (isApp
+                                    ? (widget.selectedQuantity > 5
+                                        ? 'Showing 5 sample preview 5-star reviews. The remaining $remainingCount unique reviews will be automatically prepared upon placing the order. Every worker receives their own distinct review to post.'
+                                        : 'All ${displayedComments.length} unique 5-star reviews are ready. Each worker will receive their own distinct review to post.')
+                                    : (widget.selectedQuantity > 5
+                                        ? 'Showing 5 sample preview comments. The remaining $remainingCount unique comments will be automatically prepared upon placing the order. Every worker receives their own distinct comment to post.'
+                                        : 'All ${displayedComments.length} unique comments are ready. Each worker will receive their own distinct comment to post.')),
+                            style: TextStyle(
+                              color: titleColor,
                               fontSize: 11,
                               height: 1.3,
                             ),

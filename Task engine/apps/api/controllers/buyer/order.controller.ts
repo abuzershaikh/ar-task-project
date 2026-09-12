@@ -100,6 +100,7 @@ export class BuyerOrderController {
             serviceCode?: string;
             targetUrl?: string;
             appName?: string;
+            businessName?: string;
             videoTitle?: string;
             appDescription?: string;
             model?: string;
@@ -143,7 +144,7 @@ export class BuyerOrderController {
                 uniqueness: true,
                 videoTitle,
                 appName: body.appName,
-                businessName: body.appName,
+                businessName: body.businessName || body.appName,
                 isAppReview: isPlayStore,
                 isGoogleBusiness,
                 generatorType,
