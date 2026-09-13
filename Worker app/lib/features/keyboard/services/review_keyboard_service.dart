@@ -17,9 +17,13 @@ class ReviewKeyboardService {
     final p = platform.trim().toLowerCase();
     return p == 'google_business' ||
         p == 'google_maps' ||
+        p == 'gmb' ||
+        p.contains('business') ||
+        p.contains('maps') ||
         p == 'playstore' ||
         p == 'google_play' ||
-        p == 'play_store';
+        p == 'play_store' ||
+        p.contains('play');
   }
 
   /// Sets the active review text and task ID in shared preferences and notifies native IME.

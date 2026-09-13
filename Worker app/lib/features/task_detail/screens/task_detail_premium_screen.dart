@@ -173,13 +173,13 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     }
   }
 
-  void _syncReviewToKeyboard() {
+  Future<void> _syncReviewToKeyboard() async {
     final p = _getPlatform();
     if (ReviewKeyboardService.instance.isEligiblePlatform(p) && _isCommentRequiredTask()) {
       final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
       final reviewText = _sanitizeWorkerReview(_getRawCustomText());
       if (reviewText.isNotEmpty) {
-        ReviewKeyboardService.instance.setActiveReview(
+        await ReviewKeyboardService.instance.setActiveReview(
           taskId: taskId,
           reviewText: reviewText,
           platform: p,
@@ -191,6 +191,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _syncReviewToKeyboard();
       _checkKeyboardReadiness();
       if (_isWatchingOnYouTube && !_isWatchCompleted) {
         _handleReturnFromYouTube();
@@ -1420,6 +1421,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       }
     });
 
+    _syncReviewToKeyboard();
     _startTimer();
 
     ScaffoldMessenger.of(context).showSnackBar(

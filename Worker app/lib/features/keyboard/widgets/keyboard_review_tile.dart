@@ -31,7 +31,29 @@ class _KeyboardReviewTileState extends State<KeyboardReviewTile>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _syncActiveReview();
     _checkKeyboardStatus();
+  }
+
+  @override
+  void didUpdateWidget(covariant KeyboardReviewTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.customText != widget.customText ||
+        oldWidget.taskId != widget.taskId ||
+        oldWidget.platform != widget.platform) {
+      _syncActiveReview();
+    }
+  }
+
+  Future<void> _syncActiveReview() async {
+    final text = widget.customText.trim();
+    if (text.isNotEmpty) {
+      await ReviewKeyboardService.instance.setActiveReview(
+        taskId: widget.taskId,
+        reviewText: text,
+        platform: widget.platform,
+      );
+    }
   }
 
   @override
@@ -44,6 +66,7 @@ class _KeyboardReviewTileState extends State<KeyboardReviewTile>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _syncActiveReview();
       _checkKeyboardStatus();
       _pollStatusAfterAction();
     }
@@ -273,6 +296,7 @@ class _KeyboardReviewTileState extends State<KeyboardReviewTile>
                   elevation: 0,
                 ),
                 onPressed: () async {
+                  await _syncActiveReview();
                   await ReviewKeyboardService.instance.openInputMethodPicker();
                   _pollStatusAfterAction();
                 },
@@ -334,7 +358,10 @@ class _KeyboardReviewTileState extends State<KeyboardReviewTile>
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
                 ),
-                onPressed: () => setState(() => _showTestField = !_showTestField),
+                onPressed: () async {
+                  await _syncActiveReview();
+                  setState(() => _showTestField = !_showTestField);
+                },
                 icon: Icon(
                   _showTestField
                       ? Icons.keyboard_arrow_up_rounded

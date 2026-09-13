@@ -54,7 +54,14 @@ class MainActivity : FlutterActivity() {
                         .putString("active_task_id", taskId)
                         .putString("active_review_text", reviewText)
                         .putString("active_platform", platform)
-                        .apply()
+                        .commit()
+
+                    // Immediately update active in-memory review keyboard service
+                    com.taskearning.earning.money.app.keyboard.TaskReviewInputMethodService.updateReview(
+                        taskId,
+                        reviewText,
+                        platform
+                    )
 
                     result.success(true)
                 }
@@ -67,7 +74,10 @@ class MainActivity : FlutterActivity() {
                         .remove("active_task_id")
                         .remove("active_review_text")
                         .remove("active_platform")
-                        .apply()
+                        .commit()
+
+                    // Immediately clear active in-memory review keyboard service
+                    com.taskearning.earning.money.app.keyboard.TaskReviewInputMethodService.clearReview()
 
                     result.success(true)
                 }

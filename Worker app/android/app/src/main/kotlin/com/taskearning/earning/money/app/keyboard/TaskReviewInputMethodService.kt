@@ -58,7 +58,41 @@ class TaskReviewInputMethodService : InputMethodService() {
     private val symbolRow2 = listOf("@", "#", "$", "%", "&", "-", "+", "(", ")")
     private val symbolRow3 = listOf("*", "\"", "'", ":", ";", "!", "?")
 
+    companion object {
+        var inMemoryReviewText: String? = null
+        var inMemoryPlatform: String? = null
+        var inMemoryTaskId: String? = null
+        private var activeInstance: TaskReviewInputMethodService? = null
+
+        fun updateReview(taskId: String, reviewText: String, platform: String) {
+            inMemoryTaskId = taskId
+            inMemoryReviewText = reviewText
+            inMemoryPlatform = platform
+
+            Handler(Looper.getMainLooper()).post {
+                activeInstance?.let { service ->
+                    service.loadActiveReviewFromPrefs()
+                    service.updateReviewBarUi()
+                }
+            }
+        }
+
+        fun clearReview() {
+            inMemoryTaskId = null
+            inMemoryReviewText = null
+            inMemoryPlatform = null
+
+            Handler(Looper.getMainLooper()).post {
+                activeInstance?.let { service ->
+                    service.loadActiveReviewFromPrefs()
+                    service.updateReviewBarUi()
+                }
+            }
+        }
+    }
+
     override fun onCreateInputView(): View {
+        activeInstance = this
         val inflater = LayoutInflater.from(this)
         rootView = inflater.inflate(R.layout.keyboard_view, null)
 
@@ -73,6 +107,14 @@ class TaskReviewInputMethodService : InputMethodService() {
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        activeInstance = this
+        loadActiveReviewFromPrefs()
+        updateReviewBarUi()
+    }
+
+    override fun onWindowShown() {
+        super.onWindowShown()
+        activeInstance = this
         loadActiveReviewFromPrefs()
         updateReviewBarUi()
     }
@@ -104,11 +146,14 @@ class TaskReviewInputMethodService : InputMethodService() {
 
     private fun loadActiveReviewFromPrefs() {
         val prefs = getPrefs()
-        activeReviewText = prefs.getString("flutter.active_review_text", null)
+        activeReviewText = inMemoryReviewText
+            ?: prefs.getString("flutter.active_review_text", null)
             ?: prefs.getString("active_review_text", null)
-        activePlatform = prefs.getString("flutter.active_platform", null)
+        activePlatform = inMemoryPlatform
+            ?: prefs.getString("flutter.active_platform", null)
             ?: prefs.getString("active_platform", null)
-        activeTaskId = prefs.getString("flutter.active_task_id", null)
+        activeTaskId = inMemoryTaskId
+            ?: prefs.getString("flutter.active_task_id", null)
             ?: prefs.getString("active_task_id", null)
     }
 
@@ -117,9 +162,8 @@ class TaskReviewInputMethodService : InputMethodService() {
         val platform = activePlatform?.lowercase() ?: ""
 
         val isGoogle = platform.contains("google") || platform.contains("maps") || platform.contains("business")
-        val isPlay = platform.contains("play") || platform.contains("app")
 
-        if (!review.isNullOrEmpty() && (isGoogle || isPlay)) {
+        if (!review.isNullOrEmpty()) {
             reviewActionBar.visibility = View.VISIBLE
             btnWriteReview.visibility = if (isTyping) View.GONE else View.VISIBLE
             btnPasteReview.visibility = if (isTyping) View.GONE else View.VISIBLE
@@ -355,6 +399,7 @@ class TaskReviewInputMethodService : InputMethodService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (activeInstance == this) activeInstance = null
         typingJob?.cancel()
         serviceScope.cancel()
     }
