@@ -149,7 +149,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '💡 Tip: Task Review Keyboard available at top for auto-typing or copy review manually.',
+                  '💡 Tip: Task Review Keyboard is ready for auto-typing review safely. Direct copy is disabled.',
                   style: TextStyle(fontSize: 12),
                 ),
               ),
@@ -3352,7 +3352,16 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           .where((l) => l.isNotEmpty)
           .toList();
       if (customLines.isNotEmpty) {
-        steps.addAll(customLines);
+        steps.addAll(customLines.map((line) {
+          if ((isPlayStore || _getPlatform() == 'google_business') &&
+              line.toLowerCase().contains('copy')) {
+            return line.replaceAll(
+              RegExp(r'Copy\s+(assigned\s+)?(authentic\s+|provided\s+|genuine\s+)?review', caseSensitive: false),
+              'Use Task Keyboard to write review',
+            );
+          }
+          return line;
+        }));
       }
     }
 
@@ -3405,7 +3414,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           'Click on the "Open Play Store" button below.',
           'Install or open the application page on Google Play Store.',
           'Give a 5-Star Rating (⭐⭐⭐⭐⭐) to the app.',
-          'Copy the provided review text and paste it into the review section.',
+          'Use Task Review Keyboard "✍️ Write Review" button to auto-type the review safely (Manual copy is disabled).',
           'Post your review and take a clear screenshot showing your 5-star rating & review.',
           'Return to this app and upload the screenshot proof to receive your instant reward.',
         ]);
@@ -3416,7 +3425,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
             'Click on the "Open Google Maps" button below.',
             'Locate the business profile on Google Maps.',
             'Give a 5-Star Rating (⭐⭐⭐⭐⭐) to the business.',
-            'Copy the provided genuine review text and paste it in the review box.',
+            'Use Task Review Keyboard "✍️ Write Review" button to auto-type the review safely (Manual copy is disabled).',
             'Post your review and take a clear screenshot showing your rating & review.',
             'Return to this app and upload the screenshot proof to receive your instant reward.',
           ]);
@@ -3608,11 +3617,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    isGoogleBusiness
-                        ? '(Copy & Paste into Google Maps)'
-                        : (isPlayStore
-                            ? '(Copy & Paste into Play Store)'
-                            : '(Copy & Paste)'),
+                    isReview
+                        ? '(Use Task Keyboard to Write)'
+                        : '(Copy & Paste)',
                     style: const TextStyle(
                       color: Color(0xFF94A3B8),
                       fontSize: 11.5,
@@ -3654,17 +3661,35 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
                 InkWell(
                   onTap: () {
+                    if (isReview) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.keyboard_alt_rounded, color: Colors.white, size: 20),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Direct copy is disabled! Please use Task Keyboard "✍️ Write Review" button.',
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Color(0xFFE11D48),
+                          behavior: SnackBarBehavior.floating,
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+                      return;
+                    }
                     Clipboard.setData(ClipboardData(text: customText));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
+                      const SnackBar(
                         content: Text(
-                          isReview
-                              ? '✓ 5-Star review text copied to clipboard!'
-                              : '✓ Comment text copied to clipboard!',
+                          '✓ Comment text copied to clipboard!',
                         ),
-                        backgroundColor: isGoogleBusiness
-                            ? const Color(0xFF2563EB)
-                            : const Color(0xFF059669),
+                        backgroundColor: Color(0xFF7C3AED),
                       ),
                     );
                   },
@@ -3675,52 +3700,58 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isReview ? const Color(0xFFF1F5F9) : Colors.white,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color:
-                            (isGoogleBusiness
+                        color: isReview
+                            ? const Color(0xFFCBD5E1)
+                            : ((isGoogleBusiness
                                     ? const Color(0xFF2563EB)
                                     : (isPlayStore
                                         ? const Color(0xFF059669)
                                         : const Color(0xFF7C3AED)))
-                                .withOpacity(0.3),
+                                .withOpacity(0.3)),
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              (isGoogleBusiness
-                                      ? const Color(0xFF2563EB)
-                                      : (isPlayStore
-                                          ? const Color(0xFF059669)
-                                          : const Color(0xFF7C3AED)))
-                                  .withOpacity(0.08),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      boxShadow: isReview
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: (isGoogleBusiness
+                                        ? const Color(0xFF2563EB)
+                                        : (isPlayStore
+                                            ? const Color(0xFF059669)
+                                            : const Color(0xFF7C3AED)))
+                                    .withOpacity(0.08),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.copy_rounded,
-                          color: isGoogleBusiness
-                              ? const Color(0xFF2563EB)
-                              : (isPlayStore
-                                  ? const Color(0xFF059669)
-                                  : const Color(0xFF7C3AED)),
+                          isReview ? Icons.block_rounded : Icons.copy_rounded,
+                          color: isReview
+                              ? const Color(0xFF94A3B8)
+                              : (isGoogleBusiness
+                                  ? const Color(0xFF2563EB)
+                                  : (isPlayStore
+                                      ? const Color(0xFF059669)
+                                      : const Color(0xFF7C3AED))),
                           size: 16,
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Copy',
+                          isReview ? 'Disabled' : 'Copy',
                           style: TextStyle(
-                            color: isGoogleBusiness
-                                ? const Color(0xFF2563EB)
-                                : (isPlayStore
-                                    ? const Color(0xFF059669)
-                                    : const Color(0xFF7C3AED)),
+                            color: isReview
+                                ? const Color(0xFF94A3B8)
+                                : (isGoogleBusiness
+                                    ? const Color(0xFF2563EB)
+                                    : (isPlayStore
+                                        ? const Color(0xFF059669)
+                                        : const Color(0xFF7C3AED))),
                             fontSize: 9.5,
                             fontWeight: FontWeight.bold,
                           ),
@@ -3744,11 +3775,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  isGoogleBusiness
-                      ? "Give 5-Star rating ⭐⭐⭐⭐⭐ and paste this review on Google Maps as it is."
-                      : (isPlayStore
-                          ? "Give 5-Star rating ⭐⭐⭐⭐⭐ and paste this review text as it is."
-                          : "Don't change the text. Copy and paste as it is."),
+                  isReview
+                      ? "Give 5-Star rating ⭐⭐⭐⭐⭐ and use Task Keyboard '✍️ Write Review' to auto-type safely."
+                      : "Don't change the text. Paste as it is.",
                   style: const TextStyle(
                     color: Color(0xFF64748B),
                     fontSize: 11,
