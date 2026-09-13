@@ -36,8 +36,16 @@ export class NotificationService {
         return this.notificationRepo.findByUserId(userId, limit);
     }
 
+    async getBuyerNotifications(buyerId: string, limit = 50): Promise<Notification[]> {
+        return this.notificationRepo.findBuyerNotifications(buyerId, limit);
+    }
+
     async getUnreadCount(userId: string): Promise<number> {
         return this.notificationRepo.countUnread(userId);
+    }
+
+    async getBuyerUnreadCount(buyerId: string): Promise<number> {
+        return this.notificationRepo.countBuyerUnread(buyerId);
     }
 
     async markAsRead(notificationId: string): Promise<void> {

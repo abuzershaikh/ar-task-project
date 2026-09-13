@@ -26,11 +26,33 @@ export class NotificationRepository {
         });
     }
 
+    async findBuyerNotifications(buyerId: string, limit = 50): Promise<Notification[]> {
+        return this.repository.find({
+            where: [
+                { userId: buyerId },
+                { userId: 'ALL_BUYERS' },
+                { userId: 'GLOBAL' },
+            ],
+            order: { createdAt: 'DESC' },
+            take: limit,
+        });
+    }
+
     async countUnread(userId: string): Promise<number> {
         return this.repository.count({
             where: [
                 { userId, isRead: false },
                 { userId: 'ALL_WORKERS', isRead: false },
+                { userId: 'GLOBAL', isRead: false },
+            ],
+        });
+    }
+
+    async countBuyerUnread(buyerId: string): Promise<number> {
+        return this.repository.count({
+            where: [
+                { userId: buyerId, isRead: false },
+                { userId: 'ALL_BUYERS', isRead: false },
                 { userId: 'GLOBAL', isRead: false },
             ],
         });

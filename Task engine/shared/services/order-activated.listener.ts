@@ -429,6 +429,29 @@ export class OrderActivatedListener {
                         type: 'NEW_TASK',
                     },
                 });
+
+                // Persist for buyer notification feed
+                if (payload.buyerId) {
+                    try {
+                        await this.notificationRepo.create({
+                            userId: payload.buyerId,
+                            type: NotificationType.ORDER_PROGRESS,
+                            title: `Campaign Live: ${serviceTitle}`,
+                            message: `Your campaign for "${appName || serviceTitle}" (Order #${payload.orderId.slice(0, 8)}) with ${payload.totalTasksRequired} tasks is active and dispatching to verified human users.`,
+                            entityType: 'ORDER',
+                            entityId: payload.orderId,
+                            data: {
+                                orderId: payload.orderId,
+                                serviceCode: payload.serviceCode,
+                                totalTasks: payload.totalTasksRequired,
+                                rewardAmount,
+                            },
+                            isRead: false,
+                        });
+                    } catch (buyerNotifErr: any) {
+                        this.logger.warn(`Buyer notification creation warning: ${buyerNotifErr?.message}`);
+                    }
+                }
             } catch (pushErr) {
                 this.logger.warn(`Push notification dispatch warning: ${pushErr.message}`);
             }

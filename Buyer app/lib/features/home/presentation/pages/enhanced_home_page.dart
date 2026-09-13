@@ -76,7 +76,7 @@ class _EnhancedHomePageState extends State<EnhancedHomePage> {
                 IconButton(
                   icon: const Icon(Icons.notifications_outlined),
                   onPressed: () {
-                    // Navigate to notifications
+                    Navigator.pushNamed(context, AppRouter.notifications);
                   },
                 ),
               ],

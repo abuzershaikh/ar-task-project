@@ -15,10 +15,23 @@ export class BuyerNotificationController {
     @Get()
     @ApiOperation({ summary: 'Get buyer notification feed' })
     async getNotifications(@CurrentUser() user: User) {
-        const notifications = await this.notificationService.getUserNotifications(user.id);
+        const notifications = await this.notificationService.getBuyerNotifications(user.id);
+        const unreadCount = await this.notificationService.getBuyerUnreadCount(user.id);
         return {
             success: true,
             notifications,
+            unreadCount,
+            total: notifications.length,
+        };
+    }
+
+    @Patch('read-all')
+    @ApiOperation({ summary: 'Mark all buyer notifications as read' })
+    async markAllAsRead(@CurrentUser() user: User) {
+        await this.notificationService.markAllAsRead(user.id);
+        return {
+            success: true,
+            message: 'All notifications marked as read',
         };
     }
 
