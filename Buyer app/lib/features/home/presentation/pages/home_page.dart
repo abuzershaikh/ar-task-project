@@ -891,7 +891,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           alignment: Alignment.center,
           children: [
             Image.asset(
-              'assets/icons/rating.png',
+              'assets/icons/google-maps.png',
               width: 48,
               height: 48,
               fit: BoxFit.contain,
@@ -1405,6 +1405,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (title == 'Play Store') {
       chipIcon = Image.asset('assets/icons/google-play.png',
           width: 14, height: 14, fit: BoxFit.contain);
+    } else if (title == 'Google Maps' || title.contains('Map')) {
+      chipIcon = Image.asset('assets/icons/google-maps.png',
+          width: 14, height: 14, fit: BoxFit.contain);
     } else if (title == 'YouTube') {
       chipIcon = Image.asset('assets/icons/youtube.png',
           width: 14, height: 14, fit: BoxFit.contain);
@@ -1806,7 +1809,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       case 'google_business':
       case 'google_maps':
         iconWidget = Image.asset(
-          'assets/icons/rating.png',
+          'assets/icons/google-maps.png',
           width: 28,
           height: 28,
           fit: BoxFit.contain,

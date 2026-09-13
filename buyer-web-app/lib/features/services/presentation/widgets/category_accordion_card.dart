@@ -284,6 +284,9 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
   // ── Asset Icon Resolver for Category ──
   String? _getCategoryAssetIcon(String categoryName) {
     final cat = categoryName.toUpperCase();
+    if (cat.contains('MAP') || cat.contains('GMB') || cat.contains('BUSINESS')) {
+      return 'assets/icons/google-maps.png';
+    }
     if (cat.contains('PLAY') || cat.contains('GOOGLE')) {
       return 'assets/icons/google-play.png';
     }
@@ -318,6 +321,9 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
 
+    if (code.contains('MAP') || name.contains('MAP') || code.contains('GMB') || name.contains('GMB')) {
+      return 'assets/icons/google-maps.png';
+    }
     if (code.contains('REVIEW') || name.contains('REVIEW')) {
       return 'assets/icons/review.png';
     }

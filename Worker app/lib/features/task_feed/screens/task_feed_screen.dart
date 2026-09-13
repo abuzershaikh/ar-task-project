@@ -1437,7 +1437,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
   Widget _buildPlatformChips() {
     final chips = [
       {'label': 'All Tasks', 'icon': Icons.grid_view_rounded, 'key': 'All Tasks'},
-      {'label': 'Google Maps', 'asset': 'assets/icons/rating.png', 'key': 'google'},
+      {'label': 'Google Maps', 'asset': 'assets/icons/google-maps.png', 'key': 'google'},
       {'label': 'Play Store', 'asset': 'assets/icons/google-play.png', 'key': 'playstore'},
       {'label': 'App Install', 'asset': 'assets/icons/smartphone.png', 'key': 'app_install'},
       {'label': 'YouTube', 'asset': 'assets/icons/youtube.png', 'key': 'youtube'},

@@ -149,7 +149,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '💡 Tip: Task Review Keyboard is ready for auto-typing review safely. Direct copy is disabled.',
+                  '💡 Tip: Task Review Keyboard is ready to auto-type review on Play Store.',
                   style: TextStyle(fontSize: 12),
                 ),
               ),
@@ -3414,7 +3414,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           'Click on the "Open Play Store" button below.',
           'Install or open the application page on Google Play Store.',
           'Give a 5-Star Rating (⭐⭐⭐⭐⭐) to the app.',
-          'Use Task Review Keyboard "✍️ Write Review" button to auto-type the review safely (Manual copy is disabled).',
+          'Use Task Review Keyboard "✍️ Write Review" button to auto-type the review safely.',
           'Post your review and take a clear screenshot showing your 5-star rating & review.',
           'Return to this app and upload the screenshot proof to receive your instant reward.',
         ]);
@@ -3425,7 +3425,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
             'Click on the "Open Google Maps" button below.',
             'Locate the business profile on Google Maps.',
             'Give a 5-Star Rating (⭐⭐⭐⭐⭐) to the business.',
-            'Use Task Review Keyboard "✍️ Write Review" button to auto-type the review safely (Manual copy is disabled).',
+            'Use Task Review Keyboard "✍️ Write Review" button to auto-type the review safely.',
             'Post your review and take a clear screenshot showing your rating & review.',
             'Return to this app and upload the screenshot proof to receive your instant reward.',
           ]);
@@ -3657,109 +3657,80 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
-
-                InkWell(
-                  onTap: () {
-                    if (isReview) {
+                if (!isReview) ...[
+                  const SizedBox(width: 10),
+                  InkWell(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: customText));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Row(
-                            children: [
-                              Icon(Icons.keyboard_alt_rounded, color: Colors.white, size: 20),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Direct copy is disabled! Please use Task Keyboard "✍️ Write Review" button.',
-                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ],
+                          content: Text(
+                            '✓ Comment text copied to clipboard!',
                           ),
-                          backgroundColor: Color(0xFFE11D48),
-                          behavior: SnackBarBehavior.floating,
-                          duration: Duration(seconds: 3),
+                          backgroundColor: Color(0xFF7C3AED),
                         ),
                       );
-                      return;
-                    }
-                    Clipboard.setData(ClipboardData(text: customText));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          '✓ Comment text copied to clipboard!',
-                        ),
-                        backgroundColor: Color(0xFF7C3AED),
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
                       ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isReview ? const Color(0xFFF1F5F9) : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isReview
-                            ? const Color(0xFFCBD5E1)
-                            : ((isGoogleBusiness
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: (isGoogleBusiness
+                                  ? const Color(0xFF2563EB)
+                                  : (isPlayStore
+                                      ? const Color(0xFF059669)
+                                      : const Color(0xFF7C3AED)))
+                              .withOpacity(0.3),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (isGoogleBusiness
                                     ? const Color(0xFF2563EB)
                                     : (isPlayStore
                                         ? const Color(0xFF059669)
                                         : const Color(0xFF7C3AED)))
-                                .withOpacity(0.3)),
+                                .withOpacity(0.08),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      boxShadow: isReview
-                          ? null
-                          : [
-                              BoxShadow(
-                                color: (isGoogleBusiness
-                                        ? const Color(0xFF2563EB)
-                                        : (isPlayStore
-                                            ? const Color(0xFF059669)
-                                            : const Color(0xFF7C3AED)))
-                                    .withOpacity(0.08),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isReview ? Icons.block_rounded : Icons.copy_rounded,
-                          color: isReview
-                              ? const Color(0xFF94A3B8)
-                              : (isGoogleBusiness
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.copy_rounded,
+                            color: isGoogleBusiness
+                                ? const Color(0xFF2563EB)
+                                : (isPlayStore
+                                    ? const Color(0xFF059669)
+                                    : const Color(0xFF7C3AED)),
+                            size: 16,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Copy',
+                            style: TextStyle(
+                              color: isGoogleBusiness
                                   ? const Color(0xFF2563EB)
                                   : (isPlayStore
                                       ? const Color(0xFF059669)
-                                      : const Color(0xFF7C3AED))),
-                          size: 16,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isReview ? 'Disabled' : 'Copy',
-                          style: TextStyle(
-                            color: isReview
-                                ? const Color(0xFF94A3B8)
-                                : (isGoogleBusiness
-                                    ? const Color(0xFF2563EB)
-                                    : (isPlayStore
-                                        ? const Color(0xFF059669)
-                                        : const Color(0xFF7C3AED))),
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.bold,
+                                      : const Color(0xFF7C3AED)),
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

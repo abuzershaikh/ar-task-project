@@ -266,6 +266,9 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
   // ── Asset Icon Resolver for Category ──
   String? _getCategoryAssetIcon(String categoryName) {
     final cat = categoryName.toUpperCase();
+    if (cat.contains('MAP') || cat.contains('GMB') || cat.contains('BUSINESS')) {
+      return 'assets/icons/google-maps.png';
+    }
     if (cat.contains('PLAY') || cat.contains('GOOGLE')) {
       return 'assets/icons/google-play.png';
     }
@@ -303,6 +306,10 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     // Check COMBO first so combo services get marketing icon and not single subscribe icon!
     if (code.contains('COMBO') || name.contains('COMBO')) {
       return 'assets/icons/marketing.png';
+    }
+    // Check Google Maps / GMB services
+    if (code.contains('MAP') || name.contains('MAP') || code.contains('GMB') || name.contains('GMB')) {
+      return 'assets/icons/google-maps.png';
     }
     if (code.contains('REVIEW') || name.contains('REVIEW')) {
       return 'assets/icons/review.png';

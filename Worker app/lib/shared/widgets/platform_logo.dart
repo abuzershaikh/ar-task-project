@@ -20,8 +20,8 @@ class PlatformLogo extends StatelessWidget {
 
     if (norm.contains('app_install') || norm.contains('install') || norm.contains('smartphone')) {
       assetPath = 'assets/icons/smartphone.png';
-    } else if (norm.contains('google_business') || norm.contains('google_maps') || norm.contains('gmb') || norm.contains('maps')) {
-      assetPath = (norm.contains('review') || norm.contains('comment')) ? 'assets/icons/review.png' : 'assets/icons/rating.png';
+    } else if (norm.contains('google_business') || norm.contains('google_maps') || norm.contains('gmb') || norm.contains('maps') || norm.contains('map')) {
+      assetPath = 'assets/icons/google-maps.png';
     } else if (norm.contains('play') || norm.contains('playstore') || norm.contains('app_review')) {
       assetPath = 'assets/icons/google-play.png';
     } else if (norm.contains('youtube') || norm.contains('yt_')) {
@@ -38,7 +38,7 @@ class PlatformLogo extends StatelessWidget {
       assetPath = 'assets/icons/subscribe.png';
     } else if (norm.contains('like')) {
       assetPath = 'assets/icons/like.png';
-    } else if (norm.contains('google') || norm.contains('g_map')) {
+    } else if (norm.contains('google')) {
       assetPath = 'assets/icons/google-play.png';
     }
 
