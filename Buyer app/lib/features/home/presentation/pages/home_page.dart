@@ -28,22 +28,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   final List<Map<String, dynamic>> _carouselSlides = [
     {
-      'badge': '📍 LOCAL SEO • GOOGLE MAPS',
-      'title': 'Dominate Google Business',
-      'highlight': '5-Star Ratings & Reviews',
-      'description':
-          'Boost your local business ranking on Google Maps & Search with authentic 5-star ratings & verified customer reviews.',
-      'gradientColors': [
-        const Color(0xFF0F172A),
-        const Color(0xFF1D4ED8),
-        const Color(0xFF2563EB)
-      ],
-      'accentColor': const Color(0xFF60A5FA),
-      'buttonText': 'Boost Business →',
-      'platform': 'google_business',
-      'route': AppRouter.services,
-    },
-    {
       'badge': '⭐ TOP RATED • GOOGLE PLAY',
       'title': 'Dominate Google Play Store',
       'highlight': '5-Star Ratings & Reviews',
@@ -57,6 +41,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       'accentColor': const Color(0xFF38BDF8),
       'buttonText': 'Boost Play Store →',
       'platform': 'playstore',
+      'route': AppRouter.services,
+    },
+    {
+      'badge': '📍 LOCAL SEO • GOOGLE MAPS',
+      'title': 'Dominate Google Maps & GMB',
+      'highlight': '5-Star Ratings & Reviews',
+      'description':
+          'Boost your local business ranking on Google Maps & Search with authentic 5-star ratings & verified customer reviews.',
+      'gradientColors': [
+        const Color(0xFF0F172A),
+        const Color(0xFF1D4ED8),
+        const Color(0xFF2563EB)
+      ],
+      'accentColor': const Color(0xFF60A5FA),
+      'buttonText': 'Boost Google Maps →',
+      'platform': 'google_maps',
       'route': AppRouter.services,
     },
     {
@@ -159,6 +159,42 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         'Organic Keyword Simulation',
         '2-Min Retention Verification',
         'Anti-Fraud Shield'
+      ],
+      'route': AppRouter.services,
+    },
+    {
+      'id': 'gmaps_review',
+      'category': 'Google Maps',
+      'title': 'Google Maps 5-Star Rating & Review',
+      'tag': 'LOCAL SEO BOOST',
+      'tagColor': const Color(0xFF3B82F6),
+      'description':
+          'Dominate local search on Google Maps. Real users post authentic 5-star ratings & detailed positive reviews to elevate your business ranking.',
+      'price': 'From ₹35 / review',
+      'gradient': [const Color(0xFF1D4ED8), const Color(0xFF2563EB)],
+      'iconType': 'google_maps',
+      'features': [
+        '100% Real Google Accounts',
+        'Local Geolocation Delivery',
+        'Permanent 5-Star Reviews'
+      ],
+      'route': AppRouter.services,
+    },
+    {
+      'id': 'gmaps_rating_only',
+      'category': 'Google Maps',
+      'title': 'Google Maps 5-Star Rating (Quick Star)',
+      'tag': 'FAST RATING',
+      'tagColor': const Color(0xFF60A5FA),
+      'description':
+          'Instant 5-star rating without text review for fast, safe reputation growth and higher aggregate rating on Google Maps.',
+      'price': 'From ₹20 / rating',
+      'gradient': [const Color(0xFF1E40AF), const Color(0xFF1D4ED8)],
+      'iconType': 'google_maps',
+      'features': [
+        'Quick Star Submission',
+        'Improves Average Rating',
+        'Safe & Permanent'
       ],
       'route': AppRouter.services,
     },
@@ -1378,6 +1414,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             padding: const EdgeInsets.symmetric(horizontal: 18),
             children: [
               _buildCategoryChip('Play Store'),
+              _buildCategoryChip('Google Maps'),
               _buildCategoryChip('YouTube'),
               _buildCategoryChip('Instagram'),
               _buildCategoryChip('Mobile Apps'),

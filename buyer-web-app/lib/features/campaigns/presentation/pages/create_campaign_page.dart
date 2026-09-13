@@ -707,23 +707,60 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     // Group services by category
     final Map<String, List<ServiceModel>> grouped = {};
     for (var s in _publishedServices) {
+      final codeUpper = s.code.toUpperCase();
+      final nameUpper = s.name.toUpperCase();
       String cat = s.category;
-      if (s.category.isNotEmpty && s.category != 'General') {
-        cat = s.category;
-      } else if (s.code.toUpperCase().contains('YOUTUBE') || s.code.toUpperCase().contains('YT')) {
-        cat = 'YouTube';
-      } else if (s.code.toUpperCase().contains('PLAY') || s.code.toUpperCase().contains('REVIEW') || s.code.toUpperCase().contains('RATING')) {
+
+      if (codeUpper.contains('GOOGLE_BUSINESS') ||
+          codeUpper.contains('GOOGLE_MAP') ||
+          codeUpper.contains('GMB') ||
+          nameUpper.contains('GOOGLE BUSINESS') ||
+          nameUpper.contains('GOOGLE MAP') ||
+          cat.toLowerCase().contains('google business') ||
+          cat.toLowerCase().contains('google maps')) {
+        cat = 'Google Maps';
+      } else if (codeUpper.contains('PLAY') ||
+          codeUpper.contains('RATING') ||
+          (codeUpper.contains('REVIEW') &&
+              !codeUpper.contains('INSTA') &&
+              !codeUpper.contains('YT')) ||
+          nameUpper.contains('PLAY STORE')) {
         cat = 'Google Play Store';
-      } else if (s.code.toUpperCase().contains('TELEGRAM') || s.code.toUpperCase().contains('TG')) {
-        cat = 'Telegram';
-      } else if (s.code.toUpperCase().contains('APP') || s.code.toUpperCase().contains('INSTALL')) {
+      } else if (codeUpper.contains('APP') ||
+          codeUpper.contains('INSTALL') ||
+          nameUpper.contains('INSTALL')) {
         cat = 'App Install & Review';
-      } else if (s.code.toUpperCase().contains('INSTA') && !s.code.toUpperCase().contains('INSTALL')) {
+      } else if (codeUpper.contains('YOUTUBE') ||
+          codeUpper.contains('YT') ||
+          nameUpper.contains('YOUTUBE')) {
+        cat = 'YouTube';
+      } else if (codeUpper.contains('INSTA') ||
+          nameUpper.contains('INSTAGRAM')) {
         cat = 'Instagram';
-      } else if (s.code.toUpperCase().contains('WEB') || s.code.toUpperCase().contains('TRAFFIC') || s.code.toUpperCase().contains('VISIT')) {
+      } else if (codeUpper.contains('WEB') ||
+          codeUpper.contains('TRAFFIC') ||
+          codeUpper.contains('VISIT') ||
+          nameUpper.contains('WEBSITE')) {
         cat = 'Website Traffic';
+      } else if (cat.isEmpty || cat == 'General') {
+        cat = 'Other Services';
       }
       grouped.putIfAbsent(cat, () => []).add(s);
+    }
+
+    // Sort sub-services within each category so COMBO services appear on top
+    for (var list in grouped.values) {
+      list.sort((a, b) {
+        final aIsCombo = a.serviceType.toLowerCase() == 'combo' ||
+            a.code.toUpperCase().contains('COMBO') ||
+            a.name.toUpperCase().contains('COMBO');
+        final bIsCombo = b.serviceType.toLowerCase() == 'combo' ||
+            b.code.toUpperCase().contains('COMBO') ||
+            b.name.toUpperCase().contains('COMBO');
+        if (aIsCombo && !bIsCombo) return -1;
+        if (!aIsCombo && bIsCombo) return 1;
+        return 0;
+      });
     }
 
     // Category visual themes
@@ -736,13 +773,17 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         'icon': Icons.star_rate_rounded,
         'color': const Color(0xFF059669),
       },
+      'Google Maps': {
+        'icon': Icons.location_on_rounded,
+        'color': const Color(0xFF4285F4), // Google Blue
+      },
+      'Google Business': {
+        'icon': Icons.location_on_rounded,
+        'color': const Color(0xFF4285F4),
+      },
       'YouTube': {
         'icon': Icons.play_circle_fill_rounded,
         'color': const Color(0xFFEF4444), // YouTube Red
-      },
-      'Telegram': {
-        'icon': Icons.send_rounded,
-        'color': const Color(0xFF0284C7), // Telegram Sky Blue
       },
       'Instagram': {
         'icon': Icons.camera_alt_rounded,
@@ -757,6 +798,26 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         'color': const Color(0xFFD97706), // Web Amber
       },
     };
+
+    final priorityOrder = [
+      'Google Play Store',
+      'Play Store',
+      'Google Maps',
+      'Google Business',
+      'YouTube',
+      'Instagram',
+      'App Install & Review',
+      'Mobile Apps',
+      'Website Traffic',
+    ];
+    final sortedEntries = grouped.entries.toList()
+      ..sort((a, b) {
+        int idxA = priorityOrder.indexOf(a.key);
+        int idxB = priorityOrder.indexOf(b.key);
+        if (idxA == -1) idxA = 999;
+        if (idxB == -1) idxB = 999;
+        return idxA.compareTo(idxB);
+      });
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -823,7 +884,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
               // Categories Accordion List
-              ...grouped.entries.map((entry) {
+              ...sortedEntries.map((entry) {
                 final cat = entry.key;
                 final services = entry.value;
                 final meta = categoryMeta[cat] ?? {

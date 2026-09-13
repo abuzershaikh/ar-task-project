@@ -921,7 +921,7 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       String cat = s.category.trim();
 
       if (codeUpper.contains('GOOGLE_BUSINESS') || codeUpper.contains('GOOGLE_MAP') || codeUpper.contains('GMB') || nameUpper.contains('GOOGLE BUSINESS') || nameUpper.contains('GOOGLE MAP') || cat.toLowerCase().contains('google business') || cat.toLowerCase().contains('google maps')) {
-        cat = 'Google Business';
+        cat = 'Google Maps';
       } else if (codeUpper.contains('PLAY') || codeUpper.contains('RATING') || (codeUpper.contains('REVIEW') && !codeUpper.contains('INSTA') && !codeUpper.contains('YT')) || nameUpper.contains('PLAY STORE')) {
         cat = 'Google Play Store';
       } else if (codeUpper.contains('APP') || codeUpper.contains('INSTALL') || nameUpper.contains('INSTALL')) {
@@ -938,16 +938,23 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       grouped.putIfAbsent(cat, () => []).add(s);
     }
 
+    // Sort sub-services within each category so COMBO services appear on top
+    for (var list in grouped.values) {
+      list.sort((a, b) {
+        final aIsCombo = a.serviceType.toLowerCase() == 'combo' ||
+            a.code.toUpperCase().contains('COMBO') ||
+            a.name.toUpperCase().contains('COMBO');
+        final bIsCombo = b.serviceType.toLowerCase() == 'combo' ||
+            b.code.toUpperCase().contains('COMBO') ||
+            b.name.toUpperCase().contains('COMBO');
+        if (aIsCombo && !bIsCombo) return -1;
+        if (!aIsCombo && bIsCombo) return 1;
+        return 0;
+      });
+    }
+
     // Category visual themes
     final Map<String, Map<String, dynamic>> categoryMeta = {
-      'Google Business': {
-        'icon': Icons.location_on_rounded,
-        'color': const Color(0xFF4285F4), // Google Blue
-      },
-      'Google Maps': {
-        'icon': Icons.location_on_rounded,
-        'color': const Color(0xFF4285F4),
-      },
       'Google Play Store': {
         'icon': Icons.star_rate_rounded,
         'color': const Color(0xFF059669), // Emerald Green
@@ -955,6 +962,14 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       'Play Store': {
         'icon': Icons.star_rate_rounded,
         'color': const Color(0xFF059669),
+      },
+      'Google Maps': {
+        'icon': Icons.location_on_rounded,
+        'color': const Color(0xFF4285F4), // Google Blue
+      },
+      'Google Business': {
+        'icon': Icons.location_on_rounded,
+        'color': const Color(0xFF4285F4),
       },
       'YouTube': {
         'icon': Icons.play_circle_fill_rounded,
@@ -975,12 +990,14 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     };
 
     final priorityOrder = [
-      'Google Business',
-      'Google Maps',
       'Google Play Store',
+      'Play Store',
+      'Google Maps',
+      'Google Business',
       'YouTube',
       'Instagram',
       'App Install & Review',
+      'Mobile Apps',
       'Website Traffic',
     ];
     final sortedEntries = grouped.entries.toList()

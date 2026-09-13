@@ -839,7 +839,18 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
 
   @override
   Widget build(BuildContext context) {
-    final activeServices = widget.services.where((s) => s.isActive).toList();
+    final activeServices = widget.services.where((s) => s.isActive).toList()
+      ..sort((a, b) {
+        final aIsCombo = a.serviceType.toLowerCase() == 'combo' ||
+            a.code.toUpperCase().contains('COMBO') ||
+            a.name.toUpperCase().contains('COMBO');
+        final bIsCombo = b.serviceType.toLowerCase() == 'combo' ||
+            b.code.toUpperCase().contains('COMBO') ||
+            b.name.toUpperCase().contains('COMBO');
+        if (aIsCombo && !bIsCombo) return -1;
+        if (!aIsCombo && bIsCombo) return 1;
+        return 0;
+      });
     if (activeServices.isEmpty) return const SizedBox.shrink();
 
     return Column(
