@@ -71,9 +71,6 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     _fetchPlayStoreIconIfNeeded();
     _syncReviewToKeyboard();
     _checkKeyboardReadiness();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkFirstTimeKeyboardNotice();
-    });
     final status = _getTaskStatus();
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
@@ -131,45 +128,6 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       setState(() {
         _isKeyboardReady = isReady;
       });
-    }
-  }
-
-  Future<void> _checkFirstTimeKeyboardNotice() async {
-    if (!mounted || !_isKeyboardEligibleTask()) return;
-    final hasSeen = await ReviewKeyboardService.instance.hasSeenKeyboardOnboarding();
-
-    if (!hasSeen) {
-      await ReviewKeyboardService.instance.markKeyboardOnboardingSeen();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.keyboard_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '💡 Tip: Task Review Keyboard is ready to auto-type review on Play Store.',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF1E293B),
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'Keyboard Setup',
-            textColor: const Color(0xFF60A5FA),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const KeyboardSettingsScreen(),
-                ),
-              );
-            },
-          ),
-        ),
-      );
     }
   }
 
@@ -2165,68 +2123,64 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       actions: [
         if (_isKeyboardEligibleTask()) ...[
           Padding(
-            padding: const EdgeInsets.only(right: 6, top: 10, bottom: 10),
-            child: InkWell(
-              onTap: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const KeyboardSettingsScreen(),
-                  ),
-                );
-                _checkKeyboardReadiness();
-                _syncReviewToKeyboard();
-              },
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _isKeyboardReady
-                      ? const Color(0xFFEFF6FF)
-                      : const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
+            padding: const EdgeInsets.only(right: 8, top: 9, bottom: 9),
+            child: Tooltip(
+              message: 'Keyboard Settings',
+              child: InkWell(
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const KeyboardSettingsScreen(),
+                    ),
+                  );
+                  _checkKeyboardReadiness();
+                  _syncReviewToKeyboard();
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
                     color: _isKeyboardReady
-                        ? const Color(0xFF93C5FD)
-                        : const Color(0xFFFCD34D),
+                        ? const Color(0xFFEFF6FF)
+                        : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _isKeyboardReady
+                          ? const Color(0xFF93C5FD)
+                          : const Color(0xFFCBD5E1),
+                      width: 1.2,
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (_isKeyboardReady ? const Color(0xFF2563EB) : const Color(0xFFD97706)).withValues(alpha: 0.12),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.keyboard_rounded,
-                      color: _isKeyboardReady
-                          ? const Color(0xFF2563EB)
-                          : const Color(0xFFD97706),
-                      size: 15,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _isKeyboardReady ? 'Keyboard' : 'Keyboard Setup',
-                      style: TextStyle(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        Icons.keyboard_rounded,
                         color: _isKeyboardReady
-                            ? const Color(0xFF1E40AF)
-                            : const Color(0xFF92400E),
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                            ? const Color(0xFF2563EB)
+                            : const Color(0xFF475569),
+                        size: 20,
                       ),
-                    ),
-                    const SizedBox(width: 3),
-                    Icon(
-                      Icons.settings_rounded,
-                      color: _isKeyboardReady
-                          ? const Color(0xFF2563EB)
-                          : const Color(0xFFD97706),
-                      size: 12,
-                    ),
-                  ],
+                      Positioned(
+                        right: -3,
+                        bottom: -3,
+                        child: Container(
+                          padding: const EdgeInsets.all(1.5),
+                          decoration: BoxDecoration(
+                            color: _isKeyboardReady
+                                ? const Color(0xFF2563EB)
+                                : const Color(0xFF64748B),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.settings_rounded,
+                            color: Colors.white,
+                            size: 8,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -3747,7 +3701,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
               Expanded(
                 child: Text(
                   isReview
-                      ? "Give 5-Star rating ⭐⭐⭐⭐⭐ and use Task Keyboard '✍️ Write Review' to auto-type safely."
+                      ? "Give 5-Star rating ⭐⭐⭐⭐⭐ and write authentic review."
                       : "Don't change the text. Paste as it is.",
                   style: const TextStyle(
                     color: Color(0xFF64748B),
@@ -3757,15 +3711,6 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
               ),
             ],
           ),
-
-          // ── Keyboard Auto-Typing Tile for Google Business & Play Store Review ──
-          if (isReview && (isGoogleBusiness || isPlayStore)) ...[
-            KeyboardReviewTile(
-              customText: customText,
-              platform: _getPlatform(),
-              taskId: (widget.task['id'] ?? widget.task['_id'] ?? '').toString(),
-            ),
-          ],
         ],
       ),
     );
