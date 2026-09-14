@@ -174,9 +174,9 @@ class _KeyboardSettingsScreenState extends State<KeyboardSettingsScreen>
             // Step 2: Switch
             _buildStepCard(
               step: '2',
-              title: 'Switch to Task Keyboard',
+              title: 'Switch to Task Review Keyboard',
               desc:
-                  'Set Task Review Keyboard as your active input method when doing review tasks.',
+                  'Select "Task Review Keyboard" as your active input method when doing review tasks.',
               isComplete: _isSelected,
               buttonText: _isSelected ? '✓ Currently Active' : 'Switch Keyboard',
               buttonAction: () async {

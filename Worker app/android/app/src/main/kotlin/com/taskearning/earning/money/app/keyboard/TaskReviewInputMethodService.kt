@@ -69,6 +69,8 @@ class TaskReviewInputMethodService : InputMethodService() {
             inMemoryReviewText = reviewText
             inMemoryPlatform = platform
 
+            android.util.Log.d("TaskReviewIME", "updateReview static called: taskId=$taskId, platform=$platform, len=${reviewText.length}")
+
             Handler(Looper.getMainLooper()).post {
                 activeInstance?.let { service ->
                     service.loadActiveReviewFromPrefs()
@@ -146,15 +148,18 @@ class TaskReviewInputMethodService : InputMethodService() {
 
     private fun loadActiveReviewFromPrefs() {
         val prefs = getPrefs()
-        activeReviewText = inMemoryReviewText
-            ?: prefs.getString("flutter.active_review_text", null)
-            ?: prefs.getString("active_review_text", null)
-        activePlatform = inMemoryPlatform
-            ?: prefs.getString("flutter.active_platform", null)
-            ?: prefs.getString("active_platform", null)
-        activeTaskId = inMemoryTaskId
-            ?: prefs.getString("flutter.active_task_id", null)
+        val prefsTaskId = prefs.getString("flutter.active_task_id", null)
             ?: prefs.getString("active_task_id", null)
+        val prefsReview = prefs.getString("flutter.active_review_text", null)
+            ?: prefs.getString("active_review_text", null)
+        val prefsPlatform = prefs.getString("flutter.active_platform", null)
+            ?: prefs.getString("active_platform", null)
+
+        activeTaskId = inMemoryTaskId ?: prefsTaskId
+        activeReviewText = inMemoryReviewText ?: prefsReview
+        activePlatform = inMemoryPlatform ?: prefsPlatform
+
+        android.util.Log.d("TaskReviewIME", "loadActiveReviewFromPrefs: taskId=$activeTaskId, platform=$activePlatform, hasText=${!activeReviewText.isNullOrEmpty()}")
     }
 
     private fun updateReviewBarUi() {

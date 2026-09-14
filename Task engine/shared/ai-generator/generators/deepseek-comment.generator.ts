@@ -58,7 +58,10 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
         const model = this.getModel(options);
         const isReasoner = model.toLowerCase().includes('reasoner') || model.toLowerCase().includes('r1');
 
-        this.logger.log(`🤖 Requesting AI for ${count} items (Type: ${contextType}, Model: ${model} [${isReasoner ? 'Reasoning/R1' : 'Chat/V3'}], Title: "${videoTitle}", Brand: "${brand}", Prompt: "${userPrompt}", Lang: ${language}, Tone: ${tone})`);
+        const minWords = Math.max(8, options?.minWords || 15);
+        const maxWords = Math.max(minWords + 5, options?.maxWords || 45);
+
+        this.logger.log(`🤖 Requesting AI for ${count} items (Type: ${contextType}, Words: ${minWords}-${maxWords}, Model: ${model} [${isReasoner ? 'Reasoning/R1' : 'Chat/V3'}], Title: "${videoTitle}", Brand: "${brand}", Prompt: "${userPrompt}", Lang: ${language}, Tone: ${tone})`);
 
         try {
             if (!apiKey) {
@@ -72,14 +75,15 @@ Generate exactly ${count} completely distinct, authentic, natural, human-written
 
 Business Details:
 ${brand ? `- Target Business Name: "${brand}"` : '- Target: Local Business / Store / Service'}
-${userPrompt ? `- Customer Experience / Review Focus: "${userPrompt}"\n  CRITICAL DIRECTIVE: Follow the buyer's instructions above to shape what the reviews praise or highlight (e.g., great service, polite staff, fast delivery, quality products, clean ambiance, prompt communication). DO NOT repeat or quote the buyer's prompt verbatim! Express the requested points naturally as if you visited or used their service personally.` : '- Review Focus: Outstanding customer service, polite staff, high quality, smooth experience, and great overall satisfaction'}
+${userPrompt ? `- Customer Experience / Review Focus: "${userPrompt}"\n  CRITICAL DIRECTIVE: Follow the buyer's instructions above to shape what the reviews praise or highlight (e.g., great service, polite staff, fast delivery, quality products, clean ambiance, prompt communication). DO NOT repeat or quote the buyer's prompt verbatim! Express the requested points naturally as if you visited or used their service personally.` : '- Review Focus: Genuine customer experience, polite staff, dependable quality, smooth service, and good communication'}
 - Language: "${language}" (write naturally as real everyday customers write on Google Maps; if Hindi or Hinglish, write in natural conversational Roman Hindi)
 - Tone: "${tone}" (natural, polite, authentic customer sharing genuine positive feedback)
+- Length Requirement: Each review MUST be strictly between ${minWords} and ${maxWords} words long. Never write fewer than ${minWords} words or more than ${maxWords} words.
 
 CRITICAL RULES:
 1. ABSOLUTELY NO star symbols (like ⭐, ★, 🌟, ✨), NO emojis, and NO rating numbers.
-2. Tone MUST be 100% human, casual, and authentic. Write like real customers who had a great real-world experience.
-3. Every review MUST be completely distinct in vocabulary, sentence structure, length, and perspective.
+2. Tone MUST be 100% human, casual, and authentic as written by real everyday customers. Absolutely NO corporate PR buzzwords or exaggerated marketing speak (do NOT write "exceeded all expectations", "exemplary service", "epitome of excellence").
+3. Every review MUST be completely distinct in vocabulary, sentence structure, length (within ${minWords}-${maxWords} words), and perspective.
 4. DO NOT quote or copy-paste the prompt text verbatim!
 5. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
@@ -93,6 +97,7 @@ ${brand ? `- Target App Name: "${brand}"` : '- Target App: Android mobile applic
 ${userPrompt ? `- Buyer's Prompt / Instructions: "${userPrompt}"\n  CRITICAL DIRECTIVE: Follow the buyer's instructions above to shape what the reviews praise or focus on. DO NOT repeat or quote the buyer's prompt verbatim! Express the requested points naturally as if you experienced them personally.` : '- Review Focus: Everyday user experience, smooth performance, intuitive interface, reliable stability'}
 - Language: "${language}" (write naturally as real everyday users write in this language; if Hindi or Hinglish, write in natural conversational Roman Hindi as commonly seen on Play Store reviews)
 - Tone: "${tone}" (natural, casual, honest everyday user)
+- Length Requirement: Each review MUST be strictly between ${minWords} and ${maxWords} words long. Never write fewer than ${minWords} words or more than ${maxWords} words.
 
 CRITICAL RULES:
 1. ABSOLUTELY NO star symbols (like ⭐, ★, 🌟, ✨), NO emojis, and NO rating numbers.

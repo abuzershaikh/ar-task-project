@@ -36,6 +36,10 @@ async function deployAiPromptFixes() {
         remote: '/opt/task-engine/shared/ai-generator/generators/playstore-review.generator.ts'
       },
       {
+        local: path.join(localBase, 'shared', 'ai-generator', 'generators', 'google-business-review.generator.ts'),
+        remote: '/opt/task-engine/shared/ai-generator/generators/google-business-review.generator.ts'
+      },
+      {
         local: path.join(localBase, 'apps', 'api', 'controllers', 'buyer', 'order.controller.ts'),
         remote: '/opt/task-engine/apps/api/controllers/buyer/order.controller.ts'
       },

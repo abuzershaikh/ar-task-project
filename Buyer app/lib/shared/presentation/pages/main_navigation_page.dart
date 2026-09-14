@@ -6,8 +6,6 @@ import '../../../features/campaigns/presentation/pages/create_campaign_page.dart
 import '../../../features/wallet/presentation/pages/wallet_screen.dart';
 import '../../../features/profile/presentation/pages/profile_page.dart';
 
-import '../../../features/services/presentation/pages/service_catalog_screen.dart';
-
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});
 
@@ -17,22 +15,48 @@ class MainNavigationPage extends StatefulWidget {
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _currentIndex = 0;
+  final GlobalKey<CreateCampaignPageState> _createCampaignKey =
+      GlobalKey<CreateCampaignPageState>();
 
-  final List<Widget> _pages = const [
-    HomePage(),
-    CampaignsPage(),
-    CreateCampaignPage(),
-    WalletScreen(),
-    ProfilePage(),
+  void _goToHome() {
+    if (_currentIndex != 0) {
+      setState(() {
+        _currentIndex = 0;
+      });
+    }
+  }
+
+  late final List<Widget> _pages = [
+    const HomePage(),
+    const CampaignsPage(),
+    CreateCampaignPage(
+      key: _createCampaignKey,
+      onBackToHome: _goToHome,
+    ),
+    const WalletScreen(),
+    const ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
+    return PopScope(
+      canPop: _currentIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_currentIndex == 2) {
+          final bool handled =
+              _createCampaignKey.currentState?.handleBack() ?? false;
+          if (handled) {
+            return;
+          }
+        }
+        _goToHome();
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _pages,
+        ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -86,6 +110,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

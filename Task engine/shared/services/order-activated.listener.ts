@@ -176,13 +176,16 @@ export class OrderActivatedListener {
                 ? 'google_business_review'
                 : (isPlayStore ? 'playstore_review' : (isInstagram ? 'instagram_comment' : 'youtube_comment'));
 
+            const minWords = order?.requirements?.minWords || 15;
+            const maxWords = order?.requirements?.maxWords || 45;
+
             let generatedComments: string[] = [];
             if (isCommentRequired) {
                 if (sampleComments.length >= count) {
                     generatedComments = sampleComments.slice(0, count);
                 } else {
                     const remainingNeeded = count - sampleComments.length;
-                    this.logger.log(`🤖 Generating ${remainingNeeded} ${isGoogleBusiness ? 'Google Business reviews' : (isPlayStore ? 'Play Store reviews' : (isInstagram ? 'Instagram comments' : 'comments'))} for Order '${payload.orderId}' (App: "${appName}", Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
+                    this.logger.log(`🤖 Generating ${remainingNeeded} ${isGoogleBusiness ? 'Google Business reviews' : (isPlayStore ? 'Play Store reviews' : (isInstagram ? 'Instagram comments' : 'comments'))} for Order '${payload.orderId}' (App: "${appName}", Words: ${minWords}-${maxWords}, Topic: "${topic}", Lang: ${language}, Tone: ${tone})`);
                     let newlyGenerated: string[] = [];
                     try {
                         newlyGenerated = await this.aiGeneratorService.generateContentBatch(
@@ -199,6 +202,8 @@ export class OrderActivatedListener {
                                 businessName: appName,
                                 videoTitle: order?.requirements?.videoTitle || (!isPlayStore && !isGoogleBusiness ? (appName || '') : ''),
                                 generatorType,
+                                minWords,
+                                maxWords,
                             } as any,
                         );
                     } catch (genErr) {
@@ -210,16 +215,13 @@ export class OrderActivatedListener {
 
             const fallbackTemplates = isGoogleBusiness
                 ? [
-                    'Outstanding customer service and very welcoming atmosphere. Highly recommended!',
-                    'Had a wonderful experience here. The staff was extremely professional and polite.',
-                    'Top notch service and great attention to detail. Will definitely be visiting again.',
-                    'Extremely satisfied with the overall experience. Very efficient and reliable team.',
-                    'One of the best places in town. Prompt response, clean environment, and great support.',
-                    'Very impressed with the quality and friendliness. Everything exceeded my expectations.',
-                    'Smooth and hassle-free service from start to finish. Truly a 5-star experience.',
-                    'Professionalism at its best. They genuinely care about customer satisfaction.',
-                    'Neat, organized, and very well managed. Highly satisfied with my experience here.',
-                    'Exceptional quality and timely service. I will definitely recommend them to friends and family.',
+                    `Great experience with ${appName || 'this business'}. Delivered on time with great communication and polite staff.`,
+                    `Really satisfied with the service provided by ${appName || 'their team'}. Honest pricing and smooth execution.`,
+                    `Approached ${appName || 'them'} based on recommendations. Very professional work and no unnecessary delays.`,
+                    `Clean work, quick turnaround, and supportive staff at ${appName || 'this place'}. Definitely 5 stars!`,
+                    `Work was completed smoothly and transparently. Staff answered all queries patiently. Highly recommended.`,
+                    `Had a very positive experience with ${appName || 'their team'}. Quality work within our expected budget.`,
+                    `Very responsive and dependable service. Everything was done right the first time.`,
                 ]
                 : (isPlayStore
                     ? [

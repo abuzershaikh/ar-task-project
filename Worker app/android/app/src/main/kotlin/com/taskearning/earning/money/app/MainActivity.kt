@@ -46,6 +46,8 @@ class MainActivity : FlutterActivity() {
                     val reviewText = call.argument<String>("reviewText") ?: ""
                     val platform = call.argument<String>("platform") ?: ""
 
+                    android.util.Log.d("TaskReviewChannel", "setActiveReview received: taskId=$taskId, platform=$platform, length=${reviewText.length}")
+
                     val prefs = getSharedPreferences("FlutterSharedPreferences", android.content.Context.MODE_PRIVATE)
                     prefs.edit()
                         .putString("flutter.active_task_id", taskId)

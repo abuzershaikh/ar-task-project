@@ -11,6 +11,8 @@ export interface GenerationOptions {
     generatorType?: string;
     model?: string;
     apiKey?: string;
+    minWords?: number;
+    maxWords?: number;
 }
 
 export interface IContentGenerator {

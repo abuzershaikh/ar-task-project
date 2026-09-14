@@ -10,19 +10,44 @@ import '../../../../core/utils/service_unit_helper.dart';
 
 class CreateCampaignPage extends StatefulWidget {
   final String? serviceId;
+  final VoidCallback? onBackToHome;
 
-  const CreateCampaignPage({super.key, this.serviceId});
+  const CreateCampaignPage({super.key, this.serviceId, this.onBackToHome});
 
   @override
-  State<CreateCampaignPage> createState() => _CreateCampaignPageState();
+  State<CreateCampaignPage> createState() => CreateCampaignPageState();
 }
 
-class _CreateCampaignPageState extends State<CreateCampaignPage> {
+class CreateCampaignPageState extends State<CreateCampaignPage> {
   final ServiceRepositoryImpl _serviceRepository = ServiceRepositoryImpl();
 
   List<ServiceModel> _publishedServices = [];
   ServiceModel? _selectedService;
   bool _isLoading = true;
+
+  /// Closes the order form if open and returns to the catalog.
+  /// Returns true if handled (meaning it went from order form back to catalog),
+  /// or false if the catalog was already displayed.
+  bool handleBack() {
+    if (_selectedService != null) {
+      setState(() {
+        _selectedService = null;
+      });
+      return true;
+    }
+    return false;
+  }
+
+  void _onUiBackPressed() {
+    final handled = handleBack();
+    if (!handled) {
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      } else if (widget.onBackToHome != null) {
+        widget.onBackToHome!();
+      }
+    }
+  }
   double _walletBalance = 0.0;
 
   // Order Form State
@@ -37,6 +62,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
   bool _isSubmitting = false;
   List<String> _sampleComments = [];
   bool _isGeneratingPreview = false;
+  int _minWords = 15;
+  int _maxWords = 45;
 
   // Play Store App Metadata State
   String? _appName;
@@ -351,6 +378,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
               'language': _selectedLanguage,
               'tone': _selectedTone,
               'count': _selectedQuantity,
+              'minWords': _minWords,
+              'maxWords': _maxWords,
               'serviceCode': _selectedService?.code,
               'targetUrl': _targetUrlController.text.trim(),
               'appName': cleanBrand,
@@ -411,37 +440,65 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       List<String> fallbacks = [];
 
       if (isGoogle) {
-        fallbacks = isHindi
-            ? [
-                cleanBrand.isNotEmpty
-                    ? "$cleanBrand par visit karke bohot accha laga. Staff kaafi polite aur cooperative hai."
-                    : "Bohot hi acchi service aur staff ka behaviour kaafi polite aur helpful tha.",
-                cleanBrand.isNotEmpty
-                    ? "$cleanBrand ki service quality ekdum top-notch hai aur premises bohot clean aur well-maintained hai. 100% recommended!"
-                    : "Service quality ekdum top-notch hai aur premises bohot clean aur well-maintained hai. 100% recommended!",
-                cleanBrand.isNotEmpty
-                    ? "$cleanBrand is area me sabse best option hai. Mera experience bohot shandaar raha."
-                    : "Kamaal ka experience raha, har cheez time par aur bina kisi pareshani ke ho gayi.",
-                "Customer satisfaction par pura dhyan dete hain. Pricing bhi bohot reasonable aur genuine hai.",
-                cleanBrand.isNotEmpty
-                    ? "Mai $cleanBrand ko sabhi ko recommend karunga. Truly 5-star service aur fast response!"
-                    : "Bohot professional approach aur prompt support mila. Aage bhi yahi visit karunga.",
-              ]
-            : [
-                cleanBrand.isNotEmpty
-                    ? "Had a wonderful experience at $cleanBrand. The staff was polite, professional, and very welcoming."
-                    : "Outstanding customer service and very welcoming atmosphere. Highly recommended!",
-                cleanBrand.isNotEmpty
-                    ? "$cleanBrand provides top-notch service and very well-maintained setup. Everything exceeded my expectations."
-                    : "Top-notch service and very well-maintained setup. Everything exceeded my expectations.",
-                cleanBrand.isNotEmpty
-                    ? "$cleanBrand provides reliable service with great attention to detail. Will definitely visit again."
-                    : "Extremely satisfied with the overall experience. Prompt response and great guidance throughout.",
-                "Clean environment, courteous staff, and hassle-free service. A truly 5-star experience!",
-                cleanBrand.isNotEmpty
-                    ? "Highly recommend $cleanBrand to anyone looking for quality service and dependable support."
-                    : "One of the best places in town. Dedicated team and honest, dependable service.",
-              ];
+        final bool isItTech = cleanBrand.toLowerCase().contains('tech') ||
+            cleanBrand.toLowerCase().contains('soft') ||
+            cleanBrand.toLowerCase().contains('info') ||
+            cleanBrand.toLowerCase().contains('web') ||
+            cleanBrand.toLowerCase().contains('app') ||
+            userPrompt.toLowerCase().contains('web') ||
+            userPrompt.toLowerCase().contains('soft');
+
+        if (isItTech) {
+          fallbacks = isHindi
+              ? [
+                  "$cleanBrand ke sath bohot accha experience raha. Project time par deliver hua aur technical support bhi prompt mila.",
+                  "Website development ke liye $cleanBrand se contact kiya tha. Team ne saari requirements dhyan se suni aur clean portal bana kar diya.",
+                  "$cleanBrand ki IT services sach me dependable hain. Developers kaafi cooperative hain aur pricing bhi genuine hai.",
+                  "Software aur web related work ke liye $cleanBrand best choice hai. Quick response aur clean execution mila.",
+                  "Project delivery time par mili aur UI design bhi modern hai. $cleanBrand par bina kisi doubt ke trust kiya ja sakta hai."
+                ]
+              : [
+                  "Great experience with $cleanBrand. Delivered our project right on time without any technical bugs.",
+                  "Approached $cleanBrand for customized software and website development. The team understood our requirements patiently and delivered a very smooth platform.",
+                  "Really happy with the website design and technical support provided by $cleanBrand. Responsive team, clean coding, and hassle-free delivery.",
+                  "Honest and dependable developers. $cleanBrand delivered quality work within our agreed budget.",
+                  "Smooth project execution and excellent communication throughout. Highly recommend $cleanBrand for web and tech services."
+                ];
+        } else {
+          fallbacks = isHindi
+              ? [
+                  cleanBrand.isNotEmpty
+                      ? "$cleanBrand par service bohot acchi mili. Kaam time par aur bina kisi pareshani ke ho gaya."
+                      : "Service bohot acchi mili, staff ka behaviour kaafi polite aur helpful tha.",
+                  cleanBrand.isNotEmpty
+                      ? "Pehli baar $cleanBrand visit kiya tha, overall arrangement aur staff ka behavior bohot pasand aaya. Transparent pricing aur prompt service!"
+                      : "Pehli baar visit kiya tha, staff ka behavior bohot pasand aaya aur har cheez time par ho gayi.",
+                  cleanBrand.isNotEmpty
+                      ? "$cleanBrand is area me sabse best option hai. Kaam bohot acche se nipat gaya aur staff ne pura support diya."
+                      : "Kaam bohot smoothly complete hua aur pricing bhi genuine thi.",
+                  "Bohot hi cooperative aur professional log hain. Jo commit kiya tha wahi deliver kiya bina kisi delay ke.",
+                  cleanBrand.isNotEmpty
+                      ? "Mera personal experience $cleanBrand ke sath bohot badhiya raha. Har cheez well-managed thi, 100% recommended!"
+                      : "Har cheez organized aur well-managed thi. Aage se kisi bhi requirement ke liye yahi aayenge."
+                ]
+              : [
+                  cleanBrand.isNotEmpty
+                      ? "Smooth and reliable service at $cleanBrand. The staff is courteous, professional, and very helpful."
+                      : "Smooth and reliable service. Staff is courteous, professional, and very helpful.",
+                  cleanBrand.isNotEmpty
+                      ? "Had a hassle-free experience with $cleanBrand. Everything was handled systematically and completed on schedule."
+                      : "Had a hassle-free experience here. Everything was handled systematically and completed on schedule.",
+                  cleanBrand.isNotEmpty
+                      ? "Very pleased with the quality of service provided by $cleanBrand. Punctual, communicative, and dependable team."
+                      : "Very pleased with the quality of service. Punctual, communicative, and dependable team.",
+                  cleanBrand.isNotEmpty
+                      ? "Extremely helpful team at $cleanBrand. Honest guidance, fair rates, and smooth execution from start to finish."
+                      : "Extremely helpful team. Honest guidance, fair rates, and smooth execution from start to finish.",
+                  cleanBrand.isNotEmpty
+                      ? "Visited $cleanBrand after seeing good feedback and my experience was equally positive. Deserves a solid 5 stars!"
+                      : "Visited after seeing good feedback and my experience was equally positive. Deserves a solid 5 stars!"
+                ];
+        }
       } else if (isReview) {
         if (isPayment) {
           fallbacks = isHindi
@@ -780,6 +837,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
           'language': _selectedLanguage,
           'tone': _selectedTone,
           'aiGeneratorEnabled': isCommentService,
+          'minWords': _minWords,
+          'maxWords': _maxWords,
           'sampleComments': _sampleComments,
           'appName': _appNameController.text.trim().isNotEmpty
               ? _appNameController.text.trim()
@@ -901,11 +960,30 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
       );
     }
 
-    if (_selectedService != null) {
-      return _buildOrderFormView();
+    final Widget content = _selectedService != null
+        ? _buildOrderFormView()
+        : _buildCategoryAccordionCatalogView();
+
+    // If hosted inside MainNavigationPage with onBackToHome provided,
+    // the parent PopScope manages the back event via handleBack() to avoid conflicts.
+    if (widget.onBackToHome != null) {
+      return content;
     }
 
-    return _buildCategoryAccordionCatalogView();
+    // If pushed as a standalone route (e.g. from Services or Home banner),
+    // intercept back on order form to return to catalog, or pop to previous route if already on catalog.
+    return PopScope(
+      canPop: _selectedService == null,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_selectedService != null) {
+          setState(() {
+            _selectedService = null;
+          });
+        }
+      },
+      child: content,
+    );
   }
 
   // ==================== VIEW 1: CATEGORY ACCORDION CATALOG ====================
@@ -1009,12 +1087,21 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         return idxA.compareTo(idxB);
       });
 
+    final bool canGoBack = Navigator.canPop(context) || widget.onBackToHome != null;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        leading: canGoBack
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+                tooltip: 'Back',
+                onPressed: _onUiBackPressed,
+              )
+            : null,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(color: const Color(0xFFF1F5F9), height: 1),
@@ -1132,7 +1219,8 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
-          onPressed: () => setState(() => _selectedService = null),
+          tooltip: 'Back to Catalog',
+          onPressed: _onUiBackPressed,
         ),
         title: Row(
           children: [
@@ -1744,6 +1832,13 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
                   }),
                   onToneChanged: (tone) => setState(() {
                     _selectedTone = tone;
+                    _sampleComments = [];
+                  }),
+                  minWords: _minWords,
+                  maxWords: _maxWords,
+                  onWordLimitChanged: (min, max) => setState(() {
+                    _minWords = min;
+                    _maxWords = max;
                     _sampleComments = [];
                   }),
                 ),

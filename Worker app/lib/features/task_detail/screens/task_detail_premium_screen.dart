@@ -137,12 +137,17 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       final taskId = (widget.task['id'] ?? widget.task['_id'] ?? '').toString();
       final reviewText = _sanitizeWorkerReview(_getRawCustomText());
       if (reviewText.isNotEmpty) {
+        debugPrint('⌨️ [KeyboardSync] Syncing review to Task Review Keyboard ($p, $taskId): "$reviewText"');
         await ReviewKeyboardService.instance.setActiveReview(
           taskId: taskId,
           reviewText: reviewText,
           platform: p,
         );
+      } else {
+        debugPrint('⚠️ [KeyboardSync] Review text empty for taskId: $taskId');
       }
+    } else {
+      debugPrint('ℹ️ [KeyboardSync] Task not eligible or comment not required for platform $p');
     }
   }
 
@@ -217,12 +222,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     if (type.contains('COMMENT') || type.contains('REVIEW')) return true;
 
     final p = _getPlatform();
-    if (p == 'google_business') {
+    if (p == 'google_business' || p == 'playstore') {
+      final rawText = _getRawCustomText();
+      if (rawText.isNotEmpty) return true;
       if (type.contains('RATING') && !type.contains('REVIEW')) return false;
-      return true;
-    }
-    if (p == 'playstore') {
-      if (type.contains('INSTALL') || type.contains('RATING')) return false;
       return true;
     }
 
@@ -987,51 +990,87 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   String _getRawCustomText() {
     final t = widget.task;
-    if (t['commentText'] != null &&
-        t['commentText'].toString().trim().isNotEmpty) {
-      return t['commentText'].toString().trim();
-    }
-    if (t['generatedContent'] != null &&
-        t['generatedContent'].toString().trim().isNotEmpty) {
-      return t['generatedContent'].toString().trim();
-    }
-    if (t['customText'] != null &&
-        t['customText'].toString().trim().isNotEmpty) {
-      return t['customText'].toString().trim();
-    }
-    if (t['comment'] != null && t['comment'].toString().trim().isNotEmpty) {
-      return t['comment'].toString().trim();
-    }
-    if (t['requirements'] is Map) {
-      final req = t['requirements'] as Map;
-      if (req['commentText'] != null &&
-          req['commentText'].toString().trim().isNotEmpty) {
-        return req['commentText'].toString().trim();
+    if (t == null) return '';
+
+    String? checkValue(dynamic val) {
+      if (val != null) {
+        final s = val.toString().trim();
+        if (s.isNotEmpty && s.toLowerCase() != 'null') return s;
       }
-      if (req['generatedContent'] != null &&
-          req['generatedContent'].toString().trim().isNotEmpty) {
-        return req['generatedContent'].toString().trim();
+      return null;
+    }
+
+    final directKeys = [
+      'commentText',
+      'comment_text',
+      'reviewText',
+      'review_text',
+      'customText',
+      'custom_text',
+      'review',
+      'comment',
+      'generatedContent',
+      'generated_content',
+      'text',
+    ];
+
+    if (t is Map) {
+      // 1. Direct fields on task
+      for (final k in directKeys) {
+        final res = checkValue(t[k]);
+        if (res != null) return res;
       }
-      if (req['customText'] != null &&
-          req['customText'].toString().trim().isNotEmpty) {
-        return req['customText'].toString().trim();
+
+      // 2. Requirements (Map or JSON string)
+      dynamic req = t['requirements'];
+      if (req is String && req.trim().startsWith('{')) {
+        try {
+          req = jsonDecode(req);
+        } catch (_) {}
       }
-      if (req['comment'] != null &&
-          req['comment'].toString().trim().isNotEmpty) {
-        return req['comment'].toString().trim();
+      if (req is Map) {
+        for (final k in directKeys) {
+          final res = checkValue(req[k]);
+          if (res != null) return res;
+        }
+        if (req['sampleComments'] is List &&
+            (req['sampleComments'] as List).isNotEmpty) {
+          final samples = req['sampleComments'] as List;
+          for (final item in samples) {
+            final s = checkValue(item);
+            if (s != null) return s;
+          }
+        }
+        for (final entry in req.entries) {
+          final k = entry.key.toString().toLowerCase();
+          final v = entry.value.toString().trim();
+          if ((k.contains('textfield') ||
+                  k.contains('text') ||
+                  k.contains('comment') ||
+                  k.contains('review') ||
+                  k.contains('custom')) &&
+              v.isNotEmpty &&
+              v.toLowerCase() != 'null') {
+            return v;
+          }
+        }
       }
-      for (final entry in req.entries) {
-        final k = entry.key.toString().toLowerCase();
-        final v = entry.value.toString().trim();
-        if ((k.contains('textfield') ||
-                k.contains('text') ||
-                k.contains('comment') ||
-                k.contains('custom')) &&
-            v.isNotEmpty) {
-          return v;
+
+      // 3. Metadata (Map or JSON string)
+      dynamic meta = t['metadata'];
+      if (meta is String && meta.trim().startsWith('{')) {
+        try {
+          meta = jsonDecode(meta);
+        } catch (_) {}
+      }
+      if (meta is Map) {
+        for (final k in directKeys) {
+          final res = checkValue(meta[k]);
+          if (res != null) return res;
         }
       }
     }
+
     final p = _getPlatform();
     if (p == 'google_business') {
       return 'Excellent service and great experience! Very polite and professional staff.';
@@ -3618,10 +3657,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                       Clipboard.setData(ClipboardData(text: customText));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text(
-                            '✓ Comment text copied to clipboard!',
-                          ),
+                          content: Text('✓ Comment text copied to clipboard!'),
                           backgroundColor: Color(0xFF7C3AED),
+                          duration: Duration(seconds: 2),
                         ),
                       );
                     },
@@ -3635,47 +3673,29 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: (isGoogleBusiness
-                                  ? const Color(0xFF2563EB)
-                                  : (isPlayStore
-                                      ? const Color(0xFF059669)
-                                      : const Color(0xFF7C3AED)))
-                              .withOpacity(0.3),
+                          color: const Color(0xFF7C3AED).withOpacity(0.3),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: (isGoogleBusiness
-                                    ? const Color(0xFF2563EB)
-                                    : (isPlayStore
-                                        ? const Color(0xFF059669)
-                                        : const Color(0xFF7C3AED)))
-                                .withOpacity(0.08),
+                            color: const Color(0xFF7C3AED).withOpacity(0.08),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
                         ],
                       ),
-                      child: Column(
+                      child: const Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.copy_rounded,
-                            color: isGoogleBusiness
-                                ? const Color(0xFF2563EB)
-                                : (isPlayStore
-                                    ? const Color(0xFF059669)
-                                    : const Color(0xFF7C3AED)),
+                            color: Color(0xFF7C3AED),
                             size: 16,
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(height: 2),
                           Text(
                             'Copy',
                             style: TextStyle(
-                              color: isGoogleBusiness
-                                  ? const Color(0xFF2563EB)
-                                  : (isPlayStore
-                                      ? const Color(0xFF059669)
-                                      : const Color(0xFF7C3AED)),
+                              color: Color(0xFF7C3AED),
                               fontSize: 9.5,
                               fontWeight: FontWeight.bold,
                             ),
@@ -3820,7 +3840,8 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
           // Right Button (Fixed padding & shrink-wrapped)
           InkWell(
-            onTap: () {
+            onTap: () async {
+              await _syncReviewToKeyboard();
               if (_isYouTubeTask() && _isTaskAccepted && !_isWatchCompleted) {
                 _startWatchingYouTubeVideo();
               } else {

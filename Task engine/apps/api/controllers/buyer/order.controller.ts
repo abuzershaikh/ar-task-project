@@ -105,6 +105,8 @@ export class BuyerOrderController {
             appDescription?: string;
             model?: string;
             apiKey?: string;
+            minWords?: number;
+            maxWords?: number;
         },
     ) {
         const topic = body.topic?.trim() || body.prompt?.trim() || '';
@@ -112,6 +114,8 @@ export class BuyerOrderController {
         const tone = body.tone || 'natural';
         const requestedTotal = body.count || 10;
         const previewCount = Math.min(5, requestedTotal > 0 ? requestedTotal : 5);
+        const minWords = body.minWords && body.minWords > 0 ? body.minWords : 15;
+        const maxWords = body.maxWords && body.maxWords > 0 ? body.maxWords : 45;
 
         const serviceCode = (body.serviceCode || '').toLowerCase();
         const isGoogleBusiness = serviceCode.includes('google_business') ||
@@ -150,6 +154,8 @@ export class BuyerOrderController {
                 generatorType,
                 model: configuredModel,
                 apiKey: body.apiKey,
+                minWords,
+                maxWords,
             } as any,
         );
 
@@ -161,6 +167,8 @@ export class BuyerOrderController {
             remainingToGenerate: Math.max(0, requestedTotal - sampleComments.length),
             modelUsed: configuredModel,
             isDeepSeekApiKeyConfigured: isKeyConfigured,
+            minWords,
+            maxWords,
             message: `Generated ${sampleComments.length} sample comments via DeepSeek AI (${configuredModel}). Remaining comments will be generated upon order placement.`,
         };
     }

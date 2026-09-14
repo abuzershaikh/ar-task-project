@@ -14,6 +14,9 @@ class AiCommentConfigWidget extends StatefulWidget {
   final bool isAppReview;
   final bool isGoogleBusiness;
   final String? appName;
+  final int minWords;
+  final int maxWords;
+  final void Function(int min, int max)? onWordLimitChanged;
 
   const AiCommentConfigWidget({
     super.key,
@@ -30,6 +33,9 @@ class AiCommentConfigWidget extends StatefulWidget {
     this.isAppReview = false,
     this.isGoogleBusiness = false,
     this.appName,
+    this.minWords = 15,
+    this.maxWords = 45,
+    this.onWordLimitChanged,
   });
 
   @override
@@ -522,6 +528,120 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
               ),
             ],
           ),
+          const SizedBox(height: 14),
+
+          // Word Limit Slider (Min & Max Words)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.straighten_rounded,
+                          size: 16,
+                          color: primaryColor,
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Word Count Limit:',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: badgeBorder),
+                      ),
+                      child: Text(
+                        '${widget.minWords} – ${widget.maxWords} Words',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: badgeTextColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isGoogle || isApp
+                      ? 'Select desired minimum and maximum review word length.'
+                      : 'Select desired minimum and maximum comment word length.',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 8),
+
+                // Range Slider
+                RangeSlider(
+                  values: RangeValues(
+                    widget.minWords.clamp(8, 120).toDouble(),
+                    widget.maxWords.clamp(widget.minWords + 4, 120).toDouble(),
+                  ),
+                  min: 8,
+                  max: 120,
+                  divisions: 28,
+                  activeColor: primaryColor,
+                  inactiveColor: const Color(0xFFE2E8F0),
+                  labels: RangeLabels(
+                    '${widget.minWords}w',
+                    '${widget.maxWords}w',
+                  ),
+                  onChanged: (RangeValues values) {
+                    widget.onWordLimitChanged?.call(
+                      values.start.round(),
+                      values.end.round(),
+                    );
+                  },
+                ),
+
+                // Quick Presets
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildWordPresetChip(
+                      label: '⚡ Short (10-25w)',
+                      min: 10,
+                      max: 25,
+                      isSelected: widget.minWords <= 12 && widget.maxWords <= 25,
+                      primaryColor: primaryColor,
+                    ),
+                    _buildWordPresetChip(
+                      label: '⭐ Standard (25-50w)',
+                      min: 25,
+                      max: 50,
+                      isSelected: widget.minWords >= 20 && widget.minWords <= 30 && widget.maxWords >= 45 && widget.maxWords <= 55,
+                      primaryColor: primaryColor,
+                    ),
+                    _buildWordPresetChip(
+                      label: '📝 In-Depth (50-90w)',
+                      min: 50,
+                      max: 90,
+                      isSelected: widget.minWords >= 45 && widget.maxWords >= 85,
+                      primaryColor: primaryColor,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
 
           // Generate Preview Action Button
@@ -603,6 +723,7 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                   ...displayedComments.asMap().entries.map((entry) {
                     final index = entry.key + 1;
                     final comment = entry.value;
+                    final wordCount = comment.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
                     return Container(
                       margin: const EdgeInsets.only(bottom: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -620,13 +741,27 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                               color: badgeBg,
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(
-                              '#$index',
-                              style: TextStyle(
-                                color: badgeTextColor,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '#$index',
+                                  style: TextStyle(
+                                    color: badgeTextColor,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '• ${wordCount}w',
+                                  style: TextStyle(
+                                    color: badgeTextColor.withOpacity(0.75),
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -683,6 +818,38 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildWordPresetChip({
+    required String label,
+    required int min,
+    required int max,
+    required bool isSelected,
+    required Color primaryColor,
+  }) {
+    return InkWell(
+      onTap: () => widget.onWordLimitChanged?.call(min, max),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryColor.withOpacity(0.12) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? primaryColor : const Color(0xFFCBD5E1),
+            width: isSelected ? 1.4 : 1.0,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? primaryColor : const Color(0xFF475569),
+          ),
+        ),
       ),
     );
   }
