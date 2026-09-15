@@ -35,6 +35,12 @@ class ApiEndpoints {
   
   /// Verify balance payment
   static const String verifyBalancePayment = '$buyer/wallet/verify-payment';
+
+  /// Live Razorpay order creation
+  static const String razorpayOrder = '$buyer/wallet/razorpay-order';
+
+  /// Live Razorpay signature verification and atomic wallet crediting
+  static const String razorpayVerify = '$buyer/wallet/razorpay-verify';
   
   // ============ CAMPAIGNS (ORDERS) ============
   /// List all campaigns with filters

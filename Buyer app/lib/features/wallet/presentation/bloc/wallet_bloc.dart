@@ -158,7 +158,12 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   ) async {
     emit(const BalancePaymentVerifying());
 
-    final result = await verifyBalancePayment(event.paymentId);
+    final result = await verifyBalancePayment(
+      event.paymentId,
+      orderId: event.orderId,
+      signature: event.signature,
+      amount: event.amount,
+    );
 
     result.fold(
       (failure) => emit(WalletError(failure.message)),

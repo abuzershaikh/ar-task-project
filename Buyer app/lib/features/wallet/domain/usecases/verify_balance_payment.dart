@@ -8,7 +8,17 @@ class VerifyBalancePayment {
 
   VerifyBalancePayment(this.repository);
 
-  Future<Either<Failure, WalletBalance>> call(String paymentId) async {
-    return await repository.verifyBalancePayment(paymentId);
+  Future<Either<Failure, WalletBalance>> call(
+    String paymentId, {
+    String? orderId,
+    String? signature,
+    double? amount,
+  }) async {
+    return await repository.verifyBalancePayment(
+      paymentId,
+      orderId: orderId,
+      signature: signature,
+      amount: amount,
+    );
   }
 }

@@ -167,13 +167,16 @@ class _WalletScreenState extends State<WalletScreen>
                       padding: const EdgeInsets.all(16),
                       child: BalanceCard(
                         balance: loadedState.balance,
-                        onAddBalance: () {
-                          Navigator.push(
+                        onAddBalance: () async {
+                          await Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => const AddBalanceScreen(),
                             ),
                           );
+                          if (context.mounted) {
+                            context.read<WalletBloc>().add(const RefreshWalletEvent());
+                          }
                         },
                       ),
                     ),

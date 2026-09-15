@@ -79,10 +79,18 @@ class WalletRepositoryImpl implements WalletRepository {
 
   @override
   Future<Either<Failure, WalletBalance>> verifyBalancePayment(
-    String paymentId,
-  ) async {
+    String paymentId, {
+    String? orderId,
+    String? signature,
+    double? amount,
+  }) async {
     try {
-      final result = await remoteDataSource.verifyBalancePayment(paymentId);
+      final result = await remoteDataSource.verifyBalancePayment(
+        paymentId,
+        orderId: orderId,
+        signature: signature,
+        amount: amount,
+      );
       return Right(result.toEntity());
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

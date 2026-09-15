@@ -12,7 +12,12 @@ abstract class WalletRemoteDataSource {
   });
   Future<TransactionModel> getTransactionDetail(String id);
   Future<Map<String, dynamic>> initiateAddBalance(double amount);
-  Future<WalletBalanceModel> verifyBalancePayment(String paymentId);
+  Future<WalletBalanceModel> verifyBalancePayment(
+    String paymentId, {
+    String? orderId,
+    String? signature,
+    double? amount,
+  });
 }
 
 class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
@@ -61,28 +66,71 @@ class WalletRemoteDataSourceImpl implements WalletRemoteDataSource {
 
   @override
   Future<Map<String, dynamic>> initiateAddBalance(double amount) async {
-    try {
-      final response = await client.post(
-        ApiEndpoints.addBalance,
-        data: {'amount': amount},
-      );
+    final response = await client.post(
+      ApiEndpoints.razorpayOrder,
+      data: {'amount': amount},
+    );
+    if (response.data != null) {
       return Map<String, dynamic>.from(response.data);
-    } catch (e) {
-      return {'paymentId': 'pay_123', 'amount': amount};
     }
+    throw Exception('Failed to initiate Razorpay order');
   }
 
   @override
-  Future<WalletBalanceModel> verifyBalancePayment(String paymentId) async {
-    try {
-      final response = await client.post(
-        ApiEndpoints.verifyBalancePayment,
-        data: {'transactionId': paymentId},
-      );
+  Future<WalletBalanceModel> verifyBalancePayment(
+    String paymentId, {
+    String? orderId,
+    String? signature,
+    double? amount,
+  }) async {
+    final response = await client.post(
+      ApiEndpoints.razorpayVerify,
+      data: {
+        'paymentId': paymentId,
+        'orderId': orderId ?? paymentId,
+        'signature': signature ?? '',
+        if (amount != null) 'amount': amount,
+      },
+    );
+    if (response.data != null) {
       final dataMap = response.data['balance'] ?? response.data['data'] ?? response.data;
       return WalletBalanceModel.fromJson(Map<String, dynamic>.from(dataMap as Map));
-    } catch (e) {
-      return getBalance();
     }
+    return getBalance();
+  }
+
+  Future<Map<String, dynamic>> createRazorpayOrder(double amount, {String? description}) async {
+    final response = await client.post(
+      ApiEndpoints.razorpayOrder,
+      data: {
+        'amount': amount,
+        if (description != null) 'description': description,
+      },
+    );
+    if (response.data != null) {
+      return Map<String, dynamic>.from(response.data);
+    }
+    throw Exception('Failed to create Razorpay order');
+  }
+
+  Future<Map<String, dynamic>> verifyRazorpayPayment({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+    required double amount,
+  }) async {
+    final response = await client.post(
+      ApiEndpoints.razorpayVerify,
+      data: {
+        'orderId': orderId,
+        'paymentId': paymentId,
+        'signature': signature,
+        'amount': amount,
+      },
+    );
+    if (response.data != null) {
+      return Map<String, dynamic>.from(response.data);
+    }
+    throw Exception('Failed to verify Razorpay payment');
   }
 }

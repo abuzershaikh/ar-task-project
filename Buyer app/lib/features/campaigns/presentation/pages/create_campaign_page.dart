@@ -7,6 +7,7 @@ import '../../../services/data/repositories/service_repository_impl.dart';
 import '../../../services/presentation/widgets/category_accordion_card.dart';
 import '../../../services/presentation/widgets/ai_comment_config_widget.dart';
 import '../../../../core/utils/service_unit_helper.dart';
+import '../../../wallet/presentation/pages/add_balance_screen.dart';
 
 class CreateCampaignPage extends StatefulWidget {
   final String? serviceId;
@@ -788,12 +789,27 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
     final totalCost = _calculateTotalCost();
     if (_walletBalance < totalCost) {
+      final deficit = totalCost - _walletBalance;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              '⚠️ Insufficient wallet balance (₹${_walletBalance.toStringAsFixed(2)}). Required: ₹${totalCost.toStringAsFixed(2)}. Please top up!'),
-          backgroundColor: Colors.orange.shade800,
+              '⚠️ Insufficient balance (₹${_walletBalance.toStringAsFixed(2)}). Need: ₹${totalCost.toStringAsFixed(2)} (Deficit: ₹${deficit.toStringAsFixed(2)})'),
+          backgroundColor: const Color(0xFFC2410C),
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: 'Top Up Now',
+            textColor: const Color(0xFFFDE047),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddBalanceScreen(initialAmount: deficit),
+                ),
+              );
+              _loadWalletBalance();
+            },
+          ),
         ),
       );
       return;

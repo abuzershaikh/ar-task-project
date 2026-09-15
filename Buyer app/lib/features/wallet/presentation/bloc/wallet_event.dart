@@ -51,11 +51,19 @@ class InitiateAddBalanceEvent extends WalletEvent {
 /// Verify balance payment
 class VerifyBalancePaymentEvent extends WalletEvent {
   final String paymentId;
+  final String? orderId;
+  final String? signature;
+  final double? amount;
 
-  const VerifyBalancePaymentEvent(this.paymentId);
+  const VerifyBalancePaymentEvent(
+    this.paymentId, {
+    this.orderId,
+    this.signature,
+    this.amount,
+  });
 
   @override
-  List<Object?> get props => [paymentId];
+  List<Object?> get props => [paymentId, orderId, signature, amount];
 }
 
 /// Refresh wallet data

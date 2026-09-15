@@ -37,7 +37,6 @@ class TaskReviewInputMethodService : InputMethodService() {
     private lateinit var tvPreview: TextView
     private lateinit var btnWriteReview: Button
     private lateinit var btnStopReview: Button
-    private lateinit var btnPasteReview: Button
     private lateinit var reviewActionBar: LinearLayout
     private lateinit var row1: LinearLayout
     private lateinit var row2: LinearLayout
@@ -126,7 +125,6 @@ class TaskReviewInputMethodService : InputMethodService() {
         tvPreview = view.findViewById(R.id.tv_review_preview)
         btnWriteReview = view.findViewById(R.id.btn_write_review)
         btnStopReview = view.findViewById(R.id.btn_stop_review)
-        btnPasteReview = view.findViewById(R.id.btn_paste_review)
         reviewActionBar = view.findViewById(R.id.review_action_bar)
 
         row1 = view.findViewById(R.id.row_1)
@@ -171,7 +169,6 @@ class TaskReviewInputMethodService : InputMethodService() {
         if (!review.isNullOrEmpty()) {
             reviewActionBar.visibility = View.VISIBLE
             btnWriteReview.visibility = if (isTyping) View.GONE else View.VISIBLE
-            btnPasteReview.visibility = if (isTyping) View.GONE else View.VISIBLE
             btnStopReview.visibility = if (isTyping) View.VISIBLE else View.GONE
 
             if (isGoogle) {
@@ -189,7 +186,6 @@ class TaskReviewInputMethodService : InputMethodService() {
             tvBadge.setTextColor(Color.parseColor("#94A3B8"))
             tvPreview.text = "Ready to type"
             btnWriteReview.visibility = View.GONE
-            btnPasteReview.visibility = View.GONE
             btnStopReview.visibility = View.GONE
         }
     }
@@ -206,14 +202,6 @@ class TaskReviewInputMethodService : InputMethodService() {
         // Stop Auto-Typing
         btnStopReview.setOnClickListener {
             stopAutoTyping()
-        }
-
-        // Quick Instant Paste
-        btnPasteReview.setOnClickListener {
-            val text = activeReviewText
-            if (!text.isNullOrBlank()) {
-                currentInputConnection?.commitText(text, 1)
-            }
         }
 
         // Shift / Caps Key
@@ -375,11 +363,20 @@ class TaskReviewInputMethodService : InputMethodService() {
                 val c = review[i]
                 ic.commitText(c.toString(), 1)
 
-                // Human keystroke simulation delay (28ms - 45ms, extra for punctuation/spaces)
-                val baseDelay = when (c) {
-                    ' ', ',', '.' -> Random.nextLong(65, 110)
-                    '!', '?' -> Random.nextLong(90, 140)
-                    else -> Random.nextLong(28, 48)
+                // Realistic human keystroke simulation delay (~35-45 WPM cadence on mobile)
+                val baseDelay = when {
+                    c == '.' || c == '!' || c == '?' -> Random.nextLong(550, 950) // Natural sentence thinking pause
+                    c == ',' || c == ';' || c == ':' -> Random.nextLong(300, 500) // Natural punctuation pause
+                    c == ' ' -> {
+                        // After words: normal word space or occasional brief hesitation
+                        if (Random.nextInt(100) < 15) {
+                            Random.nextLong(450, 800) // Thought pause between thoughts
+                        } else {
+                            Random.nextLong(200, 340) // Standard word gap
+                        }
+                    }
+                    c.isUpperCase() -> Random.nextLong(170, 270) // Shift key tap delay
+                    else -> Random.nextLong(115, 195) // Natural human letter keystroke (115ms - 195ms)
                 }
                 delay(baseDelay)
             }

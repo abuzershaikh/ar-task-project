@@ -24,6 +24,9 @@ abstract class WalletRepository {
 
   /// Verify balance payment after payment gateway callback
   Future<Either<Failure, WalletBalance>> verifyBalancePayment(
-    String paymentId,
-  );
+    String paymentId, {
+    String? orderId,
+    String? signature,
+    double? amount,
+  });
 }
