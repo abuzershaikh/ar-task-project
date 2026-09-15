@@ -500,11 +500,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
                 _buildIncrementChip('+₹2,000', 2000),
               ],
             ),
-            const SizedBox(height: 28),
-
-            // Generic Secure Payment Methods Banner
-            _buildPaymentMethodsCard(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -676,76 +672,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
     );
   }
 
-  Widget _buildPaymentMethodsCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.lock_outline, color: Color(0xFF10B981), size: 18),
-              SizedBox(width: 8),
-              Text(
-                '100% Secure & Instant Payment',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildPaymentBadge('UPI', Icons.qr_code),
-              const SizedBox(width: 8),
-              _buildPaymentBadge('Cards', Icons.credit_card),
-              const SizedBox(width: 8),
-              _buildPaymentBadge('Net Banking', Icons.account_balance),
-              const SizedBox(width: 8),
-              _buildPaymentBadge('Wallets', Icons.account_balance_wallet),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'Supported via Google Pay, PhonePe, Paytm, BHIM, all major Debit/Credit Cards & 50+ Banks.',
-            style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildPaymentBadge(String label, IconData icon) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 16, color: const Color(0xFF475569)),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildBottomPayBar() {
     return SafeArea(
