@@ -114,8 +114,8 @@ export class BuyerOrderController {
         const tone = body.tone || 'natural';
         const requestedTotal = body.count || 10;
         const previewCount = Math.min(5, requestedTotal > 0 ? requestedTotal : 5);
-        const minWords = body.minWords && body.minWords > 0 ? body.minWords : 15;
-        const maxWords = body.maxWords && body.maxWords > 0 ? body.maxWords : 45;
+        const minWords = body.minWords && body.minWords > 0 ? Math.max(4, body.minWords) : 15;
+        const maxWords = body.maxWords && body.maxWords > 0 ? Math.max(minWords, body.maxWords) : 45;
 
         const serviceCode = (body.serviceCode || '').toLowerCase();
         const isGoogleBusiness = serviceCode.includes('google_business') ||
@@ -151,6 +151,7 @@ export class BuyerOrderController {
                 businessName: body.businessName || body.appName,
                 isAppReview: isPlayStore,
                 isGoogleBusiness,
+                isInstagram,
                 generatorType,
                 model: configuredModel,
                 apiKey: body.apiKey,

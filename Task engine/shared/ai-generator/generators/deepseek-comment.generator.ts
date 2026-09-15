@@ -47,9 +47,19 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
 
         const isGoogleBusiness = (options as any)?.isGoogleBusiness || (options as any)?.generatorType?.includes('google_business') || (options as any)?.generatorType?.includes('google_maps') || (options as any)?.generatorType?.includes('gmb');
         const isAppReview = !isGoogleBusiness && ((options as any)?.isAppReview || (options as any)?.generatorType?.includes('review') || (options as any)?.generatorType?.includes('play'));
+        const isInstagram = !isGoogleBusiness && !isAppReview && (
+            (options as any)?.isInstagram ||
+            (options as any)?.generatorType?.includes('instagram') ||
+            (options as any)?.generatorType?.includes('insta') ||
+            (options as any)?.serviceCode?.toLowerCase()?.includes('insta')
+        );
+
         const contextType = isGoogleBusiness
             ? 'Google Business / Google Maps (Natural Customer Review)'
-            : (isAppReview ? 'Google Play Store Android App (Natural Human Review)' : 'social media / YouTube video');
+            : (isAppReview
+                ? 'Google Play Store Android App (Natural Human Review)'
+                : (isInstagram ? 'Instagram Post / Reel (Short Natural Comment)' : 'YouTube Video (Natural Human Comment)'));
+
         const fallbackGen = isGoogleBusiness
             ? this.googleBusinessFallbackGen
             : (isAppReview ? this.playStoreFallbackGen : this.templateFallbackGen);
@@ -58,15 +68,22 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
         const model = this.getModel(options);
         const isReasoner = model.toLowerCase().includes('reasoner') || model.toLowerCase().includes('r1');
 
-        const minWords = Math.max(8, options?.minWords || 15);
-        const maxWords = Math.max(minWords + 5, options?.maxWords || 45);
+        // Target word count bounds: Minimum starts from 4 words
+        const minWords = Math.max(4, options?.minWords || 15);
+        const maxWords = Math.max(minWords, options?.maxWords || 45);
+
+        const strictLengthInstruction = `- ⚠️ STRICT LENGTH REQUIREMENT: Each comment/review MUST contain strictly between ${minWords} and ${maxWords} words.
+${maxWords <= 12
+    ? `  CRITICAL DIRECTIVE: The user requested extremely short & punchy comments (strictly under ${maxWords} words). Write only ONE brief phrase or sentence (e.g., 4 to ${maxWords} words). Absolutely DO NOT write multiple sentences, explanations, or long paragraphs! Comments exceeding ${maxWords} words will be REJECTED.`
+    : `  Target length: approximately ${Math.round((minWords + maxWords) / 2)} words. Never write fewer than ${minWords} words or more than ${maxWords} words.`}`;
 
         this.logger.log(`🤖 Requesting AI for ${count} items (Type: ${contextType}, Words: ${minWords}-${maxWords}, Model: ${model} [${isReasoner ? 'Reasoning/R1' : 'Chat/V3'}], Title: "${videoTitle}", Brand: "${brand}", Prompt: "${userPrompt}", Lang: ${language}, Tone: ${tone})`);
 
         try {
             if (!apiKey) {
                 this.logger.warn(`DEEPSEEK_API_KEY is not configured in .env or request. Using smart contextual generator. Model configured: ${model}`);
-                return fallbackGen.generateBatch(count, options);
+                const rawFallback = await fallbackGen.generateBatch(count, options);
+                return rawFallback.map(c => this.enforceWordLimits(c, minWords, maxWords));
             }
 
             const prompt = isGoogleBusiness
@@ -78,12 +95,12 @@ ${brand ? `- Target Business Name: "${brand}"` : '- Target: Local Business / Sto
 ${userPrompt ? `- Customer Experience / Review Focus: "${userPrompt}"\n  CRITICAL DIRECTIVE: Follow the buyer's instructions above to shape what the reviews praise or highlight (e.g., great service, polite staff, fast delivery, quality products, clean ambiance, prompt communication). DO NOT repeat or quote the buyer's prompt verbatim! Express the requested points naturally as if you visited or used their service personally.` : '- Review Focus: Genuine customer experience, polite staff, dependable quality, smooth service, and good communication'}
 - Language: "${language}" (write naturally as real everyday customers write on Google Maps; if Hindi or Hinglish, write in natural conversational Roman Hindi)
 - Tone: "${tone}" (natural, polite, authentic customer sharing genuine positive feedback)
-- Length Requirement: Each review MUST be strictly between ${minWords} and ${maxWords} words long. Never write fewer than ${minWords} words or more than ${maxWords} words.
+${strictLengthInstruction}
 
 CRITICAL RULES:
 1. ABSOLUTELY NO star symbols (like ⭐, ★, 🌟, ✨), NO emojis, and NO rating numbers.
-2. Tone MUST be 100% human, casual, and authentic as written by real everyday customers. Absolutely NO corporate PR buzzwords or exaggerated marketing speak (do NOT write "exceeded all expectations", "exemplary service", "epitome of excellence").
-3. Every review MUST be completely distinct in vocabulary, sentence structure, length (within ${minWords}-${maxWords} words), and perspective.
+2. Tone MUST be 100% human, casual, and authentic as written by real everyday customers. Absolutely NO corporate PR buzzwords.
+3. Every review MUST be completely distinct in vocabulary, sentence structure, and perspective.
 4. DO NOT quote or copy-paste the prompt text verbatim!
 5. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
@@ -97,7 +114,7 @@ ${brand ? `- Target App Name: "${brand}"` : '- Target App: Android mobile applic
 ${userPrompt ? `- Buyer's Prompt / Instructions: "${userPrompt}"\n  CRITICAL DIRECTIVE: Follow the buyer's instructions above to shape what the reviews praise or focus on. DO NOT repeat or quote the buyer's prompt verbatim! Express the requested points naturally as if you experienced them personally.` : '- Review Focus: Everyday user experience, smooth performance, intuitive interface, reliable stability'}
 - Language: "${language}" (write naturally as real everyday users write in this language; if Hindi or Hinglish, write in natural conversational Roman Hindi as commonly seen on Play Store reviews)
 - Tone: "${tone}" (natural, casual, honest everyday user)
-- Length Requirement: Each review MUST be strictly between ${minWords} and ${maxWords} words long. Never write fewer than ${minWords} words or more than ${maxWords} words.
+${strictLengthInstruction}
 
 CRITICAL RULES:
 1. ABSOLUTELY NO star symbols (like ⭐, ★, 🌟, ✨), NO emojis, and NO rating numbers.
@@ -106,7 +123,26 @@ CRITICAL RULES:
 4. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
 ["First authentic review", "Second authentic review"]`
-                    : `You are an authentic community member and active viewer writing comments on a YouTube video.
+                    : (isInstagram
+                        ? `You are an authentic active Instagram user writing genuine comments on an Instagram post or reel.
+Generate exactly ${count} completely distinct, natural, human-written comments tailored directly to this post.
+
+Post Details:
+${videoTitle || brand ? `- Topic / Profile / Reel: "${videoTitle || brand}"` : '- Context: Engaging Instagram post / reel'}
+${userPrompt ? `- Buyer's Prompt / Vibe Instructions: "${userPrompt}"\n  CRITICAL DIRECTIVE: Follow the buyer's instructions to shape what the comments highlight (e.g. fire transition, aesthetic vibe, question, praise). DO NOT quote or copy-paste the prompt verbatim!` : '- Vibe: Authentic appreciation, trendy reaction, or genuine reaction'}
+- Language: "${language}" (write naturally as real Instagram users write; if Hindi or Hinglish, write in natural conversational Roman Hindi)
+- Tone: "${tone}" (casual, engaging, authentic everyday user)
+${strictLengthInstruction}
+
+CRITICAL RULES:
+1. Comments MUST sound like real Instagram users (casual, engaging, no robotic or corporate phrasing).
+2. Every comment MUST be distinct in wording and style.
+3. ABSOLUTELY NO star symbols or rating numbers.
+4. DO NOT copy-paste the prompt text into the comments.
+5. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
+Example format:
+["First authentic comment", "Second authentic comment"]`
+                        : `You are an authentic community member and active viewer writing comments on a YouTube video.
 Generate exactly ${count} completely distinct, authentic, natural, human-written comments tailored directly to this video.
 
 Video Details:
@@ -114,6 +150,7 @@ ${videoTitle ? `- Video Title: "${videoTitle}"` : '- Context: Engaging, high-val
 ${userPrompt ? `- Buyer's Custom Prompt / Topic Instructions: "${userPrompt}"\n  CRITICAL DIRECTIVE: The text above provides custom instructions for what the comments should say or request. Fulfill these instructions creatively and naturally across the generated comments (e.g., if asking for Part 2, request Part 2; if praising audio or specific tips, highlight that). DO NOT quote or copy-paste the prompt text verbatim! Express the intent with diverse, natural human phrasing.` : '- Topic: High-value video tutorial / presentation'}
 - Language: "${language}" (write naturally as real active YouTube viewers write in this language; if Hindi or Hinglish, write in natural conversational Roman Hindi or Devanagari as commonly used by viewers)
 - Tone: "${tone}" (e.g. natural, enthusiastic, insightful, questioning)
+${strictLengthInstruction}
 
 CRITICAL RULES:
 1. Comments MUST be directly relevant to the video title and topic.
@@ -123,14 +160,14 @@ CRITICAL RULES:
 5. DO NOT copy-paste the prompt text into the comments. Follow its instructions naturally!
 6. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
-["First unique natural comment here", "Second unique natural comment here"]`);
+["First unique natural comment here", "Second unique natural comment here"]`));
 
             const payloadObj: any = {
                 model: model,
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are an authentic everyday human user and community member writing genuine, natural, conversational comments and reviews. You tailor comments specifically to the video title and topic provided. You carefully follow custom user instructions. You NEVER use star symbols (⭐, ★), emojis, or text star ratings. You NEVER repeat or echo the user prompt literally—you always express the intended points with varied, authentic human words. Return ONLY a raw JSON array of strings.',
+                        content: `You are an authentic everyday human writing natural comments and reviews. STRICT CONSTRAINT: You MUST strictly obey the word count limit of ${minWords} to ${maxWords} words per item. NEVER write any item exceeding ${maxWords} words. Return ONLY a raw JSON array of strings.`,
                     },
                     {
                         role: 'user',
@@ -152,21 +189,26 @@ Example format:
                 throw new Error('Empty response from DeepSeek API');
             }
 
-            const parsedComments = this.parseComments(rawContent, count);
+            const parsedComments = this.parseComments(rawContent, count)
+                .map(c => this.enforceWordLimits(c, minWords, maxWords))
+                .filter(c => c.length >= 6);
+
             if (parsedComments.length >= count) {
-                this.logger.log(`✓ DeepSeek AI (${model}) successfully generated ${parsedComments.length} unique comments`);
+                this.logger.log(`✓ DeepSeek AI (${model}) successfully generated ${parsedComments.length} unique comments (Word limit: ${minWords}-${maxWords})`);
                 return parsedComments.slice(0, count);
             } else if (parsedComments.length > 0) {
                 this.logger.log(`DeepSeek returned partial set (${parsedComments.length}/${count}), filling remainder with contextual generator`);
                 const remaining = count - parsedComments.length;
-                const fallbackItems = await fallbackGen.generateBatch(remaining, options);
+                const fallbackItems = (await fallbackGen.generateBatch(remaining, options))
+                    .map(c => this.enforceWordLimits(c, minWords, maxWords));
                 return [...parsedComments, ...fallbackItems].slice(0, count);
             } else {
                 throw new Error('Could not parse comments from DeepSeek response');
             }
         } catch (error: any) {
             this.logger.error(`DeepSeek API error: ${error.message}. Using contextual generator.`, error.stack);
-            return fallbackGen.generateBatch(count, options);
+            const rawFallback = await fallbackGen.generateBatch(count, options);
+            return rawFallback.map(c => this.enforceWordLimits(c, minWords, maxWords));
         }
     }
 
@@ -237,8 +279,37 @@ Example format:
         const lines = cleanContent
             .split('\n')
             .map((line) => sanitizeReviewText(line.replace(/^[\d+.\-•*\]\[\s"]+/, '').replace(/[",\s]+$/, '')))
-            .filter((line) => line.length > 8);
+            .filter((line) => line.length >= 6);
 
         return lines;
+    }
+
+    /**
+     * Enforces that generated comments strictly respect word limits.
+     * If an item exceeds maxWords, it is trimmed to maxWords at a clean sentence or word boundary.
+     */
+    private enforceWordLimits(text: string, minWords: number, maxWords: number): string {
+        const words = text.trim().split(/\s+/).filter(Boolean);
+        if (words.length <= maxWords) {
+            return text;
+        }
+
+        // Take only up to maxWords
+        const subWords = words.slice(0, maxWords);
+        const candidate = subWords.join(' ');
+
+        // Check if there is an early complete sentence (at least Math.max(3, minWords - 1) words)
+        const match = candidate.match(/^(.+?[.!?])(?:\s+.*)?$/);
+        if (match) {
+            const sentence = match[1].trim();
+            const sentenceWordCount = sentence.split(/\s+/).filter(Boolean).length;
+            if (sentenceWordCount >= Math.max(3, minWords - 1)) {
+                return sentence;
+            }
+        }
+
+        // Clean trailing punctuation and add single period
+        const cleaned = candidate.replace(/[,;:\-\s]+$/, '').replace(/[.!?]+$/, '').trim();
+        return `${cleaned}.`;
     }
 }

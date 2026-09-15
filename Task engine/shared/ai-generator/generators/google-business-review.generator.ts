@@ -194,9 +194,9 @@ export class GoogleBusinessReviewGenerator implements IContentGenerator {
         const language = (options?.language || 'English').toLowerCase();
         const isHindi = language.includes('hindi') || language.includes('hinglish') || language.includes('roman');
 
-        // Target word count bounds (defaults: min 15, max 45)
-        const minWords = Math.max(8, options?.minWords || 15);
-        const maxWords = Math.max(minWords + 5, options?.maxWords || 45);
+        // Target word count bounds (defaults: min 15, max 45, minimum starts from 4 words)
+        const minWords = Math.max(4, options?.minWords || 15);
+        const maxWords = Math.max(minWords, options?.maxWords || 45);
 
         const category = this.detectCategory(rawBrand, userPrompt);
 
@@ -252,17 +252,17 @@ export class GoogleBusinessReviewGenerator implements IContentGenerator {
             const brandLabel = brand && brand.length > 0 ? brand : (isHindi ? 'is company' : 'this place');
             draft = draft.replace(/\{brand\}/g, brandLabel);
 
-            // If user supplied custom prompt and this is every 2nd review, weave it naturally
-            if (customOpener && i % 2 === 1 && !draft.includes(userPrompt)) {
+            // If user supplied custom prompt and this is every 2nd review, weave it naturally (only if word limit permits)
+            if (customOpener && i % 2 === 1 && !draft.includes(userPrompt) && maxWords >= 20) {
                 draft = `${customOpener} ${draft}`;
             }
 
             // Word count adjustment loop
             let words = this.countWords(draft);
 
-            // If below minWords, append a natural human filler sentence
+            // If below minWords, append a natural human filler sentence (only if allowed by maxWords)
             let fillerIdx = i;
-            while (words < minWords && fillerIdx < fillers.length + i) {
+            while (words < minWords && (words + 5) <= maxWords && fillerIdx < fillers.length + i) {
                 const addFiller = fillers[fillerIdx % fillers.length];
                 if (!draft.includes(addFiller)) {
                     draft = `${draft} ${addFiller}`;
@@ -271,7 +271,7 @@ export class GoogleBusinessReviewGenerator implements IContentGenerator {
                 fillerIdx++;
             }
 
-            // If above maxWords, truncate to the last sentence that stays within maxWords
+            // If above maxWords, truncate cleanly
             if (words > maxWords) {
                 const sentences = draft.match(/[^.!?]+[.!?]+/g) || [draft];
                 let trimmed = '';
@@ -283,8 +283,11 @@ export class GoogleBusinessReviewGenerator implements IContentGenerator {
                         break;
                     }
                 }
-                if (trimmed && this.countWords(trimmed) >= minWords * 0.7) {
+                if (trimmed && this.countWords(trimmed) >= Math.max(3, minWords * 0.7)) {
                     draft = trimmed;
+                } else {
+                    const w = draft.split(/\s+/).filter(Boolean);
+                    draft = w.slice(0, maxWords).join(' ').replace(/[,;:\-]+$/, '').trim() + '.';
                 }
             }
 

@@ -176,8 +176,8 @@ export class OrderActivatedListener {
                 ? 'google_business_review'
                 : (isPlayStore ? 'playstore_review' : (isInstagram ? 'instagram_comment' : 'youtube_comment'));
 
-            const minWords = order?.requirements?.minWords || 15;
-            const maxWords = order?.requirements?.maxWords || 45;
+            const minWords = order?.requirements?.minWords ? Math.max(4, order.requirements.minWords) : 15;
+            const maxWords = order?.requirements?.maxWords ? Math.max(minWords, order.requirements.maxWords) : 45;
 
             let generatedComments: string[] = [];
             if (isCommentRequired) {
@@ -198,6 +198,7 @@ export class OrderActivatedListener {
                                 uniqueness: true,
                                 isAppReview: isPlayStore,
                                 isGoogleBusiness,
+                                isInstagram,
                                 appName,
                                 businessName: appName,
                                 videoTitle: order?.requirements?.videoTitle || (!isPlayStore && !isGoogleBusiness ? (appName || '') : ''),

@@ -646,15 +646,15 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                 ),
                 const SizedBox(height: 8),
 
-                // Range Slider
+                // Range Slider (Starts from minimum 4 words)
                 RangeSlider(
                   values: RangeValues(
-                    widget.minWords.clamp(8, 120).toDouble(),
-                    widget.maxWords.clamp(widget.minWords + 4, 120).toDouble(),
+                    widget.minWords.clamp(4, 120).toDouble(),
+                    widget.maxWords.clamp(widget.minWords, 120).toDouble(),
                   ),
-                  min: 8,
+                  min: 4,
                   max: 120,
-                  divisions: 28,
+                  divisions: 116,
                   activeColor: primaryColor,
                   inactiveColor: const Color(0xFFE2E8F0),
                   labels: RangeLabels(
@@ -662,10 +662,9 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                     '${widget.maxWords}w',
                   ),
                   onChanged: (RangeValues values) {
-                    widget.onWordLimitChanged?.call(
-                      values.start.round(),
-                      values.end.round(),
-                    );
+                    final start = values.start.round().clamp(4, 120);
+                    final end = values.end.round().clamp(start, 120);
+                    widget.onWordLimitChanged?.call(start, end);
                   },
                 ),
 
@@ -675,21 +674,28 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                   runSpacing: 6,
                   children: [
                     _buildWordPresetChip(
-                      label: '⚡ Short (10-25w)',
-                      min: 10,
-                      max: 25,
-                      isSelected: widget.minWords <= 12 && widget.maxWords <= 25,
+                      label: '⚡ Ultra Short (4-8w)',
+                      min: 4,
+                      max: 8,
+                      isSelected: widget.minWords <= 5 && widget.maxWords <= 8,
                       primaryColor: primaryColor,
                     ),
                     _buildWordPresetChip(
-                      label: '⭐ Standard (25-50w)',
-                      min: 25,
-                      max: 50,
-                      isSelected: widget.minWords >= 20 && widget.minWords <= 30 && widget.maxWords >= 45 && widget.maxWords <= 55,
+                      label: '⚡ Short (8-18w)',
+                      min: 8,
+                      max: 18,
+                      isSelected: widget.minWords > 5 && widget.minWords <= 10 && widget.maxWords <= 20,
                       primaryColor: primaryColor,
                     ),
                     _buildWordPresetChip(
-                      label: '📝 In-Depth (50-90w)',
+                      label: '⭐ Standard (20-45w)',
+                      min: 20,
+                      max: 45,
+                      isSelected: widget.minWords >= 15 && widget.minWords <= 25 && widget.maxWords >= 40 && widget.maxWords <= 55,
+                      primaryColor: primaryColor,
+                    ),
+                    _buildWordPresetChip(
+                      label: '📝 Detailed (50-90w)',
                       min: 50,
                       max: 90,
                       isSelected: widget.minWords >= 45 && widget.maxWords >= 85,

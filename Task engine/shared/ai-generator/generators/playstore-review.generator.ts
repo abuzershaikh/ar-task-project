@@ -168,6 +168,8 @@ export class PlayStoreReviewGenerator implements IContentGenerator {
         let attempts = 0;
         const maxAttempts = count * 25;
 
+        const maxWords = options?.maxWords ? Math.max(4, options.maxWords) : 0;
+
         while (results.size < count && attempts < maxAttempts) {
             attempts++;
             let reviewText = '';
@@ -189,8 +191,14 @@ export class PlayStoreReviewGenerator implements IContentGenerator {
                 generalIdx++;
             }
 
-            const clean = sanitizeReviewText(reviewText);
-            if (clean && clean.length > 10 && !results.has(clean)) {
+            let clean = sanitizeReviewText(reviewText);
+            if (clean && maxWords > 0) {
+                const words = clean.split(/\s+/).filter(Boolean);
+                if (words.length > maxWords) {
+                    clean = words.slice(0, maxWords).join(' ').replace(/[,;:\-]+$/, '').trim() + '.';
+                }
+            }
+            if (clean && clean.length >= 6 && !results.has(clean)) {
                 results.add(clean);
             }
         }
@@ -198,7 +206,13 @@ export class PlayStoreReviewGenerator implements IContentGenerator {
         // Fill remainder if needed
         const list = Array.from(results);
         while (list.length < count) {
-            const fallback = generalPool[list.length % generalPool.length];
+            let fallback = generalPool[list.length % generalPool.length];
+            if (maxWords > 0) {
+                const words = fallback.split(/\s+/).filter(Boolean);
+                if (words.length > maxWords) {
+                    fallback = words.slice(0, maxWords).join(' ').replace(/[,;:\-]+$/, '').trim() + '.';
+                }
+            }
             list.push(sanitizeReviewText(fallback));
         }
 

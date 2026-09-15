@@ -558,6 +558,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               setState(() {
                 _sampleComments = comments
                     .map((c) => _sanitizeCommentText(c.toString()))
+                    .map((c) => _trimToWordLimit(c, _minWords, _maxWords))
                     .where((c) => c.isNotEmpty)
                     .toList();
               });
@@ -978,6 +979,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       setState(() {
         _sampleComments = fallbacks
             .map((f) => _sanitizeCommentText(f))
+            .map((f) => _trimToWordLimit(f, _minWords, _maxWords))
+            .where((f) => f.isNotEmpty)
             .take(targetCount)
             .toList();
       });
@@ -1013,6 +1016,27 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         .replaceAll(RegExp(r'\s+([.,!?])'), r'$1')
         .replaceAll(RegExp(r'\s{2,}'), ' ')
         .trim();
+  }
+
+  String _trimToWordLimit(String text, int minWords, int maxWords) {
+    final words = text.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (words.length <= maxWords) return text;
+
+    final subWords = words.take(maxWords).toList();
+    final candidate = subWords.join(' ');
+
+    // If there is an early complete sentence (at least 3 words)
+    final match = RegExp(r'^(.+?[.!?])(?:\s+.*)?$').firstMatch(candidate);
+    if (match != null) {
+      final sentence = match.group(1)!.trim();
+      final sentenceWords = sentence.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+      if (sentenceWords >= (minWords <= 5 ? 3 : (minWords - 1))) {
+        return sentence;
+      }
+    }
+
+    final cleaned = candidate.replaceAll(RegExp(r'[,;:\-\s]+$'), '').replaceAll(RegExp(r'[.!?]+$'), '').trim();
+    return '$cleaned.';
   }
 
   Future<void> _loadWalletBalance() async {

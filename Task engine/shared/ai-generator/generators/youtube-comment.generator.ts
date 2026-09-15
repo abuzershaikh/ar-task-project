@@ -262,11 +262,18 @@ export class YouTubeCommentGenerator implements IContentGenerator {
         const shuffled = [...pool].sort(() => Math.random() - 0.5);
         const results = new Set<string>();
         let idx = 0;
+        const maxWords = options?.maxWords ? Math.max(4, options.maxWords) : 0;
 
         while (results.size < count && idx < shuffled.length * 3) {
-            const item = shuffled[idx % shuffled.length];
+            let item = shuffled[idx % shuffled.length];
             idx++;
-            if (!results.has(item) && item.length > 10) {
+            if (maxWords > 0) {
+                const words = item.split(/\s+/).filter(Boolean);
+                if (words.length > maxWords) {
+                    item = words.slice(0, maxWords).join(' ').replace(/[,;:\-]+$/, '').trim() + '.';
+                }
+            }
+            if (!results.has(item) && item.length >= 6) {
                 results.add(item);
             }
         }
