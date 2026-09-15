@@ -9,28 +9,6 @@ import '../bloc/wallet_bloc.dart';
 import '../bloc/wallet_event.dart';
 import '../bloc/wallet_state.dart';
 
-class CreditPlan {
-  final String id;
-  final String title;
-  final double amount;
-  final String subtitle;
-  final String? badge;
-  final IconData icon;
-  final Color accentColor;
-  final bool isPopular;
-
-  const CreditPlan({
-    required this.id,
-    required this.title,
-    required this.amount,
-    required this.subtitle,
-    this.badge,
-    required this.icon,
-    required this.accentColor,
-    this.isPopular = false,
-  });
-}
-
 class AddBalanceScreen extends StatefulWidget {
   final double? initialAmount;
 
@@ -46,58 +24,10 @@ class AddBalanceScreen extends StatefulWidget {
 class _AddBalanceScreenState extends State<AddBalanceScreen> {
   final TextEditingController _amountController = TextEditingController();
   late Razorpay _razorpay;
-  double _selectedAmount = 1000;
-  String? _selectedPlanId = 'growth';
+  double _selectedAmount = 500;
   bool _isLoading = false;
 
-  final List<CreditPlan> _plans = const [
-    CreditPlan(
-      id: 'starter',
-      title: 'Starter Pack',
-      amount: 500,
-      subtitle: 'Fast trial • 1-2 small campaigns',
-      badge: 'STARTER',
-      icon: Icons.rocket_launch_outlined,
-      accentColor: Color(0xFF0EA5E9),
-    ),
-    CreditPlan(
-      id: 'growth',
-      title: 'Growth Pack',
-      amount: 1000,
-      subtitle: 'Most popular • 5-10 active campaigns',
-      badge: 'MOST POPULAR ⭐',
-      icon: Icons.trending_up,
-      accentColor: Color(0xFF6366F1),
-      isPopular: true,
-    ),
-    CreditPlan(
-      id: 'pro',
-      title: 'Pro Pack',
-      amount: 2500,
-      subtitle: 'For expanding businesses & stores',
-      badge: 'RECOMMENDED',
-      icon: Icons.workspace_premium_outlined,
-      accentColor: Color(0xFF8B5CF6),
-    ),
-    CreditPlan(
-      id: 'scale',
-      title: 'Scale Pack',
-      amount: 5000,
-      subtitle: 'High volume bulk orders & priority queue',
-      badge: 'BEST VALUE 🔥',
-      icon: Icons.bolt,
-      accentColor: Color(0xFFEC4899),
-    ),
-    CreditPlan(
-      id: 'enterprise',
-      title: 'Enterprise Pack',
-      amount: 10000,
-      subtitle: 'Maximum campaign reach & VIP support',
-      badge: 'ENTERPRISE',
-      icon: Icons.diamond_outlined,
-      accentColor: Color(0xFFF59E0B),
-    ),
-  ];
+  final List<double> _quickAmounts = const [100, 200, 500, 1000, 2000, 5000];
 
   @override
   void initState() {
@@ -114,10 +44,9 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
       final amount = widget.initialAmount!;
       _selectedAmount = amount;
       _amountController.text = amount.toStringAsFixed(0);
-      final matchingPlan = _plans.where((p) => p.amount == amount).toList();
-      _selectedPlanId = matchingPlan.isNotEmpty ? matchingPlan.first.id : null;
     } else {
-      _amountController.text = '1000';
+      _selectedAmount = 500;
+      _amountController.text = '500';
     }
   }
 
@@ -128,35 +57,26 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
     super.dispose();
   }
 
-  void _selectPlan(CreditPlan plan) {
-    setState(() {
-      _selectedPlanId = plan.id;
-      _selectedAmount = plan.amount;
-      _amountController.text = plan.amount.toStringAsFixed(0);
-    });
-  }
-
-  void _onCustomAmountChanged(String val) {
+  void _onAmountChanged(String val) {
     final parsed = double.tryParse(val.trim());
     setState(() {
-      if (parsed != null && parsed > 0) {
-        _selectedAmount = parsed;
-        final matchingPlan = _plans.where((p) => p.amount == parsed).toList();
-        _selectedPlanId = matchingPlan.isNotEmpty ? matchingPlan.first.id : null;
-      } else {
-        _selectedPlanId = null;
-      }
+      _selectedAmount = (parsed != null && parsed > 0) ? parsed : 0;
     });
   }
 
-  void _addQuickIncrement(double delta) {
+  void _selectQuickAmount(double amount) {
+    setState(() {
+      _selectedAmount = amount;
+      _amountController.text = amount.toStringAsFixed(0);
+    });
+  }
+
+  void _addIncrement(double delta) {
     final current = double.tryParse(_amountController.text.trim()) ?? 0;
     final next = (current + delta).clamp(1.0, 500000.0);
     setState(() {
       _selectedAmount = next;
       _amountController.text = next.toStringAsFixed(0);
-      final matchingPlan = _plans.where((p) => p.amount == next).toList();
-      _selectedPlanId = matchingPlan.isNotEmpty ? matchingPlan.first.id : null;
     });
   }
 
@@ -190,15 +110,15 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(),
+                  CircularProgressIndicator(color: Color(0xFF4F46E5)),
                   SizedBox(height: 20),
                   Text(
-                    'Generating Razorpay Order...',
+                    'Opening Secure Checkout...',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'Ishyan Technologies Secure Checkout',
+                    'Connecting to payment gateway',
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
@@ -215,7 +135,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
         ApiEndpoints.razorpayOrder,
         data: {
           'amount': amount,
-          'description': 'Buyer Wallet Top-up: ₹${amount.toStringAsFixed(0)}',
+          'description': 'Wallet Top-up: ₹${amount.toStringAsFixed(0)}',
         },
       );
 
@@ -227,19 +147,19 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
         final data = response.data;
         final orderId = data['orderId']?.toString();
         final keyId = data['keyId']?.toString() ?? 'rzp_live_TI2wdFKYDJdAxY';
-        final companyName = data['companyName']?.toString() ?? 'Ishyan Technologies';
+        final merchantName = data['companyName']?.toString() ?? 'Marketing Pro';
         final amountInPaise = data['amountInPaise'] ?? (amount * 100).toInt();
 
         if (orderId == null || orderId.isEmpty) {
-          throw Exception('Failed to retrieve Razorpay Order ID from server');
+          throw Exception('Failed to retrieve Order ID from server');
         }
 
         final options = {
           'key': keyId,
           'amount': amountInPaise,
-          'name': companyName,
+          'name': merchantName,
           'order_id': orderId,
-          'description': 'Wallet Top-up • ₹${amount.toStringAsFixed(0)} Credits',
+          'description': 'Wallet Top-up • ₹${amount.toStringAsFixed(0)}',
           'theme': {
             'color': '#4F46E5',
           },
@@ -296,12 +216,12 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
                   CircularProgressIndicator(color: Colors.green),
                   SizedBox(height: 20),
                   Text(
-                    'Verifying Payment Signature...',
+                    'Verifying Payment...',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'Crediting wallet balance atomically...',
+                    'Updating your wallet balance...',
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
@@ -350,8 +270,8 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 72,
-                    height: 72,
+                    width: 70,
+                    height: 70,
                     decoration: BoxDecoration(
                       color: Colors.green.shade50,
                       shape: BoxShape.circle,
@@ -359,7 +279,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
                     child: const Icon(
                       Icons.check_circle_rounded,
                       color: Colors.green,
-                      size: 50,
+                      size: 48,
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -373,7 +293,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '₹${_selectedAmount.toStringAsFixed(2)} has been credited to your wallet.',
+                    '₹${_selectedAmount.toStringAsFixed(2)} added to your wallet.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 15, color: Colors.black87),
                   ),
@@ -439,7 +359,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('⚠️ Verification error: $e. Please contact support with Payment ID: $paymentId'),
+            content: Text('⚠️ Verification error: $e. Transaction Reference: $paymentId'),
             backgroundColor: Colors.red.shade800,
             duration: const Duration(seconds: 6),
             behavior: SnackBarBehavior.floating,
@@ -456,7 +376,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
         SnackBar(
           content: Text(
             isCancelled
-                ? 'Payment was cancelled'
+                ? 'Payment cancelled'
                 : 'Payment failed: ${response.message ?? "Transaction declined"}',
           ),
           backgroundColor: isCancelled ? Colors.grey.shade800 : Colors.red.shade700,
@@ -483,7 +403,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
-          'Top Up Wallet',
+          'Add Balance',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         elevation: 0,
@@ -499,74 +419,91 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
             _buildBalanceHeader(),
             const SizedBox(height: 24),
 
-            // Credit Plans Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Choose a Credit Plan',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEEF2FF),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.bolt, size: 14, color: Color(0xFF4F46E5)),
-                      SizedBox(width: 4),
-                      Text(
-                        'Instant Credit',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF4F46E5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // List of curated Plans
-            ..._plans.map((plan) => _buildPlanCard(plan)),
-            const SizedBox(height: 24),
-
-            // Custom Amount Input Section
+            // Enter Amount Section Header
             const Text(
-              'Or Enter Custom Amount',
+              'Enter Amount',
               style: TextStyle(
-                fontSize: 17,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF0F172A),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 4),
+            const Text(
+              'Enter any custom amount you want to add to your wallet',
+              style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 16),
+
+            // Custom Amount Input
             _buildCustomAmountInput(),
+            const SizedBox(height: 20),
+
+            // Quick Select Amounts Header
+            const Text(
+              'Quick Select',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF475569),
+              ),
+            ),
             const SizedBox(height: 10),
 
-            // Quick Add Chips
+            // Grid of Quick Amount Buttons
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: _quickAmounts.map((amt) {
+                final isSelected = _selectedAmount == amt;
+                return InkWell(
+                  onTap: () => _selectQuickAmount(amt),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF4F46E5) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFF4F46E5) : Colors.grey.shade300,
+                        width: isSelected ? 1.5 : 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      '₹${amt.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+
+            // Add Quick Increment Chips (+100, +500)
             Wrap(
               spacing: 8,
               children: [
-                _buildQuickChip('+₹100', 100),
-                _buildQuickChip('+₹500', 500),
-                _buildQuickChip('+₹1,000', 1000),
-                _buildQuickChip('+₹2,500', 2500),
+                _buildIncrementChip('+₹100', 100),
+                _buildIncrementChip('+₹500', 500),
+                _buildIncrementChip('+₹1,000', 1000),
+                _buildIncrementChip('+₹2,000', 2000),
               ],
             ),
             const SizedBox(height: 28),
 
-            // Razorpay & Ishyan Technologies Trust Banner
-            _buildTrustBadge(),
+            // Generic Secure Payment Methods Banner
+            _buildPaymentMethodsCard(),
             const SizedBox(height: 24),
           ],
         ),
@@ -595,7 +532,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF4338CA).withOpacity(0.3),
+                color: const Color(0xFF4338CA).withOpacity(0.25),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
@@ -624,10 +561,10 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.shield_outlined, color: Colors.white, size: 12),
+                        Icon(Icons.account_balance_wallet_outlined, color: Colors.white, size: 12),
                         SizedBox(width: 4),
                         Text(
-                          'Verified Wallet',
+                          'Active Wallet',
                           style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
                         ),
                       ],
@@ -646,7 +583,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Usable across YouTube, Google Maps & Play Store campaigns',
+                'Available instantly to launch new campaigns',
                 style: TextStyle(color: Color(0xFFA5B4FC), fontSize: 12),
               ),
             ],
@@ -656,178 +593,64 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
     );
   }
 
-  Widget _buildPlanCard(CreditPlan plan) {
-    final isSelected = _selectedPlanId == plan.id;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => _selectPlan(plan),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected ? plan.accentColor : Colors.grey.shade200,
-              width: isSelected ? 2 : 1,
-            ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: plan.accentColor.withOpacity(0.15),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    )
-                  ]
-                : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-          ),
-          child: Row(
-            children: [
-              // Icon Circle
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: plan.accentColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(plan.icon, color: plan.accentColor, size: 24),
-              ),
-              const SizedBox(width: 14),
-
-              // Title & details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          plan.title,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
-                        if (plan.badge != null) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: plan.accentColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              plan.badge!,
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: plan.accentColor,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      plan.subtitle,
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Amount & radio
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '₹${plan.amount.toStringAsFixed(0)}',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? plan.accentColor : const Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isSelected ? plan.accentColor : Colors.transparent,
-                      border: Border.all(
-                        color: isSelected ? plan.accentColor : Colors.grey.shade400,
-                        width: 2,
-                      ),
-                    ),
-                    child: isSelected
-                        ? const Icon(Icons.check, size: 14, color: Colors.white)
-                        : null,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildCustomAmountInput() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _selectedPlanId == null ? const Color(0xFF4F46E5) : Colors.grey.shade200,
-          width: _selectedPlanId == null ? 2 : 1,
+          color: const Color(0xFF4F46E5),
+          width: 2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF4F46E5).withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
         children: [
           const Text(
             '₹',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 28,
               fontWeight: FontWeight.bold,
               color: Color(0xFF4F46E5),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+              ),
               decoration: const InputDecoration(
-                hintText: 'Enter custom amount (e.g. 750)',
-                hintStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.normal, color: Colors.grey),
+                hintText: '0',
+                hintStyle: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFCBD5E1),
+                ),
                 border: InputBorder.none,
               ),
-              onChanged: _onCustomAmountChanged,
+              onChanged: _onAmountChanged,
             ),
           ),
           if (_amountController.text.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
+              icon: const Icon(Icons.cancel_rounded, size: 22, color: Color(0xFF94A3B8)),
               onPressed: () {
                 _amountController.clear();
                 setState(() {
                   _selectedAmount = 0;
-                  _selectedPlanId = null;
                 });
               },
             ),
@@ -836,7 +659,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
     );
   }
 
-  Widget _buildQuickChip(String label, double addAmount) {
+  Widget _buildIncrementChip(String label, double addAmount) {
     return ActionChip(
       label: Text(
         label,
@@ -849,11 +672,11 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
       backgroundColor: const Color(0xFFEEF2FF),
       side: BorderSide(color: const Color(0xFFC7D2FE).withOpacity(0.5)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      onPressed: () => _addQuickIncrement(addAmount),
+      onPressed: () => _addIncrement(addAmount),
     );
   }
 
-  Widget _buildTrustBadge() {
+  Widget _buildPaymentMethodsCard() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -864,44 +687,62 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Row(
+            children: [
+              Icon(Icons.lock_outline, color: Color(0xFF10B981), size: 18),
+              SizedBox(width: 8),
+              Text(
+                '100% Secure & Instant Payment',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0C2340),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'Razorpay',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Ishyan Technologies Official Gateway',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-              ),
-              const Icon(Icons.verified, color: Colors.blue, size: 18),
+              _buildPaymentBadge('UPI', Icons.qr_code),
+              const SizedBox(width: 8),
+              _buildPaymentBadge('Cards', Icons.credit_card),
+              const SizedBox(width: 8),
+              _buildPaymentBadge('Net Banking', Icons.account_balance),
+              const SizedBox(width: 8),
+              _buildPaymentBadge('Wallets', Icons.account_balance_wallet),
             ],
           ),
           const SizedBox(height: 10),
           const Text(
-            'Supported payment methods:\n• UPI: Google Pay, PhonePe, Paytm, BHIM, Cred\n• Cards: Credit & Debit (Visa, Mastercard, RuPay)\n• Net Banking: All 50+ Indian Banks supported\n• 100% Secure 256-Bit SSL Encryption',
+            'Supported via Google Pay, PhonePe, Paytm, BHIM, all major Debit/Credit Cards & 50+ Banks.',
             style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentBadge(String label, IconData icon) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 16, color: const Color(0xFF475569)),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -927,7 +768,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Total Payable Amount:',
+                  'Amount to Add:',
                   style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
                 ),
                 Text(
@@ -963,10 +804,10 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.lock_outline, size: 18),
+                          const Icon(Icons.shield_outlined, size: 18),
                           const SizedBox(width: 8),
                           Text(
-                            'Pay ₹${_selectedAmount.toStringAsFixed(0)} via Razorpay',
+                            'Proceed to Pay ₹${_selectedAmount.toStringAsFixed(0)}',
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                         ],
