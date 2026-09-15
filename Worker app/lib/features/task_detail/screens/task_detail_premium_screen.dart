@@ -3592,7 +3592,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                     isReview
                         ? Icons.star_rate_rounded
                         : Icons.chat_bubble_rounded,
-                    color: isGoogleBusiness
+                    color: isReview
                         ? const Color(0xFF2563EB)
                         : (isPlayStore
                             ? const Color(0xFFF59E0B)
@@ -3608,22 +3608,37 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    isReview
-                        ? '(Use Task Keyboard to Write)'
-                        : '(Copy & Paste)',
-                    style: const TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
                 ],
               ),
               Text(
                 isReview ? '⭐' : '💬',
                 style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Dedicated Blue Heading: Use Task Keyboard to Write (Zero Overflow)
+          Row(
+            children: [
+              const Icon(
+                Icons.keyboard_alt_rounded,
+                size: 16,
+                color: Color(0xFF2563EB),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  isReview
+                      ? 'Use Task Keyboard to Write'
+                      : 'Copy & Paste',
+                  style: const TextStyle(
+                    color: Color(0xFF2563EB),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.1,
+                  ),
+                ),
               ),
             ],
           ),
