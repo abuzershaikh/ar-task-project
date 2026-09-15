@@ -298,15 +298,52 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     return null;
   }
 
+  bool _isServiceInstagram(ServiceModel s) {
+    final catName = widget.categoryName.toUpperCase();
+    final cat = s.category.toUpperCase();
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+
+    // Guard: Install / Download / App services are NEVER Instagram!
+    if (catName.contains('INSTALL') ||
+        cat.contains('INSTALL') ||
+        code.contains('INSTALL') ||
+        name.contains('INSTALL') ||
+        code.startsWith('APP_')) {
+      return false;
+    }
+
+    return code.contains('INSTAGRAM') ||
+        code.startsWith('IG_') ||
+        code == 'IG' ||
+        cat.contains('INSTAGRAM') ||
+        name.contains('INSTAGRAM') ||
+        (catName.contains('INSTA') && !catName.contains('INSTALL')) ||
+        (cat.contains('INSTA') && !cat.contains('INSTALL')) ||
+        (code.contains('INSTA') && !code.contains('INSTALL')) ||
+        (name.contains('INSTA') && !name.contains('INSTALL'));
+  }
+
+  bool _isServiceInstall(ServiceModel s) {
+    final catName = widget.categoryName.toUpperCase();
+    final cat = s.category.toUpperCase();
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    return catName.contains('INSTALL') ||
+        cat.contains('INSTALL') ||
+        code.contains('INSTALL') ||
+        name.contains('INSTALL') ||
+        code.contains('DOWNLOAD') ||
+        name.contains('DOWNLOAD') ||
+        code.startsWith('APP_');
+  }
+
   // ── Asset Icon Resolver for Sub-Services ──
   String? _getServiceAssetIcon(ServiceModel s) {
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
-    final isInstagram = widget.categoryName.toUpperCase().contains('INSTA') ||
-        s.category.toUpperCase().contains('INSTA') ||
-        code.contains('INSTA') ||
-        name.contains('INSTA') ||
-        code.startsWith('IG_');
+    final isInstagram = _isServiceInstagram(s);
+    final isInstall = _isServiceInstall(s);
 
     // Check COMBO first so combo services get marketing icon and not single subscribe icon!
     if (code.contains('COMBO') || name.contains('COMBO')) {
@@ -315,6 +352,10 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     // Check Google Maps / GMB services
     if (code.contains('MAP') || name.contains('MAP') || code.contains('GMB') || name.contains('GMB')) {
       return 'assets/icons/google-maps.png';
+    }
+    // Check App Install services explicitly BEFORE any social icons
+    if (isInstall) {
+      return 'assets/icons/smartphone.png';
     }
     if (isInstagram) {
       if (code.contains('FOLLOW') || name.contains('FOLLOW') || code.contains('SUB') || name.contains('SUB')) {
@@ -343,12 +384,6 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     if (code.contains('LIKE') || name.contains('LIKE')) {
       return 'assets/icons/like.png';
     }
-    if (code.contains('INSTALL') ||
-        name.contains('INSTALL') ||
-        code.contains('DOWNLOAD') ||
-        name.contains('DOWNLOAD')) {
-      return 'assets/icons/smartphone.png';
-    }
     if (code.contains('PLAY') ||
         code.contains('WATCH') ||
         name.contains('WATCH') ||
@@ -362,7 +397,7 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     if (code.contains('YT') || code.contains('YOUTUBE')) {
       return 'assets/icons/youtube.png';
     }
-    if (code.contains('INSTA') || code.contains('IG')) {
+    if (code.contains('INSTA') && !code.contains('INSTALL')) {
       return 'assets/icons/instagram.png';
     }
     return null;
@@ -372,15 +407,15 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
   IconData _getServiceSubIcon(ServiceModel s) {
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
-    final isInstagram = widget.categoryName.toUpperCase().contains('INSTA') ||
-        s.category.toUpperCase().contains('INSTA') ||
-        code.contains('INSTA') ||
-        name.contains('INSTA') ||
-        code.startsWith('IG_');
+    final isInstagram = _isServiceInstagram(s);
+    final isInstall = _isServiceInstall(s);
 
     // Check COMBO first so combo services never get mistaken for single sub/like
     if (code.contains('COMBO') || name.contains('COMBO')) {
       return Icons.auto_awesome_rounded;
+    }
+    if (isInstall) {
+      return Icons.install_mobile_rounded;
     }
     if (isInstagram) {
       if (code.contains('LIKE') || name.contains('LIKE')) {
@@ -408,9 +443,6 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     if (code.contains('FOLLOW') || name.contains('FOLLOW')) {
       return Icons.person_add_alt_1_rounded;
     }
-    if (code.contains('INSTALL') || name.contains('INSTALL')) {
-      return Icons.install_mobile_rounded;
-    }
     return Icons.auto_awesome_rounded;
   }
 
@@ -419,11 +451,25 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     final isAi = s.aiGeneratorEnabled;
-    final isInstagram = widget.categoryName.toUpperCase().contains('INSTA') ||
-        s.category.toUpperCase().contains('INSTA') ||
-        code.contains('INSTA') ||
-        name.contains('INSTA') ||
-        code.startsWith('IG_');
+    final isInstagram = _isServiceInstagram(s);
+    final isInstall = _isServiceInstall(s);
+
+    // ── Dedicated App Install Services Info ──
+    if (isInstall) {
+      return {
+        'badge': '📲 REAL APP INSTALL & TESTING',
+        'overview':
+            'Real active Android users search your app on Google Play Store, download and install it on their personal Android phones, and keep it active for at least 30-60 seconds. Directly improves Play Store download velocity, active user count, and store search rank.',
+        'features': [
+          '100% Verified Real Physical Android Smartphones',
+          'Direct Google Play Store Keyword Search & Install',
+          'Active 30-60 Seconds In-App Testing Session',
+          'High Retention Non-Drop Verified Install',
+          'Direct Google Play Store ASO Keyword & Category Boost',
+          'Permanent Anti-Spam & Anti-Fraud Protection',
+        ],
+      };
+    }
 
     // ── Instagram Services ──
     if (isInstagram) {
@@ -1079,11 +1125,7 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
   Widget _buildCleanSubCard(BuildContext context, ServiceModel service) {
     final icon = _getServiceSubIcon(service);
     final serviceAsset = _getServiceAssetIcon(service);
-    final isInstagram = widget.categoryName.toUpperCase().contains('INSTA') ||
-        service.category.toUpperCase().contains('INSTA') ||
-        service.code.toUpperCase().contains('INSTA') ||
-        service.name.toUpperCase().contains('INSTA') ||
-        service.code.toUpperCase().startsWith('IG_');
+    final isInstagram = _isServiceInstagram(service);
 
     return Container(
       decoration: BoxDecoration(

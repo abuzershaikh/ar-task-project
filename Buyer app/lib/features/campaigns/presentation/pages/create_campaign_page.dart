@@ -49,6 +49,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       }
     }
   }
+
   double _walletBalance = 0.0;
 
   // Order Form State
@@ -56,7 +57,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   final TextEditingController _targetUrlController = TextEditingController();
   final TextEditingController _appNameController = TextEditingController();
   final TextEditingController _topicController = TextEditingController();
-  final TextEditingController _quantityController = TextEditingController(text: '10');
+  final TextEditingController _quantityController =
+      TextEditingController(text: '10');
   int _selectedQuantity = 10;
   String _selectedLanguage = 'English';
   String _selectedTone = 'natural';
@@ -124,8 +126,25 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         desc.contains('GOOGLE BUSINESS');
   }
 
+  bool _isAppInstallService(ServiceModel? s) {
+    if (s == null || _isInstagramService(s)) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    final desc = s.description.toUpperCase();
+    final cat = s.category.toUpperCase();
+    return code.contains('INSTALL') ||
+        code.contains('DOWNLOAD') ||
+        code.startsWith('APP_') ||
+        name.contains('INSTALL') ||
+        name.contains('DOWNLOAD') ||
+        cat.contains('INSTALL') ||
+        desc.contains('INSTALL');
+  }
+
   bool _isPlayStoreService(ServiceModel? s) {
-    if (s == null || _isGoogleBusinessService(s) || _isInstagramService(s)) return false;
+    if (s == null || _isGoogleBusinessService(s) || _isInstagramService(s)) {
+      return false;
+    }
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     final desc = s.description.toUpperCase();
@@ -133,10 +152,18 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     return code.contains('PLAY') ||
         code.contains('REVIEW') ||
         code.contains('RATING') ||
+        code.contains('INSTALL') ||
+        code.contains('DOWNLOAD') ||
+        code.startsWith('APP_') ||
         cat.contains('PLAY') ||
+        cat.contains('INSTALL') ||
+        cat.contains('APP') ||
         name.contains('PLAY') ||
         name.contains('REVIEW') ||
-        desc.contains('PLAY STORE');
+        name.contains('INSTALL') ||
+        name.contains('DOWNLOAD') ||
+        desc.contains('PLAY STORE') ||
+        desc.contains('INSTALL');
   }
 
   bool _isInstagramService(ServiceModel? s) {
@@ -145,33 +172,42 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     final name = s.name.toUpperCase();
     final desc = s.description.toUpperCase();
     final cat = s.category.toUpperCase();
-    return code.contains('INSTA') ||
-        code.contains('IG') ||
-        cat.contains('INSTA') ||
+
+    // Guard: Install / Download / App services are NEVER Instagram!
+    if (code.contains('INSTALL') ||
+        name.contains('INSTALL') ||
+        cat.contains('INSTALL') ||
+        desc.contains('INSTALL') ||
+        code.startsWith('APP_')) {
+      return false;
+    }
+
+    return code.contains('INSTAGRAM') ||
+        code.startsWith('IG_') ||
+        code == 'IG' ||
         cat.contains('INSTAGRAM') ||
-        name.contains('INSTA') ||
         name.contains('INSTAGRAM') ||
-        desc.contains('INSTAGRAM');
+        desc.contains('INSTAGRAM') ||
+        (code.contains('INSTA') && !code.contains('INSTALL')) ||
+        (cat.contains('INSTA') && !cat.contains('INSTALL')) ||
+        (name.contains('INSTA') && !name.contains('INSTALL'));
   }
 
   bool _isInstagramCombo(ServiceModel? s) {
     if (s == null) return false;
+    if (!_isInstagramService(s)) return false;
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
-    final cat = s.category.toUpperCase();
-    return (code.contains('COMBO') || name.contains('COMBO')) &&
-        (code.contains('INSTA') ||
-            code.contains('IG') ||
-            cat.contains('INSTA') ||
-            name.contains('INSTA') ||
-            name.contains('INSTAGRAM'));
+    return code.contains('COMBO') || name.contains('COMBO');
   }
 
   bool _isInstagramFollowerService(ServiceModel? s) {
-    if (s == null) return false;
+    if (s == null || !_isInstagramService(s)) return false;
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
-    return code.contains('FOLLOW') || name.contains('FOLLOWER') || code.contains('INSTAGRAM_FOLLOW');
+    return code.contains('FOLLOW') ||
+        name.contains('FOLLOWER') ||
+        code.contains('INSTAGRAM_FOLLOW');
   }
 
   bool _isYouTubeService(ServiceModel? s) {
@@ -194,7 +230,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     return (code.contains('COMBO') || name.contains('COMBO')) &&
-        (code.contains('YT') || code.contains('YOUTUBE') || s.category.toUpperCase().contains('YOUTUBE'));
+        (code.contains('YT') ||
+            code.contains('YOUTUBE') ||
+            s.category.toUpperCase().contains('YOUTUBE'));
   }
 
   void _parseInstagramUrl(String input) {
@@ -218,7 +256,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       final path = uri?.path.toLowerCase() ?? trimmed.toLowerCase();
       if (path.contains('/reel/') || path.contains('/reels/')) {
         type = 'Instagram Reel';
-        final match = RegExp(r'/reel(?:s)?/([a-zA-Z0-9_\-]+)').firstMatch(trimmed);
+        final match =
+            RegExp(r'/reel(?:s)?/([a-zA-Z0-9_\-]+)').firstMatch(trimmed);
         if (match != null) {
           identifier = 'Reel: ${match.group(1)}';
         } else {
@@ -237,8 +276,11 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         identifier = 'Instagram Video';
       } else {
         // Assume profile link e.g. instagram.com/username
-        final match = RegExp(r'instagram\.com/([a-zA-Z0-9_\.]+)/?').firstMatch(trimmed);
-        if (match != null && !['p', 'reel', 'reels', 'stories', 'explore'].contains(match.group(1))) {
+        final match =
+            RegExp(r'instagram\.com/([a-zA-Z0-9_\.]+)/?').firstMatch(trimmed);
+        if (match != null &&
+            !['p', 'reel', 'reels', 'stories', 'explore']
+                .contains(match.group(1))) {
           type = 'Instagram Profile';
           identifier = '@${match.group(1)}';
         } else {
@@ -251,7 +293,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     setState(() {
       _instaTargetType = type;
       _instaIdentifier = identifier.isNotEmpty ? identifier : trimmed;
-      if (_appNameController.text.trim().isEmpty && identifier.isNotEmpty && !identifier.startsWith('http')) {
+      if (_appNameController.text.trim().isEmpty &&
+          identifier.isNotEmpty &&
+          !identifier.startsWith('http')) {
         _appNameController.text = identifier;
       }
     });
@@ -268,7 +312,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         trimmed.contains('youtube.com') ||
         trimmed.contains('youtu.be');
 
-    if (isGoogleBusiness || (!isPlayStore && !isYouTube && !isInstagram)) return;
+    if (isGoogleBusiness || (!isPlayStore && !isYouTube && !isInstagram))
+      return;
     _urlDebounceTimer?.cancel();
 
     if (trimmed.isEmpty) {
@@ -305,7 +350,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
     if (isPlayStore) {
       if (_appFetchError != null) setState(() => _appFetchError = null);
-      if (trimmed.length >= 5 && (trimmed.contains('.') || trimmed.contains('/'))) {
+      if (trimmed.length >= 5 &&
+          (trimmed.contains('.') || trimmed.contains('/'))) {
         setState(() {
           _appIcon = null;
           _packageId = null;
@@ -316,7 +362,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       }
     } else if (isYouTube) {
       if (_ytFetchError != null) setState(() => _ytFetchError = null);
-      if (trimmed.length >= 10 && (trimmed.contains('youtu.be') || trimmed.contains('youtube.com'))) {
+      if (trimmed.length >= 10 &&
+          (trimmed.contains('youtu.be') || trimmed.contains('youtube.com'))) {
         _urlDebounceTimer = Timer(const Duration(milliseconds: 600), () {
           _fetchYouTubeVideoInfo(trimmed);
         });
@@ -354,7 +401,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               ? data['requiredWatchSeconds']
               : int.tryParse(data['requiredWatchSeconds']?.toString() ?? '0');
           _ytDurationFormatted = data['durationFormatted']?.toString();
-          _ytRequiredWatchFormatted = data['requiredWatchFormatted']?.toString();
+          _ytRequiredWatchFormatted =
+              data['requiredWatchFormatted']?.toString();
           _ytIsCappedAt5Min = data['isCappedAt5Min'] == true;
           _ytFetchError = null;
 
@@ -366,13 +414,15 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       } else {
         final err = res.data?['error']?.toString();
         setState(() {
-          _ytFetchError = err ?? 'Could not extract video duration from YouTube link.';
+          _ytFetchError =
+              err ?? 'Could not extract video duration from YouTube link.';
         });
       }
     } catch (err) {
       debugPrint('Error fetching YouTube metadata: $err');
       setState(() {
-        _ytFetchError = 'Could not fetch video info. You can still proceed normally.';
+        _ytFetchError =
+            'Could not fetch video info. You can still proceed normally.';
       });
     } finally {
       if (mounted) {
@@ -425,7 +475,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     } catch (err) {
       debugPrint('Error fetching Play Store metadata: $err');
       setState(() {
-        _appFetchError = 'Could not fetch app info. You can still proceed normally.';
+        _appFetchError =
+            'Could not fetch app info. You can still proceed normally.';
       });
     } finally {
       if (mounted) {
@@ -471,7 +522,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     setState(() => _isGeneratingPreview = true);
     final userAppName = _appNameController.text.trim().isNotEmpty
         ? _appNameController.text.trim()
-        : (_isYouTubeService(_selectedService) ? (_ytTitle ?? '') : (_appName ?? ''));
+        : (_isYouTubeService(_selectedService)
+            ? (_ytTitle ?? '')
+            : (_appName ?? ''));
     final cleanBrand = userAppName.split(RegExp(r'[:\-|–—•(]'))[0].trim();
     final userPrompt = _topicController.text.trim();
 
@@ -492,10 +545,14 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               'targetUrl': _targetUrlController.text.trim(),
               'appName': cleanBrand,
               'businessName': cleanBrand,
-              'videoTitle': _isYouTubeService(_selectedService) ? (_ytTitle?.isNotEmpty == true ? _ytTitle! : userAppName) : '',
+              'videoTitle': _isYouTubeService(_selectedService)
+                  ? (_ytTitle?.isNotEmpty == true ? _ytTitle! : userAppName)
+                  : '',
             },
           );
-          if ((res.statusCode == 200 || res.statusCode == 201) && res.data != null && res.data['sampleComments'] != null) {
+          if ((res.statusCode == 200 || res.statusCode == 201) &&
+              res.data != null &&
+              res.data['sampleComments'] != null) {
             final List comments = res.data['sampleComments'];
             if (comments.isNotEmpty) {
               setState(() {
@@ -513,34 +570,68 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       }
 
       // Instant Organic Fallback Generation with Semantic Intent Matching
-      final targetCount = _selectedQuantity < 5 ? (_selectedQuantity > 0 ? _selectedQuantity : 1) : 5;
+      final targetCount = _selectedQuantity < 5
+          ? (_selectedQuantity > 0 ? _selectedQuantity : 1)
+          : 5;
       final isGoogle = _isGoogleBusinessService(_selectedService);
-      final isReview = !isGoogle && (_selectedService?.code.toUpperCase().contains('PLAY') == true ||
-          _selectedService?.code.toUpperCase().contains('REVIEW') == true ||
-          _selectedService?.category.toUpperCase().contains('PLAY') == true ||
-          _selectedService?.name.toUpperCase().contains('PLAY') == true);
+      final isReview = !isGoogle &&
+          (_selectedService?.code.toUpperCase().contains('PLAY') == true ||
+              _selectedService?.code.toUpperCase().contains('REVIEW') == true ||
+              _selectedService?.category.toUpperCase().contains('PLAY') ==
+                  true ||
+              _selectedService?.name.toUpperCase().contains('PLAY') == true);
 
-      final isHindi = _selectedLanguage.toLowerCase().contains('hindi') || _selectedLanguage.toLowerCase().contains('hinglish');
+      final isHindi = _selectedLanguage.toLowerCase().contains('hindi') ||
+          _selectedLanguage.toLowerCase().contains('hinglish');
       final lowerPrompt = userPrompt.toLowerCase();
 
-      final isPart2 = RegExp(r'part\s*2|part\s*two|next\s*part|next\s*video|sequel|agla\s*part|doosra\s*part|part2', caseSensitive: false).hasMatch(lowerPrompt);
-      final isAudio = RegExp(r'audio|mic|voice|sound|clarity|awaz|aawaz|noise', caseSensitive: false).hasMatch(lowerPrompt);
-      final isTrading = RegExp(r'trading|stock|market|crypto|forex|chart|candle|indicator|profit', caseSensitive: false).hasMatch(lowerPrompt);
-      final isTutorial = RegExp(r'explain|tutorial|guide|sikha|samjh|concept|sikhao|trick', caseSensitive: false).hasMatch(lowerPrompt);
-      final isPayment = RegExp(r'pay|upi|money|transaction|wallet|paisa|cash|billing', caseSensitive: false).hasMatch(lowerPrompt);
-      final isDelivery = RegExp(r'deliver|pickup|speed|fast|doorstep|service|courier', caseSensitive: false).hasMatch(lowerPrompt);
-      final isUi = RegExp(r'ui|design|interface|clean|navigation|simple|layout', caseSensitive: false).hasMatch(lowerPrompt);
-      final isSupport = RegExp(r'support|help|service|care|team|contact', caseSensitive: false).hasMatch(lowerPrompt);
+      final isPart2 = RegExp(
+              r'part\s*2|part\s*two|next\s*part|next\s*video|sequel|agla\s*part|doosra\s*part|part2',
+              caseSensitive: false)
+          .hasMatch(lowerPrompt);
+      final isAudio = RegExp(r'audio|mic|voice|sound|clarity|awaz|aawaz|noise',
+              caseSensitive: false)
+          .hasMatch(lowerPrompt);
+      final isTrading = RegExp(
+              r'trading|stock|market|crypto|forex|chart|candle|indicator|profit',
+              caseSensitive: false)
+          .hasMatch(lowerPrompt);
+      final isTutorial = RegExp(
+              r'explain|tutorial|guide|sikha|samjh|concept|sikhao|trick',
+              caseSensitive: false)
+          .hasMatch(lowerPrompt);
+      final isPayment = RegExp(
+              r'pay|upi|money|transaction|wallet|paisa|cash|billing',
+              caseSensitive: false)
+          .hasMatch(lowerPrompt);
+      final isDelivery = RegExp(
+              r'deliver|pickup|speed|fast|doorstep|service|courier',
+              caseSensitive: false)
+          .hasMatch(lowerPrompt);
+      final isUi = RegExp(r'ui|design|interface|clean|navigation|simple|layout',
+              caseSensitive: false)
+          .hasMatch(lowerPrompt);
+      final isSupport = RegExp(r'support|help|service|care|team|contact',
+              caseSensitive: false)
+          .hasMatch(lowerPrompt);
 
       // Extract clean subject from video title or prompt
       String subject = cleanBrand.isNotEmpty ? cleanBrand : userPrompt;
       subject = subject
           .replaceAll(RegExp(r'https?://\S+', caseSensitive: false), '')
-          .replaceAll(RegExp(r'[\[\(][^\]\)]*(?:official|music|video|4k|hd|1080p|full|ep\s*\d+|part\s*\d+)[^\]\)]*[\]\)]', caseSensitive: false), '')
+          .replaceAll(
+              RegExp(
+                  r'[\[\(][^\]\)]*(?:official|music|video|4k|hd|1080p|full|ep\s*\d+|part\s*\d+)[^\]\)]*[\]\)]',
+                  caseSensitive: false),
+              '')
           .replaceAll(RegExp(r'\|\s*[^|]+$'), '')
           .replaceAll(RegExp(r'[-–—]\s*[^–—]+$'), '')
           .replaceAll(RegExp(r'#\w+'), '')
-          .replaceAll(RegExp(r'\b(202[0-9]|hindi|urdu|english|full\s*video|watch\s*now)\b', caseSensitive: false), '')
+          .replaceAll(
+              RegExp(
+                  r'\b(202[0-9]|hindi|urdu|english|full\s*video|watch\s*now)\b',
+                  caseSensitive: false),
+              '')
           .trim();
       if (subject.contains(':')) subject = subject.split(':')[0].trim();
       if (subject.isEmpty) subject = 'is video';
@@ -613,64 +704,92 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               ? [
                   "Payment process ekdum instant aur secure hai, wallet me turant reflect hota hai.",
                   "Transactions super fast hain aur koi deduction error nahi aata, very reliable.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand me payment bohot smooth hai, trustworthy app." : "Bohot safe aur dependable payment system mila mujhe.",
+                  cleanBrand.isNotEmpty
+                      ? "$cleanBrand me payment bohot smooth hai, trustworthy app."
+                      : "Bohot safe aur dependable payment system mila mujhe.",
                 ]
               : [
                   "Instant and reliable payment processing, haven't faced a single glitch.",
                   "Transactions are super quick and secure, very transparent billing.",
-                  cleanBrand.isNotEmpty ? "Payments on $cleanBrand are seamless and instantaneous." : "Very safe checkout experience with fast transactions.",
+                  cleanBrand.isNotEmpty
+                      ? "Payments on $cleanBrand are seamless and instantaneous."
+                      : "Very safe checkout experience with fast transactions.",
                 ];
         } else if (isDelivery) {
           fallbacks = isHindi
               ? [
                   "Doorstep pickup aur service timing bohot fast aur punctual hai.",
                   "Bohot jaldi pickup ho gaya, staff ka behavior bhi kaafi polite tha.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand ki doorstep service ekdum fast hai." : "Quick and punctual execution, completely hassle-free.",
+                  cleanBrand.isNotEmpty
+                      ? "$cleanBrand ki doorstep service ekdum fast hai."
+                      : "Quick and punctual execution, completely hassle-free.",
                 ]
               : [
                   "Doorstep pickup and handling was remarkably fast and punctual.",
                   "Order fulfillment and quick response exceeded my expectations.",
-                  cleanBrand.isNotEmpty ? "The pickup service from $cleanBrand was swift and professional." : "Extremely fast service, completed well ahead of schedule.",
+                  cleanBrand.isNotEmpty
+                      ? "The pickup service from $cleanBrand was swift and professional."
+                      : "Extremely fast service, completed well ahead of schedule.",
                 ];
         } else if (isUi) {
           fallbacks = isHindi
               ? [
                   "UI bohot clean aur modern hai, navigation ekdum smooth hai.",
                   "Sabhi features aasan hain, koi bhi bina confuse hue chala sakta hai.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand ka interface kaafi lightweight aur stylish hai." : "Bohot pyara design hai, har option seedha samajh aata hai.",
+                  cleanBrand.isNotEmpty
+                      ? "$cleanBrand ka interface kaafi lightweight aur stylish hai."
+                      : "Bohot pyara design hai, har option seedha samajh aata hai.",
                 ]
               : [
                   "The user interface is sleek, modern, and clutter-free.",
                   "Clean design and fluid page transitions, truly top tier UI.",
-                  cleanBrand.isNotEmpty ? "Navigating $cleanBrand is effortless and intuitive." : "Minimalist layout that makes daily tasks enjoyable.",
+                  cleanBrand.isNotEmpty
+                      ? "Navigating $cleanBrand is effortless and intuitive."
+                      : "Minimalist layout that makes daily tasks enjoyable.",
                 ];
         } else if (isSupport) {
           fallbacks = isHindi
               ? [
                   "Customer support ne turant meri query resolve kar di, bohot helpful team hai.",
                   "Help center ka response time kaafi fast hai, polite behavior.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand support team genuinely listens and helps out." : "Very prompt customer assistance, super happy with the response.",
+                  cleanBrand.isNotEmpty
+                      ? "$cleanBrand support team genuinely listens and helps out."
+                      : "Very prompt customer assistance, super happy with the response.",
                 ]
               : [
                   "Customer support was very prompt and resolved my query in minutes.",
                   "Help desk is super responsive, polite, and genuinely helpful.",
-                  cleanBrand.isNotEmpty ? "The support team behind $cleanBrand is outstanding." : "Quick resolution from support, very dependable assistance.",
+                  cleanBrand.isNotEmpty
+                      ? "The support team behind $cleanBrand is outstanding."
+                      : "Quick resolution from support, very dependable assistance.",
                 ];
         } else {
           fallbacks = isHindi
               ? [
-                  cleanBrand.isNotEmpty ? "$cleanBrand use karke maza aa gaya, UI ekdum smooth aur fast hai." : "Bohot hi smooth chal raha hai, UI ekdum clean aur fast hai.",
+                  cleanBrand.isNotEmpty
+                      ? "$cleanBrand use karke maza aa gaya, UI ekdum smooth aur fast hai."
+                      : "Bohot hi smooth chal raha hai, UI ekdum clean aur fast hai.",
                   "Kamaal ka application hai, use karna bohot aasan aur convenient hai.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand ne kaam bohot aasan bana diya hai, sabhi features acche se chal rahe hain." : "Bohot accha user experience mila, bilkul lag nahi karta.",
+                  cleanBrand.isNotEmpty
+                      ? "$cleanBrand ne kaam bohot aasan bana diya hai, sabhi features acche se chal rahe hain."
+                      : "Bohot accha user experience mila, bilkul lag nahi karta.",
                   "Shaandar design aur super fast speed hai, daily use ke liye best app hai.",
-                  cleanBrand.isNotEmpty ? "Maine $cleanBrand use kiya aur experience kaafi badhiya raha. Highly recommended." : "Abhi tak ka sabse best app laga mujhe is category me. Bohot helpful hai.",
+                  cleanBrand.isNotEmpty
+                      ? "Maine $cleanBrand use kiya aur experience kaafi badhiya raha. Highly recommended."
+                      : "Abhi tak ka sabse best app laga mujhe is category me. Bohot helpful hai.",
                 ]
               : [
-                  cleanBrand.isNotEmpty ? "Using $cleanBrand has been a great experience. Very smooth and reliable." : "Very smooth and responsive app. Does exactly what it promises without clutter.",
+                  cleanBrand.isNotEmpty
+                      ? "Using $cleanBrand has been a great experience. Very smooth and reliable."
+                      : "Very smooth and responsive app. Does exactly what it promises without clutter.",
                   "Clean UI and great user experience. Everything works seamlessly right from the start.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand makes everyday tasks so much easier and convenient." : "Super fast, lightweight and intuitive. Very happy with the overall performance.",
+                  cleanBrand.isNotEmpty
+                      ? "$cleanBrand makes everyday tasks so much easier and convenient."
+                      : "Super fast, lightweight and intuitive. Very happy with the overall performance.",
                   "Simple, clean, and gets the job done quickly. Exactly what I was looking for.",
-                  cleanBrand.isNotEmpty ? "Really glad I installed $cleanBrand. Fast responses and zero lag." : "One of the best apps in this category. Works like a charm and saves me so much time.",
+                  cleanBrand.isNotEmpty
+                      ? "Really glad I installed $cleanBrand. Fast responses and zero lag."
+                      : "One of the best apps in this category. Works like a charm and saves me so much time.",
                 ];
         }
       } else if (_isInstagramService(_selectedService)) {
@@ -857,7 +976,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       }
 
       setState(() {
-        _sampleComments = fallbacks.map((f) => _sanitizeCommentText(f)).take(targetCount).toList();
+        _sampleComments = fallbacks
+            .map((f) => _sanitizeCommentText(f))
+            .take(targetCount)
+            .toList();
       });
     } catch (e) {
       if (mounted) {
@@ -878,7 +1000,11 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
   String _sanitizeCommentText(String text) {
     return text
-        .replaceAll(RegExp(r'[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1FA70}-\u{1FAFF}⭐★🌟✨🌠🎖️🏅🏆💯🔥👍👎]', unicode: true), '')
+        .replaceAll(
+            RegExp(
+                r'[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1FA70}-\u{1FAFF}⭐★🌟✨🌠🎖️🏅🏆💯🔥👍👎]',
+                unicode: true),
+            '')
         .replaceAll(RegExp(r'\b5\s*stars?\b', caseSensitive: false), '')
         .replaceAll(RegExp(r'\b5\s*\/\s*5\b', caseSensitive: false), '')
         .replaceAll(RegExp(r'\bfive\s*stars?\b', caseSensitive: false), '')
@@ -892,7 +1018,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   Future<void> _loadWalletBalance() async {
     try {
       if (_serviceRepository.dioClient != null) {
-        final res = await _serviceRepository.dioClient!.get('/buyer/wallet/balance');
+        final res =
+            await _serviceRepository.dioClient!.get('/buyer/wallet/balance');
         if (res.statusCode == 200 && res.data != null) {
           final bal = res.data['balance'];
           if (bal != null && bal['available'] != null) {
@@ -926,7 +1053,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     _urlDebounceTimer?.cancel();
     setState(() {
       _selectedService = service;
-      final minQ = service.pricing.minQuantity > 0 ? service.pricing.minQuantity : 10;
+      final minQ =
+          service.pricing.minQuantity > 0 ? service.pricing.minQuantity : 10;
       _selectedQuantity = minQ > 10 ? minQ : 10;
       _quantityController.text = '$_selectedQuantity';
       _targetUrlController.clear();
@@ -1013,7 +1141,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => AddBalanceScreen(initialAmount: deficit),
+                  builder: (context) =>
+                      AddBalanceScreen(initialAmount: deficit),
                 ),
               );
               _loadWalletBalance();
@@ -1054,8 +1183,11 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       final orderPayload = {
         'serviceCode': _selectedService!.code,
         'quantity': _selectedQuantity,
-        'title': '${_selectedService!.name} Campaign ($_selectedQuantity tasks)',
-        'description': isCommentService ? 'Custom content campaign' : 'Direct promotional campaign',
+        'title':
+            '${_selectedService!.name} Campaign ($_selectedQuantity tasks)',
+        'description': isCommentService
+            ? 'Custom content campaign'
+            : 'Direct promotional campaign',
         'requirements': {
           'targetUrl': _targetUrlController.text.trim(),
           'topic': _topicController.text.trim(),
@@ -1087,9 +1219,12 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                       : (_isYouTubeService(_selectedService) ? 120 : 0))),
           'videoDurationSeconds': _isInstagramService(_selectedService)
               ? 0
-              : (_ytDurationSeconds ?? (_isYouTubeService(_selectedService) ? 120 : 0)),
-          'videoTitle': _isInstagramService(_selectedService) ? '' : (_ytTitle ?? ''),
-          'videoThumbnail': _isInstagramService(_selectedService) ? '' : (_ytThumbnail ?? ''),
+              : (_ytDurationSeconds ??
+                  (_isYouTubeService(_selectedService) ? 120 : 0)),
+          'videoTitle':
+              _isInstagramService(_selectedService) ? '' : (_ytTitle ?? ''),
+          'videoThumbnail':
+              _isInstagramService(_selectedService) ? '' : (_ytThumbnail ?? ''),
         },
         'timeToAcceptHours': _selectedService!.minAcceptHours,
         'timeToCompleteHours': _selectedService!.maxCompleteHours > 48
@@ -1097,7 +1232,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
             : _selectedService!.maxCompleteHours,
       };
 
-      await _serviceRepository.dioClient!.post('/buyer/orders', data: orderPayload);
+      await _serviceRepository.dioClient!
+          .post('/buyer/orders', data: orderPayload);
 
       setState(() => _isSubmitting = false);
       _loadWalletBalance();
@@ -1108,12 +1244,15 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           title: const Row(
             children: [
-              Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 28),
+              Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF10B981), size: 28),
               SizedBox(width: 10),
-              Text('Order Live!', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text('Order Live!',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ],
           ),
           content: Column(
@@ -1134,10 +1273,14 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Total Paid:', style: TextStyle(fontSize: 13, color: Color(0xFF64748B))),
+                    const Text('Total Paid:',
+                        style:
+                            TextStyle(fontSize: 13, color: Color(0xFF64748B))),
                     Text('₹${totalCost.toStringAsFixed(2)}',
                         style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF10B981))),
                   ],
                 ),
               ),
@@ -1148,7 +1291,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () {
                 Navigator.of(ctx).pop();
@@ -1231,17 +1375,38 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       }
       String cat = s.category.trim();
 
-      if (codeUpper.contains('GOOGLE_BUSINESS') || codeUpper.contains('GOOGLE_MAP') || codeUpper.contains('GMB') || nameUpper.contains('GOOGLE BUSINESS') || nameUpper.contains('GOOGLE MAP') || cat.toLowerCase().contains('google business') || cat.toLowerCase().contains('google maps')) {
+      if (codeUpper.contains('GOOGLE_BUSINESS') ||
+          codeUpper.contains('GOOGLE_MAP') ||
+          codeUpper.contains('GMB') ||
+          nameUpper.contains('GOOGLE BUSINESS') ||
+          nameUpper.contains('GOOGLE MAP') ||
+          cat.toLowerCase().contains('google business') ||
+          cat.toLowerCase().contains('google maps')) {
         cat = 'Google Maps';
-      } else if (codeUpper.contains('PLAY') || codeUpper.contains('RATING') || (codeUpper.contains('REVIEW') && !codeUpper.contains('INSTA') && !codeUpper.contains('YT')) || nameUpper.contains('PLAY STORE')) {
-        cat = 'Google Play Store';
-      } else if (codeUpper.contains('APP') || codeUpper.contains('INSTALL') || nameUpper.contains('INSTALL')) {
+      } else if (codeUpper.contains('INSTALL') ||
+          codeUpper.startsWith('APP_') ||
+          nameUpper.contains('INSTALL') ||
+          cat.toLowerCase().contains('install')) {
         cat = 'App Install & Review';
-      } else if (codeUpper.contains('YOUTUBE') || codeUpper.contains('YT') || nameUpper.contains('YOUTUBE')) {
+      } else if (codeUpper.contains('PLAY') ||
+          codeUpper.contains('RATING') ||
+          (codeUpper.contains('REVIEW') &&
+              !codeUpper.contains('INSTA') &&
+              !codeUpper.contains('YT')) ||
+          nameUpper.contains('PLAY STORE') ||
+          cat.toLowerCase().contains('play store')) {
+        cat = 'Google Play Store';
+      } else if (codeUpper.contains('YOUTUBE') ||
+          codeUpper.contains('YT') ||
+          nameUpper.contains('YOUTUBE')) {
         cat = 'YouTube';
-      } else if (codeUpper.contains('INSTA') || nameUpper.contains('INSTAGRAM')) {
+      } else if ((codeUpper.contains('INSTA') && !codeUpper.contains('INSTALL')) ||
+          nameUpper.contains('INSTAGRAM')) {
         cat = 'Instagram';
-      } else if (codeUpper.contains('WEB') || codeUpper.contains('TRAFFIC') || codeUpper.contains('VISIT') || nameUpper.contains('WEBSITE')) {
+      } else if (codeUpper.contains('WEB') ||
+          codeUpper.contains('TRAFFIC') ||
+          codeUpper.contains('VISIT') ||
+          nameUpper.contains('WEBSITE')) {
         cat = 'Website Traffic';
       } else if (cat.isEmpty || cat == 'General') {
         cat = 'Other Services';
@@ -1320,7 +1485,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         return idxA.compareTo(idxB);
       });
 
-    final bool canGoBack = Navigator.canPop(context) || widget.onBackToHome != null;
+    final bool canGoBack =
+        Navigator.canPop(context) || widget.onBackToHome != null;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -1330,7 +1496,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         elevation: 0,
         leading: canGoBack
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF0F172A)),
+                icon: const Icon(Icons.arrow_back_rounded,
+                    color: Color(0xFF0F172A)),
                 tooltip: 'Back',
                 onPressed: _onUiBackPressed,
               )
@@ -1394,10 +1561,11 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
           ...sortedEntries.map((entry) {
             final cat = entry.key;
             final services = entry.value;
-            final meta = categoryMeta[cat] ?? {
-              'icon': Icons.stars_rounded,
-              'color': const Color(0xFF6366F1),
-            };
+            final meta = categoryMeta[cat] ??
+                {
+                  'icon': Icons.stars_rounded,
+                  'color': const Color(0xFF6366F1),
+                };
 
             return CategoryAccordionCard(
               categoryName: cat,
@@ -1416,25 +1584,65 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   String? _getServiceAsset(ServiceModel s) {
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
-    if (code.contains('GOOGLE_BUSINESS') || code.contains('GOOGLE_MAP') || name.contains('GOOGLE BUSINESS') || name.contains('GOOGLE MAP')) {
-      return (code.contains('REVIEW') || name.contains('REVIEW')) ? 'assets/icons/review.png' : 'assets/icons/rating.png';
+    if (code.contains('GOOGLE_BUSINESS') ||
+        code.contains('GOOGLE_MAP') ||
+        name.contains('GOOGLE BUSINESS') ||
+        name.contains('GOOGLE MAP')) {
+      return (code.contains('REVIEW') || name.contains('REVIEW'))
+          ? 'assets/icons/review.png'
+          : 'assets/icons/rating.png';
     }
-    if (code.contains('COMBO') || name.contains('COMBO')) return 'assets/icons/marketing.png';
-    if (code.contains('FOLLOW') || name.contains('FOLLOW')) return 'assets/icons/instagram.png';
-    if (code.contains('REVIEW') || name.contains('REVIEW')) return 'assets/icons/review.png';
-    if (code.contains('RATING') || name.contains('RATING') || name.contains('STAR')) return 'assets/icons/rating.png';
-    if (code.contains('COMMENT') || name.contains('COMMENT')) return 'assets/icons/comment.png';
-    if (code.contains('SUB') || name.contains('SUB') || name.contains('SUBSCRIBE')) return 'assets/icons/subscribe.png';
-    if (code.contains('LIKE') || name.contains('LIKE')) return 'assets/icons/like.png';
-    if (code.contains('INSTALL') || name.contains('INSTALL') || code.contains('DOWNLOAD') || name.contains('DOWNLOAD')) {
+    if (code.contains('COMBO') || name.contains('COMBO')) {
+      return 'assets/icons/marketing.png';
+    }
+    if (_isAppInstallService(s)) {
       return 'assets/icons/smartphone.png';
     }
-    if (code.contains('PLAY') || code.contains('WATCH') || name.contains('WATCH') || name.contains('VIEW')) {
+    if (_isInstagramService(s)) {
+      if (code.contains('LIKE') || name.contains('LIKE')) {
+        return 'assets/icons/like.png';
+      }
+      if (code.contains('COMMENT') || name.contains('COMMENT')) {
+        return 'assets/icons/comment.png';
+      }
+      return 'assets/icons/instagram.png';
+    }
+    if (code.contains('REVIEW') || name.contains('REVIEW')) {
+      return 'assets/icons/review.png';
+    }
+    if (code.contains('RATING') ||
+        name.contains('RATING') ||
+        name.contains('STAR')) return 'assets/icons/rating.png';
+    if (code.contains('COMMENT') || name.contains('COMMENT')) {
+      return 'assets/icons/comment.png';
+    }
+    if (code.contains('SUB') ||
+        name.contains('SUB') ||
+        name.contains('SUBSCRIBE')) return 'assets/icons/subscribe.png';
+    if (code.contains('LIKE') || name.contains('LIKE')) {
+      return 'assets/icons/like.png';
+    }
+    if (code.contains('INSTALL') ||
+        name.contains('INSTALL') ||
+        code.contains('DOWNLOAD') ||
+        name.contains('DOWNLOAD')) {
+      return 'assets/icons/smartphone.png';
+    }
+    if (code.contains('PLAY') ||
+        code.contains('WATCH') ||
+        name.contains('WATCH') ||
+        name.contains('VIEW')) {
       return 'assets/icons/play.png';
     }
-    if (code.contains('PLAY') || code.contains('GOOGLE')) return 'assets/icons/google-play.png';
-    if (code.contains('YT') || code.contains('YOUTUBE')) return 'assets/icons/youtube.png';
-    if (code.contains('INSTA') || code.contains('IG')) return 'assets/icons/instagram.png';
+    if (code.contains('PLAY') || code.contains('GOOGLE')) {
+      return 'assets/icons/google-play.png';
+    }
+    if (code.contains('YT') || code.contains('YOUTUBE')) {
+      return 'assets/icons/youtube.png';
+    }
+    if (code.contains('INSTA') && !code.contains('INSTALL')) {
+      return 'assets/icons/instagram.png';
+    }
     return null;
   }
 
@@ -1485,14 +1693,19 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   Text(
                     s.name,
                     style: const TextStyle(
-                        color: Color(0xFF0F172A), fontSize: 15, fontWeight: FontWeight.bold),
+                        color: Color(0xFF0F172A),
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    ServiceUnitHelper.getRateLabel(s.name, s.pricing.buyerPrice, serviceCode: s.code),
+                    ServiceUnitHelper.getRateLabel(s.name, s.pricing.buyerPrice,
+                        serviceCode: s.code),
                     style: const TextStyle(
-                        color: Color(0xFF2563EB), fontSize: 12, fontWeight: FontWeight.w600),
+                        color: Color(0xFF2563EB),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -1510,6 +1723,12 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               // ── SPECIAL COMBO INCLUSIONS PERKS CARD ──
               if (_isComboService(s)) ...[
                 _buildComboInclusionsCard(s),
+                const SizedBox(height: 16),
+              ],
+
+              // ── SPECIAL APP INSTALL INCLUSIONS CARD ──
+              if (_isAppInstallService(s)) ...[
+                _buildAppInstallInclusionsCard(s),
                 const SizedBox(height: 16),
               ],
 
@@ -1543,9 +1762,16 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                       ? 'YouTube Video Link (Target URL)'
                                       : (_isGoogleBusinessService(s)
                                           ? 'Google Maps Business Listing Link'
-                                          : (s.linkFieldLabel ?? 'Target Link / URL'))))),
+                                          : (_isAppInstallService(s)
+                                              ? 'Google Play Store App URL (Target App for Install)'
+                                              : (_isPlayStoreService(s)
+                                                  ? 'Google Play Store App Link / Package URL'
+                                                  : (s.linkFieldLabel ??
+                                                      'Target Link / URL'))))))),
                       style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B)),
                     ),
                     const SizedBox(height: 8),
                     TextFormField(
@@ -1559,7 +1785,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                         if (_isInstagramService(s) && trimmed.startsWith('@')) {
                           return null;
                         }
-                        if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+                        if (!trimmed.startsWith('http://') &&
+                            !trimmed.startsWith('https://')) {
                           return 'Please enter a valid URL (starting with https://)';
                         }
                         return null;
@@ -1578,19 +1805,33 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                         ? 'https://www.youtube.com/watch?v=... or youtu.be/...'
                                         : (_isGoogleBusinessService(s)
                                             ? 'https://maps.app.goo.gl/... or Google Maps listing link'
-                                            : (s.linkFieldPlaceholder ?? 'https://...'))))),
-                        hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                                            : (_isAppInstallService(s) || _isPlayStoreService(s)
+                                                ? 'https://play.google.com/store/apps/details?id=com.your.app'
+                                                : (s.linkFieldPlaceholder ??
+                                                    'https://...')))))),
+                        hintStyle: const TextStyle(
+                            fontSize: 12, color: Color(0xFF94A3B8)),
                         prefixIcon: Icon(
                           _isInstagramService(s)
                               ? Icons.camera_alt_rounded
                               : (_isGoogleBusinessService(s)
                                   ? Icons.location_on_rounded
-                                  : (_isYouTubeService(s) ? Icons.play_arrow_rounded : Icons.link_rounded)),
+                                  : (_isYouTubeService(s)
+                                      ? Icons.play_arrow_rounded
+                                      : (_isAppInstallService(s)
+                                          ? Icons.install_mobile_rounded
+                                          : (_isPlayStoreService(s)
+                                              ? Icons.shop_two_rounded
+                                              : Icons.link_rounded)))),
                           color: _isInstagramService(s)
                               ? const Color(0xFFE1306C)
                               : (_isGoogleBusinessService(s)
                                   ? const Color(0xFF2563EB)
-                                  : (_isYouTubeService(s) ? const Color(0xFFDC2626) : const Color(0xFF2563EB))),
+                                  : (_isYouTubeService(s)
+                                      ? const Color(0xFFDC2626)
+                                      : (_isAppInstallService(s)
+                                          ? const Color(0xFF7C3AED)
+                                          : const Color(0xFF059669)))),
                         ),
                         suffixIcon: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -1602,50 +1843,61 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                 child: InkWell(
                                   onTap: _isFetchingAppInfo
                                       ? null
-                                      : () => _fetchPlayStoreAppInfo(_targetUrlController.text.trim()),
+                                      : () => _fetchPlayStoreAppInfo(
+                                          _targetUrlController.text.trim()),
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFEFF6FF),
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                                      border: Border.all(
+                                          color: const Color(0xFFBFDBFE)),
                                     ),
                                     child: _isFetchingAppInfo
                                         ? const SizedBox(
                                             width: 14,
                                             height: 14,
-                                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2563EB)),
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Color(0xFF2563EB)),
                                           )
-                                        : const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF2563EB)),
+                                        : const Icon(Icons.refresh_rounded,
+                                            size: 16, color: Color(0xFF2563EB)),
                                   ),
                                 ),
                               ),
                             if (!_isInstagramService(_selectedService) &&
                                 (_isYouTubeService(_selectedService) ||
-                                    _targetUrlController.text.contains('youtu')) &&
+                                    _targetUrlController.text
+                                        .contains('youtu')) &&
                                 _targetUrlController.text.trim().isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(right: 2),
                                 child: InkWell(
                                   onTap: _isFetchingYtInfo
                                       ? null
-                                      : () => _fetchYouTubeVideoInfo(_targetUrlController.text.trim()),
+                                      : () => _fetchYouTubeVideoInfo(
+                                          _targetUrlController.text.trim()),
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFFEF2F2),
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: const Color(0xFFFECACA)),
+                                      border: Border.all(
+                                          color: const Color(0xFFFECACA)),
                                     ),
                                     child: _isFetchingYtInfo
                                         ? const SizedBox(
                                             width: 14,
                                             height: 14,
-                                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFDC2626)),
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Color(0xFFDC2626)),
                                           )
-                                        : const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFFDC2626)),
+                                        : const Icon(Icons.refresh_rounded,
+                                            size: 16, color: Color(0xFFDC2626)),
                                   ),
                                 ),
                               ),
@@ -1653,24 +1905,45 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                               onTap: _pasteFromClipboard,
                               borderRadius: BorderRadius.circular(10),
                               child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: _isInstagramService(s) ? const Color(0xFFFDF2F8) : const Color(0xFFEFF6FF),
+                                  color: _isInstagramService(s)
+                                      ? const Color(0xFFFDF2F8)
+                                      : (_isAppInstallService(s)
+                                          ? const Color(0xFFFAF5FF)
+                                          : const Color(0xFFEFF6FF)),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: _isInstagramService(s) ? const Color(0xFFFBCFE8) : const Color(0xFFBFDBFE)),
+                                  border: Border.all(
+                                      color: _isInstagramService(s)
+                                          ? const Color(0xFFFBCFE8)
+                                          : (_isAppInstallService(s)
+                                              ? const Color(0xFFE9D5FF)
+                                              : const Color(0xFFBFDBFE))),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.content_paste_rounded, size: 14, color: _isInstagramService(s) ? const Color(0xFFE1306C) : const Color(0xFF2563EB)),
+                                    Icon(Icons.content_paste_rounded,
+                                        size: 14,
+                                        color: _isInstagramService(s)
+                                            ? const Color(0xFFE1306C)
+                                            : (_isAppInstallService(s)
+                                                ? const Color(0xFF7C3AED)
+                                                : const Color(0xFF2563EB))),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Paste',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: _isInstagramService(s) ? const Color(0xFFE1306C) : const Color(0xFF2563EB),
+                                        color: _isInstagramService(s)
+                                            ? const Color(0xFFE1306C)
+                                            : (_isAppInstallService(s)
+                                                ? const Color(0xFF7C3AED)
+                                                : const Color(0xFF2563EB)),
                                       ),
                                     ),
                                   ],
@@ -1683,18 +1956,24 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                         fillColor: const Color(0xFFF8FAFC),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFE2E8F0)),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFE2E8F0)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
                             color: _isInstagramService(s)
                                 ? const Color(0xFFE1306C)
-                                : (_isYouTubeService(s) ? const Color(0xFFDC2626) : const Color(0xFF2563EB)),
+                                : (_isYouTubeService(s)
+                                    ? const Color(0xFFDC2626)
+                                    : (_isAppInstallService(s)
+                                        ? const Color(0xFF7C3AED)
+                                        : const Color(0xFF2563EB))),
                             width: 1.5,
                           ),
                         ),
@@ -1703,7 +1982,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
                     // Instagram Target Preview Card
                     if ((_isInstagramService(s) ||
-                            _targetUrlController.text.contains('instagram.com') ||
+                            _targetUrlController.text
+                                .contains('instagram.com') ||
                             _targetUrlController.text.startsWith('@')) &&
                         _instaIdentifier != null &&
                         _instaIdentifier!.isNotEmpty) ...[
@@ -1714,7 +1994,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                           color: const Color(0xFFFDF2F8),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                            color: const Color(0xFFF472B6).withValues(alpha: 0.5),
+                            color:
+                                const Color(0xFFF472B6).withValues(alpha: 0.5),
                             width: 1.2,
                           ),
                         ),
@@ -1747,7 +2028,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
@@ -1764,15 +2046,19 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                             ),
                                           ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: const Color(0xFFFCE7F3),
-                                              borderRadius: BorderRadius.circular(6),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
                                             ),
                                             child: const Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFFDB2777)),
+                                                Icon(Icons.check_circle_rounded,
+                                                    size: 11,
+                                                    color: Color(0xFFDB2777)),
                                                 SizedBox(width: 3),
                                                 Text(
                                                   'Detected',
@@ -1803,15 +2089,18 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                             ),
                             const SizedBox(height: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFFBCFE8)),
+                                border:
+                                    Border.all(color: const Color(0xFFFBCFE8)),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.verified_user_rounded, size: 12, color: Color(0xFFDB2777)),
+                                  const Icon(Icons.verified_user_rounded,
+                                      size: 12, color: Color(0xFFDB2777)),
                                   const SizedBox(width: 5),
                                   Expanded(
                                     child: Text(
@@ -1837,7 +2126,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     if (_isFetchingAppInfo) ...[
                       const SizedBox(height: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
                           color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(10),
@@ -1848,13 +2138,17 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                             SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2563EB)),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Color(0xFF2563EB)),
                             ),
                             SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 'Fetching app details from Google Play Store...',
-                                style: TextStyle(fontSize: 12, color: Color(0xFF1E40AF), fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF1E40AF),
+                                    fontWeight: FontWeight.w600),
                               ),
                             ),
                           ],
@@ -1863,7 +2157,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     ],
 
                     // Play Store App Preview Card
-                    if (_isPlayStoreService(_selectedService) && _appName != null && _appName!.isNotEmpty) ...[
+                    if (_isPlayStoreService(_selectedService) &&
+                        _appName != null &&
+                        _appName!.isNotEmpty) ...[
                       const SizedBox(height: 14),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -1885,10 +2181,12 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    border: Border.all(
+                                        color: const Color(0xFFCBD5E1)),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.06),
+                                        color: Colors.black
+                                            .withValues(alpha: 0.06),
                                         blurRadius: 6,
                                         offset: const Offset(0, 2),
                                       ),
@@ -1896,11 +2194,13 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(11),
-                                    child: (_appIcon != null && _appIcon!.isNotEmpty)
+                                    child: (_appIcon != null &&
+                                            _appIcon!.isNotEmpty)
                                         ? Image.network(
                                             _appIcon!,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => const Icon(
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(
                                               Icons.shop_two_rounded,
                                               color: Color(0xFF10B981),
                                               size: 28,
@@ -1917,7 +2217,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                 // Title & Package
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
@@ -1934,15 +2235,19 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                             ),
                                           ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: const Color(0xFFDCFCE7),
-                                              borderRadius: BorderRadius.circular(6),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
                                             ),
                                             child: const Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFF16A34A)),
+                                                Icon(Icons.check_circle_rounded,
+                                                    size: 11,
+                                                    color: Color(0xFF16A34A)),
                                                 SizedBox(width: 3),
                                                 Text(
                                                   'Detected',
@@ -1975,19 +2280,26 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                             ),
                             const SizedBox(height: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF0FDF4),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: const Row(
+                              child: Row(
                                 children: [
-                                  Icon(Icons.auto_awesome, size: 12, color: Color(0xFF16A34A)),
-                                  SizedBox(width: 5),
+                                  const Icon(Icons.auto_awesome,
+                                      size: 12, color: Color(0xFF16A34A)),
+                                  const SizedBox(width: 5),
                                   Expanded(
                                     child: Text(
-                                      'Reviews will be customized specifically matching this app\'s features',
-                                      style: TextStyle(fontSize: 10.5, color: Color(0xFF166534), fontWeight: FontWeight.w600),
+                                      _isAppInstallService(_selectedService)
+                                          ? 'Real Android users will search, install & test this app on physical devices'
+                                          : 'Reviews will be customized specifically matching this app\'s features',
+                                      style: const TextStyle(
+                                          fontSize: 10.5,
+                                          color: Color(0xFF166534),
+                                          fontWeight: FontWeight.w600),
                                     ),
                                   ),
                                 ],
@@ -1999,11 +2311,13 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     ],
 
                     // Fetch Error Hint (non-blocking)
-                    if (_appFetchError != null && (_appName == null || _appName!.isEmpty)) ...[
+                    if (_appFetchError != null &&
+                        (_appName == null || _appName!.isEmpty)) ...[
                       const SizedBox(height: 10),
                       Text(
                         '💡 ${_appFetchError!}',
-                        style: const TextStyle(fontSize: 11, color: Color(0xFFD97706)),
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFFD97706)),
                       ),
                     ],
 
@@ -2011,7 +2325,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     if (!_isInstagramService(s) && _isFetchingYtInfo) ...[
                       const SizedBox(height: 12),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFEF2F2),
                           borderRadius: BorderRadius.circular(10),
@@ -2022,13 +2337,17 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                             SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFDC2626)),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Color(0xFFDC2626)),
                             ),
                             SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 'Extracting video length & watch time from YouTube...',
-                                style: TextStyle(fontSize: 12, color: Color(0xFF991B1B), fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF991B1B),
+                                    fontWeight: FontWeight.w600),
                               ),
                             ),
                           ],
@@ -2037,14 +2356,19 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     ],
 
                     // YouTube Video Preview Card
-                    if (!_isInstagramService(s) && _ytTitle != null && _ytTitle!.isNotEmpty) ...[
+                    if (!_isInstagramService(s) &&
+                        _ytTitle != null &&
+                        _ytTitle!.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFEF2F2),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFF87171).withValues(alpha: 0.5), width: 1.2),
+                          border: Border.all(
+                              color: const Color(0xFFF87171)
+                                  .withValues(alpha: 0.5),
+                              width: 1.2),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2061,11 +2385,13 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                         width: 96,
                                         height: 60,
                                         color: Colors.black,
-                                        child: (_ytThumbnail != null && _ytThumbnail!.isNotEmpty)
+                                        child: (_ytThumbnail != null &&
+                                                _ytThumbnail!.isNotEmpty)
                                             ? Image.network(
                                                 _ytThumbnail!,
                                                 fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) => const Icon(
+                                                errorBuilder: (_, __, ___) =>
+                                                    const Icon(
                                                   Icons.play_circle_fill,
                                                   color: Colors.white70,
                                                   size: 32,
@@ -2083,10 +2409,13 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                         bottom: 4,
                                         right: 4,
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 5, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: Colors.black.withValues(alpha: 0.85),
-                                            borderRadius: BorderRadius.circular(4),
+                                            color: Colors.black
+                                                .withValues(alpha: 0.85),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
                                           ),
                                           child: Text(
                                             _ytDurationFormatted!,
@@ -2104,7 +2433,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                 // Title & Watch Info
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         _ytTitle!,
@@ -2120,10 +2450,12 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                       Row(
                                         children: [
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: const Color(0xFFFEE2E2),
-                                              borderRadius: BorderRadius.circular(5),
+                                              borderRadius:
+                                                  BorderRadius.circular(5),
                                             ),
                                             child: Text(
                                               'Total: ${_ytDurationFormatted ?? ''}',
@@ -2136,15 +2468,19 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                           ),
                                           const SizedBox(width: 6),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: _ytIsCappedAt5Min
                                                   ? const Color(0xFFFEF3C7)
                                                   : const Color(0xFFDCFCE7),
-                                              borderRadius: BorderRadius.circular(5),
+                                              borderRadius:
+                                                  BorderRadius.circular(5),
                                             ),
                                             child: Text(
-                                              _ytIsCappedAt5Min ? 'Capped at 5m' : 'Full Video',
+                                              _ytIsCappedAt5Min
+                                                  ? 'Capped at 5m'
+                                                  : 'Full Video',
                                               style: TextStyle(
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,
@@ -2163,11 +2499,13 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                             ),
                             const SizedBox(height: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 5),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFFECACA)),
+                                border:
+                                    Border.all(color: const Color(0xFFFECACA)),
                               ),
                               child: const Row(
                                 children: [
@@ -2196,11 +2534,14 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     ],
 
                     // YouTube Error Hint
-                    if (!_isInstagramService(s) && _ytFetchError != null && (_ytTitle == null || _ytTitle!.isEmpty)) ...[
+                    if (!_isInstagramService(s) &&
+                        _ytFetchError != null &&
+                        (_ytTitle == null || _ytTitle!.isEmpty)) ...[
                       const SizedBox(height: 10),
                       Text(
                         '💡 ${_ytFetchError!}',
-                        style: const TextStyle(fontSize: 11, color: Color(0xFFDC2626)),
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFFDC2626)),
                       ),
                     ],
                   ],
@@ -2222,9 +2563,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                       ? _appNameController.text.trim()
                       : (_isInstagramService(s)
                           ? (_instaIdentifier ?? '')
-                          : (_isYouTubeService(s)
-                              ? _ytTitle
-                              : _appName)),
+                          : (_isYouTubeService(s) ? _ytTitle : _appName)),
                   isAppReview: _isPlayStoreService(s),
                   isGoogleBusiness: _isGoogleBusinessService(s),
                   isInstagram: _isInstagramService(s),
@@ -2260,14 +2599,19 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      ServiceUnitHelper.getQuantityHeader(s.name, serviceCode: s.code),
+                      ServiceUnitHelper.getQuantityHeader(s.name,
+                          serviceCode: s.code),
                       style: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B)),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      ServiceUnitHelper.getUnitExplanation(s.name, serviceCode: s.code),
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      ServiceUnitHelper.getUnitExplanation(s.name,
+                          serviceCode: s.code),
+                      style: const TextStyle(
+                          fontSize: 11, color: Color(0xFF64748B)),
                     ),
                     const SizedBox(height: 12),
 
@@ -2275,9 +2619,12 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF2563EB)),
+                          icon: const Icon(Icons.remove_circle_outline,
+                              color: Color(0xFF2563EB)),
                           onPressed: () {
-                            final minQ = s.pricing.minQuantity > 0 ? s.pricing.minQuantity : 1;
+                            final minQ = s.pricing.minQuantity > 0
+                                ? s.pricing.minQuantity
+                                : 1;
                             if (_selectedQuantity > minQ) {
                               setState(() {
                                 _selectedQuantity--;
@@ -2292,27 +2639,37 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                             textAlign: TextAlign.center,
                             keyboardType: TextInputType.number,
                             style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A)),
                             onChanged: (val) {
-                              final minQ = s.pricing.minQuantity > 0 ? s.pricing.minQuantity : 1;
+                              final minQ = s.pricing.minQuantity > 0
+                                  ? s.pricing.minQuantity
+                                  : 1;
                               final num = int.tryParse(val) ?? minQ;
-                              setState(() => _selectedQuantity = num >= minQ ? num : minQ);
+                              setState(() =>
+                                  _selectedQuantity = num >= minQ ? num : minQ);
                             },
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: const Color(0xFFF8FAFC),
-                              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                              contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 8),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFE2E8F0)),
                               ),
                             ),
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.add_circle_outline, color: Color(0xFF2563EB)),
+                          icon: const Icon(Icons.add_circle_outline,
+                              color: Color(0xFF2563EB)),
                           onPressed: () {
-                            final maxQ = s.pricing.maxQuantity > 0 ? s.pricing.maxQuantity : 99999;
+                            final maxQ = s.pricing.maxQuantity > 0
+                                ? s.pricing.maxQuantity
+                                : 99999;
                             if (_selectedQuantity < maxQ) {
                               setState(() {
                                 _selectedQuantity++;
@@ -2340,11 +2697,16 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                       ].toSet().map((qty) {
                         final isSelected = _selectedQuantity == qty;
                         return ChoiceChip(
-                          label: Text(ServiceUnitHelper.getUnitName(s.name, serviceCode: s.code, count: qty, includeCount: true)),
+                          label: Text(ServiceUnitHelper.getUnitName(s.name,
+                              serviceCode: s.code,
+                              count: qty,
+                              includeCount: true)),
                           selected: isSelected,
                           selectedColor: const Color(0xFF2563EB),
                           labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : const Color(0xFF334155),
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF334155),
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -2374,21 +2736,33 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Quantity:', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                        Text(ServiceUnitHelper.getUnitName(s.name, serviceCode: s.code, count: _selectedQuantity, includeCount: true),
+                        const Text('Quantity:',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 13)),
+                        Text(
+                            ServiceUnitHelper.getUnitName(s.name,
+                                serviceCode: s.code,
+                                count: _selectedQuantity,
+                                includeCount: true),
                             style: const TextStyle(
-                                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14)),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Rate per ${ServiceUnitHelper.getUnitName(s.name, serviceCode: s.code, count: 1)}:',
-                            style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                        Text(
+                            'Rate per ${ServiceUnitHelper.getUnitName(s.name, serviceCode: s.code, count: 1)}:',
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13)),
                         Text('₹${s.pricing.buyerPrice.toStringAsFixed(2)}',
                             style: const TextStyle(
-                                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14)),
                       ],
                     ),
                     const Divider(color: Colors.white24, height: 20),
@@ -2397,7 +2771,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                       children: [
                         const Text('Total Budget:',
                             style: TextStyle(
-                                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15)),
                         Text('₹${totalCost.toStringAsFixed(2)}',
                             style: const TextStyle(
                                 color: Colors.greenAccent,
@@ -2418,7 +2794,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
                   onPressed: _isSubmitting ? null : _submitCampaign,
@@ -2426,18 +2803,164 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.rocket_launch_rounded),
                   label: Text(
-                    _isSubmitting ? 'Launching Campaign...' : 'Place Campaign Order',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    _isSubmitting
+                        ? 'Launching Campaign...'
+                        : 'Place Campaign Order',
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ── App Install Perks & Inclusions Card (Explains Play Store Search, Download, 30s Usage) ──
+  Widget _buildAppInstallInclusionsCard(ServiceModel s) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFAF5FF), Color(0xFFF3E8FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFFE9D5FF),
+          width: 1.2,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF7C3AED), Color(0xFF6D28D9)],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.install_mobile_rounded,
+                      size: 13,
+                      color: Colors.white,
+                    ),
+                    SizedBox(width: 5),
+                    Text(
+                      'REAL APP INSTALL & TESTING',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFE9D5FF),
+                  ),
+                ),
+                child: Text(
+                  'Per 1 App Install',
+                  style: GoogleFonts.outfit(
+                    color: const Color(0xFF6D28D9),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Every 1 Worker executes on their personal Android smartphone:',
+            style: GoogleFonts.outfit(
+              color: const Color(0xFF0F172A),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildActionPerkTile(
+            icon: Icons.search_rounded,
+            iconColor: const Color(0xFF7C3AED),
+            title: 'Google Play Store Search & Download',
+            desc: 'Worker searches your app on Play Store and installs directly on physical phone',
+          ),
+          const SizedBox(height: 6),
+          _buildActionPerkTile(
+            icon: Icons.timer_outlined,
+            iconColor: const Color(0xFF2563EB),
+            title: '30-60s In-App Testing Session',
+            desc: 'Opens the app and interacts for at least 30-60 seconds for verified engagement',
+          ),
+          const SizedBox(height: 6),
+          _buildActionPerkTile(
+            icon: Icons.verified_user_rounded,
+            iconColor: const Color(0xFF10B981),
+            title: 'Screenshot Proof & Package Verification',
+            desc: 'System verifies genuine installation proof before task completion reward',
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDE9FE),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.verified_rounded,
+                  size: 15,
+                  color: Color(0xFF6D28D9),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    '100% Real Physical Android Phones • Safe for Google Play Store ASO & Trending',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF5B21B6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2475,7 +2998,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isYt
@@ -2512,13 +3036,17 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: isYt ? const Color(0xFFFECACA) : const Color(0xFFFBCFE8),
+                    color: isYt
+                        ? const Color(0xFFFECACA)
+                        : const Color(0xFFFBCFE8),
                   ),
                 ),
                 child: Text(
                   'Per 1 Unit Combo',
                   style: GoogleFonts.outfit(
-                    color: isYt ? const Color(0xFFB91C1C) : const Color(0xFF9D174D),
+                    color: isYt
+                        ? const Color(0xFFB91C1C)
+                        : const Color(0xFF9D174D),
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                   ),
@@ -2543,7 +3071,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               icon: Icons.timer_outlined,
               iconColor: const Color(0xFFDC2626),
               title: 'Full Video Watch Time',
-              desc: 'Worker watches complete video (100% full retention guaranteed)',
+              desc:
+                  'Worker watches complete video (100% full retention guaranteed)',
             ),
             const SizedBox(height: 6),
             _buildActionPerkTile(
@@ -2564,7 +3093,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               icon: Icons.mode_comment_rounded,
               iconColor: const Color(0xFF2563EB),
               title: 'Video Comment',
-              desc: 'Authentic, topic-relevant positive comment posted on video',
+              desc:
+                  'Authentic, topic-relevant positive comment posted on video',
             ),
           ] else ...[
             _buildActionPerkTile(
@@ -2595,7 +3125,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                 Icon(
                   Icons.verified_rounded,
                   size: 15,
-                  color: isYt ? const Color(0xFFB91C1C) : const Color(0xFFBE185D),
+                  color:
+                      isYt ? const Color(0xFFB91C1C) : const Color(0xFFBE185D),
                 ),
                 const SizedBox(width: 7),
                 Expanded(
@@ -2606,7 +3137,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     style: GoogleFonts.outfit(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: isYt ? const Color(0xFF991B1B) : const Color(0xFF9D174D),
+                      color: isYt
+                          ? const Color(0xFF991B1B)
+                          : const Color(0xFF9D174D),
                     ),
                   ),
                 ),
@@ -2694,7 +3227,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
   // ── Google Business Perks Card (Explains Organic Google Maps Ranking & Reviews) ──
   Widget _buildGoogleBusinessInclusionsCard(ServiceModel s) {
-    final bool isReview = s.code.toUpperCase().contains('REVIEW') || s.name.toUpperCase().contains('REVIEW');
+    final bool isReview = s.code.toUpperCase().contains('REVIEW') ||
+        s.name.toUpperCase().contains('REVIEW');
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -2723,7 +3257,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
@@ -2740,7 +3275,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      isReview ? '5-STAR RATING & REVIEW' : '5-STAR RATING GUARANTEE',
+                      isReview
+                          ? '5-STAR RATING & REVIEW'
+                          : '5-STAR RATING GUARANTEE',
                       style: GoogleFonts.outfit(
                         color: Colors.white,
                         fontSize: 11,
@@ -2786,14 +3323,16 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
             icon: Icons.person_pin_circle_rounded,
             iconColor: const Color(0xFF2563EB),
             title: 'Real Local Accounts',
-            desc: 'Real active Google users with genuine Indian Google profiles',
+            desc:
+                'Real active Google users with genuine Indian Google profiles',
           ),
           const SizedBox(height: 6),
           _buildActionPerkTile(
             icon: Icons.star_rounded,
             iconColor: const Color(0xFFF59E0B),
             title: 'Guaranteed 5-Star Rating',
-            desc: 'Permanent 5-star rating directly on your Google Business page',
+            desc:
+                'Permanent 5-star rating directly on your Google Business page',
           ),
           if (isReview) ...[
             const SizedBox(height: 6),
@@ -2801,7 +3340,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               icon: Icons.reviews_rounded,
               iconColor: const Color(0xFF10B981),
               title: 'Detailed Positive Review',
-              desc: 'Customized review highlighting your staff, service quality & experience',
+              desc:
+                  'Customized review highlighting your staff, service quality & experience',
             ),
           ],
           const SizedBox(height: 6),

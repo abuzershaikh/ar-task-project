@@ -203,10 +203,10 @@ class ServiceModel {
     String derivedCategory = (json['category'] ?? '').toString().trim();
 
     if (derivedCategory.isEmpty || derivedCategory == 'General' || (derivedCategory == 'YouTube' && (codeUpper.startsWith('APP') || codeUpper.startsWith('PLAY')))) {
-      if (codeUpper.startsWith('PLAY') || codeUpper.contains('REVIEW') || codeUpper.contains('RATING') || nameUpper.contains('PLAY STORE')) {
-        derivedCategory = 'Google Play Store';
-      } else if (codeUpper.startsWith('APP') || codeUpper.contains('INSTALL') || nameUpper.contains('INSTALL')) {
+      if (codeUpper.startsWith('APP') || codeUpper.contains('INSTALL') || nameUpper.contains('INSTALL')) {
         derivedCategory = 'App Install & Review';
+      } else if (codeUpper.startsWith('PLAY') || codeUpper.contains('REVIEW') || codeUpper.contains('RATING') || nameUpper.contains('PLAY STORE')) {
+        derivedCategory = 'Google Play Store';
       } else if (codeUpper.startsWith('YOUTUBE') || codeUpper.startsWith('YT') || nameUpper.contains('YOUTUBE')) {
         derivedCategory = 'YouTube';
       } else if (codeUpper.startsWith('INSTA') || nameUpper.contains('INSTAGRAM')) {

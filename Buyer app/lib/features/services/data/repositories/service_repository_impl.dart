@@ -437,6 +437,30 @@ class ServiceRepositoryImpl implements ServiceRepository {
         ],
         updatedAt: DateTime.now(),
       ),
+      // ── APP INSTALL SERVICES ──
+      ServiceModel(
+        id: 'srv_app_install',
+        code: 'APP_INSTALL',
+        name: 'Android App Install & Open',
+        description: 'Download, install and open Android app from Google Play Store with active 30s-60s testing.',
+        category: 'App Install & Review',
+        serviceType: 'install',
+        isActive: true,
+        currentVersion: 1,
+        linkFieldLabel: 'Google Play Store App URL',
+        linkFieldPlaceholder: 'https://play.google.com/store/apps/details?id=com.your.app',
+        pricing: const PricingConfig(
+          modelType: PricingModelType.countBased,
+          buyerPrice: 5.0,
+          unitPrice: 5.0,
+          minQuantity: 5,
+          maxQuantity: 5000,
+          adminMarginPercent: 20.0,
+          workerReward: 4.0,
+        ),
+        elements: const [],
+        updatedAt: DateTime.now(),
+      ),
       // ── GOOGLE PLAY STORE SERVICES ──
       ServiceModel(
         id: 'srv_play_rating',
