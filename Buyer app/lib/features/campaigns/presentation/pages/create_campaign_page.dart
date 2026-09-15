@@ -125,7 +125,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   }
 
   bool _isPlayStoreService(ServiceModel? s) {
-    if (s == null || _isGoogleBusinessService(s)) return false;
+    if (s == null || _isGoogleBusinessService(s) || _isInstagramService(s)) return false;
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     final desc = s.description.toUpperCase();
@@ -137,19 +137,6 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         name.contains('PLAY') ||
         name.contains('REVIEW') ||
         desc.contains('PLAY STORE');
-  }
-
-  bool _isYouTubeService(ServiceModel? s) {
-    if (s == null) return false;
-    final code = s.code.toUpperCase();
-    final name = s.name.toUpperCase();
-    final desc = s.description.toUpperCase();
-    final cat = s.category.toUpperCase();
-    return code.contains('YOUTUBE') ||
-        code.contains('YT_') ||
-        cat.contains('YOUTUBE') ||
-        name.contains('YOUTUBE') ||
-        desc.contains('YOUTUBE');
   }
 
   bool _isInstagramService(ServiceModel? s) {
@@ -167,11 +154,47 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         desc.contains('INSTAGRAM');
   }
 
+  bool _isInstagramCombo(ServiceModel? s) {
+    if (s == null) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    final cat = s.category.toUpperCase();
+    return (code.contains('COMBO') || name.contains('COMBO')) &&
+        (code.contains('INSTA') ||
+            code.contains('IG') ||
+            cat.contains('INSTA') ||
+            name.contains('INSTA') ||
+            name.contains('INSTAGRAM'));
+  }
+
   bool _isInstagramFollowerService(ServiceModel? s) {
     if (s == null) return false;
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     return code.contains('FOLLOW') || name.contains('FOLLOWER') || code.contains('INSTAGRAM_FOLLOW');
+  }
+
+  bool _isYouTubeService(ServiceModel? s) {
+    if (s == null) return false;
+    if (_isInstagramService(s)) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    final desc = s.description.toUpperCase();
+    final cat = s.category.toUpperCase();
+    return code.contains('YOUTUBE') ||
+        code.contains('YT_') ||
+        cat.contains('YOUTUBE') ||
+        name.contains('YOUTUBE') ||
+        desc.contains('YOUTUBE');
+  }
+
+  bool _isYouTubeCombo(ServiceModel? s) {
+    if (s == null) return false;
+    if (_isInstagramService(s) || _isInstagramCombo(s)) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    return (code.contains('COMBO') || name.contains('COMBO')) &&
+        (code.contains('YT') || code.contains('YOUTUBE') || s.category.toUpperCase().contains('YOUTUBE'));
   }
 
   void _parseInstagramUrl(String input) {
@@ -413,15 +436,18 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
   bool _isCommentOrComboService(ServiceModel? s) {
     if (s == null) return false;
-    final code = s.code.toUpperCase();
-    // Instagram combo is strictly Like + Follow, NOT comment!
-    if (code.contains('INSTA') && (code.contains('COMBO') || code.contains('FOLLOW') || code.contains('LIKE'))) {
-      if (!code.contains('COMMENT')) return false;
+    // Instagram services: ONLY comment services should have AI comment generator!
+    // Combo, Follow, Like must NEVER have AI comment generator!
+    if (_isInstagramService(s)) {
+      final code = s.code.toUpperCase();
+      final name = s.name.toUpperCase();
+      return code.contains('COMMENT') || name.contains('COMMENT');
     }
     // YouTube Combo IS a comment service (Watch + Like + Sub + Comment)
-    if ((code.contains('YT') || code.contains('YOUTUBE')) && code.contains('COMBO')) {
+    if (_isYouTubeCombo(s)) {
       return true;
     }
+    final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     final desc = s.description.toUpperCase();
     final type = s.serviceType.toUpperCase();
@@ -439,22 +465,6 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     return code.contains('COMBO') || name.contains('COMBO');
-  }
-
-  bool _isYouTubeCombo(ServiceModel? s) {
-    if (s == null) return false;
-    final code = s.code.toUpperCase();
-    final name = s.name.toUpperCase();
-    return (code.contains('COMBO') || name.contains('COMBO')) &&
-        (code.contains('YT') || code.contains('YOUTUBE') || s.category.toUpperCase().contains('YOUTUBE'));
-  }
-
-  bool _isInstagramCombo(ServiceModel? s) {
-    if (s == null) return false;
-    final code = s.code.toUpperCase();
-    final name = s.name.toUpperCase();
-    return (code.contains('COMBO') || name.contains('COMBO')) &&
-        (code.contains('INSTA') || code.contains('IG') || s.category.toUpperCase().contains('INSTA'));
   }
 
   Future<void> _generateSampleComments() async {
@@ -1057,10 +1067,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
           'sampleComments': _sampleComments,
           'appName': _appNameController.text.trim().isNotEmpty
               ? _appNameController.text.trim()
-              : (_isYouTubeService(_selectedService)
-                  ? (_ytTitle ?? '')
-                  : (_isInstagramService(_selectedService)
-                      ? (_instaIdentifier ?? '')
+              : (_isInstagramService(_selectedService)
+                  ? (_instaIdentifier ?? '')
+                  : (_isYouTubeService(_selectedService)
+                      ? (_ytTitle ?? '')
                       : (_appName ?? ''))),
           'businessName': _isGoogleBusinessService(_selectedService)
               ? (_appNameController.text.trim().isNotEmpty
@@ -1069,13 +1079,17 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               : '',
           'appIcon': _appIcon,
           'packageId': _packageId,
-          'watchTimeSeconds': _ytRequiredWatchSeconds ??
-              (_ytDurationSeconds != null
-                  ? (_ytDurationSeconds! > 300 ? 300 : _ytDurationSeconds!)
-                  : (_isYouTubeService(_selectedService) ? 120 : 0)),
-          'videoDurationSeconds': _ytDurationSeconds ?? (_isYouTubeService(_selectedService) ? 120 : 0),
-          'videoTitle': _ytTitle ?? '',
-          'videoThumbnail': _ytThumbnail ?? '',
+          'watchTimeSeconds': _isInstagramService(_selectedService)
+              ? 0
+              : (_ytRequiredWatchSeconds ??
+                  (_ytDurationSeconds != null
+                      ? (_ytDurationSeconds! > 300 ? 300 : _ytDurationSeconds!)
+                      : (_isYouTubeService(_selectedService) ? 120 : 0))),
+          'videoDurationSeconds': _isInstagramService(_selectedService)
+              ? 0
+              : (_ytDurationSeconds ?? (_isYouTubeService(_selectedService) ? 120 : 0)),
+          'videoTitle': _isInstagramService(_selectedService) ? '' : (_ytTitle ?? ''),
+          'videoThumbnail': _isInstagramService(_selectedService) ? '' : (_ytThumbnail ?? ''),
         },
         'timeToAcceptHours': _selectedService!.minAcceptHours,
         'timeToCompleteHours': _selectedService!.maxCompleteHours > 48
@@ -1517,17 +1531,19 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _isYouTubeCombo(s)
-                          ? 'YouTube Video Link (Target for Watch, Like, Subscribe & Comment)'
-                          : (_isInstagramCombo(s)
-                              ? 'Instagram Profile Link (Target for Follower & Like)'
-                              : (_isInstagramService(s)
-                                  ? (_isInstagramFollowerService(s)
-                                      ? 'Instagram Profile Link / Username'
-                                      : 'Instagram Reel or Post URL')
-                                  : (_isGoogleBusinessService(s)
-                                      ? 'Google Maps Business Listing Link'
-                                      : (s.linkFieldLabel ?? 'Target Link / URL')))),
+                      _isInstagramCombo(s)
+                          ? 'Instagram Profile Link (Target for Follower & Like)'
+                          : (_isInstagramService(s)
+                              ? (_isInstagramFollowerService(s)
+                                  ? 'Instagram Profile Link / Username'
+                                  : 'Instagram Reel or Post URL')
+                              : (_isYouTubeCombo(s)
+                                  ? 'YouTube Video Link (Target for Watch, Like, Subscribe & Comment)'
+                                  : (_isYouTubeService(s)
+                                      ? 'YouTube Video Link (Target URL)'
+                                      : (_isGoogleBusinessService(s)
+                                          ? 'Google Maps Business Listing Link'
+                                          : (s.linkFieldLabel ?? 'Target Link / URL'))))),
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                     ),
@@ -1550,17 +1566,19 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                       },
                       style: const TextStyle(fontSize: 13),
                       decoration: InputDecoration(
-                        hintText: _isYouTubeCombo(s)
-                            ? 'https://www.youtube.com/watch?v=... or youtu.be/...'
-                            : (_isInstagramCombo(s)
-                                ? 'https://www.instagram.com/your_username'
-                                : (_isInstagramService(s)
-                                    ? (_isInstagramFollowerService(s)
-                                        ? 'https://instagram.com/your_username or @username'
-                                        : 'https://www.instagram.com/reel/... or /p/...')
-                                    : (_isGoogleBusinessService(s)
-                                        ? 'https://maps.app.goo.gl/... or Google Maps listing link'
-                                        : (s.linkFieldPlaceholder ?? 'https://...')))),
+                        hintText: _isInstagramCombo(s)
+                            ? 'https://www.instagram.com/your_username'
+                            : (_isInstagramService(s)
+                                ? (_isInstagramFollowerService(s)
+                                    ? 'https://instagram.com/your_username or @username'
+                                    : 'https://www.instagram.com/reel/... or /p/...')
+                                : (_isYouTubeCombo(s)
+                                    ? 'https://www.youtube.com/watch?v=... or youtu.be/...'
+                                    : (_isYouTubeService(s)
+                                        ? 'https://www.youtube.com/watch?v=... or youtu.be/...'
+                                        : (_isGoogleBusinessService(s)
+                                            ? 'https://maps.app.goo.gl/... or Google Maps listing link'
+                                            : (s.linkFieldPlaceholder ?? 'https://...'))))),
                         hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                         prefixIcon: Icon(
                           _isInstagramService(s)
@@ -1603,7 +1621,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                   ),
                                 ),
                               ),
-                            if ((_isYouTubeService(_selectedService) ||
+                            if (!_isInstagramService(_selectedService) &&
+                                (_isYouTubeService(_selectedService) ||
                                     _targetUrlController.text.contains('youtu')) &&
                                 _targetUrlController.text.trim().isNotEmpty)
                               Padding(
@@ -1989,7 +2008,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     ],
 
                     // YouTube Loading State
-                    if (_isFetchingYtInfo) ...[
+                    if (!_isInstagramService(s) && _isFetchingYtInfo) ...[
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -2018,7 +2037,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     ],
 
                     // YouTube Video Preview Card
-                    if (_ytTitle != null && _ytTitle!.isNotEmpty) ...[
+                    if (!_isInstagramService(s) && _ytTitle != null && _ytTitle!.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -2177,7 +2196,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     ],
 
                     // YouTube Error Hint
-                    if (_ytFetchError != null && (_ytTitle == null || _ytTitle!.isEmpty)) ...[
+                    if (!_isInstagramService(s) && _ytFetchError != null && (_ytTitle == null || _ytTitle!.isEmpty)) ...[
                       const SizedBox(height: 10),
                       Text(
                         '💡 ${_ytFetchError!}',
@@ -2201,10 +2220,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   isGeneratingPreview: _isGeneratingPreview,
                   appName: _appNameController.text.trim().isNotEmpty
                       ? _appNameController.text.trim()
-                      : (_isYouTubeService(s)
-                          ? _ytTitle
-                          : (_isInstagramService(s)
-                              ? (_instaIdentifier ?? '')
+                      : (_isInstagramService(s)
+                          ? (_instaIdentifier ?? '')
+                          : (_isYouTubeService(s)
+                              ? _ytTitle
                               : _appName)),
                   isAppReview: _isPlayStoreService(s),
                   isGoogleBusiness: _isGoogleBusinessService(s),

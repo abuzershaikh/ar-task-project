@@ -302,6 +302,11 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
   String? _getServiceAssetIcon(ServiceModel s) {
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
+    final isInstagram = widget.categoryName.toUpperCase().contains('INSTA') ||
+        s.category.toUpperCase().contains('INSTA') ||
+        code.contains('INSTA') ||
+        name.contains('INSTA') ||
+        code.startsWith('IG_');
 
     // Check COMBO first so combo services get marketing icon and not single subscribe icon!
     if (code.contains('COMBO') || name.contains('COMBO')) {
@@ -310,6 +315,18 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     // Check Google Maps / GMB services
     if (code.contains('MAP') || name.contains('MAP') || code.contains('GMB') || name.contains('GMB')) {
       return 'assets/icons/google-maps.png';
+    }
+    if (isInstagram) {
+      if (code.contains('FOLLOW') || name.contains('FOLLOW') || code.contains('SUB') || name.contains('SUB')) {
+        return 'assets/icons/instagram.png';
+      }
+      if (code.contains('LIKE') || name.contains('LIKE')) {
+        return 'assets/icons/like.png';
+      }
+      if (code.contains('COMMENT') || name.contains('COMMENT')) {
+        return 'assets/icons/comment.png';
+      }
+      return 'assets/icons/instagram.png';
     }
     if (code.contains('REVIEW') || name.contains('REVIEW')) {
       return 'assets/icons/review.png';
@@ -322,9 +339,6 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     }
     if (code.contains('SUB') || name.contains('SUB') || name.contains('SUBSCRIBE')) {
       return 'assets/icons/subscribe.png';
-    }
-    if (code.contains('FOLLOW') || name.contains('FOLLOW')) {
-      return 'assets/icons/instagram.png';
     }
     if (code.contains('LIKE') || name.contains('LIKE')) {
       return 'assets/icons/like.png';
@@ -358,9 +372,27 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
   IconData _getServiceSubIcon(ServiceModel s) {
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
+    final isInstagram = widget.categoryName.toUpperCase().contains('INSTA') ||
+        s.category.toUpperCase().contains('INSTA') ||
+        code.contains('INSTA') ||
+        name.contains('INSTA') ||
+        code.startsWith('IG_');
+
     // Check COMBO first so combo services never get mistaken for single sub/like
     if (code.contains('COMBO') || name.contains('COMBO')) {
       return Icons.auto_awesome_rounded;
+    }
+    if (isInstagram) {
+      if (code.contains('LIKE') || name.contains('LIKE')) {
+        return Icons.favorite_rounded;
+      }
+      if (code.contains('COMMENT') || name.contains('COMMENT')) {
+        return Icons.chat_bubble_rounded;
+      }
+      if (code.contains('FOLLOW') || name.contains('FOLLOW') || code.contains('SUB') || name.contains('SUB')) {
+        return Icons.person_add_alt_1_rounded;
+      }
+      return Icons.camera_alt_rounded;
     }
     if (code.contains('REVIEW')) return Icons.rate_review_rounded;
     if (code.contains('RATING')) return Icons.star_rounded;
@@ -368,9 +400,7 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
       return Icons.chat_bubble_rounded;
     }
     if (code.contains('LIKE') || name.contains('LIKE')) {
-      return (code.contains('INSTA') || code.contains('IG') || s.category.toUpperCase().contains('INSTA'))
-          ? Icons.favorite_rounded
-          : Icons.thumb_up_alt_rounded;
+      return Icons.thumb_up_alt_rounded;
     }
     if (code.contains('SUB') || name.contains('SUB')) {
       return Icons.notifications_active_rounded;
@@ -389,9 +419,14 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     final isAi = s.aiGeneratorEnabled;
+    final isInstagram = widget.categoryName.toUpperCase().contains('INSTA') ||
+        s.category.toUpperCase().contains('INSTA') ||
+        code.contains('INSTA') ||
+        name.contains('INSTA') ||
+        code.startsWith('IG_');
 
     // ── Instagram Services ──
-    if (code.contains('INSTA') || name.contains('INSTA') || s.category.toUpperCase().contains('INSTA')) {
+    if (isInstagram) {
       if (code.contains('COMBO') || name.contains('COMBO')) {
         return {
           'badge': '🔥 2-IN-1 INSTAGRAM GROWTH COMBO',
@@ -437,7 +472,7 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
         };
       }
 
-      if (code.contains('FOLLOW') || name.contains('FOLLOW')) {
+      if (code.contains('FOLLOW') || name.contains('FOLLOW') || code.contains('SUB') || name.contains('SUB')) {
         return {
           'badge': '🔥 PROFILE REACH & AUTHORITY',
           'overview':
@@ -450,6 +485,18 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
           ],
         };
       }
+
+      return {
+        'badge': '🚀 INSTAGRAM ORGANIC GROWTH',
+        'overview':
+            'Genuine Instagram engagement from real active user profiles. Boosts explore discoverability, follower retention, and profile reach.',
+        'features': [
+          '100% Real Active Instagram Users',
+          'Zero Bot / Automation Detection Risk',
+          'Permanent Non-Drop Protection',
+          'Fast Organic Delivery Pace',
+        ],
+      };
     }
 
     if (code.contains('REVIEW') ||
@@ -487,52 +534,59 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
       };
     }
 
-    if ((code.contains('YT') || code.contains('YOUTUBE') || s.category.toUpperCase().contains('YOUTUBE')) &&
-        (code.contains('COMBO') || name.contains('COMBO'))) {
-      return {
-        'badge': '🚀 4-IN-1 ALL-IN-ONE VIRAL BUNDLE',
-        'overview':
-            'Complete YouTube viral package: Every worker watches your full video, likes the video, subscribes to your channel, and posts an engaging comment.',
-        'features': [
-          '⏱️ Full Video Watch Time (Complete watch guaranteed)',
-          '👍 Genuine Thumbs-Up Like on Video',
-          '🔔 Permanent Channel Subscription',
-          '💬 Engaging Video Comment',
-          '⚡ Triggers YouTube Browse & Suggested Recommendations',
-          '100% Real Active Google / YouTube Accounts',
-        ],
-      };
-    }
+    final isYouTube = widget.categoryName.toUpperCase().contains('YOUTUBE') ||
+        s.category.toUpperCase().contains('YOUTUBE') ||
+        code.contains('YT') ||
+        code.contains('YOUTUBE') ||
+        name.contains('YOUTUBE');
 
-    if (code.contains('COMMENT') || name.contains('COMMENT')) {
-      return {
-        'badge': '🎯 ALGORITHM ENGAGEMENT',
-        'overview':
-            'Real viewers watch your YouTube video for at least 30 seconds and post contextual, human-like comments. Signals high viewer interest to YouTube recommendation algorithms to boost impressions.',
-        'features': [
-          'Minimum 30 Seconds Watch Time Included',
-          'Topic-Relevant Natural Comments',
-          'Triggers YouTube Suggestion & Recommended Feeds',
-          'Verified Active Google/YouTube Accounts',
-        ],
-      };
-    }
+    if (isYouTube) {
+      if (code.contains('COMBO') || name.contains('COMBO')) {
+        return {
+          'badge': '🚀 4-IN-1 ALL-IN-ONE VIRAL BUNDLE',
+          'overview':
+              'Complete YouTube viral package: Every worker watches your full video, likes the video, subscribes to your channel, and posts an engaging comment.',
+          'features': [
+            '⏱️ Full Video Watch Time (Complete watch guaranteed)',
+            '👍 Genuine Thumbs-Up Like on Video',
+            '🔔 Permanent Channel Subscription',
+            '💬 Engaging Video Comment',
+            '⚡ Triggers YouTube Browse & Suggested Recommendations',
+            '100% Real Active Google / YouTube Accounts',
+          ],
+        };
+      }
 
-    if (code.contains('SUB') ||
-        code.contains('LIKE') ||
-        name.contains('SUB') ||
-        name.contains('LIKE')) {
-      return {
-        'badge': '📈 CHANNEL GROWTH',
-        'overview':
-            'Real users subscribe to your channel and turn on notifications. Helps unlock YouTube Partner Program monetization milestones and creates permanent social proof.',
-        'features': [
-          '100% Genuine Human Subscribers',
-          'High Retention Non-Drop Guarantee',
-          'Helps Reach Partner Program Milestones',
-          'Steady, Safe & Organic Delivery Pacing',
-        ],
-      };
+      if (code.contains('COMMENT') || name.contains('COMMENT')) {
+        return {
+          'badge': '🎯 ALGORITHM ENGAGEMENT',
+          'overview':
+              'Real viewers watch your YouTube video for at least 30 seconds and post contextual, human-like comments. Signals high viewer interest to YouTube recommendation algorithms to boost impressions.',
+          'features': [
+            'Minimum 30 Seconds Watch Time Included',
+            'Topic-Relevant Natural Comments',
+            'Triggers YouTube Suggestion & Recommended Feeds',
+            'Verified Active Google/YouTube Accounts',
+          ],
+        };
+      }
+
+      if (code.contains('SUB') ||
+          code.contains('LIKE') ||
+          name.contains('SUB') ||
+          name.contains('LIKE')) {
+        return {
+          'badge': '📈 CHANNEL GROWTH',
+          'overview':
+              'Real users subscribe to your channel and turn on notifications. Helps unlock YouTube Partner Program monetization milestones and creates permanent social proof.',
+          'features': [
+            '100% Genuine Human Subscribers',
+            'High Retention Non-Drop Guarantee',
+            'Helps Reach Partner Program Milestones',
+            'Steady, Safe & Organic Delivery Pacing',
+          ],
+        };
+      }
     }
 
     if (code.contains('INSTALL') || name.contains('INSTALL')) {
@@ -1025,6 +1079,11 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
   Widget _buildCleanSubCard(BuildContext context, ServiceModel service) {
     final icon = _getServiceSubIcon(service);
     final serviceAsset = _getServiceAssetIcon(service);
+    final isInstagram = widget.categoryName.toUpperCase().contains('INSTA') ||
+        service.category.toUpperCase().contains('INSTA') ||
+        service.code.toUpperCase().contains('INSTA') ||
+        service.name.toUpperCase().contains('INSTA') ||
+        service.code.toUpperCase().startsWith('IG_');
 
     return Container(
       decoration: BoxDecoration(
@@ -1139,14 +1198,14 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: (service.code.toUpperCase().contains('YT') || service.name.toUpperCase().contains('YT') || service.category.toUpperCase().contains('YOUTUBE'))
-                    ? const Color(0xFFFEF2F2)
-                    : const Color(0xFFFDF2F8),
+                color: isInstagram
+                    ? const Color(0xFFFDF2F8)
+                    : const Color(0xFFFEF2F2),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                  color: (service.code.toUpperCase().contains('YT') || service.name.toUpperCase().contains('YT') || service.category.toUpperCase().contains('YOUTUBE'))
-                      ? const Color(0xFFFECACA)
-                      : const Color(0xFFFBCFE8),
+                  color: isInstagram
+                      ? const Color(0xFFFBCFE8)
+                      : const Color(0xFFFECACA),
                   width: 0.8,
                 ),
               ),
@@ -1156,22 +1215,22 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
                   Icon(
                     Icons.auto_awesome_rounded,
                     size: 11,
-                    color: (service.code.toUpperCase().contains('YT') || service.name.toUpperCase().contains('YT') || service.category.toUpperCase().contains('YOUTUBE'))
-                        ? const Color(0xFFDC2626)
-                        : const Color(0xFFDB2777),
+                    color: isInstagram
+                        ? const Color(0xFFDB2777)
+                        : const Color(0xFFDC2626),
                   ),
                   const SizedBox(width: 5),
                   Flexible(
                     child: Text(
-                      (service.code.toUpperCase().contains('YT') || service.name.toUpperCase().contains('YT') || service.category.toUpperCase().contains('YOUTUBE'))
-                          ? 'Includes: Watch Time + Like + Subscribe + Comment'
-                          : 'Includes: Profile Follow + Post/Reel Like',
+                      isInstagram
+                          ? 'Includes: Profile Follow + Post/Reel Like'
+                          : 'Includes: Watch Time + Like + Subscribe + Comment',
                       style: GoogleFonts.outfit(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: (service.code.toUpperCase().contains('YT') || service.name.toUpperCase().contains('YT') || service.category.toUpperCase().contains('YOUTUBE'))
-                            ? const Color(0xFFB91C1C)
-                            : const Color(0xFF9D174D),
+                        color: isInstagram
+                            ? const Color(0xFF9D174D)
+                            : const Color(0xFFB91C1C),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1191,14 +1250,18 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                 decoration: BoxDecoration(
-                  color: (service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO'))
-                      ? const Color(0xFFEFF6FF)
-                      : _palette.iconBg,
+                  color: isInstagram
+                      ? const Color(0xFFFDF2F8)
+                      : ((service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO'))
+                          ? const Color(0xFFEFF6FF)
+                          : _palette.iconBg),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: (service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO'))
-                        ? const Color(0xFFBFDBFE)
-                        : _palette.cardBorder,
+                    color: isInstagram
+                        ? const Color(0xFFFBCFE8)
+                        : ((service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO'))
+                            ? const Color(0xFFBFDBFE)
+                            : _palette.cardBorder),
                     width: 0.8,
                   ),
                 ),
@@ -1207,9 +1270,11 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
                   style: GoogleFonts.outfit(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: (service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO'))
-                        ? const Color(0xFF1D4ED8)
-                        : _palette.primaryDeep,
+                    color: isInstagram
+                        ? const Color(0xFFDB2777)
+                        : ((service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO'))
+                            ? const Color(0xFF1D4ED8)
+                            : _palette.primaryDeep),
                   ),
                 ),
               ),
