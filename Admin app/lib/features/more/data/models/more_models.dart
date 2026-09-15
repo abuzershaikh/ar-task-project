@@ -70,9 +70,11 @@ class PayoutItemModel {
       workerName: json['workerName'] ?? 'Worker',
       workerEmail: json['workerEmail'] ?? json['email'] ?? '',
       amount: double.tryParse(json['amount']?.toString() ?? '0.0') ?? 0.0,
-      paymentMethod: json['paymentMethod'] ?? json['method'] ?? 'UPI / Bank',
+      paymentMethod: json['paymentMethod'] ?? json['method'] ?? json['paymentMethodId'] ?? 'UPI / Bank',
       status: json['status']?.toString().toUpperCase() ?? 'PENDING',
-      requestedAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
+      requestedAt: json['requestedAt'] != null 
+          ? DateTime.tryParse(json['requestedAt'].toString()) 
+          : (json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) : null),
     );
   }
 }

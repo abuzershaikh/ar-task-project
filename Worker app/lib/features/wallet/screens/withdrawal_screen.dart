@@ -275,10 +275,22 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
           ),
         );
       } else {
+        String errorMsg = 'Failed to submit withdrawal request';
+        if (response['message'] != null) {
+          errorMsg = response['message'] is List 
+              ? (response['message'] as List).join(', ') 
+              : response['message'].toString();
+        } else if (response['error'] != null) {
+          if (response['error'] is Map && response['error']['message'] != null) {
+            errorMsg = response['error']['message'].toString();
+          } else {
+            errorMsg = response['error'].toString();
+          }
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              response['message'] ?? response['error'] ?? 'Failed to submit withdrawal request',
+              errorMsg,
               style: GoogleFonts.poppins(color: Colors.white),
             ),
             backgroundColor: const Color(0xFFDC2626),

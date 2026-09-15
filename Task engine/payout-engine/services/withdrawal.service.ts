@@ -49,7 +49,6 @@ export class WithdrawalService {
             let worker = await manager.findOne(Worker, { 
                 where: [{ userId: workerId }, { id: workerId }],
                 lock: { mode: 'pessimistic_write' },
-                relations: ['profile']
             });
 
             // Canonical ID resolution for earnings & withdrawals (support both users.id and workers.id)

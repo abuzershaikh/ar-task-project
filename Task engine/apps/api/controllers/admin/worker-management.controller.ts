@@ -158,8 +158,12 @@ export class AdminWorkerManagementController {
     @ApiOperation({ summary: 'Get worker withdrawal requests' })
     async getWorkerWithdrawals(@Param('id') workerId: string) {
         let worker = await this.workerRepo.findById(workerId);
+        if (!worker) {
+            worker = await this.workerRepo.findByUserId(workerId);
+        }
         const userId = worker ? worker.userId : workerId;
-        const withdrawals = await this.withdrawalRepo.findByWorker(userId);
+        const matchingIds = Array.from(new Set([workerId, userId, worker?.id].filter(Boolean) as string[]));
+        const withdrawals = await this.withdrawalRepo.findByWorker(matchingIds);
         return { success: true, withdrawals };
     }
 
