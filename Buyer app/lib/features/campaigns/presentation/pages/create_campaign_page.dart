@@ -2452,7 +2452,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -2485,7 +2486,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   ],
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -2699,7 +2700,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -2730,7 +2732,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   ],
                 ),
               ),
-              const Spacer(),
+              const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(

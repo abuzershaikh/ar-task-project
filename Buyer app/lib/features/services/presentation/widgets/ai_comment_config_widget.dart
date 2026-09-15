@@ -140,7 +140,7 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
     final String badgeLabel = isGoogle
         ? '100% Real Local Customers'
         : (isApp
-            ? '100% Unique & Natural'
+            ? '100% Real Customers'
             : (isInsta ? '100% Real Active IG Users' : '100% Unique & Natural'));
 
     final String widgetDescription = isGoogle
@@ -273,14 +273,12 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
             ],
           ),
           const SizedBox(height: 8),
-
-          // Badges Row
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
+          // Badges: Stacked one below the other to completely eliminate overflow
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                 decoration: BoxDecoration(
                   color: badgeBg,
                   borderRadius: BorderRadius.circular(6),
@@ -299,46 +297,43 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                       badgeLabel,
                       style: TextStyle(
                         color: badgeTextColor,
-                        fontSize: 10,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (widget.appName != null && widget.appName!.isNotEmpty)
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width - 64,
+              if (widget.appName != null && widget.appName!.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
                   ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF3C7),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: const Color(0xFFFDE68A)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.star_rounded, size: 12, color: Color(0xFFB45309)),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            isGoogle ? 'Business: ${widget.appName}' : 'Target: ${widget.appName}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFFB45309),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, size: 12, color: Color(0xFFB45309)),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          isGoogle ? 'Business: ${widget.appName}' : 'Target: ${widget.appName}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFFB45309),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 6),
@@ -600,24 +595,30 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.straighten_rounded,
-                          size: 16,
-                          color: primaryColor,
-                        ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'Word Count Limit:',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.straighten_rounded,
+                            size: 16,
+                            color: primaryColor,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          const Flexible(
+                            child: Text(
+                              'Word Count Limit:',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0F172A),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
@@ -668,9 +669,10 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
                   },
                 ),
 
-                // Quick Presets
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Quick Presets: Wrap with spacing to completely prevent overflow outside card
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
                     _buildWordPresetChip(
                       label: '⚡ Short (10-25w)',
@@ -901,7 +903,7 @@ class _AiCommentConfigWidgetState extends State<AiCommentConfigWidget> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: isSelected ? primaryColor.withOpacity(0.12) : const Color(0xFFF8FAFC),
+          color: isSelected ? primaryColor.withValues(alpha: 0.12) : const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? primaryColor : const Color(0xFFCBD5E1),
