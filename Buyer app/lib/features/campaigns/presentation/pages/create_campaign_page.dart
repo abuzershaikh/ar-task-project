@@ -85,6 +85,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   bool _isFetchingYtInfo = false;
   String? _ytFetchError;
 
+  // Instagram Target Metadata State
+  String? _instaTargetType;
+  String? _instaIdentifier;
+
   @override
   void initState() {
     super.initState();
@@ -148,15 +152,100 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         desc.contains('YOUTUBE');
   }
 
+  bool _isInstagramService(ServiceModel? s) {
+    if (s == null) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    final desc = s.description.toUpperCase();
+    final cat = s.category.toUpperCase();
+    return code.contains('INSTA') ||
+        code.contains('IG') ||
+        cat.contains('INSTA') ||
+        cat.contains('INSTAGRAM') ||
+        name.contains('INSTA') ||
+        name.contains('INSTAGRAM') ||
+        desc.contains('INSTAGRAM');
+  }
+
+  bool _isInstagramFollowerService(ServiceModel? s) {
+    if (s == null) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    return code.contains('FOLLOW') || name.contains('FOLLOWER') || code.contains('INSTAGRAM_FOLLOW');
+  }
+
+  void _parseInstagramUrl(String input) {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty) {
+      setState(() {
+        _instaTargetType = null;
+        _instaIdentifier = null;
+      });
+      return;
+    }
+
+    String type = 'Instagram Target';
+    String identifier = '';
+
+    if (trimmed.startsWith('@')) {
+      type = 'Instagram Profile';
+      identifier = trimmed;
+    } else {
+      final uri = Uri.tryParse(trimmed);
+      final path = uri?.path.toLowerCase() ?? trimmed.toLowerCase();
+      if (path.contains('/reel/') || path.contains('/reels/')) {
+        type = 'Instagram Reel';
+        final match = RegExp(r'/reel(?:s)?/([a-zA-Z0-9_\-]+)').firstMatch(trimmed);
+        if (match != null) {
+          identifier = 'Reel: ${match.group(1)}';
+        } else {
+          identifier = 'Instagram Reel';
+        }
+      } else if (path.contains('/p/')) {
+        type = 'Instagram Post';
+        final match = RegExp(r'/p/([a-zA-Z0-9_\-]+)').firstMatch(trimmed);
+        if (match != null) {
+          identifier = 'Post: ${match.group(1)}';
+        } else {
+          identifier = 'Instagram Post';
+        }
+      } else if (path.contains('/tv/')) {
+        type = 'Instagram Video';
+        identifier = 'Instagram Video';
+      } else {
+        // Assume profile link e.g. instagram.com/username
+        final match = RegExp(r'instagram\.com/([a-zA-Z0-9_\.]+)/?').firstMatch(trimmed);
+        if (match != null && !['p', 'reel', 'reels', 'stories', 'explore'].contains(match.group(1))) {
+          type = 'Instagram Profile';
+          identifier = '@${match.group(1)}';
+        } else {
+          type = 'Instagram Link';
+          identifier = trimmed;
+        }
+      }
+    }
+
+    setState(() {
+      _instaTargetType = type;
+      _instaIdentifier = identifier.isNotEmpty ? identifier : trimmed;
+      if (_appNameController.text.trim().isEmpty && identifier.isNotEmpty && !identifier.startsWith('http')) {
+        _appNameController.text = identifier;
+      }
+    });
+  }
+
   void _onTargetUrlChanged(String val) {
     final trimmed = val.trim();
     final isGoogleBusiness = _isGoogleBusinessService(_selectedService);
     final isPlayStore = _isPlayStoreService(_selectedService);
+    final isInstagram = _isInstagramService(_selectedService) ||
+        trimmed.contains('instagram.com') ||
+        trimmed.startsWith('@');
     final isYouTube = _isYouTubeService(_selectedService) ||
         trimmed.contains('youtube.com') ||
         trimmed.contains('youtu.be');
 
-    if (isGoogleBusiness || (!isPlayStore && !isYouTube)) return;
+    if (isGoogleBusiness || (!isPlayStore && !isYouTube && !isInstagram)) return;
     _urlDebounceTimer?.cancel();
 
     if (trimmed.isEmpty) {
@@ -178,8 +267,16 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         _ytFetchError = null;
         _isFetchingYtInfo = false;
 
+        _instaTargetType = null;
+        _instaIdentifier = null;
+
         _sampleComments = [];
       });
+      return;
+    }
+
+    if (isInstagram) {
+      _parseInstagramUrl(trimmed);
       return;
     }
 
@@ -566,6 +663,108 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   cleanBrand.isNotEmpty ? "Really glad I installed $cleanBrand. Fast responses and zero lag." : "One of the best apps in this category. Works like a charm and saves me so much time.",
                 ];
         }
+      } else if (_isInstagramService(_selectedService)) {
+        // Instagram Comments (Contextual with Reels, Posts, Aesthetics & Trending Vibes)
+        final isTrend = lowerPrompt.contains('fire') ||
+            lowerPrompt.contains('trend') ||
+            lowerPrompt.contains('viral') ||
+            lowerPrompt.contains('lit');
+        final isAesthetic = lowerPrompt.contains('aesthetic') ||
+            lowerPrompt.contains('love') ||
+            lowerPrompt.contains('vibe') ||
+            lowerPrompt.contains('pyar') ||
+            lowerPrompt.contains('sundar');
+        final isQuestion = lowerPrompt.contains('detail') ||
+            lowerPrompt.contains('price') ||
+            lowerPrompt.contains('kahan') ||
+            lowerPrompt.contains('where') ||
+            lowerPrompt.contains('link');
+        final isFunny = lowerPrompt.contains('funny') ||
+            lowerPrompt.contains('relat') ||
+            lowerPrompt.contains('haha') ||
+            lowerPrompt.contains('lol');
+
+        if (isTrend) {
+          fallbacks = isHindi
+              ? [
+                  "Bhai kya transition hai ekdum smooth! 🔥🔥",
+                  "Pure fire content boss! Algorithm boost pakka hai 🔥",
+                  "Vibe ekdum next level hai yaar! Loved it 🔥",
+                  "Superb edit and concept! Keep creating such reels 🔥👏",
+                  "Full on energy! Trending reel pakka hai yeh 🔥",
+                ]
+              : [
+                  "The transitions and edit are absolutely insane! 🔥🔥",
+                  "Pure fire content! The algorithm is definitely pushing this 🔥",
+                  "Such high energy and great editing! Loved every second 🔥",
+                  "Top tier content as always! Keep killing it 🔥👏",
+                  "This is going straight to the explore page! 🔥",
+                ];
+        } else if (isAesthetic) {
+          fallbacks = isHindi
+              ? [
+                  "Vibe ekdum aesthetic hai ❤️ Loved this so much!",
+                  "Itna pyara aur clean content! Dil khush ho gaya ❤️✨",
+                  "Color palette aur aesthetics dono 10/10 hain 😍",
+                  "Bohot soothing aur beautiful reel hai ❤️",
+                  "Pure aesthetic vibes! Bookmarking this ❤️✨",
+                ]
+              : [
+                  "The aesthetic and vibe here are unmatched ❤️✨",
+                  "So aesthetically pleasing! Absolutely loved this ❤️",
+                  "The color grading and aesthetics are a 10/10 😍",
+                  "Such a peaceful and beautiful reel ❤️",
+                  "Saved this! Pure aesthetic perfection ✨❤️",
+                ];
+        } else if (isQuestion) {
+          fallbacks = isHindi
+              ? [
+                  "Bhai outfit details please! Bohot stylish lag raha hai 😍",
+                  "Yeh place kahan par hai? Location zaroor share karna!",
+                  "Details ya link share kar sakte ho kya please? 🙌",
+                  "Price aur availability kya hai iski? DM me batao please!",
+                  "Product link kahan milega? Bio me hai kya? 🙏",
+                ]
+              : [
+                  "Can you please share the outfit / item details? Looks amazing! 😍",
+                  "Where was this filmed? Please share the location!",
+                  "Could you share the link or details for this? 🙌",
+                  "What is the price and availability? Looks incredible!",
+                  "Where can we find the product link? Checked bio! 🙏",
+                ];
+        } else if (isFunny) {
+          fallbacks = isHindi
+              ? [
+                  "Bhai itna relatable! 😂 Has has ke pagal ho gaya!",
+                  "Literally me every single day! 😂 Super funny!",
+                  "Ending ne toh dimaag hila diya! 😂😂😂",
+                  "Tagging all my friends on this right now! 😂👏",
+                  "Ekdum sach bola bhai tune! Relatable 100% 😂",
+                ]
+              : [
+                  "I felt this on a spiritual level! So relatable 😂",
+                  "Literally me every single day! Absolutely hilarious 😂",
+                  "The ending caught me so off guard! 😂😂😂",
+                  "Sending this to the group chat right now! 😂👏",
+                  "Too accurate! Relatable on another level 😂",
+                ];
+        } else {
+          fallbacks = isHindi
+              ? [
+                  "Bhai kya zabardast reel hai! Mazaa aa gaya 🔥❤️",
+                  "Concept aur execution dono top notch hain boss 👏",
+                  "Superb work! Har ek frame bohot well-crafted hai ❤️",
+                  "Aapka content hamesha stand-out karta hai! Keep it up 🙌",
+                  "Saved and shared! Aise hi badhiya posts banate raho 🔥",
+                ]
+              : [
+                  "This is amazing! Loved the creative execution 🔥❤️",
+                  "Concept and delivery are both top notch 👏",
+                  "Such great content! Every frame is super engaging ❤️",
+                  "Your posts always stand out on my feed! Keep it up 🙌",
+                  "Saved and shared with friends! Keep creating great stuff 🔥",
+                ];
+        }
       } else {
         // YouTube / Social Video Comments (Contextual with Subject & Video Title)
         if (isPart2) {
@@ -858,7 +1057,11 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
           'sampleComments': _sampleComments,
           'appName': _appNameController.text.trim().isNotEmpty
               ? _appNameController.text.trim()
-              : (_isYouTubeService(_selectedService) ? (_ytTitle ?? '') : (_appName ?? '')),
+              : (_isYouTubeService(_selectedService)
+                  ? (_ytTitle ?? '')
+                  : (_isInstagramService(_selectedService)
+                      ? (_instaIdentifier ?? '')
+                      : (_appName ?? ''))),
           'businessName': _isGoogleBusinessService(_selectedService)
               ? (_appNameController.text.trim().isNotEmpty
                   ? _appNameController.text.trim()
@@ -1318,9 +1521,13 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                           ? 'YouTube Video Link (Target for Watch, Like, Subscribe & Comment)'
                           : (_isInstagramCombo(s)
                               ? 'Instagram Profile Link (Target for Follower & Like)'
-                              : (_isGoogleBusinessService(s)
-                                  ? 'Google Maps Business Listing Link'
-                                  : (s.linkFieldLabel ?? 'Target Link / Video URL'))),
+                              : (_isInstagramService(s)
+                                  ? (_isInstagramFollowerService(s)
+                                      ? 'Instagram Profile Link / Username'
+                                      : 'Instagram Reel or Post URL')
+                                  : (_isGoogleBusinessService(s)
+                                      ? 'Google Maps Business Listing Link'
+                                      : (s.linkFieldLabel ?? 'Target Link / URL')))),
                       style: const TextStyle(
                           fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                     ),
@@ -1332,7 +1539,11 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                         if (val == null || val.trim().isEmpty) {
                           return 'Please enter a target link';
                         }
-                        if (!val.trim().startsWith('http://') && !val.trim().startsWith('https://')) {
+                        final trimmed = val.trim();
+                        if (_isInstagramService(s) && trimmed.startsWith('@')) {
+                          return null;
+                        }
+                        if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
                           return 'Please enter a valid URL (starting with https://)';
                         }
                         return null;
@@ -1343,11 +1554,26 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                             ? 'https://www.youtube.com/watch?v=... or youtu.be/...'
                             : (_isInstagramCombo(s)
                                 ? 'https://www.instagram.com/your_username'
-                                : (_isGoogleBusinessService(s)
-                                    ? 'https://maps.app.goo.gl/... or Google Maps listing link'
-                                    : (s.linkFieldPlaceholder ?? 'https://...'))),
+                                : (_isInstagramService(s)
+                                    ? (_isInstagramFollowerService(s)
+                                        ? 'https://instagram.com/your_username or @username'
+                                        : 'https://www.instagram.com/reel/... or /p/...')
+                                    : (_isGoogleBusinessService(s)
+                                        ? 'https://maps.app.goo.gl/... or Google Maps listing link'
+                                        : (s.linkFieldPlaceholder ?? 'https://...')))),
                         hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                        prefixIcon: const Icon(Icons.link_rounded, color: Color(0xFF2563EB)),
+                        prefixIcon: Icon(
+                          _isInstagramService(s)
+                              ? Icons.camera_alt_rounded
+                              : (_isGoogleBusinessService(s)
+                                  ? Icons.location_on_rounded
+                                  : (_isYouTubeService(s) ? Icons.play_arrow_rounded : Icons.link_rounded)),
+                          color: _isInstagramService(s)
+                              ? const Color(0xFFE1306C)
+                              : (_isGoogleBusinessService(s)
+                                  ? const Color(0xFF2563EB)
+                                  : (_isYouTubeService(s) ? const Color(0xFFDC2626) : const Color(0xFF2563EB))),
+                        ),
                         suffixIcon: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -1411,21 +1637,21 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                 margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFEFF6FF),
+                                  color: _isInstagramService(s) ? const Color(0xFFFDF2F8) : const Color(0xFFEFF6FF),
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  border: Border.all(color: _isInstagramService(s) ? const Color(0xFFFBCFE8) : const Color(0xFFBFDBFE)),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.content_paste_rounded, size: 14, color: Color(0xFF2563EB)),
-                                    SizedBox(width: 4),
+                                    Icon(Icons.content_paste_rounded, size: 14, color: _isInstagramService(s) ? const Color(0xFFE1306C) : const Color(0xFF2563EB)),
+                                    const SizedBox(width: 4),
                                     Text(
                                       'Paste',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF2563EB),
+                                        color: _isInstagramService(s) ? const Color(0xFFE1306C) : const Color(0xFF2563EB),
                                       ),
                                     ),
                                   ],
@@ -1446,10 +1672,147 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.5),
+                          borderSide: BorderSide(
+                            color: _isInstagramService(s)
+                                ? const Color(0xFFE1306C)
+                                : (_isYouTubeService(s) ? const Color(0xFFDC2626) : const Color(0xFF2563EB)),
+                            width: 1.5,
+                          ),
                         ),
                       ),
                     ),
+
+                    // Instagram Target Preview Card
+                    if ((_isInstagramService(s) ||
+                            _targetUrlController.text.contains('instagram.com') ||
+                            _targetUrlController.text.startsWith('@')) &&
+                        _instaIdentifier != null &&
+                        _instaIdentifier!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFDF2F8),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: const Color(0xFFF472B6).withValues(alpha: 0.5),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF833AB4),
+                                        Color(0xFFFD1D1D),
+                                        Color(0xFFF77737),
+                                      ],
+                                      begin: Alignment.bottomLeft,
+                                      end: Alignment.topRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt_rounded,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              _instaIdentifier!,
+                                              style: const TextStyle(
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF0F172A),
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFCE7F3),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.check_circle_rounded, size: 11, color: Color(0xFFDB2777)),
+                                                SizedBox(width: 3),
+                                                Text(
+                                                  'Detected',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFFDB2777),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        _instaTargetType ?? 'Instagram Target',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFFBE185D),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFFBCFE8)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.verified_user_rounded, size: 12, color: Color(0xFFDB2777)),
+                                  const SizedBox(width: 5),
+                                  Expanded(
+                                    child: Text(
+                                      _instaTargetType == 'Instagram Profile'
+                                          ? 'Real active Indian Instagram profiles will follow this handle'
+                                          : 'Workers will directly open this ${_instaTargetType?.toLowerCase() ?? "reel/post"} on Instagram app',
+                                      style: const TextStyle(
+                                        fontSize: 10.5,
+                                        color: Color(0xFF9D174D),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
 
                     // Play Store Loading State
                     if (_isFetchingAppInfo) ...[
@@ -1838,9 +2201,14 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   isGeneratingPreview: _isGeneratingPreview,
                   appName: _appNameController.text.trim().isNotEmpty
                       ? _appNameController.text.trim()
-                      : (_isYouTubeService(s) ? _ytTitle : _appName),
+                      : (_isYouTubeService(s)
+                          ? _ytTitle
+                          : (_isInstagramService(s)
+                              ? (_instaIdentifier ?? '')
+                              : _appName)),
                   isAppReview: _isPlayStoreService(s),
                   isGoogleBusiness: _isGoogleBusinessService(s),
+                  isInstagram: _isInstagramService(s),
                   onGeneratePreview: _generateSampleComments,
                   onLanguageChanged: (lang) => setState(() {
                     _selectedLanguage = lang;

@@ -367,7 +367,12 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     if (code.contains('COMMENT') || name.contains('COMMENT')) {
       return Icons.chat_bubble_rounded;
     }
-    if (code.contains('SUB') || code.contains('LIKE') || name.contains('SUB')) {
+    if (code.contains('LIKE') || name.contains('LIKE')) {
+      return (code.contains('INSTA') || code.contains('IG') || s.category.toUpperCase().contains('INSTA'))
+          ? Icons.favorite_rounded
+          : Icons.thumb_up_alt_rounded;
+    }
+    if (code.contains('SUB') || name.contains('SUB')) {
       return Icons.notifications_active_rounded;
     }
     if (code.contains('FOLLOW') || name.contains('FOLLOW')) {

@@ -107,8 +107,14 @@ class ServiceUnitHelper {
     if (singular == 'Subscriber') {
       return '1 Subscriber = 1 Real Channel Subscription';
     } else if (singular == 'Like') {
+      if (combined.contains('insta') || combined.contains('ig')) {
+        return '1 Like = 1 Genuine Instagram Post / Reel Like';
+      }
       return '1 Like = 1 Genuine Video / Post Like';
     } else if (singular == 'Comment') {
+      if (combined.contains('insta') || combined.contains('ig')) {
+        return '1 Comment = 1 Authentic Instagram Comment';
+      }
       return '1 Comment = 1 Unique Relevant Comment';
     } else if (singular == 'View') {
       return '1 View = 1 Full-Watch Video View';
@@ -125,6 +131,9 @@ class ServiceUnitHelper {
     } else if (singular == 'Install') {
       return '1 Install = 1 Verified App Installation';
     } else if (singular == 'Follower') {
+      if (combined.contains('insta') || combined.contains('ig')) {
+        return '1 Follower = 1 Real Instagram Profile Follow';
+      }
       return '1 Follower = 1 Real Profile Follow';
     } else if (singular == 'Share') {
       return '1 Share = 1 Verified Post Share';
