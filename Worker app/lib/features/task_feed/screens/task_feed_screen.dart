@@ -142,13 +142,13 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
       return 'app_install';
     }
 
-    // 2. Google (Maps / Local Reviews / Business) - Checked before generic URL matches
+    // 2. Google Maps / Local Reviews / Business - Checked before generic URL matches
     if (type.contains('GOOGLE_BUSINESS') ||
         serviceCode.contains('GOOGLE_BUSINESS') ||
         type.contains('GOOGLE_MAPS') ||
         serviceCode.contains('GOOGLE_MAPS') ||
-        type.startsWith('GOOGLE') ||
-        serviceCode.startsWith('GOOGLE') ||
+        type.contains('MAP') ||
+        serviceCode.contains('MAP') ||
         title.contains('google maps') ||
         title.contains('google review') ||
         title.contains('google business') ||
@@ -159,8 +159,10 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
         reqCategory.contains('google maps') ||
         reqCategory.contains('google') ||
         targetUrl.contains('maps.google.com') ||
+        targetUrl.contains('share.google') ||
+        targetUrl.contains('maps.app.goo.gl') ||
         targetUrl.contains('goo.gl/maps')) {
-      return 'google';
+      return 'google_maps';
     }
 
     // 3. Play Store Review & Rating
@@ -202,7 +204,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     if (rawPlatform == 'playstore') return 'playstore';
     if (rawPlatform == 'youtube' && !title.contains('install') && type != 'APP_INSTALL') return 'youtube';
     if (rawPlatform == 'instagram' && !title.contains('install') && type != 'APP_INSTALL') return 'instagram';
-    if (rawPlatform == 'google' || rawPlatform == 'google_business' || rawPlatform == 'google_maps') return 'google';
+    if (rawPlatform == 'google' || rawPlatform == 'google_business' || rawPlatform == 'google_maps' || rawPlatform.contains('map')) return 'google_maps';
 
     return 'other';
   }
@@ -225,8 +227,8 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     if (filterKey == 'instagram') {
       return cat == 'instagram';
     }
-    if (filterKey == 'google') {
-      return cat == 'google';
+    if (filterKey == 'google' || filterKey == 'google_maps') {
+      return cat == 'google_maps' || cat == 'google';
     }
 
     return cat == filterKey;
@@ -1419,6 +1421,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
   String _getSelectedCategoryLabel() {
     switch (_selectedPlatform) {
       case 'google':
+      case 'google_maps':
         return 'Google Maps';
       case 'playstore':
         return 'Play Store';
@@ -1437,9 +1440,9 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
   Widget _buildPlatformChips() {
     final chips = [
       {'label': 'All Tasks', 'icon': Icons.grid_view_rounded, 'key': 'All Tasks'},
-      {'label': 'Google Maps', 'asset': 'assets/icons/google-maps.png', 'key': 'google'},
+      {'label': 'Google Maps', 'asset': 'assets/icons/google-maps.png', 'key': 'google_maps'},
       {'label': 'Play Store', 'asset': 'assets/icons/google-play.png', 'key': 'playstore'},
-      {'label': 'App Install', 'asset': 'assets/icons/smartphone.png', 'key': 'app_install'},
+      {'label': 'App Install', 'asset': 'assets/icons/app_install.png', 'key': 'app_install'},
       {'label': 'YouTube', 'asset': 'assets/icons/youtube.png', 'key': 'youtube'},
       {'label': 'Instagram', 'asset': 'assets/icons/instagram.png', 'key': 'instagram'},
     ];

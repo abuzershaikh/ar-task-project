@@ -1032,6 +1032,26 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       );
     }
 
+    if (platform == 'app_install' || platform == 'apps' || platform == 'mobile_apps') {
+      return Container(
+        width: 86,
+        height: 86,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        ),
+        child: Center(
+          child: Image.asset(
+            'assets/icons/app_install.png',
+            width: 50,
+            height: 50,
+            fit: BoxFit.contain,
+          ),
+        ),
+      );
+    }
+
     if (platform == 'verify') {
       return Container(
         width: 86,
@@ -1451,8 +1471,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     } else if (title == 'Instagram') {
       chipIcon = Image.asset('assets/icons/instagram.png',
           width: 14, height: 14, fit: BoxFit.contain);
-    } else if (title == 'Mobile Apps') {
-      chipIcon = Image.asset('assets/icons/smartphone.png',
+    } else if (title == 'Mobile Apps' ||
+        title == 'App Install & Review' ||
+        title.contains('Install') ||
+        title.contains('App')) {
+      chipIcon = Image.asset('assets/icons/app_install.png',
           width: 14, height: 14, fit: BoxFit.contain);
     } else {
       chipIcon = Icon(Icons.auto_awesome_rounded,
@@ -1909,7 +1932,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         break;
       case 'app_install':
         iconWidget = Image.asset(
-          'assets/icons/smartphone.png',
+          'assets/icons/app_install.png',
           width: 28,
           height: 28,
           fit: BoxFit.contain,

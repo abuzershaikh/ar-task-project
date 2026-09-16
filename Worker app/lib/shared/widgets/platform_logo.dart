@@ -19,14 +19,23 @@ class PlatformLogo extends StatelessWidget {
     String? assetPath;
 
     if (norm.contains('app_install') || norm.contains('install') || norm.contains('smartphone')) {
-      assetPath = 'assets/icons/smartphone.png';
-    } else if (norm.contains('google_business') || norm.contains('google_maps') || norm.contains('gmb') || norm.contains('maps') || norm.contains('map')) {
+      assetPath = 'assets/icons/app_install.png';
+    } else if (norm.contains('google_business') ||
+               norm.contains('google_maps') ||
+               norm.contains('gmb') ||
+               norm.contains('maps') ||
+               norm.contains('map') ||
+               norm == 'google') {
       assetPath = 'assets/icons/google-maps.png';
-    } else if (norm.contains('play') || norm.contains('playstore') || norm.contains('app_review')) {
+    } else if (norm.contains('playstore') ||
+               norm.contains('google_play') ||
+               norm.contains('play_store') ||
+               norm.contains('app_review') ||
+               (norm.contains('play') && !norm.contains('display'))) {
       assetPath = 'assets/icons/google-play.png';
     } else if (norm.contains('youtube') || norm.contains('yt_')) {
       assetPath = 'assets/icons/youtube.png';
-    } else if (norm.contains('instagram') || norm.contains('insta') || norm.contains('ig_')) {
+    } else if (norm.contains('instagram') || (norm.contains('insta') && !norm.contains('install')) || norm.contains('ig_')) {
       assetPath = 'assets/icons/instagram.png';
     } else if (norm.contains('rating') || norm.contains('star')) {
       assetPath = 'assets/icons/rating.png';
@@ -39,7 +48,7 @@ class PlatformLogo extends StatelessWidget {
     } else if (norm.contains('like')) {
       assetPath = 'assets/icons/like.png';
     } else if (norm.contains('google')) {
-      assetPath = 'assets/icons/google-play.png';
+      assetPath = 'assets/icons/google-maps.png';
     }
 
     if (assetPath != null) {
@@ -56,18 +65,22 @@ class PlatformLogo extends StatelessWidget {
   }
 
   Widget _fallbackIcon(String norm) {
-    if (norm.contains('google_business') || norm.contains('google_maps') || norm.contains('maps')) {
+    if (norm.contains('google_business') ||
+        norm.contains('google_maps') ||
+        norm.contains('maps') ||
+        norm.contains('map') ||
+        norm.contains('google')) {
       return Icon(Icons.location_on_rounded, color: const Color(0xFF4285F4), size: size);
     }
-    if (norm.contains('youtube')) {
+    if (norm.contains('youtube') || norm.contains('yt')) {
       return Icon(Icons.play_circle_fill_rounded, color: const Color(0xFFFF0000), size: size);
     }
     if (norm.contains('play') || norm.contains('install')) {
       return Icon(Icons.play_arrow_rounded, color: const Color(0xFF00875A), size: size);
     }
-    if (norm.contains('instagram')) {
+    if (norm.contains('instagram') || norm.contains('insta')) {
       return Icon(Icons.camera_alt_rounded, color: const Color(0xFFE1306C), size: size);
     }
-    return Icon(Icons.apps_rounded, size: size, color: const Color(0xFF00875A));
+    return Icon(Icons.location_on_rounded, size: size, color: const Color(0xFF4285F4));
   }
 }

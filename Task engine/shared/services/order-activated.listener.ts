@@ -214,47 +214,7 @@ export class OrderActivatedListener {
                 }
             }
 
-            const fallbackTemplates = isGoogleBusiness
-                ? [
-                    `Great experience with ${appName || 'this business'}. Delivered on time with great communication and polite staff.`,
-                    `Really satisfied with the service provided by ${appName || 'their team'}. Honest pricing and smooth execution.`,
-                    `Approached ${appName || 'them'} based on recommendations. Very professional work and no unnecessary delays.`,
-                    `Clean work, quick turnaround, and supportive staff at ${appName || 'this place'}. Definitely 5 stars!`,
-                    `Work was completed smoothly and transparently. Staff answered all queries patiently. Highly recommended.`,
-                    `Had a very positive experience with ${appName || 'their team'}. Quality work within our expected budget.`,
-                    `Very responsive and dependable service. Everything was done right the first time.`,
-                ]
-                : (isPlayStore
-                    ? [
-                        'Very smooth and responsive app. Does exactly what it promises without clutter.',
-                        'Clean UI and great user experience. Everything works seamlessly right from the start.',
-                        'Super fast, lightweight and intuitive. Very happy with the overall performance.',
-                        'Simple, clean, and gets the job done quickly. Exactly what I was looking for.',
-                        'One of the best apps in this category. Works like a charm and saves so much time.',
-                        'Really impressed with how fast and reliable it is. Zero lags or crashes experienced.',
-                        'Top notch user experience! Everything is neat, intuitive, and works as advertised.',
-                        'Works effortlessly. Very stable and dependable on every device.',
-                        'Terrific app! Smooth performance, no bugs or glitches encountered so far.',
-                        'Clean design, fast loading speeds, and very intuitive navigation throughout.',
-                    ]
-                    : (isInstagram
-                        ? [
-                            topic ? `Loving the aesthetic and vibe of ${topic}! 🔥` : 'Love the aesthetic and vibe of this post! 🔥',
-                            topic ? `Such valuable points on ${topic}. Definitely saving this! 🙌` : 'Such valuable content! Definitely saving this. 🙌',
-                            topic ? `Top quality post regarding ${topic}. Keep up the great work! ✨` : 'Top quality content! Keep inspiring. ✨',
-                            topic ? `The details about ${topic} are spot on. Really well done!` : 'Pure gold! Really well done! 👏',
-                            topic ? `Great insights on ${topic}. Following for more!` : 'Amazing post! Following for more updates. 💯',
-                            'Incredible visual style and great caption! ❤️',
-                            'This deserves so much more reach! Great work. 🚀',
-                            'Super helpful and inspiring post! Thanks for sharing. 🙌',
-                        ]
-                        : [
-                            topic ? `Really good points made on ${topic}, very informative!` : 'Great video, keep up the fantastic work!',
-                            topic ? `Loved the breakdown about ${topic}. Very helpful!` : 'Awesome explanation, really enjoyed this video!',
-                            topic ? `Super informative video regarding ${topic}. Thanks for sharing!` : 'Very helpful and well explained!',
-                            topic ? `The explanation on ${topic} is so clear and precise.` : 'Thanks for sharing this, learned a lot!',
-                            topic ? `Great insights on ${topic}. Subscribed for more!` : 'Nicely done! Looking forward to more content.',
-                        ]));
+            // Hardcoded fallback template arrays removed - real AI comments or approved sampleComments are strictly used.
 
             const detectedPlatform = isGoogleBusiness
                 ? 'google_business'
@@ -297,9 +257,14 @@ export class OrderActivatedListener {
                 
                 const unitsToCreate = [];
                 for (let i = generatedCount; i < count; i++) {
-                    const rawAssigned = (generatedComments[i] && generatedComments[i].trim().length > 0)
-                        ? generatedComments[i].trim()
-                        : fallbackTemplates[i % fallbackTemplates.length];
+                    let rawAssigned = '';
+                    if (generatedComments[i] && generatedComments[i].trim().length > 0) {
+                        rawAssigned = generatedComments[i].trim();
+                    } else if (sampleComments.length > 0) {
+                        rawAssigned = sampleComments[i % sampleComments.length].trim();
+                    } else {
+                        rawAssigned = topic || order?.requirements?.customText || '';
+                    }
                     const assignedComment = sanitizeReviewText(rawAssigned);
 
                     unitsToCreate.push({
@@ -316,7 +281,7 @@ export class OrderActivatedListener {
                 for (let i = 0; i < savedUnits.length; i++) {
                     const unit = savedUnits[i];
                     const finalComment = isCommentRequired
-                        ? sanitizeReviewText(unit.generatedContent || fallbackTemplates[i % fallbackTemplates.length])
+                        ? sanitizeReviewText(unit.generatedContent || (sampleComments.length > 0 ? sampleComments[i % sampleComments.length] : (topic || '')))
                         : (order?.requirements?.customText || '');
 
                     const taskReqs = {

@@ -279,7 +279,7 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
         cat.contains('INSTALL') ||
         cat.contains('MOBILE') ||
         cat.contains('DOWNLOAD')) {
-      return 'assets/icons/smartphone.png';
+      return 'assets/icons/app_install.png';
     }
     if (cat.contains('INSTAGRAM') ||
         cat.contains('IG') ||
@@ -309,6 +309,8 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
         cat.contains('INSTALL') ||
         code.contains('INSTALL') ||
         name.contains('INSTALL') ||
+        catName.contains('APP') ||
+        cat.contains('APP') ||
         code.startsWith('APP_')) {
       return false;
     }
@@ -335,7 +337,8 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
         name.contains('INSTALL') ||
         code.contains('DOWNLOAD') ||
         name.contains('DOWNLOAD') ||
-        code.startsWith('APP_');
+        code.startsWith('APP_') ||
+        code == 'APP_INSTALL';
   }
 
   // ── Asset Icon Resolver for Sub-Services ──
@@ -354,8 +357,12 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
       return 'assets/icons/google-maps.png';
     }
     // Check App Install services explicitly BEFORE any social icons
-    if (isInstall) {
-      return 'assets/icons/smartphone.png';
+    if (isInstall ||
+        code.contains('INSTALL') ||
+        name.contains('INSTALL') ||
+        code.startsWith('APP_') ||
+        code == 'APP_INSTALL') {
+      return 'assets/icons/app_install.png';
     }
     if (isInstagram) {
       if (code.contains('FOLLOW') || name.contains('FOLLOW') || code.contains('SUB') || name.contains('SUB')) {

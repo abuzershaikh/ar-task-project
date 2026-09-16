@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -127,7 +128,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   }
 
   bool _isAppInstallService(ServiceModel? s) {
-    if (s == null || _isInstagramService(s)) return false;
+    if (s == null) return false;
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     final desc = s.description.toUpperCase();
@@ -135,9 +136,11 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     return code.contains('INSTALL') ||
         code.contains('DOWNLOAD') ||
         code.startsWith('APP_') ||
+        code == 'APP_INSTALL' ||
         name.contains('INSTALL') ||
         name.contains('DOWNLOAD') ||
         cat.contains('INSTALL') ||
+        cat.contains('APP') ||
         desc.contains('INSTALL');
   }
 
@@ -178,7 +181,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         name.contains('INSTALL') ||
         cat.contains('INSTALL') ||
         desc.contains('INSTALL') ||
-        code.startsWith('APP_')) {
+        cat.contains('APP') ||
+        code.startsWith('APP_') ||
+        code == 'APP_INSTALL') {
       return false;
     }
 
@@ -529,467 +534,97 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     final userPrompt = _topicController.text.trim();
 
     try {
-      if (_serviceRepository.dioClient != null) {
-        try {
-          final res = await _serviceRepository.dioClient!.post(
-            '/buyer/orders/ai-preview-comments',
-            data: {
-              'topic': userPrompt,
-              'prompt': userPrompt,
-              'language': _selectedLanguage,
-              'tone': _selectedTone,
-              'count': _selectedQuantity,
-              'minWords': _minWords,
-              'maxWords': _maxWords,
-              'serviceCode': _selectedService?.code,
-              'targetUrl': _targetUrlController.text.trim(),
-              'appName': cleanBrand,
-              'businessName': cleanBrand,
-              'videoTitle': _isYouTubeService(_selectedService)
-                  ? (_ytTitle?.isNotEmpty == true ? _ytTitle! : userAppName)
-                  : '',
-            },
-          );
-          if ((res.statusCode == 200 || res.statusCode == 201) &&
-              res.data != null &&
-              res.data['sampleComments'] != null) {
-            final List comments = res.data['sampleComments'];
-            if (comments.isNotEmpty) {
-              setState(() {
-                _sampleComments = comments
-                    .map((c) => _sanitizeCommentText(c.toString()))
-                    .map((c) => _trimToWordLimit(c, _minWords, _maxWords))
-                    .where((c) => c.isNotEmpty)
-                    .toList();
-              });
-              return;
-            }
+      if (_serviceRepository.dioClient == null) {
+        throw Exception('Not connected to API server. Please check your internet connection.');
+      }
+
+      final res = await _serviceRepository.dioClient!.post(
+        '/buyer/orders/ai-preview-comments',
+        data: {
+          'topic': userPrompt,
+          'prompt': userPrompt,
+          'language': _selectedLanguage,
+          'tone': _selectedTone,
+          'count': _selectedQuantity,
+          'minWords': _minWords,
+          'maxWords': _maxWords,
+          'serviceCode': _selectedService?.code,
+          'targetUrl': _targetUrlController.text.trim(),
+          'appName': cleanBrand,
+          'businessName': cleanBrand,
+          'videoTitle': _isYouTubeService(_selectedService)
+              ? (_ytTitle?.isNotEmpty == true ? _ytTitle! : userAppName)
+              : '',
+        },
+      );
+
+      if ((res.statusCode == 200 || res.statusCode == 201) &&
+          res.data != null &&
+          res.data['sampleComments'] != null) {
+        final List comments = res.data['sampleComments'];
+        if (comments.isNotEmpty) {
+          setState(() {
+            _sampleComments = comments
+                .map((c) => _sanitizeCommentText(c.toString()))
+                .map((c) => _trimToWordLimit(c, _minWords, _maxWords))
+                .where((c) => c.isNotEmpty)
+                .toList();
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('✓ Successfully generated ${_sampleComments.length} comments via DeepSeek AI'),
+                backgroundColor: const Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
           }
-        } catch (apiErr) {
-          debugPrint('Preview API error, fallback: $apiErr');
+          return;
         }
       }
 
-      // Instant Organic Fallback Generation with Semantic Intent Matching
-      final targetCount = _selectedQuantity < 5
-          ? (_selectedQuantity > 0 ? _selectedQuantity : 1)
-          : 5;
-      final isGoogle = _isGoogleBusinessService(_selectedService);
-      final isReview = !isGoogle &&
-          (_selectedService?.code.toUpperCase().contains('PLAY') == true ||
-              _selectedService?.code.toUpperCase().contains('REVIEW') == true ||
-              _selectedService?.category.toUpperCase().contains('PLAY') ==
-                  true ||
-              _selectedService?.name.toUpperCase().contains('PLAY') == true);
-
-      final isHindi = _selectedLanguage.toLowerCase().contains('hindi') ||
-          _selectedLanguage.toLowerCase().contains('hinglish');
-      final lowerPrompt = userPrompt.toLowerCase();
-
-      final isPart2 = RegExp(
-              r'part\s*2|part\s*two|next\s*part|next\s*video|sequel|agla\s*part|doosra\s*part|part2',
-              caseSensitive: false)
-          .hasMatch(lowerPrompt);
-      final isAudio = RegExp(r'audio|mic|voice|sound|clarity|awaz|aawaz|noise',
-              caseSensitive: false)
-          .hasMatch(lowerPrompt);
-      final isTrading = RegExp(
-              r'trading|stock|market|crypto|forex|chart|candle|indicator|profit',
-              caseSensitive: false)
-          .hasMatch(lowerPrompt);
-      final isTutorial = RegExp(
-              r'explain|tutorial|guide|sikha|samjh|concept|sikhao|trick',
-              caseSensitive: false)
-          .hasMatch(lowerPrompt);
-      final isPayment = RegExp(
-              r'pay|upi|money|transaction|wallet|paisa|cash|billing',
-              caseSensitive: false)
-          .hasMatch(lowerPrompt);
-      final isDelivery = RegExp(
-              r'deliver|pickup|speed|fast|doorstep|service|courier',
-              caseSensitive: false)
-          .hasMatch(lowerPrompt);
-      final isUi = RegExp(r'ui|design|interface|clean|navigation|simple|layout',
-              caseSensitive: false)
-          .hasMatch(lowerPrompt);
-      final isSupport = RegExp(r'support|help|service|care|team|contact',
-              caseSensitive: false)
-          .hasMatch(lowerPrompt);
-
-      // Extract clean subject from video title or prompt
-      String subject = cleanBrand.isNotEmpty ? cleanBrand : userPrompt;
-      subject = subject
-          .replaceAll(RegExp(r'https?://\S+', caseSensitive: false), '')
-          .replaceAll(
-              RegExp(
-                  r'[\[\(][^\]\)]*(?:official|music|video|4k|hd|1080p|full|ep\s*\d+|part\s*\d+)[^\]\)]*[\]\)]',
-                  caseSensitive: false),
-              '')
-          .replaceAll(RegExp(r'\|\s*[^|]+$'), '')
-          .replaceAll(RegExp(r'[-–—]\s*[^–—]+$'), '')
-          .replaceAll(RegExp(r'#\w+'), '')
-          .replaceAll(
-              RegExp(
-                  r'\b(202[0-9]|hindi|urdu|english|full\s*video|watch\s*now)\b',
-                  caseSensitive: false),
-              '')
-          .trim();
-      if (subject.contains(':')) subject = subject.split(':')[0].trim();
-      if (subject.isEmpty) subject = 'is video';
-
-      List<String> fallbacks = [];
-
-      if (isGoogle) {
-        final bool isItTech = cleanBrand.toLowerCase().contains('tech') ||
-            cleanBrand.toLowerCase().contains('soft') ||
-            cleanBrand.toLowerCase().contains('info') ||
-            cleanBrand.toLowerCase().contains('web') ||
-            cleanBrand.toLowerCase().contains('app') ||
-            userPrompt.toLowerCase().contains('web') ||
-            userPrompt.toLowerCase().contains('soft');
-
-        if (isItTech) {
-          fallbacks = isHindi
-              ? [
-                  "$cleanBrand ke sath bohot accha experience raha. Project time par deliver hua aur technical support bhi prompt mila.",
-                  "Website development ke liye $cleanBrand se contact kiya tha. Team ne saari requirements dhyan se suni aur clean portal bana kar diya.",
-                  "$cleanBrand ki IT services sach me dependable hain. Developers kaafi cooperative hain aur pricing bhi genuine hai.",
-                  "Software aur web related work ke liye $cleanBrand best choice hai. Quick response aur clean execution mila.",
-                  "Project delivery time par mili aur UI design bhi modern hai. $cleanBrand par bina kisi doubt ke trust kiya ja sakta hai."
-                ]
-              : [
-                  "Great experience with $cleanBrand. Delivered our project right on time without any technical bugs.",
-                  "Approached $cleanBrand for customized software and website development. The team understood our requirements patiently and delivered a very smooth platform.",
-                  "Really happy with the website design and technical support provided by $cleanBrand. Responsive team, clean coding, and hassle-free delivery.",
-                  "Honest and dependable developers. $cleanBrand delivered quality work within our agreed budget.",
-                  "Smooth project execution and excellent communication throughout. Highly recommend $cleanBrand for web and tech services."
-                ];
+      throw Exception(res.data?['message'] ?? 'AI returned empty comments.');
+    } catch (apiErr) {
+      String errMsg = 'AI Agent Failed to generate comments.';
+      if (apiErr is DioException) {
+        final serverMsg = apiErr.response?.data?['message'];
+        final errObj = apiErr.response?.data?['error'];
+        if (serverMsg != null) {
+          errMsg = serverMsg is List ? serverMsg.join(', ') : serverMsg.toString();
+        } else if (errObj != null) {
+          if (errObj is Map && errObj['message'] != null) {
+            errMsg = errObj['message'].toString();
+          } else {
+            errMsg = errObj.toString();
+          }
         } else {
-          fallbacks = isHindi
-              ? [
-                  cleanBrand.isNotEmpty
-                      ? "$cleanBrand par service bohot acchi mili. Kaam time par aur bina kisi pareshani ke ho gaya."
-                      : "Service bohot acchi mili, staff ka behaviour kaafi polite aur helpful tha.",
-                  cleanBrand.isNotEmpty
-                      ? "Pehli baar $cleanBrand visit kiya tha, overall arrangement aur staff ka behavior bohot pasand aaya. Transparent pricing aur prompt service!"
-                      : "Pehli baar visit kiya tha, staff ka behavior bohot pasand aaya aur har cheez time par ho gayi.",
-                  cleanBrand.isNotEmpty
-                      ? "$cleanBrand is area me sabse best option hai. Kaam bohot acche se nipat gaya aur staff ne pura support diya."
-                      : "Kaam bohot smoothly complete hua aur pricing bhi genuine thi.",
-                  "Bohot hi cooperative aur professional log hain. Jo commit kiya tha wahi deliver kiya bina kisi delay ke.",
-                  cleanBrand.isNotEmpty
-                      ? "Mera personal experience $cleanBrand ke sath bohot badhiya raha. Har cheez well-managed thi, 100% recommended!"
-                      : "Har cheez organized aur well-managed thi. Aage se kisi bhi requirement ke liye yahi aayenge."
-                ]
-              : [
-                  cleanBrand.isNotEmpty
-                      ? "Smooth and reliable service at $cleanBrand. The staff is courteous, professional, and very helpful."
-                      : "Smooth and reliable service. Staff is courteous, professional, and very helpful.",
-                  cleanBrand.isNotEmpty
-                      ? "Had a hassle-free experience with $cleanBrand. Everything was handled systematically and completed on schedule."
-                      : "Had a hassle-free experience here. Everything was handled systematically and completed on schedule.",
-                  cleanBrand.isNotEmpty
-                      ? "Very pleased with the quality of service provided by $cleanBrand. Punctual, communicative, and dependable team."
-                      : "Very pleased with the quality of service. Punctual, communicative, and dependable team.",
-                  cleanBrand.isNotEmpty
-                      ? "Extremely helpful team at $cleanBrand. Honest guidance, fair rates, and smooth execution from start to finish."
-                      : "Extremely helpful team. Honest guidance, fair rates, and smooth execution from start to finish.",
-                  cleanBrand.isNotEmpty
-                      ? "Visited $cleanBrand after seeing good feedback and my experience was equally positive. Deserves a solid 5 stars!"
-                      : "Visited after seeing good feedback and my experience was equally positive. Deserves a solid 5 stars!"
-                ];
-        }
-      } else if (isReview) {
-        if (isPayment) {
-          fallbacks = isHindi
-              ? [
-                  "Payment process ekdum instant aur secure hai, wallet me turant reflect hota hai.",
-                  "Transactions super fast hain aur koi deduction error nahi aata, very reliable.",
-                  cleanBrand.isNotEmpty
-                      ? "$cleanBrand me payment bohot smooth hai, trustworthy app."
-                      : "Bohot safe aur dependable payment system mila mujhe.",
-                ]
-              : [
-                  "Instant and reliable payment processing, haven't faced a single glitch.",
-                  "Transactions are super quick and secure, very transparent billing.",
-                  cleanBrand.isNotEmpty
-                      ? "Payments on $cleanBrand are seamless and instantaneous."
-                      : "Very safe checkout experience with fast transactions.",
-                ];
-        } else if (isDelivery) {
-          fallbacks = isHindi
-              ? [
-                  "Doorstep pickup aur service timing bohot fast aur punctual hai.",
-                  "Bohot jaldi pickup ho gaya, staff ka behavior bhi kaafi polite tha.",
-                  cleanBrand.isNotEmpty
-                      ? "$cleanBrand ki doorstep service ekdum fast hai."
-                      : "Quick and punctual execution, completely hassle-free.",
-                ]
-              : [
-                  "Doorstep pickup and handling was remarkably fast and punctual.",
-                  "Order fulfillment and quick response exceeded my expectations.",
-                  cleanBrand.isNotEmpty
-                      ? "The pickup service from $cleanBrand was swift and professional."
-                      : "Extremely fast service, completed well ahead of schedule.",
-                ];
-        } else if (isUi) {
-          fallbacks = isHindi
-              ? [
-                  "UI bohot clean aur modern hai, navigation ekdum smooth hai.",
-                  "Sabhi features aasan hain, koi bhi bina confuse hue chala sakta hai.",
-                  cleanBrand.isNotEmpty
-                      ? "$cleanBrand ka interface kaafi lightweight aur stylish hai."
-                      : "Bohot pyara design hai, har option seedha samajh aata hai.",
-                ]
-              : [
-                  "The user interface is sleek, modern, and clutter-free.",
-                  "Clean design and fluid page transitions, truly top tier UI.",
-                  cleanBrand.isNotEmpty
-                      ? "Navigating $cleanBrand is effortless and intuitive."
-                      : "Minimalist layout that makes daily tasks enjoyable.",
-                ];
-        } else if (isSupport) {
-          fallbacks = isHindi
-              ? [
-                  "Customer support ne turant meri query resolve kar di, bohot helpful team hai.",
-                  "Help center ka response time kaafi fast hai, polite behavior.",
-                  cleanBrand.isNotEmpty
-                      ? "$cleanBrand support team genuinely listens and helps out."
-                      : "Very prompt customer assistance, super happy with the response.",
-                ]
-              : [
-                  "Customer support was very prompt and resolved my query in minutes.",
-                  "Help desk is super responsive, polite, and genuinely helpful.",
-                  cleanBrand.isNotEmpty
-                      ? "The support team behind $cleanBrand is outstanding."
-                      : "Quick resolution from support, very dependable assistance.",
-                ];
-        } else {
-          fallbacks = isHindi
-              ? [
-                  cleanBrand.isNotEmpty
-                      ? "$cleanBrand use karke maza aa gaya, UI ekdum smooth aur fast hai."
-                      : "Bohot hi smooth chal raha hai, UI ekdum clean aur fast hai.",
-                  "Kamaal ka application hai, use karna bohot aasan aur convenient hai.",
-                  cleanBrand.isNotEmpty
-                      ? "$cleanBrand ne kaam bohot aasan bana diya hai, sabhi features acche se chal rahe hain."
-                      : "Bohot accha user experience mila, bilkul lag nahi karta.",
-                  "Shaandar design aur super fast speed hai, daily use ke liye best app hai.",
-                  cleanBrand.isNotEmpty
-                      ? "Maine $cleanBrand use kiya aur experience kaafi badhiya raha. Highly recommended."
-                      : "Abhi tak ka sabse best app laga mujhe is category me. Bohot helpful hai.",
-                ]
-              : [
-                  cleanBrand.isNotEmpty
-                      ? "Using $cleanBrand has been a great experience. Very smooth and reliable."
-                      : "Very smooth and responsive app. Does exactly what it promises without clutter.",
-                  "Clean UI and great user experience. Everything works seamlessly right from the start.",
-                  cleanBrand.isNotEmpty
-                      ? "$cleanBrand makes everyday tasks so much easier and convenient."
-                      : "Super fast, lightweight and intuitive. Very happy with the overall performance.",
-                  "Simple, clean, and gets the job done quickly. Exactly what I was looking for.",
-                  cleanBrand.isNotEmpty
-                      ? "Really glad I installed $cleanBrand. Fast responses and zero lag."
-                      : "One of the best apps in this category. Works like a charm and saves me so much time.",
-                ];
-        }
-      } else if (_isInstagramService(_selectedService)) {
-        // Instagram Comments (Contextual with Reels, Posts, Aesthetics & Trending Vibes)
-        final isTrend = lowerPrompt.contains('fire') ||
-            lowerPrompt.contains('trend') ||
-            lowerPrompt.contains('viral') ||
-            lowerPrompt.contains('lit');
-        final isAesthetic = lowerPrompt.contains('aesthetic') ||
-            lowerPrompt.contains('love') ||
-            lowerPrompt.contains('vibe') ||
-            lowerPrompt.contains('pyar') ||
-            lowerPrompt.contains('sundar');
-        final isQuestion = lowerPrompt.contains('detail') ||
-            lowerPrompt.contains('price') ||
-            lowerPrompt.contains('kahan') ||
-            lowerPrompt.contains('where') ||
-            lowerPrompt.contains('link');
-        final isFunny = lowerPrompt.contains('funny') ||
-            lowerPrompt.contains('relat') ||
-            lowerPrompt.contains('haha') ||
-            lowerPrompt.contains('lol');
-
-        if (isTrend) {
-          fallbacks = isHindi
-              ? [
-                  "Bhai kya transition hai ekdum smooth! 🔥🔥",
-                  "Pure fire content boss! Algorithm boost pakka hai 🔥",
-                  "Vibe ekdum next level hai yaar! Loved it 🔥",
-                  "Superb edit and concept! Keep creating such reels 🔥👏",
-                  "Full on energy! Trending reel pakka hai yeh 🔥",
-                ]
-              : [
-                  "The transitions and edit are absolutely insane! 🔥🔥",
-                  "Pure fire content! The algorithm is definitely pushing this 🔥",
-                  "Such high energy and great editing! Loved every second 🔥",
-                  "Top tier content as always! Keep killing it 🔥👏",
-                  "This is going straight to the explore page! 🔥",
-                ];
-        } else if (isAesthetic) {
-          fallbacks = isHindi
-              ? [
-                  "Vibe ekdum aesthetic hai ❤️ Loved this so much!",
-                  "Itna pyara aur clean content! Dil khush ho gaya ❤️✨",
-                  "Color palette aur aesthetics dono 10/10 hain 😍",
-                  "Bohot soothing aur beautiful reel hai ❤️",
-                  "Pure aesthetic vibes! Bookmarking this ❤️✨",
-                ]
-              : [
-                  "The aesthetic and vibe here are unmatched ❤️✨",
-                  "So aesthetically pleasing! Absolutely loved this ❤️",
-                  "The color grading and aesthetics are a 10/10 😍",
-                  "Such a peaceful and beautiful reel ❤️",
-                  "Saved this! Pure aesthetic perfection ✨❤️",
-                ];
-        } else if (isQuestion) {
-          fallbacks = isHindi
-              ? [
-                  "Bhai outfit details please! Bohot stylish lag raha hai 😍",
-                  "Yeh place kahan par hai? Location zaroor share karna!",
-                  "Details ya link share kar sakte ho kya please? 🙌",
-                  "Price aur availability kya hai iski? DM me batao please!",
-                  "Product link kahan milega? Bio me hai kya? 🙏",
-                ]
-              : [
-                  "Can you please share the outfit / item details? Looks amazing! 😍",
-                  "Where was this filmed? Please share the location!",
-                  "Could you share the link or details for this? 🙌",
-                  "What is the price and availability? Looks incredible!",
-                  "Where can we find the product link? Checked bio! 🙏",
-                ];
-        } else if (isFunny) {
-          fallbacks = isHindi
-              ? [
-                  "Bhai itna relatable! 😂 Has has ke pagal ho gaya!",
-                  "Literally me every single day! 😂 Super funny!",
-                  "Ending ne toh dimaag hila diya! 😂😂😂",
-                  "Tagging all my friends on this right now! 😂👏",
-                  "Ekdum sach bola bhai tune! Relatable 100% 😂",
-                ]
-              : [
-                  "I felt this on a spiritual level! So relatable 😂",
-                  "Literally me every single day! Absolutely hilarious 😂",
-                  "The ending caught me so off guard! 😂😂😂",
-                  "Sending this to the group chat right now! 😂👏",
-                  "Too accurate! Relatable on another level 😂",
-                ];
-        } else {
-          fallbacks = isHindi
-              ? [
-                  "Bhai kya zabardast reel hai! Mazaa aa gaya 🔥❤️",
-                  "Concept aur execution dono top notch hain boss 👏",
-                  "Superb work! Har ek frame bohot well-crafted hai ❤️",
-                  "Aapka content hamesha stand-out karta hai! Keep it up 🙌",
-                  "Saved and shared! Aise hi badhiya posts banate raho 🔥",
-                ]
-              : [
-                  "This is amazing! Loved the creative execution 🔥❤️",
-                  "Concept and delivery are both top notch 👏",
-                  "Such great content! Every frame is super engaging ❤️",
-                  "Your posts always stand out on my feed! Keep it up 🙌",
-                  "Saved and shared with friends! Keep creating great stuff 🔥",
-                ];
+          errMsg = apiErr.message ?? errMsg;
         }
       } else {
-        // YouTube / Social Video Comments (Contextual with Subject & Video Title)
-        if (isPart2) {
-          fallbacks = isHindi
-              ? [
-                  "Bhai iska Part 2 kab aayega? Jaldi upload karo please!",
-                  "$subject ka next part besabri se wait kar raha hu, bohot zabardast explanation tha.",
-                  "Bhai agla part zaroor lana, aage ka concept bhi detail me dekhna hai!",
-                  "$subject ka Part 2 jaldi lao bhai, poora topic complete dekhna hai!",
-                  "Subscribed! Please agla part jaldi drop karna bhai, can't wait!",
-                ]
-              : [
-                  "Really hope there is a Part 2 coming out soon! Left me wanting more.",
-                  "Can you please drop Part 2 on $subject as soon as possible? Super excited!",
-                  "Waiting eagerly for part 2, this explanation was crystal clear.",
-                  "Bro we need Part 2 on this immediately, loved the breakdown of $subject!",
-                  "Subscribed just for Part 2! Please do not keep us waiting too long.",
-                ];
-        } else if (isAudio) {
-          fallbacks = isHindi
-              ? [
-                  "Bhai audio quality ekdum crystal clear hai, sunne me maza aa gaya.",
-                  "Aapki voice clarity aur sound setup bohot badhiya hai bhai.",
-                  "Ekdum saaf aawaz hai, har ek point clearly samajh aaya.",
-                  "Mic quality aur explanation dono top tier hain bhai!",
-                ]
-              : [
-                  "The audio quality and mic clarity are top notch, super easy to listen to.",
-                  "Loved the clear sound quality and voiceover, made following along effortless.",
-                  "Voice clarity is 10/10 in this video, great production quality!",
-                  "Super crisp audio! Really appreciate creators who care about clear sound.",
-                ];
-        } else if (isTrading) {
-          fallbacks = isHindi
-              ? [
-                  "$subject ka market setup aur risk management bohot practical bataya aapne!",
-                  "Chart reading aur price action ka tareeka ekdum accurate hai bhai, taking notes!",
-                  "$subject sikhne ke liye sabse best aur disciplined video hai ye.",
-                  "Aapka chart reading aur SL lagane ka tareeka bohot safe hai, shukriya bhai!",
-                ]
-              : [
-                  "The risk management and chart strategy explained for $subject are top notch!",
-                  "Super insightful breakdown of $subject, price action analysis was on point.",
-                  "Best trading breakdown I have watched this month, super practical insights.",
-                  "Clear price action analysis without confusing indicators, loved it!",
-                ];
-        } else if (isTutorial) {
-          fallbacks = isHindi
-              ? [
-                  "$subject ko itne simple tareeke se samjhaya aapne, poora doubt clear ho gaya.",
-                  "Point to point baat ki hai $subject par bina time waste kiye, bohot helpful raha.",
-                  "Aapka samjhane ka tareeka sabse best hai bhai, ek baar me $subject clear ho gaya.",
-                  "Bohot informative aur valuable guide on $subject, shukriya bhai!",
-                ]
-              : [
-                  "The step-by-step breakdown of $subject was so clean and easy to follow.",
-                  "Finally someone who explains $subject straight to the point without wasting time.",
-                  "This cleared up so much confusion regarding $subject, thanks for sharing!",
-                  "One of the best tutorials on $subject on YouTube, bookmarked!",
-                ];
-        } else {
-          fallbacks = isHindi
-              ? [
-                  "$subject ke baare me bohot hi aasan aur saral tareeke se samjhaya aapne bhai!",
-                  "$subject par bohot saare doubts the mere, is video ke baad sab clear ho gaya.",
-                  "Aapka $subject ka breakdown bohot informative aur valuable raha, full support bhai!",
-                  "Seedha point to point baat ki hai $subject par bina time waste kiye, keep it up!",
-                  "$subject sikhne ke liye YouTube par sabse best video hai ye, maza aa gaya dekh kar.",
-                  "Content quality top class hai bhai, $subject par aur bhi videos banate rahiye!",
-                ]
-              : [
-                  "The way you explained $subject was exceptionally clear and easy to follow!",
-                  "This cleared up all my confusion regarding $subject, really appreciate the depth!",
-                  "Straight to the point with zero fluff, one of the best videos on $subject.",
-                  "Super informative and actionable breakdown of $subject, keep up the great work!",
-                  "Genuinely one of the most well-structured guides on $subject out there, bookmarked!",
-                  "Appreciate the effort and depth put into this video on $subject, highly valuable!",
-                ];
-        }
+        errMsg = apiErr.toString().replaceFirst('Exception: ', '');
       }
 
       setState(() {
-        _sampleComments = fallbacks
-            .map((f) => _sanitizeCommentText(f))
-            .map((f) => _trimToWordLimit(f, _minWords, _maxWords))
-            .where((f) => f.isNotEmpty)
-            .take(targetCount)
-            .toList();
+        _sampleComments = [];
       });
-    } catch (e) {
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not generate sample preview: $e'),
-            backgroundColor: Colors.red.shade700,
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '❌ $errMsg',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFDC2626),
+            duration: const Duration(seconds: 5),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -1619,8 +1254,12 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     if (code.contains('COMBO') || name.contains('COMBO')) {
       return 'assets/icons/marketing.png';
     }
-    if (_isAppInstallService(s)) {
-      return 'assets/icons/smartphone.png';
+    if (_isAppInstallService(s) ||
+        code.contains('INSTALL') ||
+        name.contains('INSTALL') ||
+        code.startsWith('APP_') ||
+        code == 'APP_INSTALL') {
+      return 'assets/icons/app_install.png';
     }
     if (_isInstagramService(s)) {
       if (code.contains('LIKE') || name.contains('LIKE')) {
@@ -1650,7 +1289,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         name.contains('INSTALL') ||
         code.contains('DOWNLOAD') ||
         name.contains('DOWNLOAD')) {
-      return 'assets/icons/smartphone.png';
+      return 'assets/icons/app_install.png';
     }
     if (code.contains('PLAY') ||
         code.contains('WATCH') ||

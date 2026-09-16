@@ -118,10 +118,22 @@ class MyTaskCard extends StatelessWidget {
         .toLowerCase();
 
     final combined = '$type $reqStr $metaStr $titleStr';
-    if (combined.contains('play') ||
-        combined.contains('playstore') ||
-        combined.contains('app_review'))
+    if (combined.contains('google_business') ||
+        combined.contains('google_maps') ||
+        combined.contains('gmb') ||
+        combined.contains('share.google') ||
+        combined.contains('maps.google') ||
+        combined.contains('goo.gl/maps') ||
+        combined.contains('maps') ||
+        combined.contains('map')) {
+      return 'google_maps';
+    }
+    if (combined.contains('playstore') ||
+        combined.contains('app_review') ||
+        combined.contains('google_play') ||
+        (combined.contains('play') && !combined.contains('display'))) {
       return 'playstore';
+    }
     if (combined.contains('youtube') || combined.contains('yt_'))
       return 'youtube';
     if (combined.contains('instagram') || combined.contains('insta'))
@@ -129,15 +141,14 @@ class MyTaskCard extends StatelessWidget {
     if (combined.contains('facebook') || combined.contains('fb'))
       return 'facebook';
     if (combined.contains('google') ||
-        combined.contains('g_map') ||
-        combined.contains('maps'))
-      return 'google';
+        combined.contains('g_map'))
+      return 'google_maps';
     if (combined.contains('twitter') ||
         combined.contains(' x ') ||
         combined.contains('x.com'))
       return 'x';
     if (combined.contains('telegram')) return 'telegram';
-    return 'playstore';
+    return 'google_maps';
   }
 
   String _getReward(dynamic task) {

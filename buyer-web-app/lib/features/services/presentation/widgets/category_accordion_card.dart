@@ -297,7 +297,7 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
         cat.contains('INSTALL') ||
         cat.contains('MOBILE') ||
         cat.contains('DOWNLOAD')) {
-      return 'assets/icons/smartphone.png';
+      return 'assets/icons/app_install.png';
     }
     if (cat.contains('INSTAGRAM') ||
         cat.contains('IG') ||
@@ -324,6 +324,16 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     if (code.contains('MAP') || name.contains('MAP') || code.contains('GMB') || name.contains('GMB')) {
       return 'assets/icons/google-maps.png';
     }
+    // Check App Install services explicitly BEFORE any social icons
+    if (code.contains('INSTALL') ||
+        name.contains('INSTALL') ||
+        code.contains('DOWNLOAD') ||
+        name.contains('DOWNLOAD') ||
+        code.startsWith('APP_') ||
+        code == 'APP_INSTALL' ||
+        s.category.toUpperCase().contains('INSTALL')) {
+      return 'assets/icons/app_install.png';
+    }
     if (code.contains('REVIEW') || name.contains('REVIEW')) {
       return 'assets/icons/review.png';
     }
@@ -339,17 +349,11 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     if (code.contains('COMBO') || name.contains('COMBO')) {
       return 'assets/icons/marketing.png';
     }
-    if (code.contains('FOLLOW') || name.contains('FOLLOW')) {
+    if ((code.contains('FOLLOW') || name.contains('FOLLOW')) && !code.contains('INSTALL')) {
       return 'assets/icons/instagram.png';
     }
-    if (code.contains('LIKE') || name.contains('LIKE')) {
+    if ((code.contains('LIKE') || name.contains('LIKE')) && !code.contains('INSTALL')) {
       return 'assets/icons/like.png';
-    }
-    if (code.contains('INSTALL') ||
-        name.contains('INSTALL') ||
-        code.contains('DOWNLOAD') ||
-        name.contains('DOWNLOAD')) {
-      return 'assets/icons/smartphone.png';
     }
     if (code.contains('PLAY') ||
         code.contains('WATCH') ||
@@ -364,7 +368,7 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     if (code.contains('YT') || code.contains('YOUTUBE')) {
       return 'assets/icons/youtube.png';
     }
-    if (code.contains('INSTA') || code.contains('IG')) {
+    if ((code.contains('INSTA') || code.contains('IG')) && !code.contains('INSTALL')) {
       return 'assets/icons/instagram.png';
     }
     if (code.contains('TELEGRAM') || code.contains('TG')) {

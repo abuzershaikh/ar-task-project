@@ -33,11 +33,14 @@ async function testLiveAiPreview() {
       'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
-      topic: 'How to build high-ticket client acquisition funnel',
+      topic: 'Best camera settings for cinematic look',
       language: 'English',
-      tone: 'professional',
-      count: 25,
-      serviceCode: 'YOUTUBE_COMMENT'
+      tone: 'natural',
+      count: 5,
+      serviceCode: 'YOUTUBE_COMMENT',
+      videoTitle: 'Sony FX3 Complete Cinematic Guide',
+      minWords: 6,
+      maxWords: 20
     })
   });
 

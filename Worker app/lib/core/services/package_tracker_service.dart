@@ -68,6 +68,17 @@ class PackageTrackerService {
     final str = rawInput.toString().trim();
     if (str.isEmpty) return null;
 
+    // Ignore web domains or Google Maps URLs (share.google, maps.google, etc.)
+    if (str.contains('maps.google') ||
+        str.contains('goo.gl/maps') ||
+        str.contains('share.google') ||
+        str.contains('maps.app.goo.gl') ||
+        str.contains('youtube.com') ||
+        str.contains('youtu.be') ||
+        str.contains('instagram.com')) {
+      return null;
+    }
+
     // Check for 'id=' query parameter in Play Store URLs
     final uri = Uri.tryParse(str);
     if (uri != null && uri.queryParameters.containsKey('id')) {
@@ -77,11 +88,20 @@ class PackageTrackerService {
       }
     }
 
+    // If string is a direct Google Play store URL or market:// URI
+    if (str.contains('play.google.com') || str.startsWith('market://')) {
+      final match = RegExp(r'id=([a-zA-Z0-9._]+)').firstMatch(str);
+      if (match != null) return match.group(1);
+    }
+
     // Regex match for standard Android package names (e.g. com.example.app)
-    final regExp = RegExp(r'[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+');
-    final match = regExp.firstMatch(str);
-    if (match != null) {
-      return match.group(0);
+    // Only if it doesn't look like a generic web URL
+    if (!str.startsWith('http://') && !str.startsWith('https://')) {
+      final regExp = RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$');
+      final match = regExp.firstMatch(str);
+      if (match != null) {
+        return match.group(0);
+      }
     }
 
     return null;
@@ -89,7 +109,7 @@ class PackageTrackerService {
 
   /// Determines if a task is an App Install / Play Store task requiring retention tracking.
   static bool isAppInstallTask(Map<String, dynamic> task) {
-    final type = (task['taskType'] ??
+    final typeUpper = (task['taskType'] ??
             task['task_type'] ??
             task['type'] ??
             task['serviceCode'] ??
@@ -98,7 +118,7 @@ class PackageTrackerService {
         .toString()
         .toUpperCase();
 
-    final platform = (task['platform'] ??
+    final platformLower = (task['platform'] ??
             (task['requirements'] is Map
                 ? task['requirements']['platform']
                 : null) ??
@@ -106,18 +126,80 @@ class PackageTrackerService {
         .toString()
         .toLowerCase();
 
-    if (type.contains('INSTALL') ||
-        type.contains('PLAYSTORE') ||
-        platform.contains('playstore') ||
-        platform.contains('google')) {
+    final titleLower = (task['title'] ??
+            task['serviceTitle'] ??
+            task['serviceName'] ??
+            (task['requirements'] is Map
+                ? (task['requirements']['serviceName'] ?? task['requirements']['title'])
+                : null) ??
+            '')
+        .toString()
+        .toLowerCase();
+
+    final targetUrlLower = (task['targetUrl'] ??
+            task['url'] ??
+            (task['requirements'] is Map ? task['requirements']['targetUrl'] : null) ??
+            '')
+        .toString()
+        .toLowerCase();
+
+    // 0. STRICT EXCLUSION: Google Maps, Google Business, Review/Rating, YouTube, Instagram tasks are NEVER app install tasks!
+    if (typeUpper.contains('MAP') ||
+        typeUpper.contains('GMB') ||
+        typeUpper.contains('GOOGLE_BUSINESS') ||
+        platformLower.contains('maps') ||
+        platformLower.contains('business') ||
+        platformLower == 'google_maps' ||
+        platformLower == 'google_business' ||
+        titleLower.contains('google map') ||
+        titleLower.contains('google business') ||
+        titleLower.contains('rating & review') ||
+        targetUrlLower.contains('maps.google') ||
+        targetUrlLower.contains('goo.gl/maps') ||
+        targetUrlLower.contains('share.google') ||
+        targetUrlLower.contains('maps.app.goo.gl') ||
+        targetUrlLower.contains('search.google.com/local')) {
+      return false;
+    }
+
+    if (typeUpper.contains('YOUTUBE') ||
+        typeUpper.contains('INSTAGRAM') ||
+        typeUpper.contains('FACEBOOK') ||
+        typeUpper.contains('TELEGRAM') ||
+        platformLower == 'youtube' ||
+        platformLower == 'instagram' ||
+        platformLower == 'facebook') {
+      return false;
+    }
+
+    // Exclude general review/rating/comment tasks unless explicitly marked as install
+    if ((typeUpper.contains('REVIEW') ||
+            typeUpper.contains('RATING') ||
+            typeUpper.contains('COMMENT') ||
+            typeUpper.contains('FOLLOW') ||
+            typeUpper.contains('LIKE') ||
+            typeUpper.contains('SUBSCRIBE')) &&
+        !typeUpper.contains('INSTALL') &&
+        !titleLower.contains('install & open') &&
+        !titleLower.contains('app install')) {
+      return false;
+    }
+
+    // 1. Genuine App Install Tasks
+    if (typeUpper.contains('APP_INSTALL') ||
+        typeUpper.contains('INSTALL_APP') ||
+        typeUpper == 'INSTALL' ||
+        typeUpper.startsWith('INSTALL_') ||
+        typeUpper.endsWith('_INSTALL') ||
+        titleLower.contains('install & open') ||
+        titleLower.contains('app install') ||
+        titleLower.contains('install app')) {
       return true;
     }
 
     final req = task['requirements'];
     if (req is Map &&
-        (req.containsKey('packageName') ||
-            req.containsKey('package_name') ||
-            req.containsKey('minRetentionHours') ||
+        (req.containsKey('minRetentionHours') ||
             req.containsKey('min_retention_hours'))) {
       return true;
     }

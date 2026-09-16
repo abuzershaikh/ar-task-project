@@ -522,10 +522,17 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   // ── Helper Extractors ──────────────────────────────────────────────────────
   void _fetchPlayStoreIconIfNeeded() async {
-    if (_getPlatform() == 'google_business') return;
+    final p = _getPlatform();
+    if (p == 'google_business' || p == 'google_maps' || p == 'google') return;
     final direct = _getAppIcon();
     if (direct.isNotEmpty && !direct.contains('/assets/icons/')) return;
     final url = _getTargetUrl();
+    if (url.contains('share.google') ||
+        url.contains('maps.google') ||
+        url.contains('goo.gl/maps') ||
+        url.contains('maps.app.goo.gl')) {
+      return;
+    }
     if (url.contains('play.google.com') ||
         url.contains('market://') ||
         url.contains('id=')) {
@@ -556,9 +563,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   String _getPlatform() {
     final t = widget.task;
-    if (t == null) return 'playstore';
+    if (t == null) return 'google_maps';
 
-    final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? '')
+    final type = (t['taskType'] ?? t['task_type'] ?? t['type'] ?? t['serviceCode'] ?? '')
         .toString()
         .toLowerCase();
     String reqStr = '';
@@ -568,7 +575,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final metaStr = (t['metadata'] != null)
         ? t['metadata'].toString().toLowerCase()
         : '';
-    final titleStr = (t['title'] ?? t['serviceName'] ?? t['serviceTitle'] ?? '')
+    final titleStr = (t['title'] ??
+            t['serviceName'] ??
+            t['serviceTitle'] ??
+            (t['requirements'] is Map ? (t['requirements']['serviceName'] ?? t['requirements']['title']) : null) ??
+            '')
         .toString()
         .toLowerCase();
     final descStr = (t['description'] ?? t['body'] ?? '')
@@ -581,25 +592,37 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     if (type.contains('google_business') ||
         type.contains('google_maps') ||
         type.contains('gmb') ||
+        type.contains('map') ||
         titleStr.contains('google business') ||
         titleStr.contains('google maps') ||
         titleStr.contains('business review') ||
+        titleStr.contains('map') ||
         targetUrl.contains('maps.google') ||
         targetUrl.contains('goo.gl/maps') ||
+        targetUrl.contains('share.google') ||
         targetUrl.contains('maps.app.goo.gl') ||
+        targetUrl.contains('search.google.com/local') ||
         combined.contains('google_business') ||
         combined.contains('google_maps') ||
+        combined.contains('share.google') ||
+        combined.contains('maps.app.goo.gl') ||
         combined.contains('gmb_') ||
         (t['platform'] != null &&
             (t['platform'].toString().toLowerCase().contains('business') ||
-                t['platform'].toString().toLowerCase().contains('maps')))) {
-      return 'google_business';
+                t['platform'].toString().toLowerCase().contains('maps') ||
+                t['platform'].toString().toLowerCase() == 'google')) ||
+        (t['requirements'] is Map &&
+            t['requirements']['platform'] != null &&
+            (t['requirements']['platform'].toString().toLowerCase().contains('business') ||
+                t['requirements']['platform'].toString().toLowerCase().contains('maps') ||
+                t['requirements']['platform'].toString().toLowerCase() == 'google'))) {
+      return 'google_maps';
     }
 
     // 1. Play Store & App Install MUST ALWAYS take priority over raw platform tag
-    if (type.contains('install') ||
-        type.contains('app_install') ||
-        titleStr.contains('install') ||
+    if (type.contains('app_install') ||
+        (type.contains('install') && !type.contains('instagram')) ||
+        titleStr.contains('install & open') ||
         titleStr.contains('play store') ||
         titleStr.contains('app review') ||
         targetUrl.contains('play.google.com') ||
@@ -613,12 +636,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
     if (t['platform'] != null && t['platform'].toString().trim().isNotEmpty) {
       final p = t['platform'].toString().toLowerCase().trim();
-      if (p.contains('play') ||
-          p.contains('google_play') ||
-          p.contains('google') ||
-          p.contains('install') ||
-          p.contains('app'))
+      if (p.contains('play') || p.contains('google_play') || p.contains('install'))
         return 'playstore';
+      if (p.contains('maps') || p.contains('business') || p == 'google')
+        return 'google_maps';
       if (p.contains('instagram') ||
           (p.contains('insta') && !p.contains('install')))
         return 'instagram';
@@ -640,9 +661,12 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     if (combined.contains('facebook') || combined.contains('fb'))
       return 'facebook';
 
-    // 5. Google / Maps
-    if (combined.contains('google') || combined.contains('maps'))
-      return 'playstore';
+    // 5. Google Maps / Local
+    if (combined.contains('maps') ||
+        combined.contains('map') ||
+        combined.contains('google') ||
+        combined.contains('share.google'))
+      return 'google_maps';
 
     // 6. X
     if (combined.contains('twitter') ||
@@ -653,7 +677,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     // 7. Telegram
     if (combined.contains('telegram')) return 'telegram';
 
-    return 'playstore';
+    return 'google_maps';
   }
 
   String _getAppIcon() {
@@ -742,6 +766,16 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       if (isInstall) {
         return 'Install & Open: $appName 📱';
       }
+      final p = _getPlatform();
+      if (p == 'google_business' || p == 'google_maps' || p == 'google') {
+        return 'Rate & Review: $appName ⭐⭐⭐⭐⭐';
+      }
+      if (p == 'youtube') {
+        return 'Watch & Engage: $appName ▶️';
+      }
+      if (p == 'instagram') {
+        return 'Engage: $appName 📸';
+      }
       return 'Rate & Review: $appName ⭐⭐⭐⭐⭐';
     }
     if (t['title'] != null && t['title'].toString().trim().isNotEmpty) {
@@ -772,9 +806,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       }
     }
     final p = _getPlatform();
-    if (p == 'google_business') {
+    if (p == 'google_business' || p == 'google_maps' || p == 'google') {
       final tUpper =
           (widget.task['taskType'] ??
+                  widget.task['task_type'] ??
                   widget.task['type'] ??
                   widget.task['serviceCode'] ??
                   '')
@@ -788,6 +823,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     if (p == 'playstore') {
       final tUpper =
           (widget.task['taskType'] ??
+                  widget.task['task_type'] ??
                   widget.task['type'] ??
                   widget.task['serviceCode'] ??
                   '')
@@ -801,6 +837,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     if (p == 'instagram') {
       final tUpper =
           (widget.task['taskType'] ??
+                  widget.task['task_type'] ??
                   widget.task['type'] ??
                   widget.task['serviceCode'] ??
                   '')
@@ -814,6 +851,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     if (p == 'youtube') {
       final tUpper =
           (widget.task['taskType'] ??
+                  widget.task['task_type'] ??
                   widget.task['type'] ??
                   widget.task['serviceCode'] ??
                   '')
@@ -838,10 +876,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
         return b;
       }
     }
-    final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? 'COMMENT')
+    final type = (t['taskType'] ?? t['task_type'] ?? t['type'] ?? t['serviceCode'] ?? 'COMMENT')
         .toString()
         .toUpperCase();
-    if (p == 'google_business') {
+    if (p == 'google_business' || p == 'google_maps' || p == 'google') {
       if (type.contains('REVIEW')) {
         return 'GOOGLE MAPS REVIEW';
       }
@@ -1842,7 +1880,13 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     setState(() => _isSubmitting = true);
 
     // Pre-flight check: If this is an App Install task, verify it is actually installed!
-    if (widget.task is Map &&
+    final currentPlat = _getPlatform();
+    final isMapsTask = currentPlat == 'google_business' ||
+        currentPlat == 'google_maps' ||
+        currentPlat == 'google';
+
+    if (!isMapsTask &&
+        widget.task is Map &&
         PackageTrackerService.isAppInstallTask(
           Map<String, dynamic>.from(widget.task),
         )) {
@@ -1948,6 +1992,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     switch (p) {
       case 'google_business':
       case 'google_maps':
+      case 'google':
         return 'Google Maps';
       case 'youtube':
         return 'YouTube';
@@ -1956,14 +2001,15 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       case 'facebook':
         return 'Facebook';
       case 'playstore':
-      case 'google':
         return 'Play Store';
+      case 'app_install':
+        return 'App Install';
       case 'x':
         return 'X (Twitter)';
       case 'telegram':
         return 'Telegram';
       default:
-        return 'Platform';
+        return 'Google Maps';
     }
   }
 
@@ -1981,6 +2027,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final videoTutorialUrl = _getVideoTutorialUrl();
     final audioGuideUrl = _extractAudioGuideUrl();
     final platformName = _getPlatformDisplayName();
+    final currentPlat = _getPlatform();
+    final bool isMapsTask = currentPlat == 'google_business' ||
+        currentPlat == 'google_maps' ||
+        currentPlat == 'google';
     final status = _getTaskStatus();
     final bool isApprovedOrCompleted =
         status == 'APPROVED' || status == 'COMPLETED';
@@ -2079,7 +2129,8 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                 ],
 
                 // ── App Install Retention Warning Banner ───
-                if (widget.task is Map &&
+                if (!isMapsTask &&
+                    widget.task is Map &&
                     PackageTrackerService.isAppInstallTask(
                       Map<String, dynamic>.from(widget.task),
                     )) ...[
@@ -2600,6 +2651,32 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   }
 
   Widget _build3DPlatformAvatar(String platform) {
+    final isMaps = platform == 'google_maps' ||
+        platform == 'google_business' ||
+        platform == 'google';
+
+    if (isMaps) {
+      return Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF4285F4).withOpacity(0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: PlatformLogo(platform: 'google_maps', size: 42),
+        ),
+      );
+    }
+
     final appIcon = _getAppIcon();
     if (appIcon.isNotEmpty) {
       return Container(
@@ -2653,40 +2730,19 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       width: 64,
       height: 64,
       decoration: BoxDecoration(
-        gradient: const RadialGradient(
-          colors: [Color(0xFFEDE9FE), Color(0xFFDDD6FE)],
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF8B5CF6).withOpacity(0.18),
+            color: Colors.black.withOpacity(0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const Icon(
-            Icons.face_retouching_natural_rounded,
-            size: 34,
-            color: Color(0xFF6D28D9),
-          ),
-          Positioned(
-            right: 2,
-            bottom: 2,
-            child: Container(
-              padding: const EdgeInsets.all(3),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
-              ),
-              child: PlatformLogo(platform: platform, size: 16),
-            ),
-          ),
-        ],
+      child: Center(
+        child: PlatformLogo(platform: platform, size: 40),
       ),
     );
   }
@@ -3479,40 +3535,118 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           const SizedBox(height: 14),
 
           for (int i = 0; i < steps.length; i++) ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF059669),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${i + 1}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w900,
+            Builder(
+              builder: (context) {
+                final bool isKeyboardStep = steps[i].toLowerCase().contains('task keyboard') ||
+                    steps[i].toLowerCase().contains('review keyboard');
+
+                final stepContent = Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: isKeyboardStep
+                            ? const Color(0xFF2563EB)
+                            : const Color(0xFF059669),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${i + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    steps[i],
-                    style: const TextStyle(
-                      color: Color(0xFF334155),
-                      fontSize: 12.5,
-                      height: 1.35,
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: isKeyboardStep
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    steps[i],
+                                    style: const TextStyle(
+                                      color: Color(0xFF1D4ED8),
+                                      fontSize: 12.5,
+                                      height: 1.35,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Setup',
+                                        style: TextStyle(
+                                          color: Color(0xFF1D4ED8),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      SizedBox(width: 2),
+                                      Icon(
+                                        Icons.arrow_forward_ios_rounded,
+                                        size: 8,
+                                        color: Color(0xFF1D4ED8),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Text(
+                              steps[i],
+                              style: const TextStyle(
+                                color: Color(0xFF334155),
+                                fontSize: 12.5,
+                                height: 1.35,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+
+                if (isKeyboardStep) {
+                  return InkWell(
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const KeyboardSettingsScreen(),
+                        ),
+                      );
+                      if (mounted) {
+                        _checkKeyboardReadiness();
+                        _syncReviewToKeyboard();
+                        setState(() {});
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: stepContent,
+                    ),
+                  );
+                }
+
+                return stepContent;
+              },
             ),
             if (i < steps.length - 1) const SizedBox(height: 10),
           ],
@@ -3618,29 +3752,85 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           ),
           const SizedBox(height: 8),
 
-          // Dedicated Blue Heading: Use Task Keyboard to Write (Zero Overflow)
-          Row(
-            children: [
-              const Icon(
-                Icons.keyboard_alt_rounded,
-                size: 16,
-                color: Color(0xFF2563EB),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  isReview
-                      ? 'Use Task Keyboard to Write'
-                      : 'Copy & Paste',
-                  style: const TextStyle(
-                    color: Color(0xFF2563EB),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.1,
+          // Dedicated Blue Heading: Use Task Keyboard to Write (Clickable to open Keyboard Settings)
+          InkWell(
+            onTap: isReview
+                ? () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const KeyboardSettingsScreen(),
+                      ),
+                    );
+                    if (mounted) {
+                      _checkKeyboardReadiness();
+                      _syncReviewToKeyboard();
+                      setState(() {});
+                    }
+                  }
+                : null,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+              child: Row(
+                children: [
+                  Icon(
+                    isReview ? Icons.keyboard_alt_rounded : Icons.copy_all_rounded,
+                    size: 16,
+                    color: const Color(0xFF2563EB),
                   ),
-                ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      isReview
+                          ? 'Use Task Keyboard to Write'
+                          : 'Copy & Paste',
+                      style: const TextStyle(
+                        color: Color(0xFF2563EB),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                  ),
+                  if (isReview) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.settings_suggest_rounded,
+                            size: 12,
+                            color: Color(0xFF1D4ED8),
+                          ),
+                          SizedBox(width: 3),
+                          Text(
+                            'Settings',
+                            style: TextStyle(
+                              color: Color(0xFF1D4ED8),
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(width: 2),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 9,
+                            color: Color(0xFF1D4ED8),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
+            ),
           ),
           const SizedBox(height: 12),
 

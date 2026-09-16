@@ -1287,8 +1287,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       chipIcon = Image.asset('assets/icons/youtube.png', width: 14, height: 14, fit: BoxFit.contain);
     } else if (title == 'Instagram') {
       chipIcon = Image.asset('assets/icons/instagram.png', width: 14, height: 14, fit: BoxFit.contain);
-    } else if (title == 'Mobile Apps') {
-      chipIcon = Image.asset('assets/icons/smartphone.png', width: 14, height: 14, fit: BoxFit.contain);
+    } else if (title == 'Mobile Apps' ||
+        title == 'App Install & Review' ||
+        title.contains('Install') ||
+        title.contains('App')) {
+      chipIcon = Image.asset('assets/icons/app_install.png', width: 14, height: 14, fit: BoxFit.contain);
     } else {
       chipIcon = Icon(Icons.auto_awesome_rounded, size: 13, color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF38BDF8));
     }
@@ -1696,7 +1699,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         break;
       case 'app_install':
         iconWidget = Image.asset(
-          'assets/icons/smartphone.png',
+          'assets/icons/app_install.png',
           width: 28,
           height: 28,
           fit: BoxFit.contain,

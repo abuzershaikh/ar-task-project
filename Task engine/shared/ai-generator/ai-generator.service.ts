@@ -24,16 +24,16 @@ export class AiGeneratorService {
         this.generators.set('social_comment', this.deepSeekGen);
         this.generators.set('playstore_review', this.deepSeekGen);
         this.generators.set('google_play_review', this.deepSeekGen);
-        this.generators.set('playstore_rating', this.playStoreReviewGen);
-        this.generators.set('app_review', this.playStoreReviewGen);
+        this.generators.set('playstore_rating', this.deepSeekGen);
+        this.generators.set('app_review', this.deepSeekGen);
         this.generators.set('google_business_review', this.deepSeekGen);
-        this.generators.set('google_business_rating', this.googleBusinessReviewGen);
+        this.generators.set('google_business_rating', this.deepSeekGen);
         this.generators.set('google_maps_review', this.deepSeekGen);
-        this.generators.set('google_maps_rating', this.googleBusinessReviewGen);
+        this.generators.set('google_maps_rating', this.deepSeekGen);
         this.generators.set('gmb_review', this.deepSeekGen);
-        this.generators.set('template_comment', this.youtubeCommentGen);
-        this.generators.set('template_review', this.playStoreReviewGen);
-        this.generators.set('template_google_review', this.googleBusinessReviewGen);
+        this.generators.set('template_comment', this.deepSeekGen);
+        this.generators.set('template_review', this.deepSeekGen);
+        this.generators.set('template_google_review', this.deepSeekGen);
     }
 
     async generateContentBatch(

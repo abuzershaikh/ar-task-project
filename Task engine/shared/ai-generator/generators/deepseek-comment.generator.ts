@@ -60,10 +60,6 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
                 ? 'Google Play Store Android App (Natural Human Review)'
                 : (isInstagram ? 'Instagram Post / Reel (Short Natural Comment)' : 'YouTube Video (Natural Human Comment)'));
 
-        const fallbackGen = isGoogleBusiness
-            ? this.googleBusinessFallbackGen
-            : (isAppReview ? this.playStoreFallbackGen : this.templateFallbackGen);
-
         const apiKey = this.getApiKey(options);
         const model = this.getModel(options);
         const isReasoner = model.toLowerCase().includes('reasoner') || model.toLowerCase().includes('r1');
@@ -79,12 +75,12 @@ ${maxWords <= 12
 
         this.logger.log(`🤖 Requesting AI for ${count} items (Type: ${contextType}, Words: ${minWords}-${maxWords}, Model: ${model} [${isReasoner ? 'Reasoning/R1' : 'Chat/V3'}], Title: "${videoTitle}", Brand: "${brand}", Prompt: "${userPrompt}", Lang: ${language}, Tone: ${tone})`);
 
+        if (!apiKey) {
+            this.logger.error(`DEEPSEEK_API_KEY is not configured in .env or request. Model: ${model}`);
+            throw new Error('AI Agent Failed: DEEPSEEK_API_KEY is not configured on the server. Please contact support or configure an API key.');
+        }
+
         try {
-            if (!apiKey) {
-                this.logger.warn(`DEEPSEEK_API_KEY is not configured in .env or request. Using smart contextual generator. Model configured: ${model}`);
-                const rawFallback = await fallbackGen.generateBatch(count, options);
-                return rawFallback.map(c => this.enforceWordLimits(c, minWords, maxWords));
-            }
 
             const prompt = isGoogleBusiness
                 ? `You are an authentic local customer writing a genuine 5-star review for a business on Google Maps / Google Business.
@@ -197,18 +193,14 @@ Example format:
                 this.logger.log(`✓ DeepSeek AI (${model}) successfully generated ${parsedComments.length} unique comments (Word limit: ${minWords}-${maxWords})`);
                 return parsedComments.slice(0, count);
             } else if (parsedComments.length > 0) {
-                this.logger.log(`DeepSeek returned partial set (${parsedComments.length}/${count}), filling remainder with contextual generator`);
-                const remaining = count - parsedComments.length;
-                const fallbackItems = (await fallbackGen.generateBatch(remaining, options))
-                    .map(c => this.enforceWordLimits(c, minWords, maxWords));
-                return [...parsedComments, ...fallbackItems].slice(0, count);
+                this.logger.log(`DeepSeek returned ${parsedComments.length}/${count} comments`);
+                return parsedComments;
             } else {
-                throw new Error('Could not parse comments from DeepSeek response');
+                throw new Error('AI Agent Failed: Could not parse valid comments from AI response');
             }
         } catch (error: any) {
-            this.logger.error(`DeepSeek API error: ${error.message}. Using contextual generator.`, error.stack);
-            const rawFallback = await fallbackGen.generateBatch(count, options);
-            return rawFallback.map(c => this.enforceWordLimits(c, minWords, maxWords));
+            this.logger.error(`DeepSeek API error: ${error.message}`, error.stack);
+            throw new Error(`AI Agent Failed: ${error.message || 'Unknown error during AI generation'}`);
         }
     }
 
@@ -263,22 +255,25 @@ Example format:
             .replace(/\s*```$/i, '')
             .trim();
 
-        // 1. Attempt JSON parse
+        // 1. Attempt JSON parse (either direct or embedded [ ... ])
+        const arrayMatch = cleanContent.match(/\[\s*[\s\S]*?\s*\]/);
+        const jsonCandidate = arrayMatch ? arrayMatch[0] : cleanContent;
+
         try {
-            const parsed = JSON.parse(cleanContent);
+            const parsed = JSON.parse(jsonCandidate);
             if (Array.isArray(parsed)) {
                 return parsed
                     .map((item) => sanitizeReviewText(typeof item === 'string' ? item : String(item)))
                     .filter((c) => c.length > 5);
             }
         } catch (_) {
-            // Not pure JSON, proceed to regex / line matching
+            // Not pure JSON, proceed to line matching
         }
 
         // 2. Attempt line-by-line / numbered extraction
         const lines = cleanContent
             .split('\n')
-            .map((line) => sanitizeReviewText(line.replace(/^[\d+.\-•*\]\[\s"]+/, '').replace(/[",\s]+$/, '')))
+            .map((line) => sanitizeReviewText(line.replace(/^[\d+.\-•*\]\[\s"'\\]+/, '').replace(/[",\s\\\]\[]+$/, '')))
             .filter((line) => line.length >= 6);
 
         return lines;

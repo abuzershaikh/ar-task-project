@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -190,230 +191,91 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     final userPrompt = _topicController.text.trim();
 
     try {
-      if (_serviceRepository.dioClient != null) {
-        try {
-          final res = await _serviceRepository.dioClient!.post(
-            '/buyer/orders/ai-preview-comments',
-            data: {
-              'topic': userPrompt,
-              'prompt': userPrompt,
-              'language': _selectedLanguage,
-              'tone': _selectedTone,
-              'count': _selectedQuantity,
-              'serviceCode': _selectedService?.code,
-              'targetUrl': _targetUrlController.text.trim(),
-              'appName': cleanBrand,
-              'videoTitle': userAppName,
-            },
-          );
-          if ((res.statusCode == 200 || res.statusCode == 201) && res.data != null && res.data['sampleComments'] != null) {
-            final List comments = res.data['sampleComments'];
-            if (comments.isNotEmpty) {
-              setState(() {
-                _sampleComments = comments
-                    .map((c) => _sanitizeCommentText(c.toString()))
-                    .where((c) => c.isNotEmpty)
-                    .toList();
-              });
-              return;
-            }
+      if (_serviceRepository.dioClient == null) {
+        throw Exception('Not connected to API server. Please check your internet connection.');
+      }
+
+      final res = await _serviceRepository.dioClient!.post(
+        '/buyer/orders/ai-preview-comments',
+        data: {
+          'topic': userPrompt,
+          'prompt': userPrompt,
+          'language': _selectedLanguage,
+          'tone': _selectedTone,
+          'count': _selectedQuantity,
+          'serviceCode': _selectedService?.code,
+          'targetUrl': _targetUrlController.text.trim(),
+          'appName': cleanBrand,
+          'videoTitle': userAppName,
+        },
+      );
+
+      if ((res.statusCode == 200 || res.statusCode == 201) &&
+          res.data != null &&
+          res.data['sampleComments'] != null) {
+        final List comments = res.data['sampleComments'];
+        if (comments.isNotEmpty) {
+          setState(() {
+            _sampleComments = comments
+                .map((c) => _sanitizeCommentText(c.toString()))
+                .where((c) => c.isNotEmpty)
+                .toList();
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('✓ Successfully generated ${_sampleComments.length} comments via DeepSeek AI'),
+                backgroundColor: const Color(0xFF10B981),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
           }
-        } catch (apiErr) {
-          debugPrint('Preview API error, fallback: $apiErr');
+          return;
         }
       }
 
-      // Instant Organic Fallback Generation with Semantic Intent Matching
-      final targetCount = _selectedQuantity < 5 ? (_selectedQuantity > 0 ? _selectedQuantity : 1) : 5;
-      final isReview = _selectedService?.code.toUpperCase().contains('PLAY') == true ||
-          _selectedService?.code.toUpperCase().contains('REVIEW') == true ||
-          _selectedService?.category.toUpperCase().contains('PLAY') == true ||
-          _selectedService?.name.toUpperCase().contains('PLAY') == true ||
-          _selectedService?.name.toUpperCase().contains('REVIEW') == true;
-
-      final isHindi = _selectedLanguage.toLowerCase().contains('hindi') || _selectedLanguage.toLowerCase().contains('hinglish');
-      final lowerPrompt = userPrompt.toLowerCase();
-
-      final isPart2 = RegExp(r'part\s*2|part\s*two|next\s*part|next\s*video|sequel|agla\s*part|doosra\s*part|part2', caseSensitive: false).hasMatch(lowerPrompt);
-      final isAudio = RegExp(r'audio|mic|voice|sound|clarity|awaz|aawaz|noise', caseSensitive: false).hasMatch(lowerPrompt);
-      final isTrading = RegExp(r'trading|stock|market|crypto|forex|chart|candle|indicator|profit', caseSensitive: false).hasMatch(lowerPrompt);
-      final isTutorial = RegExp(r'explain|tutorial|guide|sikha|samjh|concept|sikhao|trick', caseSensitive: false).hasMatch(lowerPrompt);
-      final isPayment = RegExp(r'pay|upi|money|transaction|wallet|paisa|cash|billing', caseSensitive: false).hasMatch(lowerPrompt);
-      final isDelivery = RegExp(r'deliver|pickup|speed|fast|doorstep|service|courier', caseSensitive: false).hasMatch(lowerPrompt);
-      final isUi = RegExp(r'ui|design|interface|clean|navigation|simple|layout', caseSensitive: false).hasMatch(lowerPrompt);
-      final isSupport = RegExp(r'support|help|service|care|team|contact', caseSensitive: false).hasMatch(lowerPrompt);
-
-      // Extract clean subject from video title or prompt
-      String subject = cleanBrand.isNotEmpty ? cleanBrand : userPrompt;
-      subject = subject
-          .replaceAll(RegExp(r'https?://\S+', caseSensitive: false), '')
-          .replaceAll(RegExp(r'[\[\(][^\]\)]*(?:official|music|video|4k|hd|1080p|full|ep\s*\d+|part\s*\d+)[^\]\)]*[\]\)]', caseSensitive: false), '')
-          .replaceAll(RegExp(r'\|\s*[^|]+$'), '')
-          .replaceAll(RegExp(r'[-–—]\s*[^–—]+$'), '')
-          .replaceAll(RegExp(r'#\w+'), '')
-          .replaceAll(RegExp(r'\b(202[0-9]|hindi|urdu|english|full\s*video|watch\s*now)\b', caseSensitive: false), '')
-          .trim();
-      if (subject.contains(':')) subject = subject.split(':')[0].trim();
-      if (subject.isEmpty) subject = 'is video';
-
-      List<String> fallbacks = [];
-
-      if (isReview) {
-        if (isPayment) {
-          fallbacks = isHindi
-              ? [
-                  "Payment process ekdum instant aur secure hai, wallet me turant reflect hota hai.",
-                  "Transactions super fast hain aur koi deduction error nahi aata, very reliable.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand me payment bohot smooth hai, trustworthy app." : "Bohot safe aur dependable payment system mila mujhe.",
-                ]
-              : [
-                  "Instant and reliable payment processing, haven't faced a single glitch.",
-                  "Transactions are super quick and secure, very transparent billing.",
-                  cleanBrand.isNotEmpty ? "Payments on $cleanBrand are seamless and instantaneous." : "Very safe checkout experience with fast transactions.",
-                ];
-        } else if (isDelivery) {
-          fallbacks = isHindi
-              ? [
-                  "Doorstep pickup aur service timing bohot fast aur punctual hai.",
-                  "Bohot jaldi pickup ho gaya, staff ka behavior bhi kaafi polite tha.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand ki doorstep service ekdum fast hai." : "Quick and punctual execution, completely hassle-free.",
-                ]
-              : [
-                  "Doorstep pickup and handling was remarkably fast and punctual.",
-                  "Order fulfillment and quick response exceeded my expectations.",
-                  cleanBrand.isNotEmpty ? "The pickup service from $cleanBrand was swift and professional." : "Extremely fast service, completed well ahead of schedule.",
-                ];
-        } else if (isUi) {
-          fallbacks = isHindi
-              ? [
-                  "UI bohot clean aur modern hai, navigation ekdum smooth hai.",
-                  "Sabhi features aasan hain, koi bhi bina confuse hue chala sakta hai.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand ka interface kaafi lightweight aur stylish hai." : "Bohot pyara design hai, har option seedha samajh aata hai.",
-                ]
-              : [
-                  "The user interface is sleek, modern, and clutter-free.",
-                  "Clean design and fluid page transitions, truly top tier UI.",
-                  cleanBrand.isNotEmpty ? "Navigating $cleanBrand is effortless and intuitive." : "Minimalist layout that makes daily tasks enjoyable.",
-                ];
-        } else if (isSupport) {
-          fallbacks = isHindi
-              ? [
-                  "Customer support ne turant meri query resolve kar di, bohot helpful team hai.",
-                  "Help center ka response time kaafi fast hai, polite behavior.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand support team genuinely listens and helps out." : "Very prompt customer assistance, super happy with the response.",
-                ]
-              : [
-                  "Customer support was very prompt and resolved my query in minutes.",
-                  "Help desk is super responsive, polite, and genuinely helpful.",
-                  cleanBrand.isNotEmpty ? "The support team behind $cleanBrand is outstanding." : "Quick resolution from support, very dependable assistance.",
-                ];
+      throw Exception(res.data?['message'] ?? 'AI returned empty comments.');
+    } catch (apiErr) {
+      String errMsg = 'AI Agent Failed to generate comments.';
+      if (apiErr is DioException) {
+        final serverMsg = apiErr.response?.data?['message'];
+        final errObj = apiErr.response?.data?['error'];
+        if (serverMsg != null) {
+          errMsg = serverMsg is List ? serverMsg.join(', ') : serverMsg.toString();
+        } else if (errObj != null) {
+          if (errObj is Map && errObj['message'] != null) {
+            errMsg = errObj['message'].toString();
+          } else {
+            errMsg = errObj.toString();
+          }
         } else {
-          fallbacks = isHindi
-              ? [
-                  cleanBrand.isNotEmpty ? "$cleanBrand use karke maza aa gaya, UI ekdum smooth aur fast hai." : "Bohot hi smooth chal raha hai, UI ekdum clean aur fast hai.",
-                  "Kamaal ka application hai, use karna bohot aasan aur convenient hai.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand ne kaam bohot aasan bana diya hai, sabhi features acche se chal rahe hain." : "Bohot accha user experience mila, bilkul lag nahi karta.",
-                  "Shaandar design aur super fast speed hai, daily use ke liye best app hai.",
-                  cleanBrand.isNotEmpty ? "Maine $cleanBrand use kiya aur experience kaafi badhiya raha. Highly recommended." : "Abhi tak ka sabse best app laga mujhe is category me. Bohot helpful hai.",
-                ]
-              : [
-                  cleanBrand.isNotEmpty ? "Using $cleanBrand has been a great experience. Very smooth and reliable." : "Very smooth and responsive app. Does exactly what it promises without clutter.",
-                  "Clean UI and great user experience. Everything works seamlessly right from the start.",
-                  cleanBrand.isNotEmpty ? "$cleanBrand makes everyday tasks so much easier and convenient." : "Super fast, lightweight and intuitive. Very happy with the overall performance.",
-                  "Simple, clean, and gets the job done quickly. Exactly what I was looking for.",
-                  cleanBrand.isNotEmpty ? "Really glad I installed $cleanBrand. Fast responses and zero lag." : "One of the best apps in this category. Works like a charm and saves me so much time.",
-                ];
+          errMsg = apiErr.message ?? errMsg;
         }
       } else {
-        // YouTube / Social Video Comments (Contextual with Subject & Video Title)
-        if (isPart2) {
-          fallbacks = isHindi
-              ? [
-                  "Bhai iska Part 2 kab aayega? Jaldi upload karo please!",
-                  "$subject ka next part besabri se wait kar raha hu, bohot zabardast explanation tha.",
-                  "Bhai agla part zaroor lana, aage ka concept bhi detail me dekhna hai!",
-                  "$subject ka Part 2 jaldi lao bhai, poora topic complete dekhna hai!",
-                  "Subscribed! Please agla part jaldi drop karna bhai, can't wait!",
-                ]
-              : [
-                  "Really hope there is a Part 2 coming out soon! Left me wanting more.",
-                  "Can you please drop Part 2 on $subject as soon as possible? Super excited!",
-                  "Waiting eagerly for part 2, this explanation was crystal clear.",
-                  "Bro we need Part 2 on this immediately, loved the breakdown of $subject!",
-                  "Subscribed just for Part 2! Please do not keep us waiting too long.",
-                ];
-        } else if (isAudio) {
-          fallbacks = isHindi
-              ? [
-                  "Bhai audio quality ekdum crystal clear hai, sunne me maza aa gaya.",
-                  "Aapki voice clarity aur sound setup bohot badhiya hai bhai.",
-                  "Ekdum saaf aawaz hai, har ek point clearly samajh aaya.",
-                  "Mic quality aur explanation dono top tier hain bhai!",
-                ]
-              : [
-                  "The audio quality and mic clarity are top notch, super easy to listen to.",
-                  "Loved the clear sound quality and voiceover, made following along effortless.",
-                  "Voice clarity is 10/10 in this video, great production quality!",
-                  "Super crisp audio! Really appreciate creators who care about clear sound.",
-                ];
-        } else if (isTrading) {
-          fallbacks = isHindi
-              ? [
-                  "$subject ka market setup aur risk management bohot practical bataya aapne!",
-                  "Chart analysis aur price action ka tareeka ekdum accurate hai bhai, taking notes!",
-                  "$subject sikhne ke liye sabse best aur disciplined video hai ye.",
-                  "Aapka chart reading aur SL lagane ka tareeka bohot safe hai, shukriya bhai!",
-                ]
-              : [
-                  "The risk management and chart strategy explained for $subject are top notch!",
-                  "Super insightful breakdown of $subject, price action analysis was on point.",
-                  "Best trading breakdown I have watched this month, super practical insights.",
-                  "Clear price action analysis without confusing indicators, loved it!",
-                ];
-        } else if (isTutorial) {
-          fallbacks = isHindi
-              ? [
-                  "$subject ko itne simple tareeke se samjhaya aapne, poora doubt clear ho gaya.",
-                  "Point to point baat ki hai $subject par bina time waste kiye, bohot helpful raha.",
-                  "Aapka samjhane ka tareeka sabse best hai bhai, ek baar me $subject clear ho gaya.",
-                  "Bohot informative aur valuable guide on $subject, shukriya bhai!",
-                ]
-              : [
-                  "The step-by-step breakdown of $subject was so clean and easy to follow.",
-                  "Finally someone who explains $subject straight to the point without wasting time.",
-                  "This cleared up so much confusion regarding $subject, thanks for sharing!",
-                  "One of the best tutorials on $subject on YouTube, bookmarked!",
-                ];
-        } else {
-          fallbacks = isHindi
-              ? [
-                  "$subject ke baare me bohot hi aasan aur saral tareeke se samjhaya aapne bhai!",
-                  "$subject par bohot saare doubts the mere, is video ke baad sab clear ho gaya.",
-                  "Aapka $subject ka breakdown bohot informative aur valuable raha, full support bhai!",
-                  "Seedha point to point baat ki hai $subject par bina time waste kiye, keep it up!",
-                  "$subject sikhne ke liye YouTube par sabse best video hai ye, maza aa gaya dekh kar.",
-                  "Content quality top class hai bhai, $subject par aur bhi videos banate rahiye!",
-                ]
-              : [
-                  "The way you explained $subject was exceptionally clear and easy to follow!",
-                  "This cleared up all my confusion regarding $subject, really appreciate the depth!",
-                  "Straight to the point with zero fluff, one of the best videos on $subject.",
-                  "Super informative and actionable breakdown of $subject, keep up the great work!",
-                  "Genuinely one of the most well-structured guides on $subject out there, bookmarked!",
-                  "Appreciate the effort and depth put into this video on $subject, highly valuable!",
-                ];
-        }
+        errMsg = apiErr.toString().replaceFirst('Exception: ', '');
       }
 
       setState(() {
-        _sampleComments = fallbacks.map((f) => _sanitizeCommentText(f)).take(targetCount).toList();
+        _sampleComments = [];
       });
-    } catch (e) {
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not generate sample preview: $e'),
-            backgroundColor: Colors.red.shade700,
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '❌ $errMsg',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFFDC2626),
+            duration: const Duration(seconds: 5),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -912,21 +774,34 @@ class _CreateCampaignPageState extends State<CreateCampaignPage> {
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     if (code.contains('COMBO') || name.contains('COMBO')) return 'assets/icons/marketing.png';
-    if (code.contains('FOLLOW') || name.contains('FOLLOW')) return 'assets/icons/instagram.png';
+    // Check App Install services explicitly BEFORE any social icons
+    if (code.contains('INSTALL') ||
+        name.contains('INSTALL') ||
+        code.contains('DOWNLOAD') ||
+        name.contains('DOWNLOAD') ||
+        code.startsWith('APP_') ||
+        code == 'APP_INSTALL' ||
+        s.category.toUpperCase().contains('INSTALL')) {
+      return 'assets/icons/app_install.png';
+    }
+    if ((code.contains('FOLLOW') || name.contains('FOLLOW')) && !code.contains('INSTALL')) {
+      return 'assets/icons/instagram.png';
+    }
     if (code.contains('REVIEW') || name.contains('REVIEW')) return 'assets/icons/review.png';
     if (code.contains('RATING') || name.contains('RATING') || name.contains('STAR')) return 'assets/icons/rating.png';
     if (code.contains('COMMENT') || name.contains('COMMENT')) return 'assets/icons/comment.png';
     if (code.contains('SUB') || name.contains('SUB') || name.contains('SUBSCRIBE')) return 'assets/icons/subscribe.png';
-    if (code.contains('LIKE') || name.contains('LIKE')) return 'assets/icons/like.png';
-    if (code.contains('INSTALL') || name.contains('INSTALL') || code.contains('DOWNLOAD') || name.contains('DOWNLOAD')) {
-      return 'assets/icons/smartphone.png';
+    if ((code.contains('LIKE') || name.contains('LIKE')) && !code.contains('INSTALL')) {
+      return 'assets/icons/like.png';
     }
     if (code.contains('PLAY') || code.contains('WATCH') || name.contains('WATCH') || name.contains('VIEW')) {
       return 'assets/icons/play.png';
     }
     if (code.contains('PLAY') || code.contains('GOOGLE')) return 'assets/icons/google-play.png';
     if (code.contains('YT') || code.contains('YOUTUBE')) return 'assets/icons/youtube.png';
-    if (code.contains('INSTA') || code.contains('IG')) return 'assets/icons/instagram.png';
+    if ((code.contains('INSTA') || code.contains('IG')) && !code.contains('INSTALL')) {
+      return 'assets/icons/instagram.png';
+    }
     if (code.contains('TELEGRAM') || code.contains('TG')) return 'assets/icons/mobile-chatting.png';
     return null;
   }

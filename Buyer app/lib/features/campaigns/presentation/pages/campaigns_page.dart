@@ -715,7 +715,7 @@ class _CampaignsViewState extends State<_CampaignsView> {
     if (nameLower.contains('combo') || nameLower.contains('all-in-one') || nameLower.contains('bundle')) {
       // Combo Marketing / Growth bundle
       gradientColors = const [Color(0xFFFEF2F2), Color(0xFFFFEDD5)];
-      mainAsset = nameLower.contains('insta') ? 'assets/icons/instagram.png' : 'assets/icons/marketing.png';
+      mainAsset = (nameLower.contains('insta') && !nameLower.contains('install')) ? 'assets/icons/instagram.png' : 'assets/icons/marketing.png';
       mainSize = 34;
       badgeTopLeft = true;
       customBadge = Container(
@@ -820,7 +820,7 @@ class _CampaignsViewState extends State<_CampaignsView> {
         nameLower.contains('download') ||
         nameLower.contains('app')) {
       gradientColors = const [Color(0xFFE0F2FE), Color(0xFFBAE6FD)];
-      mainAsset = 'assets/icons/smartphone.png';
+      mainAsset = 'assets/icons/app_install.png';
       mainSize = 34;
       badgeAsset = 'assets/icons/google-play.png';
     } else if (nameLower.contains('like')) {
@@ -828,7 +828,7 @@ class _CampaignsViewState extends State<_CampaignsView> {
       mainAsset = 'assets/icons/like.png';
       mainSize = 34;
       badgeAsset = 'assets/icons/youtube.png';
-    } else if (nameLower.contains('insta') || nameLower.contains('follow')) {
+    } else if ((nameLower.contains('insta') && !nameLower.contains('install')) || nameLower.contains('follow')) {
       gradientColors = const [Color(0xFFFDF2F8), Color(0xFFFCE7F3)];
       mainAsset = 'assets/icons/instagram.png';
       mainSize = 34;

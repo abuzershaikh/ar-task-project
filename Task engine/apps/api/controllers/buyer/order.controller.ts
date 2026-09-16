@@ -117,7 +117,7 @@ export class BuyerOrderController {
         const minWords = body.minWords && body.minWords > 0 ? Math.max(4, body.minWords) : 15;
         const maxWords = body.maxWords && body.maxWords > 0 ? Math.max(minWords, body.maxWords) : 45;
 
-        const serviceCode = (body.serviceCode || '').toLowerCase();
+        const serviceCode = (body.serviceCode || (body as any).serviceType || '').toLowerCase();
         const isGoogleBusiness = serviceCode.includes('google_business') ||
             serviceCode.includes('gmb') ||
             serviceCode.includes('google_maps') ||
@@ -138,27 +138,37 @@ export class BuyerOrderController {
         const configuredModel = (body.model || process.env.DEEPSEEK_MODEL || 'deepseek-chat').trim();
         const isKeyConfigured = !!(body.apiKey || process.env.DEEPSEEK_API_KEY);
 
-        const sampleComments = await this.aiGeneratorService.generateContentBatch(
-            generatorType,
-            previewCount,
-            {
-                topic,
-                language,
-                tone,
-                uniqueness: true,
-                videoTitle,
-                appName: body.appName,
-                businessName: body.businessName || body.appName,
-                isAppReview: isPlayStore,
-                isGoogleBusiness,
-                isInstagram,
+        let sampleComments: string[] = [];
+        try {
+            sampleComments = await this.aiGeneratorService.generateContentBatch(
                 generatorType,
-                model: configuredModel,
-                apiKey: body.apiKey,
-                minWords,
-                maxWords,
-            } as any,
-        );
+                previewCount,
+                {
+                    topic,
+                    language,
+                    tone,
+                    uniqueness: true,
+                    videoTitle,
+                    appName: body.appName,
+                    businessName: body.businessName || body.appName,
+                    isAppReview: isPlayStore,
+                    isGoogleBusiness,
+                    isInstagram,
+                    generatorType,
+                    model: configuredModel,
+                    apiKey: body.apiKey,
+                    minWords,
+                    maxWords,
+                } as any,
+            );
+        } catch (err: any) {
+            this.logger.error(`AI Preview generation failed: ${err.message}`, err.stack);
+            throw new BadRequestException(err.message || 'AI Agent Failed: Could not generate comments. Please try again.');
+        }
+
+        if (!sampleComments || sampleComments.length === 0) {
+            throw new BadRequestException('AI Agent Failed: No comments were generated. Please try again.');
+        }
 
         return {
             success: true,

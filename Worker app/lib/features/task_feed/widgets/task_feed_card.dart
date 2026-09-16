@@ -24,7 +24,7 @@ class TaskFeedCard extends StatelessWidget {
     final plat = _getPlatform(task);
 
     // Check for business name first for Google Business / Maps tasks
-    if (plat == 'google_business' || plat == 'google_maps') {
+    if (plat == 'google_business' || plat == 'google_maps' || plat == 'google') {
       String? bName;
       if (task['businessName'] != null && task['businessName'].toString().trim().isNotEmpty) {
         bName = task['businessName'].toString().trim();
@@ -32,6 +32,12 @@ class TaskFeedCard extends StatelessWidget {
           task['requirements']['businessName'] != null &&
           task['requirements']['businessName'].toString().trim().isNotEmpty) {
         bName = task['requirements']['businessName'].toString().trim();
+      } else if (task['appName'] != null && task['appName'].toString().trim().isNotEmpty) {
+        bName = task['appName'].toString().trim();
+      } else if (task['requirements'] is Map &&
+          task['requirements']['appName'] != null &&
+          task['requirements']['appName'].toString().trim().isNotEmpty) {
+        bName = task['requirements']['appName'].toString().trim();
       }
       if (bName != null && bName.isNotEmpty) {
         return 'Rate & Review: $bName';
@@ -55,6 +61,12 @@ class TaskFeedCard extends StatelessWidget {
     if (appName != null && appName.isNotEmpty) {
       if (isInstall) {
         return 'Install & Open: $appName';
+      }
+      if (plat == 'youtube') {
+        return 'Watch & Engage: $appName';
+      }
+      if (plat == 'instagram') {
+        return 'Engage: $appName';
       }
       return 'Rate & Review: $appName';
     }
@@ -147,14 +159,17 @@ class TaskFeedCard extends StatelessWidget {
     if (_isAppInstall(task)) {
       return 'Install App & Open for 30 Seconds';
     }
-    if (platform == 'google_business' || platform == 'google_maps') {
-      return '5-Star Google Business / Maps Review';
+    if (platform == 'google_business' || platform == 'google_maps' || platform == 'google') {
+      return '5-Star Google Maps Review';
     }
-    if (task != null && task['requirements'] is Map && (task['requirements']['appName'] != null && task['requirements']['appName'].toString().trim().isNotEmpty)) {
+    if (platform == 'playstore') {
       return '5-Star Google Play Store Review';
     }
-    if (task != null && task['metadata'] is Map && (task['metadata']['appName'] != null && task['metadata']['appName'].toString().trim().isNotEmpty)) {
-      return '5-Star Google Play Store Review';
+    if (platform == 'youtube') {
+      return 'Watch, Like, Sub & Comment';
+    }
+    if (platform == 'instagram') {
+      return 'Like Post & Follow Creator';
     }
     if (task != null && task['description'] != null && task['description'].toString().trim().isNotEmpty) {
       final desc = task['description'].toString().trim();
@@ -221,21 +236,37 @@ class TaskFeedCard extends StatelessWidget {
 
   String _getPlatform(dynamic task) {
     if (task == null) return 'general';
-    final type = (task['taskType'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toLowerCase();
+    final type = (task['taskType'] ?? task['task_type'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toLowerCase();
     String reqStr = '';
     if (task['requirements'] is Map) {
       reqStr = task['requirements'].toString().toLowerCase();
     }
-    final titleStr = (task['title'] ?? task['serviceTitle'] ?? task['serviceName'] ?? '').toString().toLowerCase();
-    final combined = '$type $reqStr $titleStr';
+    final titleStr = (task['title'] ?? task['serviceTitle'] ?? task['serviceName'] ?? (task['requirements'] is Map ? (task['requirements']['serviceName'] ?? task['requirements']['title']) : null) ?? '').toString().toLowerCase();
+    final urlStr = (task['targetUrl'] ?? task['url'] ?? (task['requirements'] is Map ? task['requirements']['targetUrl'] : null) ?? '').toString().toLowerCase();
+    final combined = '$type $reqStr $titleStr $urlStr';
 
     // 0. Google Business / Maps
-    if (type.contains('google_business') || type.contains('google_maps') || combined.contains('google business') || combined.contains('google maps') || combined.contains('maps.google') || combined.contains('goo.gl/maps') || combined.contains('gmb')) {
-      return 'google_business';
+    if (type.contains('google_business') ||
+        type.contains('google_maps') ||
+        type.contains('gmb') ||
+        type.contains('map') ||
+        combined.contains('google business') ||
+        combined.contains('google maps') ||
+        combined.contains('share.google') ||
+        combined.contains('maps.google') ||
+        combined.contains('goo.gl/maps') ||
+        combined.contains('maps.app.goo.gl') ||
+        combined.contains('gmb')) {
+      return 'google_maps';
     }
 
     // 1. App Install & Play Store takes priority over raw platform tag
-    if (type.contains('app_install') || type.contains('install') || combined.contains('install & open') || combined.contains('app install') || combined.contains('playstore') || combined.contains('play.google')) {
+    if (type.contains('app_install') ||
+        (type.contains('install') && !type.contains('instagram')) ||
+        combined.contains('install & open') ||
+        combined.contains('app install') ||
+        combined.contains('playstore') ||
+        combined.contains('play.google')) {
       return 'playstore';
     }
     // 2. YouTube
@@ -246,17 +277,18 @@ class TaskFeedCard extends StatelessWidget {
     if (type.contains('instagram') || combined.contains('instagram') || (combined.contains('insta') && !combined.contains('install'))) {
       return 'instagram';
     }
-    // 4. Google
-    if (type.contains('google') || combined.contains('g_map')) {
-      return 'google';
+    // 4. Google Maps fallback
+    if (type.contains('google') || combined.contains('g_map') || combined.contains('maps') || combined.contains('share.google')) {
+      return 'google_maps';
     }
 
     if (task['platform'] != null && task['platform'].toString().trim().isNotEmpty) {
       final p = task['platform'].toString().toLowerCase().trim();
+      if (p == 'google' || p == 'google_business' || p == 'google_maps' || p == 'maps') return 'google_maps';
       if (p != 'general') return p;
     }
 
-    return 'playstore';
+    return 'google_maps';
   }
 
   String _getReward(dynamic task) {
@@ -327,7 +359,7 @@ class TaskFeedCard extends StatelessWidget {
                     border: Border.all(color: const Color(0xFFEDF2F7)),
                   ),
                   child: Center(
-                    child: (appIcon != null && appIcon.isNotEmpty)
+                    child: ((platform != 'google_maps' && platform != 'google_business' && platform != 'google') && appIcon != null && appIcon.isNotEmpty)
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: Image.network(

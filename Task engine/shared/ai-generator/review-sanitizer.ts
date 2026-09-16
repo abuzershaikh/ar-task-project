@@ -18,8 +18,8 @@ export function sanitizeReviewText(text: string): string {
         .replace(/\b5\s*star\b/gi, '')
         .replace(/\bworth\s*all\s*stars?\b/gi, '')
         .replace(/\bgiving\s*a?\s*full\s*rating\b/gi, '')
-        // Strip leading/trailing quote characters often output by LLMs
-        .replace(/^["'`\s]+|["'`\s]+$/g, '')
+        // Strip leading/trailing quote, bracket, slash, and punctuation noise often output by LLMs
+        .replace(/^[\[\]"'`\\,\s]+|[\[\]"'`\\,\s]+$/g, '')
         // Fix spacing around punctuation
         .replace(/\s+([.,!?])/g, '$1')
         .replace(/\s{2,}/g, ' ')
