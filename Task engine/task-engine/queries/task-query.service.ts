@@ -126,6 +126,8 @@ export class TaskQueryService {
             }
         } catch (_) {}
 
+        const activeStatuses = new Set(['assigned', 'in_progress', 'accepted', 'submitted', 'under_review', 'active']);
+
         // (c) From tasks table where assigned_to in allWorkerIds
         try {
             const workerTasks = await this.taskRepository.findByWorker(allWorkerIds);
@@ -134,20 +136,27 @@ export class TaskQueryService {
                 if (wt.orderId) excludedCampaignIds.add(wt.orderId.toString());
                 if (wt.id) excludedTaskIds.add(wt.id.toString());
                 if (wt.orderUnitId) excludedOrderUnitIds.add(wt.orderUnitId.toString());
-                const { packageId, normalizedUrl } = this.extractTaskIdentity(wt);
-                if (packageId) excludedPackageIds.add(packageId);
-                if (normalizedUrl) excludedTargetUrls.add(normalizedUrl);
+                
+                // Only exclude packageId / targetUrl if the worker currently has an active / pending task for it
+                if (activeStatuses.has((wt.status || '').toLowerCase())) {
+                    const { packageId, normalizedUrl } = this.extractTaskIdentity(wt);
+                    if (packageId) excludedPackageIds.add(packageId);
+                    if (normalizedUrl) excludedTargetUrls.add(normalizedUrl);
+                }
             }
         } catch (_) {}
 
         // (d) From submissions table (batch fetched to prevent N+1 query overhead)
         try {
             const subs = await this.submissionRepo.findByWorker(allWorkerIds);
-            const subTaskIds = Array.from(new Set(subs.map((s) => s.taskId).filter(Boolean)));
-            for (const sId of subTaskIds) {
-                excludedTaskIds.add(sId.toString());
+            for (const s of subs) {
+                if (s.taskId) {
+                    excludedTaskIds.add(s.taskId.toString());
+                }
             }
 
+            const pendingSubs = subs.filter((s) => ['pending', 'submitted', 'under_review'].includes((s.status || '').toLowerCase()));
+            const subTaskIds = Array.from(new Set(pendingSubs.map((s) => s.taskId).filter(Boolean)));
             if (subTaskIds.length > 0) {
                 const subTasks = await this.taskRepository.findByIds(subTaskIds);
                 for (const t of subTasks) {

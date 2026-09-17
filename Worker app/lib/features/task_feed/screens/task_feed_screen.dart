@@ -117,8 +117,8 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
   String _detectCategory(dynamic task) {
     if (task == null) return 'other';
 
-    final type = (task['taskType'] ?? task['type'] ?? '').toString().toUpperCase();
-    final serviceCode = (task['serviceCode'] ?? '').toString().toUpperCase();
+    final type = (task['taskType'] ?? task['task_type'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toUpperCase();
+    final serviceCode = (task['serviceCode'] ?? task['service_code'] ?? '').toString().toUpperCase();
     final title = (task['title'] ?? task['serviceTitle'] ?? task['serviceName'] ?? '').toString().toLowerCase();
 
     Map<String, dynamic> req = {};

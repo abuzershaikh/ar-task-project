@@ -60,10 +60,9 @@ class TaskProvider extends ChangeNotifier {
     }
     try {
       final rawTasks = await ApiService.getAvailableTasks();
-      // Ensure distinct campaigns: Each worker can only see 1 task per campaign/order/app/url
+      // Ensure distinct campaigns: Each worker can only see 1 task per campaign/order
       final seenCampaigns = <String>{};
       final seenPackages = <String>{};
-      final seenUrls = <String>{};
       final uniqueTasks = <dynamic>[];
       for (final t in rawTasks) {
         if (t is Map) {
@@ -71,24 +70,15 @@ class TaskProvider extends ChangeNotifier {
           final reqs = t['requirements'] is Map ? t['requirements'] as Map : {};
           final meta = t['metadata'] is Map ? t['metadata'] as Map : {};
           final pkg = (reqs['packageId'] ?? meta['packageId'] ?? '').toString().trim().toLowerCase();
-          String rawUrl = (reqs['targetUrl'] ?? meta['targetUrl'] ?? '').toString().trim().toLowerCase();
-          String normUrl = '';
-          if (rawUrl.isNotEmpty) {
-            try {
-              final uri = Uri.parse(rawUrl);
-              normUrl = '${uri.scheme}://${uri.host}${uri.path}'.replaceAll(RegExp(r'/+$'), '');
-            } catch (_) {
-              normUrl = rawUrl.replaceAll(RegExp(r'/+$'), '');
-            }
-          }
 
-          if (seenCampaigns.contains(cId)) continue;
+          // 1 slot per campaign/order
+          if (cId.isNotEmpty && seenCampaigns.contains(cId)) continue;
+          if (cId.isNotEmpty) seenCampaigns.add(cId);
+
+          // Only deduplicate if multiple campaigns target the EXACT same app package
           if (pkg.isNotEmpty && seenPackages.contains(pkg)) continue;
-          if (normUrl.isNotEmpty && seenUrls.contains(normUrl)) continue;
-
-          seenCampaigns.add(cId);
           if (pkg.isNotEmpty) seenPackages.add(pkg);
-          if (normUrl.isNotEmpty) seenUrls.add(normUrl);
+
           uniqueTasks.add(t);
         } else {
           uniqueTasks.add(t);
