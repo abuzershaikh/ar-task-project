@@ -535,7 +535,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
     try {
       if (_serviceRepository.dioClient == null) {
-        throw Exception('Not connected to API server. Please check your internet connection.');
+        throw Exception(
+            'Not connected to API server. Please check your internet connection.');
       }
 
       final res = await _serviceRepository.dioClient!.post(
@@ -573,7 +574,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('✓ Successfully generated ${_sampleComments.length} comments via DeepSeek AI'),
+                content: Text(
+                    '✓ Successfully generated ${_sampleComments.length} comments via DeepSeek AI'),
                 backgroundColor: const Color(0xFF10B981),
                 behavior: SnackBarBehavior.floating,
               ),
@@ -590,7 +592,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         final serverMsg = apiErr.response?.data?['message'];
         final errObj = apiErr.response?.data?['error'];
         if (serverMsg != null) {
-          errMsg = serverMsg is List ? serverMsg.join(', ') : serverMsg.toString();
+          errMsg =
+              serverMsg is List ? serverMsg.join(', ') : serverMsg.toString();
         } else if (errObj != null) {
           if (errObj is Map && errObj['message'] != null) {
             errMsg = errObj['message'].toString();
@@ -613,7 +616,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 22),
+                const Icon(Icons.error_outline_rounded,
+                    color: Colors.white, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -654,7 +658,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   }
 
   String _trimToWordLimit(String text, int minWords, int maxWords) {
-    final words = text.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final words =
+        text.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
     if (words.length <= maxWords) return text;
 
     final subWords = words.take(maxWords).toList();
@@ -664,13 +669,17 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     final match = RegExp(r'^(.+?[.!?])(?:\s+.*)?$').firstMatch(candidate);
     if (match != null) {
       final sentence = match.group(1)!.trim();
-      final sentenceWords = sentence.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+      final sentenceWords =
+          sentence.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
       if (sentenceWords >= (minWords <= 5 ? 3 : (minWords - 1))) {
         return sentence;
       }
     }
 
-    final cleaned = candidate.replaceAll(RegExp(r'[,;:\-\s]+$'), '').replaceAll(RegExp(r'[.!?]+$'), '').trim();
+    final cleaned = candidate
+        .replaceAll(RegExp(r'[,;:\-\s]+$'), '')
+        .replaceAll(RegExp(r'[.!?]+$'), '')
+        .trim();
     return '$cleaned.';
   }
 
@@ -1059,7 +1068,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
           codeUpper.contains('YT') ||
           nameUpper.contains('YOUTUBE')) {
         cat = 'YouTube';
-      } else if ((codeUpper.contains('INSTA') && !codeUpper.contains('INSTALL')) ||
+      } else if ((codeUpper.contains('INSTA') &&
+              !codeUpper.contains('INSTALL')) ||
           nameUpper.contains('INSTAGRAM')) {
         cat = 'Instagram';
       } else if (codeUpper.contains('WEB') ||
@@ -1468,7 +1478,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                         ? 'https://www.youtube.com/watch?v=... or youtu.be/...'
                                         : (_isGoogleBusinessService(s)
                                             ? 'https://maps.app.goo.gl/... or Google Maps listing link'
-                                            : (_isAppInstallService(s) || _isPlayStoreService(s)
+                                            : (_isAppInstallService(s) ||
+                                                    _isPlayStoreService(s)
                                                 ? 'https://play.google.com/store/apps/details?id=com.your.app'
                                                 : (s.linkFieldPlaceholder ??
                                                     'https://...')))))),
@@ -2579,21 +2590,24 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
             icon: Icons.search_rounded,
             iconColor: const Color(0xFF7C3AED),
             title: 'Google Play Store Search & Download',
-            desc: 'Worker searches your app on Play Store and installs directly on physical phone',
+            desc:
+                'Worker searches your app on Play Store and installs directly on physical phone',
           ),
           const SizedBox(height: 6),
           _buildActionPerkTile(
             icon: Icons.timer_outlined,
             iconColor: const Color(0xFF2563EB),
             title: '30-60s In-App Testing Session',
-            desc: 'Opens the app and interacts for at least 30-60 seconds for verified engagement',
+            desc:
+                'Opens the app and interacts for at least 30-60 seconds for verified engagement',
           ),
           const SizedBox(height: 6),
           _buildActionPerkTile(
             icon: Icons.verified_user_rounded,
             iconColor: const Color(0xFF10B981),
             title: 'Screenshot Proof & Package Verification',
-            desc: 'System verifies genuine installation proof before task completion reward',
+            desc:
+                'System verifies genuine installation proof before task completion reward',
           ),
           const SizedBox(height: 10),
           Container(

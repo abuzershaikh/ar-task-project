@@ -117,7 +117,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   bool _isKeyboardEligibleTask() {
     final p = _getPlatform();
-    final isEligible = p == 'google_business' || p == 'playstore';
+    final isEligible = ReviewKeyboardService.instance.isEligiblePlatform(p);
     return isEligible && _isCommentRequiredTask();
   }
 
@@ -222,7 +222,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     if (type.contains('COMMENT') || type.contains('REVIEW')) return true;
 
     final p = _getPlatform();
-    if (p == 'google_business' || p == 'playstore') {
+    if (p == 'google_business' || p == 'google_maps' || p == 'google' || p == 'playstore') {
       final rawText = _getRawCustomText();
       if (rawText.isNotEmpty) return true;
       if (type.contains('RATING') && !type.contains('REVIEW')) return false;
@@ -924,7 +924,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           ? 'YT'
           : (p == 'instagram'
               ? 'IG'
-              : (p == 'google_business'
+              : ((p == 'google_business' || p == 'google_maps' || p == 'google')
                   ? 'GM'
                   : (p == 'playstore' ? 'GP' : 'TS')));
       return '#$prefix${id.substring(id.length - 4).toUpperCase()}';
@@ -1003,7 +1003,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       }
     }
     final p = _getPlatform();
-    if (p == 'google_business') {
+    if (p == 'google_business' || p == 'google_maps' || p == 'google') {
       final tUpper =
           (widget.task['taskType'] ??
                   widget.task['type'] ??
@@ -1110,7 +1110,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     }
 
     final p = _getPlatform();
-    if (p == 'google_business') {
+    if (p == 'google_business' || p == 'google_maps' || p == 'google') {
       return 'Excellent service and great experience! Very polite and professional staff.';
     }
     if (p == 'playstore') {
@@ -1186,7 +1186,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       return rawUrl;
     }
     final p = _getPlatform();
-    if (p == 'google_business') return 'https://maps.google.com';
+    if (p == 'google_business' || p == 'google_maps' || p == 'google') return 'https://maps.google.com';
     if (p == 'instagram') return 'https://instagram.com';
     if (p == 'facebook') return 'https://facebook.com';
     if (p == 'playstore' || p == 'google')
@@ -3401,8 +3401,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           .where((l) => l.isNotEmpty)
           .toList();
       if (customLines.isNotEmpty) {
+        final isGmb = _getPlatform() == 'google_business' ||
+            _getPlatform() == 'google_maps' ||
+            _getPlatform() == 'google';
         steps.addAll(customLines.map((line) {
-          if ((isPlayStore || _getPlatform() == 'google_business') &&
+          if ((isPlayStore || isGmb) &&
               line.toLowerCase().contains('copy')) {
             return line.replaceAll(
               RegExp(r'Copy\s+(assigned\s+)?(authentic\s+|provided\s+|genuine\s+)?review', caseSensitive: false),
@@ -3467,7 +3470,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           'Post your review and take a clear screenshot showing your 5-star rating & review.',
           'Return to this app and upload the screenshot proof to receive your instant reward.',
         ]);
-      } else if (_getPlatform() == 'google_business') {
+      } else if (_getPlatform() == 'google_business' ||
+          _getPlatform() == 'google_maps' ||
+          _getPlatform() == 'google') {
         final bool isReview = type.contains('REVIEW');
         if (isReview) {
           steps.addAll([
@@ -3674,7 +3679,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                         ? 'Make sure you have followed the profile and liked the post/reel before submitting proof.'
                         : (isYtCombo
                               ? 'Make sure you watch the video, like, subscribe, and post the assigned comment.'
-                              : (_getPlatform() == 'google_business'
+                              : ((_getPlatform() == 'google_business' ||
+                                      _getPlatform() == 'google_maps' ||
+                                      _getPlatform() == 'google')
                                     ? 'Ensure your 5-star rating and review are posted on Google Maps before submitting proof.'
                                     : (isPlayStore
                                           ? 'Ensure your 5-star rating and review are posted on the app page before submitting proof.'
@@ -3696,7 +3703,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   // ── 5. Comment Text (Copy & Paste) ─────────────────────────────────────────
   Widget _buildCommentCopySection(String customText) {
-    final bool isGoogleBusiness = _getPlatform() == 'google_business';
+    final bool isGoogleBusiness = _getPlatform() == 'google_business' ||
+        _getPlatform() == 'google_maps' ||
+        _getPlatform() == 'google';
     final bool isPlayStore = _getPlatform() == 'playstore';
     final bool isReview = isPlayStore || isGoogleBusiness;
 
@@ -3943,7 +3952,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   // ── 6. Where to Perform Action & Open Platform (Overflow-Proof Layout) ─────
   Widget _buildWhereToCommentSection(String platformName, String targetUrl) {
-    final bool isGoogleBusiness = _getPlatform() == 'google_business';
+    final bool isGoogleBusiness = _getPlatform() == 'google_business' ||
+        _getPlatform() == 'google_maps' ||
+        _getPlatform() == 'google';
     final bool isPlayStore = _getPlatform() == 'playstore';
     final bool isCommentReq = _isCommentRequiredTask();
     final type =
