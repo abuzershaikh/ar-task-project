@@ -176,16 +176,21 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
         .toString()
         .toUpperCase();
 
-    // Instagram Combo is strictly Like + Follow, NO COMMENT!
+    // Instagram Combo: requires comment if comment action is enabled or custom text is provided
     if (type.contains('INSTA') && type.contains('COMBO')) {
+      final rawText = _getRawCustomText();
+      if (rawText.isNotEmpty) return true;
+      if (t['actions'] is Map && (t['actions']['comment'] == true)) return true;
+      if (t['requirements'] is Map && t['requirements']['actions'] is Map && (t['requirements']['actions']['comment'] == true)) return true;
+      if (t['requirements'] is Map && t['requirements']['aiGeneratorEnabled'] == true) return true;
       return false;
     }
 
     // Instagram Follow or Like only
     if (type == 'INSTAGRAM_FOLLOW' ||
         type == 'INSTAGRAM_LIKE' ||
-        (type.contains('FOLLOW') && !type.contains('COMMENT'))) {
-      if (!type.contains('COMMENT') && !type.contains('COMBO')) return false;
+        (type.contains('FOLLOW') && !type.contains('COMMENT') && !type.contains('COMBO'))) {
+      return false;
     }
 
     // YouTube Subscribe only
@@ -843,7 +848,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                   '')
               .toString()
               .toUpperCase();
-      if (tUpper.contains('COMBO')) return 'Instagram Combo: Like & Follow 📸';
+      if (tUpper.contains('COMBO')) {
+        return _isCommentRequiredTask()
+            ? 'Instagram Combo: Like, Follow & Comment 📸'
+            : 'Instagram Combo: Like & Follow 📸';
+      }
       if (tUpper.contains('LIKE')) return 'Like Instagram Post / Reel ❤️';
       if (tUpper.contains('COMMENT')) return 'Comment on Instagram Post 💬';
       return 'Instagram Task (Follow & Like) 📸';

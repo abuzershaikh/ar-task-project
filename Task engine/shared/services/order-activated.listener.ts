@@ -130,7 +130,13 @@ export class OrderActivatedListener {
                 Boolean(order?.requirements?.aiGeneratorEnabled)
             );
 
-            const isCommentRequired = !isInstagramCombo && (
+            const isInstagramComboWithComments = isInstagramCombo && Boolean(
+                order?.requirements?.aiGeneratorEnabled ||
+                serviceCatalog?.aiGeneratorEnabled ||
+                (Array.isArray(order?.requirements?.sampleComments) && order.requirements.sampleComments.length > 0)
+            );
+
+            const isCommentRequired = isInstagramComboWithComments || (!isInstagramCombo && (
                 isGoogleBusinessReview ||
                 (!isGoogleBusiness && (
                     Boolean(serviceCatalog?.aiGeneratorEnabled) ||
@@ -139,7 +145,7 @@ export class OrderActivatedListener {
                     serviceIdentifier.includes('REVIEW') ||
                     Boolean(order?.requirements?.aiGeneratorEnabled)
                 ))
-            );
+            ));
 
             const count = payload.totalTasksRequired;
             const topic = order?.requirements?.topic || order?.requirements?.customText || order?.requirements?.comment || '';

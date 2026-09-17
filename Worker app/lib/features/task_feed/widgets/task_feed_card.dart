@@ -126,7 +126,7 @@ class TaskFeedCard extends StatelessWidget {
     }
     if (plat == 'instagram') {
       final rtLower = rawType.toLowerCase();
-      if (rtLower.contains('combo')) return 'Like & Follow on Instagram';
+      if (rtLower.contains('combo')) return 'Like, Follow & Comment on Instagram';
       if (rtLower.contains('like')) return 'Like Instagram Post / Reel';
       if (rtLower.contains('comment')) return 'Comment on Instagram Post';
       return 'Follow on Instagram';

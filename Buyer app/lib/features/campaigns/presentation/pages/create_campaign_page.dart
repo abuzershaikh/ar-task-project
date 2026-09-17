@@ -492,12 +492,13 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
   bool _isCommentOrComboService(ServiceModel? s) {
     if (s == null) return false;
-    // Instagram services: ONLY comment services should have AI comment generator!
-    // Combo, Follow, Like must NEVER have AI comment generator!
+    // Instagram services: Combo and Comment services have AI comment generator!
     if (_isInstagramService(s)) {
       final code = s.code.toUpperCase();
       final name = s.name.toUpperCase();
-      return code.contains('COMMENT') || name.contains('COMMENT');
+      return _isInstagramCombo(s) ||
+          code.contains('COMMENT') ||
+          name.contains('COMMENT');
     }
     // YouTube Combo IS a comment service (Watch + Like + Sub + Comment)
     if (_isYouTubeCombo(s)) {
@@ -1424,7 +1425,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   children: [
                     Text(
                       _isInstagramCombo(s)
-                          ? 'Instagram Profile Link (Target for Follower & Like)'
+                          ? 'Instagram Post / Reel or Profile Link (Target for Like, Follow & Comment)'
                           : (_isInstagramService(s)
                               ? (_isInstagramFollowerService(s)
                                   ? 'Instagram Profile Link / Username'
@@ -1467,7 +1468,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                       style: const TextStyle(fontSize: 13),
                       decoration: InputDecoration(
                         hintText: _isInstagramCombo(s)
-                            ? 'https://www.instagram.com/your_username'
+                            ? 'https://www.instagram.com/p/... or /reel/... or /your_username'
                             : (_isInstagramService(s)
                                 ? (_isInstagramFollowerService(s)
                                     ? 'https://instagram.com/your_username or @username'

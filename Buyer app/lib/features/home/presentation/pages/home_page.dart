@@ -201,16 +201,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     {
       'id': 'insta_combo',
       'category': 'Instagram',
-      'title': 'Instagram Engagement Combo (Like + Follow)',
-      'tag': 'LIKE + FOLLOW COMBO',
+      'title': 'Instagram Engagement Combo (Like + Follow + Comment)',
+      'tag': 'ALL-IN-ONE VIRAL COMBO',
       'tagColor': const Color(0xFFEC4899),
       'description':
-          'Accelerate algorithm reach. Workers follow your profile and like recent reels/posts with genuine engagement.',
+          'Accelerate algorithm reach. Workers follow your profile, like recent reels/posts, and leave contextual comments with genuine engagement.',
       'price': 'From ₹2.50 / combo',
       'gradient': [const Color(0xFFBE185D), const Color(0xFFE11D48)],
       'iconType': 'insta_combo',
       'features': [
-        'Profile Follow + Post Like',
+        'Follow + Like + AI Comment',
         'Real Active Accounts',
         'High Retention'
       ],

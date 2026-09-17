@@ -482,12 +482,13 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
     if (isInstagram) {
       if (code.contains('COMBO') || name.contains('COMBO')) {
         return {
-          'badge': '🔥 2-IN-1 INSTAGRAM GROWTH COMBO',
+          'badge': '🔥 3-IN-1 INSTAGRAM GROWTH COMBO',
           'overview':
-              'Dual-action profile accelerator: Real active users follow your Instagram profile and like your latest post or reel from authentic mobile devices.',
+              'All-in-one profile accelerator: Real active users follow your Instagram profile, like your latest post/reel, and leave topic-relevant comments.',
           'features': [
             '👤 1 Real Profile Follower Included',
             '❤️ 1 Genuine Post / Reel Like Included',
+            '💬 1 Topic-Relevant Comment Included',
             '⚡ Rapidly Boosts Explore & Reel Recommendations',
             '100% Real Active Mobile Device Accounts',
             'Permanent Non-Drop Protection',
@@ -1272,7 +1273,7 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
                   Flexible(
                     child: Text(
                       isInstagram
-                          ? 'Includes: Profile Follow + Post/Reel Like'
+                          ? 'Includes: Profile Follow + Post/Reel Like + AI Comment'
                           : 'Includes: Watch Time + Like + Subscribe + Comment',
                       style: GoogleFonts.outfit(
                         fontSize: 10,
