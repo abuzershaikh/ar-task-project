@@ -20,6 +20,7 @@ import { ApproveTaskCommand } from '../commands/approve-task.command';
 import { RejectTaskCommand } from '../commands/reject-task.command';
 import { RequestChangesCommand } from '../commands/request-changes.command';
 import { CancelTaskCommand } from '../commands/cancel-task.command';
+import { extractTaskIdentity } from '../../shared/common/utils/task-identity.util';
 
 @Injectable()
 export class TaskCommandService {
@@ -116,6 +117,24 @@ export class TaskCommandService {
                 });
                 if (existingUnitAssignment) {
                     throw new BadRequestException('This task unit has already been assigned.');
+                }
+            }
+
+            // 4. Same App Package & Same URL Protection across all campaigns
+            const targetIdentity = extractTaskIdentity(task);
+            if (targetIdentity.packageId || targetIdentity.normalizedUrl) {
+                const workerTasks = await manager.find(Task, {
+                    where: { assignedTo: In(allIds) }
+                });
+                for (const wt of workerTasks) {
+                    if (wt.id === task.id) continue;
+                    const pastIdentity = extractTaskIdentity(wt);
+                    if (targetIdentity.packageId && pastIdentity.packageId === targetIdentity.packageId) {
+                        throw new BadRequestException('You have already completed or accepted a task for this app.');
+                    }
+                    if (targetIdentity.normalizedUrl && pastIdentity.normalizedUrl === targetIdentity.normalizedUrl) {
+                        throw new BadRequestException('You have already completed or accepted a task for this link/URL.');
+                    }
                 }
             }
 
@@ -242,6 +261,24 @@ export class TaskCommandService {
                 });
                 if (existingTask && existingTask.id !== task.id) {
                     throw new BadRequestException('You have already participated in this campaign.');
+                }
+
+                // 4. Same App Package & Same URL Protection across all campaigns
+                const targetIdentity = extractTaskIdentity(task);
+                if (targetIdentity.packageId || targetIdentity.normalizedUrl) {
+                    const workerTasks = await manager.find(Task, {
+                        where: { assignedTo: In(allIds) }
+                    });
+                    for (const wt of workerTasks) {
+                        if (wt.id === task.id) continue;
+                        const pastIdentity = extractTaskIdentity(wt);
+                        if (targetIdentity.packageId && pastIdentity.packageId === targetIdentity.packageId) {
+                            throw new BadRequestException('You have already completed or accepted a task for this app.');
+                        }
+                        if (targetIdentity.normalizedUrl && pastIdentity.normalizedUrl === targetIdentity.normalizedUrl) {
+                            throw new BadRequestException('You have already completed or accepted a task for this link/URL.');
+                        }
+                    }
                 }
 
                 try {

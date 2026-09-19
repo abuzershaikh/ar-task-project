@@ -81,7 +81,7 @@ export class FirebaseAdminService implements OnModuleInit {
     }
   }
 
-  /// Broadcast New Task Push Notification to all workers
+  /// Broadcast New Task Push Notification to all workers or targeted eligible worker tokens
   async sendTaskBroadcastNotification(params: {
     title?: string;
     body?: string;
@@ -95,6 +95,7 @@ export class FirebaseAdminService implements OnModuleInit {
     appName?: string;
     appIcon?: string;
     targetUrl?: string;
+    targetTokens?: string[];
   }): Promise<void> {
     try {
       const rewardFormatted = params.reward ? `₹${params.reward}` : 'Cash Reward';
@@ -123,31 +124,67 @@ export class FirebaseAdminService implements OnModuleInit {
         createdAt: new Date().toISOString(),
       };
 
-      // 1. Send single broadcast to FCM Topic 'workers' (guarantees strictly 1 notification per device)
-      try {
-        const topicMessage: admin.messaging.Message = {
-          topic: 'workers',
-          notification: {
-            title: notificationTitle,
-            body: notificationBody,
-            ...(iconUrl ? { imageUrl: iconUrl } : {}),
-          },
-          data: dataPayload,
-          android: {
-            priority: 'high',
+      // 1. If targeted eligible tokens are provided, send via Multicast strictly to those devices
+      if (params.targetTokens !== undefined) {
+        if (params.targetTokens.length > 0) {
+          const chunkSize = 500;
+          for (let i = 0; i < params.targetTokens.length; i += chunkSize) {
+            const chunk = params.targetTokens.slice(i, i + chunkSize);
+            try {
+              const response = await this.messaging.sendEachForMulticast({
+                tokens: chunk,
+                notification: {
+                  title: notificationTitle,
+                  body: notificationBody,
+                  ...(iconUrl ? { imageUrl: iconUrl } : {}),
+                },
+                data: dataPayload,
+                android: {
+                  priority: 'high',
+                  notification: {
+                    channelId: 'task_notifications',
+                    priority: 'high',
+                    sound: 'default',
+                    clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+                    ...(iconUrl ? { imageUrl: iconUrl } : {}),
+                  },
+                },
+              });
+              this.logger.log(`📱 [FCM DIRECT MULTICAST] Push sent to ${response.successCount}/${chunk.length} eligible worker devices: ${notificationTitle}`);
+            } catch (mcErr) {
+              this.logger.error(`FCM Multicast error: ${mcErr.message}`);
+            }
+          }
+        } else {
+          this.logger.log(`ℹ️ [FCM SUPPRESSED] 0 eligible worker devices found for this app/URL. Push notification suppressed.`);
+        }
+      } else {
+        // Fallback: Send single broadcast to FCM Topic 'workers'
+        try {
+          const topicMessage: admin.messaging.Message = {
+            topic: 'workers',
             notification: {
-              channelId: 'task_notifications',
-              priority: 'high',
-              sound: 'default',
-              clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+              title: notificationTitle,
+              body: notificationBody,
               ...(iconUrl ? { imageUrl: iconUrl } : {}),
             },
-          },
-        };
-        await this.messaging.send(topicMessage);
-        this.logger.log(`📢 [FCM BROADCAST] Push sent strictly once to topic 'workers': ${notificationTitle}`);
-      } catch (topicErr) {
-        this.logger.warn(`FCM Topic push warning: ${topicErr.message}`);
+            data: dataPayload,
+            android: {
+              priority: 'high',
+              notification: {
+                channelId: 'task_notifications',
+                priority: 'high',
+                sound: 'default',
+                clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+                ...(iconUrl ? { imageUrl: iconUrl } : {}),
+              },
+            },
+          };
+          await this.messaging.send(topicMessage);
+          this.logger.log(`📢 [FCM BROADCAST] Push sent strictly once to topic 'workers': ${notificationTitle}`);
+        } catch (topicErr) {
+          this.logger.warn(`FCM Topic push warning: ${topicErr.message}`);
+        }
       }
 
       // 3. Persist notification to Firestore for worker notification history

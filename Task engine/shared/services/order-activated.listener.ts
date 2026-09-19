@@ -11,10 +11,13 @@ import { ServiceCatalogRepository } from '../database/repositories/service-catal
 import { OrderUnitRepository } from '../database/repositories/order-unit.repository';
 import { NotificationRepository } from '../database/repositories/notification.repository';
 import { NotificationType } from '../database/entities/notification.entity';
+import { UserRepository } from '../database/repositories/user.repository';
+import { UserRole } from '../database/entities/user.entity';
 import { AiGeneratorService } from '../ai-generator/ai-generator.service';
 import { sanitizeReviewText } from '../ai-generator/review-sanitizer';
 import { FirebaseAdminService } from './firebase-admin.service';
 import { PlayStoreScraperService } from './playstore-scraper.service';
+import { extractTaskIdentity } from '../common/utils/task-identity.util';
 
 export interface OrderActivatedEventPayload {
     orderId: string;
@@ -39,6 +42,7 @@ export class OrderActivatedListener {
         private readonly serviceCatalogRepo: ServiceCatalogRepository,
         private readonly orderUnitRepo: OrderUnitRepository,
         private readonly notificationRepo: NotificationRepository,
+        private readonly userRepo: UserRepository,
         private readonly aiGeneratorService: AiGeneratorService,
         private readonly firebaseAdmin: FirebaseAdminService,
         private readonly playStoreScraper: PlayStoreScraperService,
@@ -366,6 +370,55 @@ export class OrderActivatedListener {
                     notificationIcon = `${assetBaseUrl}/playstore`;
                 }
 
+                // 1. Resolve task identity
+                const taskIdentity = extractTaskIdentity({
+                    requirements: combinedRequirements,
+                    metadata: { appName, appIcon, targetUrl, packageId },
+                    targetUrl,
+                    packageId,
+                });
+
+                // 2. Identify workers who have ALREADY completed/held a task for this packageId or normalizedUrl
+                const excludedWorkerIds = new Set<string>();
+                if (taskIdentity.packageId || taskIdentity.normalizedUrl) {
+                    try {
+                        const excluded = await this.taskRepo.findWorkerIdsWithPackageOrUrl(
+                            taskIdentity.packageId,
+                            taskIdentity.normalizedUrl,
+                        );
+                        for (const id of excluded) {
+                            excludedWorkerIds.add(id.toLowerCase().trim());
+                        }
+                    } catch (e) {
+                        this.logger.warn(`Error finding excluded workers for task notification: ${e.message}`);
+                    }
+                }
+
+                // 3. Resolve eligible workers who have device push tokens
+                let eligibleTokens: string[] | undefined = undefined;
+                if (taskIdentity.packageId || taskIdentity.normalizedUrl) {
+                    try {
+                        const allWorkers = await this.userRepo.findByRole(UserRole.WORKER);
+                        const tokenList: string[] = [];
+                        for (const w of allWorkers) {
+                            const wId = (w.id || '').toLowerCase().trim();
+                            const wEmail = (w.email || '').toLowerCase().trim();
+                            if (excludedWorkerIds.has(wId) || (wEmail && excludedWorkerIds.has(wEmail))) {
+                                continue; // 🚫 SUPPRESS! Worker has already done this app/URL
+                            }
+                            const meta = (w.metadata as any) || {};
+                            const token = meta.fcmToken || meta.deviceToken;
+                            if (token && typeof token === 'string' && token.length > 20) {
+                                tokenList.push(token);
+                            }
+                        }
+                        eligibleTokens = tokenList;
+                        this.logger.log(`🎯 [NOTIFICATION FILTER] Total workers: ${allWorkers.length}, Excluded (already completed): ${excludedWorkerIds.size}, Eligible tokens: ${eligibleTokens.length}`);
+                    } catch (e) {
+                        this.logger.warn(`Error resolving eligible worker tokens: ${e.message}`);
+                    }
+                }
+
                 await this.firebaseAdmin.sendTaskBroadcastNotification({
                     title: notificationTitle,
                     body: notificationBody,
@@ -379,6 +432,7 @@ export class OrderActivatedListener {
                     appIcon: specificAppIcon || notificationIcon,
                     appName: appName || combinedRequirements?.appName || '',
                     targetUrl: targetUrl || '',
+                    targetTokens: eligibleTokens,
                 });
 
                 // Persist in MySQL for worker in-app notification history
@@ -400,6 +454,8 @@ export class OrderActivatedListener {
                         appIcon: specificAppIcon || notificationIcon,
                         appName: appName || combinedRequirements?.appName || '',
                         targetUrl: targetUrl || '',
+                        packageId: taskIdentity.packageId || packageId || '',
+                        normalizedUrl: taskIdentity.normalizedUrl || '',
                         type: 'NEW_TASK',
                     },
                 });

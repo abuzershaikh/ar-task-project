@@ -76,4 +76,8 @@ export class TaskEngineService {
     async getWorkerTasks(workerId: string, status?: string, workerEmail?: string) {
         return this.queryService.getWorkerTasks(workerId, status, workerEmail);
     }
+
+    async getWorkerExcludedEntities(workerId: string, workerEmail?: string) {
+        return this.queryService.getWorkerExcludedEntities(workerId, workerEmail);
+    }
 }

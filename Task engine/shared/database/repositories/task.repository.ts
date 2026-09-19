@@ -4,6 +4,7 @@ import { In, Repository } from 'typeorm';
 import { Task } from '../entities/task.entity';
 import { Worker } from '../entities/worker.entity';
 import { TaskStatus } from '../../../task-engine/types/task-status.enum';
+import { extractTaskIdentity } from '../../common/utils/task-identity.util';
 
 @Injectable()
 export class TaskRepository {
@@ -252,6 +253,31 @@ export class TaskRepository {
             }
         }
         return participationMap;
+    }
+
+    async findWorkerIdsWithPackageOrUrl(packageId?: string, normalizedUrl?: string): Promise<string[]> {
+        if (!packageId && !normalizedUrl) return [];
+
+        const tasks = await this.repository.find({
+            select: ['id', 'assignedTo', 'requirements', 'metadata', 'status'],
+        });
+
+        const workerIds = new Set<string>();
+
+        for (const t of tasks) {
+            if (t.status === 'cancelled' || t.status === TaskStatus.CANCELLED) continue;
+
+            const id = extractTaskIdentity(t);
+            let match = false;
+            if (packageId && id.packageId === packageId) match = true;
+            if (normalizedUrl && id.normalizedUrl === normalizedUrl) match = true;
+
+            if (match) {
+                if (t.assignedTo) workerIds.add(t.assignedTo.toString().trim());
+            }
+        }
+
+        return Array.from(workerIds);
     }
 
     async save(task: Task): Promise<Task> {

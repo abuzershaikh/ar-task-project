@@ -2,11 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { CampaignWorkerParticipationRepository } from '../../shared/database/repositories/campaign-worker-participation.repository';
 import { MatchingContext } from '../types';
+import { extractTaskIdentity } from '../../shared/common/utils/task-identity.util';
 
 /**
  * Duplicate task & Campaign-level worker participation filter.
  * Ensures a worker participates at most ONCE in a single Campaign (campaignId).
  * If a worker's task attempt expired or was rejected in Campaign A, they remain EXCLUDED from Campaign A.
+ * Also strictly excludes any worker who has already completed or accepted a task for the same App Package or same URL.
  */
 @Injectable()
 export class DuplicateFilterService {
@@ -42,6 +44,30 @@ export class DuplicateFilterService {
             );
         }
 
+        // 3. Check Cross-Campaign App Package and Target URL duplication
+        const targetIdentity = extractTaskIdentity(context.task);
+        const workersWithSameAppOrUrl = new Set<string>();
+
+        if (targetIdentity.packageId || targetIdentity.normalizedUrl) {
+            try {
+                const pastTasks = await this.taskRepo.findByWorker(workerIds);
+                for (const pt of pastTasks) {
+                    const pastIdentity = extractTaskIdentity(pt);
+                    const workerKey = (pt.assignedTo || '').toString();
+                    if (!workerKey) continue;
+
+                    if (targetIdentity.packageId && pastIdentity.packageId === targetIdentity.packageId) {
+                        workersWithSameAppOrUrl.add(workerKey);
+                    }
+                    if (targetIdentity.normalizedUrl && pastIdentity.normalizedUrl === targetIdentity.normalizedUrl) {
+                        workersWithSameAppOrUrl.add(workerKey);
+                    }
+                }
+            } catch (err) {
+                this.logger.warn(`Error checking cross-campaign task identity: ${err.message}`);
+            }
+        }
+
         const eligibleWorkers: string[] = [];
 
         for (const workerId of workerIds) {
@@ -53,10 +79,17 @@ export class DuplicateFilterService {
 
             // Strict Exclusion Rule 2: Check active task assignments in Task table via bulk map
             const hasActiveOrCompletedInCampaign = taskParticipationMap.get(workerId) === true;
-
-            if (!hasActiveOrCompletedInCampaign) {
-                eligibleWorkers.push(workerId);
+            if (hasActiveOrCompletedInCampaign) {
+                continue;
             }
+
+            // Strict Exclusion Rule 3: Same app package or same target URL completed
+            if (workersWithSameAppOrUrl.has(workerId)) {
+                this.logger.debug(`Worker '${workerId}' EXCLUDED due to already completed app/URL (${targetIdentity.packageId || targetIdentity.normalizedUrl})`);
+                continue;
+            }
+
+            eligibleWorkers.push(workerId);
         }
 
         if (eligibleWorkers.length === 0) {

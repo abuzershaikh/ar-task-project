@@ -43,8 +43,8 @@ async function deploy() {
     console.log('Build output:\n', build.stdout);
     if (build.stderr) console.error('Build errors:\n', build.stderr);
     
-    console.log('Restarting PM2 api...');
-    const restart = await ssh.execCommand('pm2 restart task-engine-api');
+    console.log('Restarting PM2 api & worker...');
+    const restart = await ssh.execCommand('pm2 restart task-engine-api task-engine-worker');
     console.log('Restart output:\n', restart.stdout);
 
     const status = await ssh.execCommand('pm2 status');
