@@ -17,7 +17,7 @@ import { AiGeneratorService } from '../ai-generator/ai-generator.service';
 import { sanitizeReviewText } from '../ai-generator/review-sanitizer';
 import { FirebaseAdminService } from './firebase-admin.service';
 import { PlayStoreScraperService } from './playstore-scraper.service';
-import { extractTaskIdentity } from '../common/utils/task-identity.util';
+import { extractTaskIdentity, resolveShortUrl } from '../common/utils/task-identity.util';
 
 export interface OrderActivatedEventPayload {
     orderId: string;
@@ -370,11 +370,18 @@ export class OrderActivatedListener {
                     notificationIcon = `${assetBaseUrl}/playstore`;
                 }
 
-                // 1. Resolve task identity
+                // 1. Resolve task identity (expand short URLs like maps.app.goo.gl if present)
+                let resolvedTargetUrl = targetUrl;
+                if (targetUrl && (targetUrl.includes('goo.gl') || targetUrl.includes('bit.ly') || targetUrl.includes('tinyurl.com'))) {
+                    try {
+                        resolvedTargetUrl = await resolveShortUrl(targetUrl, 3000);
+                    } catch (_) {}
+                }
+
                 const taskIdentity = extractTaskIdentity({
                     requirements: combinedRequirements,
-                    metadata: { appName, appIcon, targetUrl, packageId },
-                    targetUrl,
+                    metadata: { appName, appIcon, targetUrl: resolvedTargetUrl, packageId },
+                    targetUrl: resolvedTargetUrl,
                     packageId,
                 });
 

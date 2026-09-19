@@ -114,15 +114,28 @@ export function extractTaskIdentity(task: any): TaskIdentity {
             ) {
                 const cid = parsed.searchParams.get('cid');
                 const placeId = parsed.searchParams.get('placeid') || parsed.searchParams.get('place_id');
+                const hexMatch = rawUrl.match(/1s(0x[a-f0-9]+:0x[a-f0-9]+)/i);
+                const placeMatch = pathname.match(/\/maps\/place\/([^\/@?]+)/i);
+                const searchParam = parsed.searchParams.get('query') || parsed.searchParams.get('q');
+                const searchPathMatch = pathname.match(/\/maps\/search\/([^\/?]+)/i);
+
                 if (cid) {
                     normalizedUrl = `google_maps:cid:${cid.trim()}`;
                 } else if (placeId) {
                     normalizedUrl = `google_maps:placeid:${placeId.trim()}`;
+                } else if (hexMatch && hexMatch[1]) {
+                    normalizedUrl = `google_maps:hex:${hexMatch[1].toLowerCase()}`;
+                } else if (placeMatch && placeMatch[1]) {
+                    const cleanPlace = decodeURIComponent(placeMatch[1]).trim().toLowerCase().replace(/\+/g, ' ');
+                    normalizedUrl = `google_maps:place:${cleanPlace}`;
+                } else if (searchParam || searchPathMatch) {
+                    const rawSearch = searchParam || (searchPathMatch ? searchPathMatch[1] : '');
+                    const cleanSearch = decodeURIComponent(rawSearch).trim().toLowerCase().replace(/\+/g, ' ');
+                    normalizedUrl = `google_maps:search:${cleanSearch}`;
                 } else if (host.includes('goo.gl') || host.includes('share.google') || host.includes('maps.app.goo.gl')) {
-                    // Short Google Maps / Business links: preserve path, strip tracking params
+                    // Short Google Maps / Business links: preserve host + pathname
                     normalizedUrl = `https://${host}${pathname}`;
                 } else {
-                    // Clean Google Maps path, strip all query tracking
                     normalizedUrl = `https://${host}${pathname.toLowerCase()}`;
                 }
             }
@@ -161,3 +174,50 @@ export function extractTaskIdentity(task: any): TaskIdentity {
         entityKey,
     };
 }
+
+/**
+ * Asynchronously follows redirects for Google Maps short links (e.g. maps.app.goo.gl, goo.gl/maps)
+ * to retrieve the full canonical destination URL before extracting place/cid/search identity.
+ */
+export async function resolveShortUrl(url: string, timeoutMs = 4000): Promise<string> {
+    if (!url || typeof url !== 'string') return url || '';
+    const cleanUrl = url.trim();
+    const lower = cleanUrl.toLowerCase();
+
+    if (
+        !lower.includes('maps.app.goo.gl') &&
+        !lower.includes('goo.gl/maps') &&
+        !lower.includes('bit.ly') &&
+        !lower.includes('tinyurl.com')
+    ) {
+        return cleanUrl;
+    }
+
+    try {
+        const target = cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            const res = await fetch(target, {
+                method: 'HEAD',
+                redirect: 'follow',
+                signal: controller.signal,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                },
+            });
+            if (res && res.url && res.url !== target) {
+                return res.url;
+            }
+        } finally {
+            clearTimeout(timer);
+        }
+    } catch (_) {
+        // Fallback to original URL on timeout or network error
+    }
+
+    return cleanUrl;
+}
+

@@ -263,6 +263,7 @@ export class TaskRepository {
         });
 
         const workerIds = new Set<string>();
+        const matchingTaskIds: string[] = [];
 
         for (const t of tasks) {
             if (t.status === 'cancelled' || t.status === TaskStatus.CANCELLED) continue;
@@ -273,11 +274,53 @@ export class TaskRepository {
             if (normalizedUrl && id.normalizedUrl === normalizedUrl) match = true;
 
             if (match) {
+                matchingTaskIds.push(t.id);
                 if (t.assignedTo) workerIds.add(t.assignedTo.toString().trim());
             }
         }
 
-        return Array.from(workerIds);
+        // Also query task_assignments history (includes expired, released, rejected, completed)
+        if (matchingTaskIds.length > 0) {
+            try {
+                const assignmentRows = await this.repository.query(
+                    `SELECT DISTINCT worker_id AS workerId FROM task_assignments WHERE task_id IN (?)`,
+                    [matchingTaskIds],
+                );
+                for (const row of assignmentRows) {
+                    if (row.workerId) workerIds.add(row.workerId.toString().trim());
+                }
+            } catch (_) {}
+        }
+
+        if (workerIds.size === 0) return [];
+
+        // Resolve all aliases: User ID, Worker Profile ID, and User Email
+        const rawIds = Array.from(workerIds);
+        const resolvedIds = new Set<string>();
+        for (const id of rawIds) {
+            resolvedIds.add(id.toLowerCase().trim());
+        }
+
+        try {
+            const rows = await this.repository.query(
+                `SELECT u.id AS userId, u.email AS userEmail, w.id AS workerId
+                 FROM users u
+                 LEFT JOIN workers w ON w.user_id = u.id
+                 WHERE u.id IN (?) OR u.email IN (?) OR w.id IN (?)`,
+                [rawIds, rawIds, rawIds],
+            );
+            for (const r of rows) {
+                if (r.userId) resolvedIds.add(r.userId.toString().trim().toLowerCase());
+                if (r.userEmail) resolvedIds.add(r.userEmail.toString().trim().toLowerCase());
+                if (r.workerId) resolvedIds.add(r.workerId.toString().trim().toLowerCase());
+            }
+        } catch (_) {}
+
+        return Array.from(resolvedIds);
+    }
+
+    async query(sql: string, params?: any[]): Promise<any> {
+        return this.repository.query(sql, params);
     }
 
     async save(task: Task): Promise<Task> {

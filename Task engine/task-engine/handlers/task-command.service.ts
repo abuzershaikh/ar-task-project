@@ -5,6 +5,7 @@ import { CampaignWorkerParticipation, ParticipationStatus } from '../../shared/d
 import { TaskAssignment, TaskAssignmentStatus } from '../../shared/database/entities/task-assignment.entity';
 import { SystemSetting } from '../../shared/database/entities/system-settings.entity';
 import { User } from '../../shared/database/entities/user.entity';
+import { Worker } from '../../shared/database/entities/worker.entity';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { CampaignWorkerParticipationRepository } from '../../shared/database/repositories/campaign-worker-participation.repository';
 import { TaskAssignmentRepository } from '../../shared/database/repositories/task-assignment.repository';
@@ -46,24 +47,115 @@ export class TaskCommandService {
             }
         }
 
+        // 1. If workerId matches Worker profile UUID or User ID
+        try {
+            const workerProfile = await manager.findOne(Worker, {
+                where: [{ id: workerId }, { userId: workerId }],
+            });
+            if (workerProfile) {
+                if (workerProfile.id) ids.add(workerProfile.id);
+                if (workerProfile.userId) {
+                    ids.add(workerProfile.userId);
+                    if (!resolvedEmail) {
+                        const user = await manager.findOne(User, { where: { id: workerProfile.userId } });
+                        if (user?.email) resolvedEmail = user.email.toLowerCase().trim();
+                    }
+                }
+            }
+        } catch (_) {}
+
+        // 2. Lookup by User ID
         if (!resolvedEmail && workerId) {
             try {
                 const user = await manager.findOne(User, { where: { id: workerId } });
                 if (user?.email) {
                     resolvedEmail = user.email.toLowerCase().trim();
                 }
-            } catch (_) {}
-        }
-
-        if (resolvedEmail) {
-            ids.add(resolvedEmail);
-            try {
-                const user = await manager.findOne(User, { where: { email: resolvedEmail } });
                 if (user?.id) ids.add(user.id);
             } catch (_) {}
         }
 
+        // 3. Lookup by resolvedEmail
+        if (resolvedEmail) {
+            ids.add(resolvedEmail);
+            try {
+                const user = await manager.findOne(User, { where: { email: resolvedEmail } });
+                if (user?.id) {
+                    ids.add(user.id);
+                    const workerProfile = await manager.findOne(Worker, { where: { userId: user.id } });
+                    if (workerProfile?.id) ids.add(workerProfile.id);
+                }
+            } catch (_) {}
+        }
+
         return { email: resolvedEmail, allIds: Array.from(ids) };
+    }
+
+    private async acquireIdentityLock(manager: any, workerKey: string, entityKey?: string): Promise<string | null> {
+        if (!entityKey) return null;
+        const lockName = `t_lock:${workerKey}:${entityKey}`.substring(0, 64);
+        try {
+            const res = await manager.query('SELECT GET_LOCK(?, 10) AS acquired', [lockName]);
+            const acquired = res?.[0]?.acquired;
+            if (acquired !== 1 && acquired !== true) {
+                throw new BadRequestException('Another task operation is currently in progress for this app/URL. Please retry.');
+            }
+            return lockName;
+        } catch (e) {
+            if (e instanceof BadRequestException) throw e;
+            return null;
+        }
+    }
+
+    private async releaseIdentityLock(manager: any, lockName: string | null) {
+        if (!lockName) return;
+        try {
+            await manager.query('SELECT RELEASE_LOCK(?)', [lockName]);
+        } catch (_) {}
+    }
+
+    private async verifyNoDuplicateAppOrUrlTransactional(
+        manager: any,
+        task: Task,
+        allIds: string[],
+        targetIdentity: any,
+    ) {
+        if (!targetIdentity.packageId && !targetIdentity.normalizedUrl) return;
+
+        // 1. Current active assigned tasks
+        const workerTasks = await manager.find(Task, {
+            where: { assignedTo: In(allIds) },
+        });
+
+        // 2. Historical assignments across ALL statuses (expired, released, rejected, completed)
+        const workerAssignments = await manager.find(TaskAssignment, {
+            where: { workerId: In(allIds) },
+        });
+        const historicalTaskIds = workerAssignments
+            .map((a: any) => a.taskId)
+            .filter((id: string) => id && id !== task.id);
+
+        let allTasksToCheck: Task[] = [...workerTasks];
+        if (historicalTaskIds.length > 0) {
+            const historicalTasks = await manager.find(Task, {
+                where: { id: In(historicalTaskIds) },
+            });
+            allTasksToCheck = allTasksToCheck.concat(historicalTasks);
+        }
+
+        const checkedTaskIds = new Set<string>();
+        for (const wt of allTasksToCheck) {
+            if (wt.id === task.id || checkedTaskIds.has(wt.id)) continue;
+            checkedTaskIds.add(wt.id);
+
+            const pastIdentity = extractTaskIdentity(wt);
+            if (targetIdentity.packageId && pastIdentity.packageId === targetIdentity.packageId) {
+                throw new BadRequestException('You have already completed or accepted a task for this app.');
+            }
+            if (targetIdentity.normalizedUrl && pastIdentity.normalizedUrl === targetIdentity.normalizedUrl) {
+                throw new BadRequestException('You have already completed or accepted a task for this link/URL.');
+            }
+        }
     }
 
     async createTask(command: CreateTaskCommand) {
@@ -120,74 +212,66 @@ export class TaskCommandService {
                 }
             }
 
-            // 4. Same App Package & Same URL Protection across all campaigns
+            // 4. Same App Package & Same URL Protection across all campaigns with concurrency lock
             const targetIdentity = extractTaskIdentity(task);
-            if (targetIdentity.packageId || targetIdentity.normalizedUrl) {
-                const workerTasks = await manager.find(Task, {
-                    where: { assignedTo: In(allIds) }
-                });
-                for (const wt of workerTasks) {
-                    if (wt.id === task.id) continue;
-                    const pastIdentity = extractTaskIdentity(wt);
-                    if (targetIdentity.packageId && pastIdentity.packageId === targetIdentity.packageId) {
-                        throw new BadRequestException('You have already completed or accepted a task for this app.');
-                    }
-                    if (targetIdentity.normalizedUrl && pastIdentity.normalizedUrl === targetIdentity.normalizedUrl) {
-                        throw new BadRequestException('You have already completed or accepted a task for this link/URL.');
-                    }
+            const lockName = await this.acquireIdentityLock(manager, primaryWorkerKey, targetIdentity.entityKey);
+
+            try {
+                await this.verifyNoDuplicateAppOrUrlTransactional(manager, task, allIds, targetIdentity);
+
+                if (task.assignedTo && !allIds.includes(task.assignedTo)) {
+                    throw new BadRequestException('Task is already assigned to another worker');
                 }
-            }
 
-            if (task.assignedTo && !allIds.includes(task.assignedTo)) {
-                throw new BadRequestException('Task is already assigned to another worker');
-            }
-
-            if (!task.assignedTo) {
-                this.validationService.ensureTaskAssignable(task);
-                this.stateMachine.validateTransition({
-                    taskId: task.id,
-                    orderId: task.orderId,
-                    campaignId: task.campaignId,
-                    taskType: task.taskType,
-                    currentStatus: task.status,
-                    targetStatus: TaskStatus.ASSIGNED,
-                    timestamp: new Date(),
-                    actor: { id: command.actorId || primaryWorkerKey, type: 'system' },
-                });
-
-                try {
-                    const participation = manager.create(CampaignWorkerParticipation, {
-                        campaignId,
-                        workerId: primaryWorkerKey,
-                        status: ParticipationStatus.ASSIGNED,
+                if (!task.assignedTo) {
+                    this.validationService.ensureTaskAssignable(task);
+                    this.stateMachine.validateTransition({
+                        taskId: task.id,
+                        orderId: task.orderId,
+                        campaignId: task.campaignId,
+                        taskType: task.taskType,
+                        currentStatus: task.status,
+                        targetStatus: TaskStatus.ASSIGNED,
+                        timestamp: new Date(),
+                        actor: { id: command.actorId || primaryWorkerKey, type: 'system' },
                     });
-                    await manager.save(participation);
-                } catch (err) {
-                    this.logger.warn(`DB UNIQUE CONFLICT: Worker '${primaryWorkerKey}' was assigned concurrently in Campaign '${campaignId}'.`);
-                    throw new BadRequestException('You have already participated in this campaign.');
+
+                    try {
+                        const participation = manager.create(CampaignWorkerParticipation, {
+                            campaignId,
+                            workerId: primaryWorkerKey,
+                            status: ParticipationStatus.ASSIGNED,
+                        });
+                        await manager.save(participation);
+                    } catch (err) {
+                        this.logger.warn(`DB UNIQUE CONFLICT: Worker '${primaryWorkerKey}' was assigned concurrently in Campaign '${campaignId}'.`);
+                        throw new BadRequestException('You have already participated in this campaign.');
+                    }
+
+                    const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
+                    const assignment = manager.create(TaskAssignment, {
+                        taskId: task.id,
+                        campaignId,
+                        orderId,
+                        orderUnitId,
+                        workerId: primaryWorkerKey,
+                        attemptNumber: attempts.length + 1,
+                        status: TaskAssignmentStatus.ASSIGNED,
+                        assignedAt: new Date(),
+                    });
+                    await manager.save(assignment);
+
+                    task.assignedTo = primaryWorkerKey;
+                    task.orderUnitId = orderUnitId;
+                    task.assignedAt = new Date();
+                    task.status = TaskStatus.ASSIGNED;
+                    task.metadata = { ...(task.metadata || {}), ...(command.metadata || {}) };
+                    return manager.save(task);
                 }
-
-                const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
-                const assignment = manager.create(TaskAssignment, {
-                    taskId: task.id,
-                    campaignId,
-                    orderId,
-                    orderUnitId,
-                    workerId: primaryWorkerKey,
-                    attemptNumber: attempts.length + 1,
-                    status: TaskAssignmentStatus.ASSIGNED,
-                    assignedAt: new Date(),
-                });
-                await manager.save(assignment);
-
-                task.assignedTo = primaryWorkerKey;
-                task.orderUnitId = orderUnitId;
-                task.assignedAt = new Date();
-                task.status = TaskStatus.ASSIGNED;
-                task.metadata = { ...(task.metadata || {}), ...(command.metadata || {}) };
-                return manager.save(task);
+                return task;
+            } finally {
+                await this.releaseIdentityLock(manager, lockName);
             }
-            return task;
         });
     }
 
@@ -263,75 +347,67 @@ export class TaskCommandService {
                     throw new BadRequestException('You have already participated in this campaign.');
                 }
 
-                // 4. Same App Package & Same URL Protection across all campaigns
+                // 4. Same App Package & Same URL Protection across all campaigns with concurrency lock
                 const targetIdentity = extractTaskIdentity(task);
-                if (targetIdentity.packageId || targetIdentity.normalizedUrl) {
-                    const workerTasks = await manager.find(Task, {
-                        where: { assignedTo: In(allIds) }
-                    });
-                    for (const wt of workerTasks) {
-                        if (wt.id === task.id) continue;
-                        const pastIdentity = extractTaskIdentity(wt);
-                        if (targetIdentity.packageId && pastIdentity.packageId === targetIdentity.packageId) {
-                            throw new BadRequestException('You have already completed or accepted a task for this app.');
-                        }
-                        if (targetIdentity.normalizedUrl && pastIdentity.normalizedUrl === targetIdentity.normalizedUrl) {
-                            throw new BadRequestException('You have already completed or accepted a task for this link/URL.');
-                        }
-                    }
-                }
+                const lockName = await this.acquireIdentityLock(manager, primaryWorkerKey, targetIdentity.entityKey);
 
                 try {
-                    const participation = manager.create(CampaignWorkerParticipation, {
+                    await this.verifyNoDuplicateAppOrUrlTransactional(manager, task, allIds, targetIdentity);
+
+                    try {
+                        const participation = manager.create(CampaignWorkerParticipation, {
+                            campaignId,
+                            workerId: primaryWorkerKey,
+                            status: ParticipationStatus.ASSIGNED,
+                        });
+                        await manager.save(participation);
+                    } catch (partErr) {
+                        this.logger.warn(`CampaignWorkerParticipation constraint conflict: ${partErr?.message}`);
+                        throw new BadRequestException('You have already participated in this campaign.');
+                    }
+
+                    const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
+                    const assignment = manager.create(TaskAssignment, {
+                        taskId: task.id,
                         campaignId,
+                        orderId,
+                        orderUnitId,
                         workerId: primaryWorkerKey,
-                        status: ParticipationStatus.ASSIGNED,
+                        attemptNumber: attempts.length + 1,
+                        status: TaskAssignmentStatus.ACCEPTED,
+                        assignedAt: new Date(),
+                        acceptedAt: new Date(),
                     });
-                    await manager.save(participation);
-                } catch (partErr) {
-                    this.logger.warn(`CampaignWorkerParticipation constraint conflict: ${partErr?.message}`);
-                    throw new BadRequestException('You have already participated in this campaign.');
-                }
+                    await manager.save(assignment);
 
-                const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
-                const assignment = manager.create(TaskAssignment, {
-                    taskId: task.id,
-                    campaignId,
-                    orderId,
-                    orderUnitId,
-                    workerId: primaryWorkerKey,
-                    attemptNumber: attempts.length + 1,
-                    status: TaskAssignmentStatus.ACCEPTED,
-                    assignedAt: new Date(),
-                    acceptedAt: new Date(),
-                });
-                await manager.save(assignment);
-
-                // Dynamic deadline calculation: Strictly prioritize Admin system setting
-                let executionHours = 2.0;
-                try {
-                    const timeoutSetting = await manager.findOne(SystemSetting, { where: { key: 'worker_execution_timeout_hours' } });
-                    if (timeoutSetting && timeoutSetting.value !== null && timeoutSetting.value !== undefined) {
-                        executionHours = Number(timeoutSetting.value);
-                    } else if (task.requirements?.timeToCompleteHours) {
-                        executionHours = Number(task.requirements.timeToCompleteHours);
+                    // Dynamic deadline calculation: Strictly prioritize Admin system setting
+                    let executionHours = 2.0;
+                    try {
+                        const timeoutSetting = await manager.findOne(SystemSetting, { where: { key: 'worker_execution_timeout_hours' } });
+                        if (timeoutSetting && timeoutSetting.value !== null && timeoutSetting.value !== undefined) {
+                            executionHours = Number(timeoutSetting.value);
+                        } else if (task.requirements?.timeToCompleteHours) {
+                            executionHours = Number(task.requirements.timeToCompleteHours);
+                        }
+                    } catch (_) {
+                        if (task.requirements?.timeToCompleteHours) {
+                            executionHours = Number(task.requirements.timeToCompleteHours);
+                        }
                     }
-                } catch (_) {
-                    if (task.requirements?.timeToCompleteHours) {
-                        executionHours = Number(task.requirements.timeToCompleteHours);
-                    }
+
+                    const now = new Date();
+                    const deadline = new Date(now.getTime() + executionHours * 3600 * 1000);
+
+                    task.status = TaskStatus.ACCEPTED;
+                    task.acceptedAt = now;
+                    task.assignedAt = now;
+                    task.assignedTo = primaryWorkerKey;
+                    task.orderUnitId = orderUnitId;
+                    task.deadline = deadline;
+                    return manager.save(task);
+                } finally {
+                    await this.releaseIdentityLock(manager, lockName);
                 }
-
-                const now = new Date();
-                const deadline = new Date(now.getTime() + executionHours * 3600 * 1000);
-
-                task.status = TaskStatus.ACCEPTED;
-                task.acceptedAt = now;
-                task.assignedAt = now;
-                task.assignedTo = primaryWorkerKey;
-                task.orderUnitId = orderUnitId;
-                task.deadline = deadline;
-                return manager.save(task);
             }
 
             // If task was already assigned to this worker, transition to ACCEPTED

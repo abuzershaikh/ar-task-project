@@ -50,18 +50,12 @@ export class DuplicateFilterService {
 
         if (targetIdentity.packageId || targetIdentity.normalizedUrl) {
             try {
-                const pastTasks = await this.taskRepo.findByWorker(workerIds);
-                for (const pt of pastTasks) {
-                    const pastIdentity = extractTaskIdentity(pt);
-                    const workerKey = (pt.assignedTo || '').toString();
-                    if (!workerKey) continue;
-
-                    if (targetIdentity.packageId && pastIdentity.packageId === targetIdentity.packageId) {
-                        workersWithSameAppOrUrl.add(workerKey);
-                    }
-                    if (targetIdentity.normalizedUrl && pastIdentity.normalizedUrl === targetIdentity.normalizedUrl) {
-                        workersWithSameAppOrUrl.add(workerKey);
-                    }
+                const excluded = await this.taskRepo.findWorkerIdsWithPackageOrUrl(
+                    targetIdentity.packageId,
+                    targetIdentity.normalizedUrl,
+                );
+                for (const id of excluded) {
+                    workersWithSameAppOrUrl.add(id.toLowerCase().trim());
                 }
             } catch (err) {
                 this.logger.warn(`Error checking cross-campaign task identity: ${err.message}`);
@@ -84,7 +78,8 @@ export class DuplicateFilterService {
             }
 
             // Strict Exclusion Rule 3: Same app package or same target URL completed
-            if (workersWithSameAppOrUrl.has(workerId)) {
+            const normalizedWId = (workerId || '').toLowerCase().trim();
+            if (workersWithSameAppOrUrl.has(normalizedWId)) {
                 this.logger.debug(`Worker '${workerId}' EXCLUDED due to already completed app/URL (${targetIdentity.packageId || targetIdentity.normalizedUrl})`);
                 continue;
             }

@@ -32,20 +32,28 @@ export class TaskQueryService {
             }
         }
 
+        try {
+            const rows = await this.taskRepository.query(
+                `SELECT u.id AS userId, u.email AS userEmail, w.id AS workerId
+                 FROM users u
+                 LEFT JOIN workers w ON w.user_id = u.id
+                 WHERE u.id = ? OR u.email = ? OR w.id = ? OR w.user_id = ?`,
+                [workerId, resolvedEmail || workerId, workerId, workerId],
+            );
+            for (const r of rows) {
+                if (r.userId) ids.add(r.userId.toString().trim());
+                if (r.userEmail) ids.add(r.userEmail.toString().trim().toLowerCase());
+                if (r.workerId) ids.add(r.workerId.toString().trim());
+            }
+        } catch (_) {}
+
         if (!resolvedEmail && workerId) {
             try {
                 const user = await this.userRepo.findById(workerId);
                 if (user?.email) {
                     resolvedEmail = user.email.toLowerCase().trim();
+                    ids.add(resolvedEmail);
                 }
-            } catch (_) {}
-        }
-
-        if (resolvedEmail) {
-            ids.add(resolvedEmail);
-            try {
-                const user = await this.userRepo.findByEmail(resolvedEmail);
-                if (user?.id) ids.add(user.id);
             } catch (_) {}
         }
 
@@ -76,14 +84,26 @@ export class TaskQueryService {
             }
         } catch (_) {}
 
-        // (b) From task_assignments
+        // (b) From task_assignments (all historical attempts: expired, released, completed)
         try {
             const assignments = await this.assignmentRepo.findByWorker(allWorkerIds);
+            const assignmentTaskIds: string[] = [];
             for (const a of assignments) {
                 if (a.campaignId) excludedCampaignIds.add(a.campaignId.toString());
                 if (a.orderId) excludedCampaignIds.add(a.orderId.toString());
-                if (a.taskId) excludedTaskIds.add(a.taskId.toString());
+                if (a.taskId) {
+                    excludedTaskIds.add(a.taskId.toString());
+                    assignmentTaskIds.push(a.taskId.toString());
+                }
                 if (a.orderUnitId) excludedOrderUnitIds.add(a.orderUnitId.toString());
+            }
+
+            const missingAssignmentTaskIds = Array.from(new Set(assignmentTaskIds)).filter((id) => !pastTasksMap.has(id));
+            if (missingAssignmentTaskIds.length > 0) {
+                const assignedTasks = await this.taskRepository.findByIds(missingAssignmentTaskIds);
+                for (const t of assignedTasks) {
+                    if (t?.id) pastTasksMap.set(t.id.toString(), t);
+                }
             }
         } catch (_) {}
 
@@ -206,6 +226,19 @@ export class TaskQueryService {
             const workerTasks = await this.taskRepository.findByWorker(allWorkerIds);
             for (const wt of workerTasks) {
                 if (wt.id) pastTasksMap.set(wt.id, wt);
+            }
+        } catch (_) {}
+
+        // Include all historical task_assignments (covers expired, released, rejected, completed)
+        try {
+            const assignments = await this.assignmentRepo.findByWorker(allWorkerIds);
+            const assignmentTaskIds = Array.from(new Set(assignments.map((a) => a.taskId).filter(Boolean))) as string[];
+            const missing = assignmentTaskIds.filter((id) => !pastTasksMap.has(id));
+            if (missing.length > 0) {
+                const assignTasks = await this.taskRepository.findByIds(missing);
+                for (const t of assignTasks) {
+                    if (t?.id) pastTasksMap.set(t.id, t);
+                }
             }
         } catch (_) {}
 
