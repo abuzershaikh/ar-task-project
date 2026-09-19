@@ -15,6 +15,7 @@ import '../../../core/services/package_tracker_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../keyboard/keyboard.dart';
+import '../widgets/in_app_youtube_player_modal.dart';
 
 /// Premium 3D Realistic Task Detail & Execution Screen
 /// - Exact visual layout matching reference UI image
@@ -1409,6 +1410,31 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           context,
         ).showSnackBar(SnackBar(content: Text('Opening: $urlString')));
       }
+    }
+  }
+
+  void _playInAppVideo(String videoUrl) {
+    if (videoUrl.trim().isEmpty) return;
+    final ytId = _extractYouTubeId(videoUrl);
+    if (ytId != null && ytId.isNotEmpty) {
+      final t = widget.task;
+      final taskTitle = (t['title'] ??
+              t['serviceName'] ??
+              t['serviceTitle'] ??
+              (t['requirements'] is Map
+                  ? (t['requirements']['serviceName'] ??
+                      t['requirements']['title'])
+                  : null) ??
+              'Instruction Video')
+          .toString();
+      InAppYoutubePlayerModal.show(
+        context,
+        videoId: ytId,
+        videoUrl: videoUrl,
+        title: taskTitle.isNotEmpty ? taskTitle : 'Instruction Video',
+      );
+    } else {
+      _launchURL(videoUrl);
     }
   }
 
@@ -3013,7 +3039,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           InkWell(
             onTap: () {
               if (videoTutorialUrl.isNotEmpty) {
-                _launchURL(videoTutorialUrl);
+                _playInAppVideo(videoTutorialUrl);
               } else {
                 _launchURL('https://youtube.com');
               }
@@ -3126,7 +3152,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           InkWell(
             onTap: () {
               if (videoTutorialUrl.isNotEmpty) {
-                _launchURL(videoTutorialUrl);
+                _playInAppVideo(videoTutorialUrl);
               } else {
                 _launchURL('https://youtube.com');
               }

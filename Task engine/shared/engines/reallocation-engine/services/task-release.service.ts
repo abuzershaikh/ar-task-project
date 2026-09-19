@@ -63,6 +63,7 @@ export class TaskReleaseService {
             startedAt: null,
             submittedAt: null,
             completedAt: null,
+            deadline: null,
             status: TaskStatus.ACTIVE,
         });
 
