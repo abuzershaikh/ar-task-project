@@ -8,8 +8,9 @@ async function run() {
     password: 'G8u$RW{5m46buXgw',
   });
 
-  const res = await ssh.execCommand('grep -E "^DB_" /opt/task-engine/.env');
-  console.log(res.stdout);
+  const res = await ssh.execCommand('grep -i -E "FCM DIRECT MULTICAST|NOTIFICATION FILTER|FCM SUPPRESSED|FCM BROADCAST" /root/.pm2/logs/*.log | tail -n 25');
+  console.log('=== FCM DISPATCH LOGS ===\n', res.stdout);
+
   ssh.dispose();
 }
 
