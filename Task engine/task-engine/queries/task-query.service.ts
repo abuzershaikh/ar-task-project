@@ -100,12 +100,10 @@ export class TaskQueryService {
         // 2. Identify all worker identifiers (Gmail, UID, Worker profile ID)
         const allWorkerIds = await this.resolveAllWorkerIdentifiers(workerId, workerEmail);
 
-        // 3. Collect all campaignIds, taskIds, orderUnitIds, packageIds, and targetUrls the worker has ever interacted with
+        // 3. Collect all campaignIds, taskIds, and orderUnitIds the worker has already interacted with
         const excludedCampaignIds = new Set<string>();
         const excludedTaskIds = new Set<string>();
         const excludedOrderUnitIds = new Set<string>();
-        const excludedPackageIds = new Set<string>();
-        const excludedTargetUrls = new Set<string>();
 
         // (a) From campaign_worker_participation
         try {
@@ -126,8 +124,6 @@ export class TaskQueryService {
             }
         } catch (_) {}
 
-        const activeStatuses = new Set(['assigned', 'in_progress', 'accepted', 'submitted', 'under_review', 'active']);
-
         // (c) From tasks table where assigned_to in allWorkerIds
         try {
             const workerTasks = await this.taskRepository.findByWorker(allWorkerIds);
@@ -136,13 +132,6 @@ export class TaskQueryService {
                 if (wt.orderId) excludedCampaignIds.add(wt.orderId.toString());
                 if (wt.id) excludedTaskIds.add(wt.id.toString());
                 if (wt.orderUnitId) excludedOrderUnitIds.add(wt.orderUnitId.toString());
-                
-                // Only exclude packageId / targetUrl if the worker currently has an active / pending task for it
-                if (activeStatuses.has((wt.status || '').toLowerCase())) {
-                    const { packageId, normalizedUrl } = this.extractTaskIdentity(wt);
-                    if (packageId) excludedPackageIds.add(packageId);
-                    if (normalizedUrl) excludedTargetUrls.add(normalizedUrl);
-                }
             }
         } catch (_) {}
 
@@ -163,48 +152,34 @@ export class TaskQueryService {
                     if (t?.campaignId) excludedCampaignIds.add(t.campaignId.toString());
                     if (t?.orderId) excludedCampaignIds.add(t.orderId.toString());
                     if (t?.orderUnitId) excludedOrderUnitIds.add(t.orderUnitId.toString());
-                    const { packageId, normalizedUrl } = this.extractTaskIdentity(t);
-                    if (packageId) excludedPackageIds.add(packageId);
-                    if (normalizedUrl) excludedTargetUrls.add(normalizedUrl);
                 }
             }
         } catch (_) {}
 
-        // 4. Filter out any task matching excluded campaign, order, unit, taskId, packageId, or targetUrl
+        // 4. Filter out any task matching excluded campaign, order, unit, or taskId
         const eligibleTasks = availableTasks.filter((task) => {
             const taskCampaign = (task.campaignId || '').toString();
             const taskOrder = (task.orderId || '').toString();
             const taskUnit = (task.orderUnitId || '').toString();
             const taskId = (task.id || '').toString();
-            const { packageId, normalizedUrl } = this.extractTaskIdentity(task);
 
             if (taskCampaign && excludedCampaignIds.has(taskCampaign)) return false;
             if (taskOrder && excludedCampaignIds.has(taskOrder)) return false;
             if (taskUnit && excludedOrderUnitIds.has(taskUnit)) return false;
             if (taskId && excludedTaskIds.has(taskId)) return false;
-            if (packageId && excludedPackageIds.has(packageId)) return false;
-            if (normalizedUrl && excludedTargetUrls.has(normalizedUrl)) return false;
 
             return true;
         });
 
-        // 5. DISTINCT BY CAMPAIGN/ORDER & TARGET APP/URL: Exactly 1 task/unit per campaign is offered to each worker
+        // 5. DISTINCT BY CAMPAIGN/ORDER: Exactly 1 task/unit per campaign is offered to each worker
         const seenCampaigns = new Set<string>();
-        const seenPackages = new Set<string>();
-        const seenUrls = new Set<string>();
         const distinctTasks: Task[] = [];
 
         for (const task of eligibleTasks) {
             const campaignKey = (task.campaignId || task.orderId || task.id || '').toString();
-            const { packageId, normalizedUrl } = this.extractTaskIdentity(task);
 
             if (seenCampaigns.has(campaignKey)) continue;
-            if (packageId && seenPackages.has(packageId)) continue;
-            if (normalizedUrl && seenUrls.has(normalizedUrl)) continue;
-
             seenCampaigns.add(campaignKey);
-            if (packageId) seenPackages.add(packageId);
-            if (normalizedUrl) seenUrls.add(normalizedUrl);
 
             distinctTasks.push(task);
         }
