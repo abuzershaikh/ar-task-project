@@ -28,7 +28,33 @@ export class CampaignWorkerParticipationRepository {
             where: { campaignId },
             select: ['workerId'],
         });
-        return records.map((r) => r.workerId);
+        const rawIds = records.map((r) => r.workerId).filter(Boolean);
+        if (rawIds.length === 0) return [];
+
+        const allAliases = new Set<string>();
+        for (const id of rawIds) {
+            allAliases.add(id.toLowerCase().trim());
+        }
+
+        try {
+            const rows = await this.repository.query(
+                `SELECT u.id AS userId, u.email AS userEmail, w.id AS workerId
+                 FROM users u
+                 LEFT JOIN workers w ON w.user_id = u.id
+                 WHERE u.id IN (?) OR u.email IN (?) OR w.id IN (?)`,
+                [rawIds, rawIds, rawIds],
+            );
+            for (const r of rows) {
+                if (r.userId) allAliases.add(r.userId.toString().trim().toLowerCase());
+                if (r.userEmail) allAliases.add(r.userEmail.toString().trim().toLowerCase());
+                if (r.workerId) allAliases.add(r.workerId.toString().trim().toLowerCase());
+            }
+        } catch (err) {
+            this.logger.error(`Error resolving aliases for used campaign workers: ${err?.message}`);
+            throw err;
+        }
+
+        return Array.from(allAliases);
     }
 
     async findCampaignIdsByWorker(workerId: string | string[]): Promise<string[]> {

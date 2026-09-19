@@ -27,6 +27,7 @@ import { CampaignWorkerParticipation } from './entities/campaign-worker-particip
 import { TaskAssignment } from './entities/task-assignment.entity';
 import { Wallet } from './entities/wallet.entity';
 import { WalletTransaction } from './entities/wallet-transaction.entity';
+import { WorkerCompletedIdentity } from './entities/worker-completed-identity.entity';
 
 // Repositories
 import { UserRepository } from './repositories/user.repository';
@@ -79,6 +80,7 @@ const entities = [
     TaskAssignment,
     Wallet,
     WalletTransaction,
+    WorkerCompletedIdentity,
 ];
 
 const repositories = [

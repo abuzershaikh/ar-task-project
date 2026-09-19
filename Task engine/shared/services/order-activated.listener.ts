@@ -86,7 +86,18 @@ export class OrderActivatedListener {
                 ? (await this.serviceCatalogRepo.findByCode(rawIdentifier) || await this.serviceCatalogRepo.findById(rawIdentifier))
                 : null;
 
-            const targetUrl = order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '';
+            let targetUrl = order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '';
+            if (targetUrl) {
+                try {
+                    const canonicalUrl = await resolveShortUrl(targetUrl);
+                    if (canonicalUrl && canonicalUrl !== targetUrl) {
+                        this.logger.log(`🔗 Resolved short link '${targetUrl}' -> Canonical: '${canonicalUrl}'`);
+                        targetUrl = canonicalUrl;
+                    }
+                } catch (resErr) {
+                    this.logger.warn(`Could not resolve short targetUrl '${targetUrl}': ${resErr?.message}`);
+                }
+            }
 
             const isGoogleBusiness = serviceIdentifier.includes('GOOGLE_BUSINESS') ||
                 serviceIdentifier.includes('GMB') ||

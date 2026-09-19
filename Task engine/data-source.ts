@@ -23,6 +23,7 @@ import { CampaignWorkerParticipation } from "./shared/database/entities/campaign
 import { TaskAssignment } from "./shared/database/entities/task-assignment.entity";
 import { Wallet } from "./shared/database/entities/wallet.entity";
 import { WalletTransaction } from "./shared/database/entities/wallet-transaction.entity";
+import { WorkerCompletedIdentity } from "./shared/database/entities/worker-completed-identity.entity";
 
 export const AppDataSource = new DataSource({
     type: "mysql",
@@ -38,7 +39,8 @@ export const AppDataSource = new DataSource({
         User, Worker, WorkerScore, Order, Task, TaskSubmission, Earning, Withdrawal,
         KycProfile, PaymentMethod, Rating, File, Notification, AuditLog, ServiceCatalog,
         ServicePricing, SystemSetting, PaymentTransaction, TaskGenerationJob,
-        CampaignWorkerParticipation, TaskAssignment, Wallet, WalletTransaction
+        CampaignWorkerParticipation, TaskAssignment, Wallet, WalletTransaction,
+        WorkerCompletedIdentity
     ],
     migrations: ["./shared/database/migrations/*.ts"],
 });

@@ -32,6 +32,7 @@ import { AiGeneratorService } from '../../../../shared/ai-generator/ai-generator
 import { PlayStoreScraperService } from '../../../../shared/services/playstore-scraper.service';
 import { YouTubeMetadataService } from '../../../../shared/services/youtube-metadata.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { resolveShortUrl } from '../../../../shared/common/utils/task-identity.util';
 
 @ApiTags('Buyer - Orders')
 @Roles(UserRole.BUYER)
@@ -253,7 +254,18 @@ export class BuyerOrderController {
 
         // Normalize requirements payload for simplified buyer form & legacy elements
         const reqs = data.requirements || {};
-        const targetUrl = reqs.targetUrl || reqs.url || reqs.link || reqs.channelUrl || reqs.videoUrl || '';
+        let targetUrl = reqs.targetUrl || reqs.url || reqs.link || reqs.channelUrl || reqs.videoUrl || '';
+        if (targetUrl) {
+            try {
+                const resolvedUrl = await resolveShortUrl(targetUrl);
+                if (resolvedUrl && resolvedUrl !== targetUrl) {
+                    targetUrl = resolvedUrl;
+                    if (reqs.targetUrl) reqs.targetUrl = resolvedUrl;
+                    if (reqs.url) reqs.url = resolvedUrl;
+                    if (reqs.link) reqs.link = resolvedUrl;
+                }
+            } catch (_) {}
+        }
         let watchTimeSeconds = reqs.watchTimeSeconds || catalog?.watchtimeSeconds || 0;
         let videoDurationSeconds = reqs.videoDurationSeconds || 0;
 

@@ -58,15 +58,19 @@ export class DuplicateFilterService {
                     workersWithSameAppOrUrl.add(id.toLowerCase().trim());
                 }
             } catch (err) {
-                this.logger.warn(`Error checking cross-campaign task identity: ${err.message}`);
+                this.logger.error(`Fail-Closed: Error checking cross-campaign task identity: ${err.message}`);
+                throw err;
             }
         }
 
         const eligibleWorkers: string[] = [];
+        const usedWorkerSet = new Set(usedWorkerIdsInCampaign.map((id) => (id || '').toLowerCase().trim()));
 
         for (const workerId of workerIds) {
-            // Strict Exclusion Rule 1: Worker has ALREADY participated in CampaignWorkerParticipation DB table
-            if (campaignId && usedWorkerIdsInCampaign.includes(workerId)) {
+            const normalizedWId = (workerId || '').toLowerCase().trim();
+
+            // Strict Exclusion Rule 1: Worker has ALREADY participated in CampaignWorkerParticipation DB table (checked across all aliases)
+            if (campaignId && usedWorkerSet.has(normalizedWId)) {
                 this.logger.debug(`Worker '${workerId}' EXCLUDED from Campaign '${campaignId}' (Already participated/expired)`);
                 continue;
             }
@@ -78,7 +82,6 @@ export class DuplicateFilterService {
             }
 
             // Strict Exclusion Rule 3: Same app package or same target URL completed
-            const normalizedWId = (workerId || '').toLowerCase().trim();
             if (workersWithSameAppOrUrl.has(normalizedWId)) {
                 this.logger.debug(`Worker '${workerId}' EXCLUDED due to already completed app/URL (${targetIdentity.packageId || targetIdentity.normalizedUrl})`);
                 continue;

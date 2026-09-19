@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Task } from '../entities/task.entity';
@@ -8,6 +8,7 @@ import { extractTaskIdentity } from '../../common/utils/task-identity.util';
 
 @Injectable()
 export class TaskRepository {
+    private readonly logger = new Logger(TaskRepository.name);
     private static readonly statusAliases: Record<string, string[]> = {
         draft: ['draft'],
         active: ['active', 'created', 'available'],
@@ -289,7 +290,10 @@ export class TaskRepository {
                 for (const row of assignmentRows) {
                     if (row.workerId) workerIds.add(row.workerId.toString().trim());
                 }
-            } catch (_) {}
+            } catch (assignErr) {
+                this.logger.error(`Fail-closed: Error querying task_assignments history: ${assignErr?.message}`);
+                throw assignErr;
+            }
         }
 
         if (workerIds.size === 0) return [];
@@ -314,7 +318,10 @@ export class TaskRepository {
                 if (r.userEmail) resolvedIds.add(r.userEmail.toString().trim().toLowerCase());
                 if (r.workerId) resolvedIds.add(r.workerId.toString().trim().toLowerCase());
             }
-        } catch (_) {}
+        } catch (aliasErr) {
+            this.logger.error(`Fail-closed: Error resolving worker aliases: ${aliasErr?.message}`);
+            throw aliasErr;
+        }
 
         return Array.from(resolvedIds);
     }
