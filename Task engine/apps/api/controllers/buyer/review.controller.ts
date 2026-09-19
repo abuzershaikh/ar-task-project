@@ -4,6 +4,7 @@ import {
     Post,
     Param,
     Body,
+    Query,
     NotFoundException,
     ForbiddenException,
 } from '@nestjs/common';
@@ -230,6 +231,169 @@ export class BuyerReviewController {
             review,
             reasonCode,
             message: 'Changes requested from worker. Resubmission unlocked.',
+        };
+    }
+
+    @Post('approve-all')
+    @ApiOperation({ summary: 'Approve all pending submissions in bulk' })
+    async approveAll(
+        @Body() body: { orderId?: string; submissionIds?: string[]; notes?: string },
+        @CurrentUser() user: User,
+    ) {
+        // Fetch all orders of this buyer to enforce ownership
+        const buyerOrders = await this.orderRepo.findByBuyer(user.id);
+        const buyerOrderIds = new Set(buyerOrders.map((o) => o.id));
+
+        // If specific orderId requested, verify ownership
+        if (body?.orderId && !buyerOrderIds.has(body.orderId)) {
+            throw new ForbiddenException('You do not own this order');
+        }
+
+        const targetOrderIds = body?.orderId ? [body.orderId] : Array.from(buyerOrderIds);
+
+        // Fetch pending reviews
+        const pendingSubmissions = await this.submissionRepo.findPendingReviews();
+        const submissionsToApprove: TaskSubmission[] = [];
+
+        for (const sub of pendingSubmissions) {
+            // If explicit submissionIds were provided, filter by them
+            if (body?.submissionIds && body.submissionIds.length > 0) {
+                if (!body.submissionIds.includes(sub.id) && !body.submissionIds.includes(sub.taskId)) {
+                    continue;
+                }
+            }
+
+            const task = await this.taskRepo.findById(sub.taskId);
+            if (task && targetOrderIds.includes(task.orderId)) {
+                submissionsToApprove.push(sub);
+            }
+        }
+
+        const approvedResults: any[] = [];
+        const errors: any[] = [];
+
+        for (const sub of submissionsToApprove) {
+            try {
+                const review = await this.reviewEngine.reviewSubmission(sub.id, {
+                    action: 'approved',
+                    reviewedBy: user.id,
+                    notes: body?.notes || 'Bulk approved by buyer',
+                });
+                approvedResults.push({ submissionId: sub.id, action: review?.action || 'approved' });
+            } catch (err: any) {
+                console.error(`Bulk approve error for submission ${sub.id}:`, err);
+                errors.push({ submissionId: sub.id, error: err.message });
+            }
+        }
+
+        return {
+            success: true,
+            totalRequested: submissionsToApprove.length,
+            approvedCount: approvedResults.length,
+            failedCount: errors.length,
+            errors: errors.length > 0 ? errors : undefined,
+            message: `Successfully approved ${approvedResults.length} submissions in bulk`,
+        };
+    }
+
+    @Get('auto-approve-status')
+    @ApiOperation({ summary: 'Get current auto-approve setting' })
+    async getAutoApproveStatus(
+        @Query('orderId') orderId: string | undefined,
+        @CurrentUser() user: User,
+    ) {
+        if (orderId) {
+            const order = await this.orderRepo.findById(orderId);
+            if (!order || order.buyerId !== user.id) {
+                throw new NotFoundException('Order not found or unauthorized');
+            }
+            const mode = (order.reviewMode || '').toLowerCase();
+            const isAuto = mode === 'automatic' || mode === 'auto' || mode === 'system' || order.requirements?.autoApprove === true;
+            return {
+                success: true,
+                orderId,
+                autoApprove: isAuto,
+            };
+        }
+
+        // Global buyer check across active orders
+        const buyerOrders = await this.orderRepo.findByBuyer(user.id);
+        const activeOrders = buyerOrders.filter(o => o.status === 'active' || o.status === 'ACTIVE');
+        const targetList = activeOrders.length > 0 ? activeOrders : buyerOrders;
+
+        const autoCount = targetList.filter(o => {
+            const mode = (o.reviewMode || '').toLowerCase();
+            return mode === 'automatic' || mode === 'auto' || mode === 'system' || o.requirements?.autoApprove === true;
+        }).length;
+
+        const isAutoApprove = targetList.length > 0 && autoCount === targetList.length;
+
+        return {
+            success: true,
+            autoApprove: isAutoApprove || (targetList.length > 0 && autoCount > 0),
+            autoCount,
+            totalOrders: targetList.length,
+        };
+    }
+
+    @Post('auto-approve-toggle')
+    @ApiOperation({ summary: 'Toggle auto-approval setting on or off' })
+    async toggleAutoApprove(
+        @Body() body: { autoApprove: boolean; orderId?: string },
+        @CurrentUser() user: User,
+    ) {
+        const { autoApprove, orderId } = body;
+
+        let affectedOrders: any[] = [];
+        if (orderId) {
+            const order = await this.orderRepo.findById(orderId);
+            if (!order || order.buyerId !== user.id) {
+                throw new NotFoundException('Order not found or unauthorized');
+            }
+            affectedOrders = [order];
+        } else {
+            const buyerOrders = await this.orderRepo.findByBuyer(user.id);
+            const activeOrders = buyerOrders.filter(o => o.status === 'active' || o.status === 'ACTIVE');
+            affectedOrders = activeOrders.length > 0 ? activeOrders : buyerOrders;
+        }
+
+        for (const order of affectedOrders) {
+            order.reviewMode = autoApprove ? 'automatic' : 'buyer';
+            order.requirements = {
+                ...(order.requirements || {}),
+                autoApprove: autoApprove,
+            };
+            await this.orderRepo.save(order);
+        }
+
+        // If turning ON, automatically approve existing pending submissions for these orders!
+        let autoApprovedCount = 0;
+        if (autoApprove && affectedOrders.length > 0) {
+            const affectedOrderIds = new Set(affectedOrders.map(o => o.id));
+            const pendingSubmissions = await this.submissionRepo.findPendingReviews();
+            for (const sub of pendingSubmissions) {
+                const task = await this.taskRepo.findById(sub.taskId);
+                if (task && affectedOrderIds.has(task.orderId)) {
+                    try {
+                        await this.reviewEngine.reviewSubmission(sub.id, {
+                            action: 'approved',
+                            reviewedBy: 'system',
+                            notes: 'Auto-approved upon enabling auto-approval toggle',
+                        });
+                        autoApprovedCount++;
+                    } catch (e) {
+                        console.error(`Error auto-approving pending submission ${sub.id}:`, e);
+                    }
+                }
+            }
+        }
+
+        return {
+            success: true,
+            autoApprove,
+            affectedOrdersCount: affectedOrders.length,
+            existingApprovedCount: autoApprovedCount,
+            message: `Auto-approval has been ${autoApprove ? 'enabled' : 'disabled'}${autoApprovedCount > 0 ? ` and ${autoApprovedCount} pending submissions were approved` : ''}`,
         };
     }
 }

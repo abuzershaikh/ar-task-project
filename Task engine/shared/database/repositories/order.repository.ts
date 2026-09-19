@@ -45,6 +45,10 @@ export class OrderRepository {
         return this.findById(id);
     }
 
+    async save(order: Order): Promise<Order> {
+        return this.repository.save(order);
+    }
+
     async incrementCompletedTasks(orderId: string): Promise<void> {
         await this.repository.increment({ id: orderId }, 'tasksCompleted', 1);
     }

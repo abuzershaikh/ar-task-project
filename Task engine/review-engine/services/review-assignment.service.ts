@@ -31,29 +31,33 @@ export class ReviewAssignmentService {
             throw new Error('Order not found');
         }
 
-        // Determine reviewer based on review mode (case-insensitive & safe fallback)
+        // Determine reviewer based on review mode & autoApprove flag (case-insensitive & safe fallback)
         let reviewerId: string | null = null;
         const mode = (order.reviewMode || '').toString().trim().toLowerCase();
+        const isAuto =
+            mode === 'automatic' ||
+            mode === 'auto' ||
+            mode === 'system' ||
+            order.requirements?.autoApprove === true ||
+            (order.requirements as any)?.autoApproval === true;
 
-        switch (mode) {
-            case 'buyer':
-                reviewerId = order.buyerId;
-                break;
+        if (isAuto) {
+            reviewerId = 'system';
+        } else {
+            switch (mode) {
+                case 'buyer':
+                    reviewerId = order.buyerId;
+                    break;
 
-            case 'admin':
-                reviewerId = 'admin'; // Assign to available admin
-                break;
+                case 'admin':
+                    reviewerId = 'admin'; // Assign to available admin
+                    break;
 
-            case 'automatic':
-            case 'auto':
-            case 'system':
-                reviewerId = 'system';
-                break;
-
-            default:
-                // Safe fallback to buyer or admin instead of throwing 500 error!
-                reviewerId = order.buyerId || 'admin';
-                break;
+                default:
+                    // Safe fallback to buyer or admin instead of throwing 500 error!
+                    reviewerId = order.buyerId || 'admin';
+                    break;
+            }
         }
 
         // Update submission

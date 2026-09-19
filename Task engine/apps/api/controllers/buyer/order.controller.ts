@@ -245,9 +245,8 @@ export class BuyerOrderController {
         }
 
         const catalogReviewMode = (catalog?.reviewMode || 'buyer').toString().trim().toLowerCase();
-        // Enforce catalog reviewMode if it's explicitly set to something other than 'buyer' by admin
-        // Otherwise, allow buyer to specify it, defaulting to 'buyer'
-        const buyerReviewMode = (data.reviewMode || '').toString().trim().toLowerCase();
+        const isAutoApproveRequested = (data as any).autoApprove === true || data.requirements?.autoApprove === true;
+        const buyerReviewMode = isAutoApproveRequested ? 'automatic' : (data.reviewMode || '').toString().trim().toLowerCase();
         const finalReviewMode = catalogReviewMode && catalogReviewMode !== 'buyer' ? catalogReviewMode : (buyerReviewMode || 'buyer');
 
         const title = data.title || `${snapshot.serviceCode || serviceIdentifier} Campaign (${quantity} tasks)`;
@@ -306,6 +305,7 @@ export class BuyerOrderController {
 
         const normalizedRequirements = {
             ...reqs,
+            autoApprove: isAutoApproveRequested || finalReviewMode === 'automatic',
             targetUrl,
             customText: reqs.customText || reqs.text || reqs.comment || reqs.instructions || data.description || '',
             watchTimeSeconds: Number(watchTimeSeconds) || 0,
@@ -931,6 +931,35 @@ export class BuyerOrderController {
         return {
             success: true,
             message: 'Order cancelled',
+        };
+    }
+
+    @Post(':id/auto-approve')
+    @ApiOperation({ summary: 'Toggle auto-approval for a specific order' })
+    async toggleOrderAutoApprove(
+        @Param('id') orderId: string,
+        @Body() body: { autoApprove: boolean },
+        @CurrentUser() user: User,
+    ) {
+        const order = await this.orderRepo.findById(orderId);
+        if (!order || order.buyerId !== user.id) {
+            throw new NotFoundException('Order not found or access denied');
+        }
+
+        const autoApprove = body.autoApprove === true;
+        order.reviewMode = autoApprove ? 'automatic' : 'buyer';
+        order.requirements = {
+            ...(order.requirements || {}),
+            autoApprove,
+        };
+        await this.orderRepo.save(order);
+
+        return {
+            success: true,
+            orderId,
+            autoApprove,
+            reviewMode: order.reviewMode,
+            message: `Order auto-approval has been ${autoApprove ? 'enabled' : 'disabled'}`,
         };
     }
 }

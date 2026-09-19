@@ -8,6 +8,9 @@ abstract class ReviewRepository {
   Future<Either<Failure, ReviewSubmissionModel>> getReviewDetail(String submissionId);
   Future<Either<Failure, bool>> approveTaskProof(String submissionId, {String? notes});
   Future<Either<Failure, bool>> rejectTaskProof(String submissionId, String reasonCode, String note);
+  Future<Either<Failure, Map<String, dynamic>>> approveAllTaskProofs({String? orderId, List<String>? submissionIds, String? notes});
+  Future<Either<Failure, bool>> toggleAutoApprove({required bool autoApprove, String? orderId});
+  Future<Either<Failure, bool>> getAutoApproveStatus({String? orderId});
 }
 
 class ReviewRepositoryImpl implements ReviewRepository {
@@ -50,6 +53,36 @@ class ReviewRepositoryImpl implements ReviewRepository {
     try {
       final success = await remoteDataSource.rejectSubmission(submissionId, reasonCode, note);
       return Right(success);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> approveAllTaskProofs({String? orderId, List<String>? submissionIds, String? notes}) async {
+    try {
+      final res = await remoteDataSource.approveAllSubmissions(orderId: orderId, submissionIds: submissionIds, notes: notes);
+      return Right(res);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> toggleAutoApprove({required bool autoApprove, String? orderId}) async {
+    try {
+      final success = await remoteDataSource.toggleAutoApprove(autoApprove: autoApprove, orderId: orderId);
+      return Right(success);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> getAutoApproveStatus({String? orderId}) async {
+    try {
+      final status = await remoteDataSource.getAutoApproveStatus(orderId: orderId);
+      return Right(status);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

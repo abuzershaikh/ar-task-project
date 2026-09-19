@@ -6,6 +6,7 @@ class ReviewSubmissionModel {
   final String workerName;
   final String proofScreenshotUrl;
   final String proofText;
+  final String? orderId;
   final String status;
   final DateTime submittedAt;
 
@@ -17,6 +18,7 @@ class ReviewSubmissionModel {
     required this.workerName,
     required this.proofScreenshotUrl,
     required this.proofText,
+    this.orderId,
     required this.status,
     required this.submittedAt,
   });
@@ -51,6 +53,8 @@ class ReviewSubmissionModel {
       extractedProofUrl = 'http://65.20.77.112:3000/api/v1/files/raw/$clean';
     }
 
+    final rawOrderId = (json['orderId'] ?? json['task']?['orderId'] ?? '').toString();
+
     return ReviewSubmissionModel(
       id: (json['id'] ?? json['_id'] ?? json['submissionId'] ?? '').toString(),
       taskId: (json['taskId'] ?? '').toString(),
@@ -59,6 +63,7 @@ class ReviewSubmissionModel {
       workerName: (json['workerName'] ?? json['worker']?['name'] ?? 'Worker').toString(),
       proofScreenshotUrl: extractedProofUrl,
       proofText: extractedProofText,
+      orderId: rawOrderId.isNotEmpty ? rawOrderId : null,
       status: (json['status'] ?? 'PENDING').toString().toUpperCase(),
       submittedAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
@@ -77,8 +82,10 @@ class ReviewSubmissionModel {
       'workerName': workerName,
       'proofScreenshotUrl': proofScreenshotUrl,
       'proofText': proofText,
+      if (orderId != null) 'orderId': orderId,
       'status': status,
       'createdAt': submittedAt.toIso8601String(),
     };
   }
 }
+

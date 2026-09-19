@@ -12,7 +12,7 @@ class ReviewsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getIt<ReviewsBloc>()..add(LoadPendingReviewsEvent()),
+      create: (_) => getIt<ReviewsBloc>()..add(const LoadPendingReviewsEvent()),
       child: const _ReviewsView(),
     );
   }
@@ -44,7 +44,7 @@ class _ReviewsView extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.refresh_rounded, color: Color(0xFF6D28D9)),
               onPressed: () {
-                context.read<ReviewsBloc>().add(LoadPendingReviewsEvent());
+                context.read<ReviewsBloc>().add(const LoadPendingReviewsEvent());
               },
             ),
           ],
@@ -88,7 +88,12 @@ class _ReviewsView extends StatelessWidget {
             if (state is ReviewsLoaded) {
               return TabBarView(
                 children: [
-                  _buildReviewList(context, state.submissions, 'pending'),
+                  _buildReviewList(
+                    context,
+                    state.submissions,
+                    'pending',
+                    isAutoApprove: state.isAutoApprove,
+                  ),
                   _buildReviewList(context, [], 'approved'),
                   _buildReviewList(context, [], 'rejected'),
                 ],
@@ -136,21 +141,250 @@ class _ReviewsView extends StatelessWidget {
     );
   }
 
-  Widget _buildReviewList(BuildContext context, List<ReviewSubmissionModel> submissions, String type) {
+  Widget _buildAutoApproveToggleCard(BuildContext context, bool isAutoApprove) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isAutoApprove
+              ? [const Color(0xFFFAF5FF), const Color(0xFFF3E8FF)]
+              : [Colors.white, const Color(0xFFF9FAFB)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isAutoApprove ? const Color(0xFFDDD6FE) : const Color(0xFFE5E7EB),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isAutoApprove
+                ? const Color(0xFF7C3AED).withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isAutoApprove ? const Color(0xFF7C3AED) : const Color(0xFF9CA3AF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.bolt_rounded, size: 20, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Auto-Approve Proofs',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: const Color(0xFF1E1B4B),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isAutoApprove ? const Color(0xFFECFDF5) : const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: isAutoApprove ? const Color(0xFFA7F3D0) : const Color(0xFFE5E7EB),
+                        ),
+                      ),
+                      child: Text(
+                        isAutoApprove ? 'ACTIVE' : 'OFF',
+                        style: GoogleFonts.outfit(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          color: isAutoApprove ? const Color(0xFF059669) : const Color(0xFF6B7280),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isAutoApprove
+                      ? 'Worker proofs are approved and credited automatically'
+                      : 'Turn on to automatically approve all incoming worker proofs',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    color: const Color(0xFF6B7280),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch.adaptive(
+            value: isAutoApprove,
+            activeColor: const Color(0xFF7C3AED),
+            onChanged: (val) {
+              context.read<ReviewsBloc>().add(ToggleAutoApproveEvent(autoApprove: val));
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApproveAllBar(BuildContext context, int count) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFECFDF5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.playlist_add_check_circle_rounded, color: Color(0xFF059669), size: 24),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pending Review: $count Tasks',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: const Color(0xFF065F46),
+                  ),
+                ),
+                Text(
+                  'Accept all tasks in a single click',
+                  style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF047857)),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => _confirmApproveAll(context, count),
+            icon: const Icon(Icons.done_all_rounded, size: 16),
+            label: const Text('Approve All'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmApproveAll(BuildContext context, int count) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.done_all_rounded, color: Color(0xFF059669), size: 24),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Approve All?',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to approve all $count pending submissions? Worker rewards will be credited immediately.',
+          style: GoogleFonts.outfit(fontSize: 13, color: const Color(0xFF4B5563)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text('Cancel', style: GoogleFonts.outfit(color: const Color(0xFF6B7280), fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              context.read<ReviewsBloc>().add(const ApproveAllReviewsEvent());
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            child: Text('Approve All ($count)', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewList(
+    BuildContext context,
+    List<ReviewSubmissionModel> submissions,
+    String type, {
+    bool isAutoApprove = false,
+  }) {
+    final isPendingTab = type == 'pending';
+
     if (submissions.isEmpty) {
+      if (isPendingTab) {
+        return RefreshIndicator(
+          color: const Color(0xFF7C3AED),
+          onRefresh: () async {
+            context.read<ReviewsBloc>().add(const LoadPendingReviewsEvent());
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              _buildAutoApproveToggleCard(context, isAutoApprove),
+              const SizedBox(height: 32),
+              _buildEmptyState(context, 'No pending submissions to review'),
+            ],
+          ),
+        );
+      }
       return _buildEmptyState(context, 'No submissions found');
     }
 
     return RefreshIndicator(
       color: const Color(0xFF7C3AED),
       onRefresh: () async {
-        context.read<ReviewsBloc>().add(LoadPendingReviewsEvent());
+        context.read<ReviewsBloc>().add(const LoadPendingReviewsEvent());
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: submissions.length,
+        itemCount: submissions.length + (isPendingTab ? 2 : 0),
         itemBuilder: (context, index) {
-          final item = submissions[index];
+          if (isPendingTab && index == 0) {
+            return _buildAutoApproveToggleCard(context, isAutoApprove);
+          }
+          if (isPendingTab && index == 1) {
+            return _buildApproveAllBar(context, submissions.length);
+          }
+
+          final itemIndex = isPendingTab ? index - 2 : index;
+          final item = submissions[itemIndex];
           final isPending = item.status.toUpperCase() == 'PENDING' || item.status.toUpperCase() == 'SUBMITTED';
 
           return Container(
@@ -182,7 +416,7 @@ class _ReviewsView extends StatelessWidget {
                     ),
                   ).then((_) {
                     if (context.mounted) {
-                      context.read<ReviewsBloc>().add(LoadPendingReviewsEvent());
+                      context.read<ReviewsBloc>().add(const LoadPendingReviewsEvent());
                     }
                   });
                 },

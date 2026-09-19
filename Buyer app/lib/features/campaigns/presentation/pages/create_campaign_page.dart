@@ -68,6 +68,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   bool _isGeneratingPreview = false;
   int _minWords = 15;
   int _maxWords = 45;
+  bool _autoApprove = false;
 
   // Play Store App Metadata State
   String? _appName;
@@ -857,7 +858,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         'description': isCommentService
             ? 'Custom content campaign'
             : 'Direct promotional campaign',
+        'autoApprove': _autoApprove,
+        'reviewMode': _autoApprove ? 'automatic' : 'manual',
         'requirements': {
+          'autoApprove': _autoApprove,
           'targetUrl': _targetUrlController.text.trim(),
           'topic': _topicController.text.trim(),
           'language': _selectedLanguage,
@@ -976,6 +980,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   _sampleComments = [];
                   _ytTitle = null;
                   _ytThumbnail = null;
+                  _autoApprove = false;
                 });
               },
               child: const Text('Create Another'),
@@ -2457,6 +2462,74 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                       ],
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Auto-Approve Proofs Toggle Card
+              Container(
+                decoration: BoxDecoration(
+                  color: _autoApprove
+                      ? const Color(0xFFF0FDF4)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: _autoApprove
+                        ? const Color(0xFF86EFAC)
+                        : const Color(0xFFE2E8F0),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: SwitchListTile.adaptive(
+                  value: _autoApprove,
+                  onChanged: (val) {
+                    setState(() => _autoApprove = val);
+                  },
+                  activeColor: const Color(0xFF10B981),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  secondary: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _autoApprove
+                          ? const Color(0xFFDCFCE7)
+                          : const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.auto_mode_rounded,
+                      size: 20,
+                      color: _autoApprove
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFF64748B),
+                    ),
+                  ),
+                  title: const Text(
+                    'Auto-Approve Proofs',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  subtitle: Text(
+                    _autoApprove
+                        ? 'Worker proofs are approved instantly upon submission.'
+                        : 'Proofs will wait for manual review or bulk accept.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _autoApprove
+                          ? const Color(0xFF15803D)
+                          : const Color(0xFF64748B),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),

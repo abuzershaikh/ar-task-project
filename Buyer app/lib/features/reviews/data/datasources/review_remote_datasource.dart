@@ -7,6 +7,9 @@ abstract class ReviewRemoteDataSource {
   Future<ReviewSubmissionModel> getReviewDetail(String submissionId);
   Future<bool> approveSubmission(String submissionId, {String? notes});
   Future<bool> rejectSubmission(String submissionId, String reasonCode, String note);
+  Future<Map<String, dynamic>> approveAllSubmissions({String? orderId, List<String>? submissionIds, String? notes});
+  Future<bool> toggleAutoApprove({required bool autoApprove, String? orderId});
+  Future<bool> getAutoApproveStatus({String? orderId});
 }
 
 class ReviewRemoteDataSourceImpl implements ReviewRemoteDataSource {
@@ -50,5 +53,42 @@ class ReviewRemoteDataSourceImpl implements ReviewRemoteDataSource {
       },
     );
     return response.statusCode == 200 || response.statusCode == 201;
+  }
+
+  @override
+  Future<Map<String, dynamic>> approveAllSubmissions({String? orderId, List<String>? submissionIds, String? notes}) async {
+    final response = await client.post(
+      '/buyer/reviews/approve-all',
+      data: {
+        if (orderId != null) 'orderId': orderId,
+        if (submissionIds != null) 'submissionIds': submissionIds,
+        if (notes != null) 'notes': notes,
+      },
+    );
+    return response.data != null ? Map<String, dynamic>.from(response.data) : {'success': true};
+  }
+
+  @override
+  Future<bool> toggleAutoApprove({required bool autoApprove, String? orderId}) async {
+    final response = await client.post(
+      '/buyer/reviews/auto-approve-toggle',
+      data: {
+        'autoApprove': autoApprove,
+        if (orderId != null) 'orderId': orderId,
+      },
+    );
+    return response.statusCode == 200 || response.statusCode == 201;
+  }
+
+  @override
+  Future<bool> getAutoApproveStatus({String? orderId}) async {
+    final response = await client.get(
+      '/buyer/reviews/auto-approve-status',
+      queryParameters: orderId != null ? {'orderId': orderId} : null,
+    );
+    if (response.statusCode == 200 && response.data != null) {
+      return response.data['autoApprove'] == true;
+    }
+    return false;
   }
 }
