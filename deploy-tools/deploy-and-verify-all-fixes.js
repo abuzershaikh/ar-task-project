@@ -50,6 +50,10 @@ const FILES_TO_UPLOAD = [
     remote: '/opt/task-engine/apps/api/controllers/buyer/order.controller.ts',
   },
   {
+    local: path.join(LOCAL_BASE, 'shared/config/database.config.ts'),
+    remote: '/opt/task-engine/shared/config/database.config.ts',
+  },
+  {
     local: path.join(__dirname, 'remote-test-suite.js'),
     remote: '/opt/task-engine/run-verification-suite.js',
   },
@@ -71,7 +75,7 @@ async function run() {
       console.log(`Uploading ${path.basename(item.local)} -> ${item.remote}`);
       await ssh.putFile(item.local, item.remote);
     }
-    console.log('✅ All 12 files uploaded successfully!');
+    console.log(`✅ All ${FILES_TO_UPLOAD.length} files uploaded successfully!`);
 
     // ── 3. Build Project on VPS ─────────────────────────────────────────────
     console.log('\n--- 3. Running npm run build on VPS ---');

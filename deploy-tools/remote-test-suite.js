@@ -169,6 +169,41 @@ async function runTestSuite() {
     process.exit(1);
   }
 
+  console.log('\n======================================================');
+  console.log('--- 6. TypeORM Active Transaction Pessimistic Lock Validation ---');
+  console.log('======================================================');
+  const { DataSource } = require('typeorm');
+  const { Task } = require('./dist/shared/database/entities/task.entity');
+  const testDataSource = new DataSource({
+    type: 'mysql',
+    host: process.env.DB_HOST || '127.0.0.1',
+    port: parseInt(process.env.DB_PORT || '3306', 10),
+    username: process.env.DB_USERNAME || 'task_user',
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE || 'task_engine',
+    entities: [Task],
+    synchronize: false,
+  });
+  await testDataSource.initialize();
+  const queryRunner = testDataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+  try {
+    const testTask = await queryRunner.manager.findOne(Task, {
+      where: {},
+      lock: { mode: 'pessimistic_write' },
+    });
+    console.log('PASS: TypeORM pessimistic_write lock executed inside active transaction with ZERO errors!');
+    await queryRunner.commitTransaction();
+  } catch (err) {
+    await queryRunner.rollbackTransaction();
+    console.error('FAIL: Pessimistic lock failed:', err);
+    process.exit(1);
+  } finally {
+    await queryRunner.release();
+    await testDataSource.destroy();
+  }
+
   await lockConn1.end();
   await lockConn2.end();
   await connection.end();

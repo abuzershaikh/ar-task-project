@@ -116,6 +116,7 @@ const repositories = [
             ...databaseConfig,
             entities,
             autoLoadEntities: false,
+            migrationsRun: true,
         }),
         TypeOrmModule.forFeature(entities),
     ],

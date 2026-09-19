@@ -225,23 +225,22 @@ export class TaskCommandService {
     async assignTask(command: AssignTaskCommand) {
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
+        await queryRunner.startTransaction();
+        const manager = queryRunner.manager;
 
         let lockName: string | null = null;
         try {
-            const task = await this.ensureTaskTransactional(queryRunner.manager, command.taskId);
+            const task = await this.ensureTaskTransactional(manager, command.taskId);
             const campaignId = task.campaignId || task.orderId;
             const orderId = task.orderId || task.campaignId;
             const orderUnitId = task.orderUnitId || (command as any).orderUnitId || task.requirements?.orderUnitId || null;
 
-            const { email: workerEmail, allIds } = await this.resolveWorkerIdentifiers(queryRunner.manager, command.workerId, command.workerEmail);
+            const { email: workerEmail, allIds } = await this.resolveWorkerIdentifiers(manager, command.workerId, command.workerEmail);
             const primaryWorkerKey = workerEmail || command.workerId;
             const targetIdentity = extractTaskIdentity(task);
 
-            // Acquire advisory lock on the dedicated connection BEFORE starting transaction!
-            lockName = await this.acquireIdentityLock(queryRunner.manager, primaryWorkerKey, targetIdentity.entityKey);
-
-            await queryRunner.startTransaction();
-            const manager = queryRunner.manager;
+            // Acquire advisory lock on the dedicated connection session
+            lockName = await this.acquireIdentityLock(manager, primaryWorkerKey, targetIdentity.entityKey);
 
             // 1. Same campaign participation verification
             const existingParticipation = await manager.findOne(CampaignWorkerParticipation, {
@@ -352,11 +351,13 @@ export class TaskCommandService {
     async acceptTask(command: AcceptTaskCommand) {
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
+        await queryRunner.startTransaction();
+        const manager = queryRunner.manager;
 
         let lockName: string | null = null;
         try {
-            const task = await this.ensureTaskTransactional(queryRunner.manager, command.taskId);
-            const { email: workerEmail, allIds } = await this.resolveWorkerIdentifiers(queryRunner.manager, command.workerId, command.workerEmail);
+            const task = await this.ensureTaskTransactional(manager, command.taskId);
+            const { email: workerEmail, allIds } = await this.resolveWorkerIdentifiers(manager, command.workerId, command.workerEmail);
             const primaryWorkerKey = workerEmail || command.workerId;
             const campaignId = task.campaignId || task.orderId;
             const orderId = task.orderId || task.campaignId;
@@ -368,14 +369,12 @@ export class TaskCommandService {
             }
 
             if (task.status === TaskStatus.ACCEPTED && allIds.includes(task.assignedTo || '')) {
+                await queryRunner.commitTransaction();
                 return task;
             }
 
-            // Acquire advisory lock on the dedicated connection BEFORE starting transaction!
-            lockName = await this.acquireIdentityLock(queryRunner.manager, primaryWorkerKey, targetIdentity.entityKey);
-
-            await queryRunner.startTransaction();
-            const manager = queryRunner.manager;
+            // Acquire advisory lock on the dedicated connection session
+            lockName = await this.acquireIdentityLock(manager, primaryWorkerKey, targetIdentity.entityKey);
 
             // Perform 3-level verification if task was unassigned or active
             if (!task.assignedTo || task.status === TaskStatus.ACTIVE) {

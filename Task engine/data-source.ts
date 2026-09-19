@@ -42,5 +42,5 @@ export const AppDataSource = new DataSource({
         CampaignWorkerParticipation, TaskAssignment, Wallet, WalletTransaction,
         WorkerCompletedIdentity
     ],
-    migrations: ["./shared/database/migrations/*.ts"],
+    migrations: [__dirname + "/shared/database/migrations/*{.ts,.js}"],
 });
