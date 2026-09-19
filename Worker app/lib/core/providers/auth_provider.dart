@@ -131,27 +131,6 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setDirectUser(Map<String, dynamic> userData) async {
-    _isAuthenticated = true;
-    _user = userData;
-    final email = userData['email'] ?? 'worker@taskpost.com';
-    final uid = userData['uid'] ?? 'worker_device_user';
-    final name = userData['name'] ?? 'Worker';
-
-    await ApiService.saveUserData(
-      email: email,
-      uid: uid,
-      name: name,
-    );
-    await CrashlyticsService.setUser(
-      id: uid,
-      email: email,
-      name: name,
-      role: 'WORKER',
-    );
-    notifyListeners();
-  }
-
   Future<void> fetchProfile() async {
     final firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser != null) {

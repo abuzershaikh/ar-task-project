@@ -19,9 +19,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'core/services/api_service.dart';
 import 'features/update/screens/app_update_screen.dart';
 
-// Set to false to enable authentication screens
-const bool kBypassAuth = false;
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -142,10 +139,6 @@ class _AppBootstrapWrapperState extends State<AppBootstrapWrapper> {
         releaseNotes: _updateInfo!['releaseNotes']?.toString() ??
             '• New task execution engine\n• Real-time notification deep linking\n• Improved stability and security',
       );
-    }
-
-    if (kBypassAuth) {
-      return const MainNavScreen();
     }
 
     return Consumer<AuthProvider>(

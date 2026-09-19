@@ -108,33 +108,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _handleDirectLogin() async {
-    setState(() => _isLoading = true);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    try {
-      final userData = {
-        'uid': 'worker_${DateTime.now().millisecondsSinceEpoch}',
-        'name': 'Worker User',
-        'email': 'worker_user@taskpost.com',
-        'role': 'WORKER',
-        'phone': '9876543210',
-        'isOnline': true,
-      };
-      await authProvider.setDirectUser(userData);
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainNavScreen()),
-        );
-      }
-    } catch (e) {
-      debugPrint('[DIRECT LOGIN ERROR] $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -268,32 +241,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Direct Worker Access Button
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: OutlinedButton.icon(
-                    onPressed: _isLoading ? null : _handleDirectLogin,
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white.withOpacity(0.25)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white70),
-                    label: const Text(
-                      'Direct Worker Access (Quick Login)',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white70,
-                      ),
-                    ),
                   ),
                 ),
 
