@@ -557,9 +557,13 @@ class ApiService {
   }
 
   /// Check if the running version requires an update from backend
-  static Future<Map<String, dynamic>?> checkAppUpdate(String version) async {
+  static Future<Map<String, dynamic>?> checkAppUpdate(String version, {String? versionCode}) async {
     try {
-      final url = Uri.parse('$baseUrl/app/check-update?version=$version&app=worker');
+      final q = StringBuffer('$baseUrl/app/check-update?version=${Uri.encodeComponent(version)}&app=worker');
+      if (versionCode != null && versionCode.trim().isNotEmpty) {
+        q.write('&versionCode=${Uri.encodeComponent(versionCode.trim())}');
+      }
+      final url = Uri.parse(q.toString());
       final response = await http.get(url).timeout(const Duration(seconds: 6));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

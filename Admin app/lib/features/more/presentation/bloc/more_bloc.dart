@@ -14,6 +14,11 @@ class ProcessPayoutEvent extends MoreEvent {
   final String payoutId;
   ProcessPayoutEvent(this.payoutId);
 }
+class RejectPayoutEvent extends MoreEvent {
+  final String payoutId;
+  final String reason;
+  RejectPayoutEvent(this.payoutId, this.reason);
+}
 
 class LoadReviewsQueueEvent extends MoreEvent {}
 class ApproveReviewEvent extends MoreEvent {
@@ -60,6 +65,7 @@ class MoreBloc extends Bloc<MoreEvent, MoreState> {
     on<VerifyKycEvent>(_onVerifyKyc);
     on<LoadPayoutsQueueEvent>(_onLoadPayouts);
     on<ProcessPayoutEvent>(_onProcessPayout);
+    on<RejectPayoutEvent>(_onRejectPayout);
     on<LoadReviewsQueueEvent>(_onLoadReviews);
     on<ApproveReviewEvent>(_onApproveReview);
     on<LoadAuditLogsEvent>(_onLoadAuditLogs);
@@ -97,6 +103,15 @@ class MoreBloc extends Bloc<MoreEvent, MoreState> {
   Future<void> _onProcessPayout(ProcessPayoutEvent event, Emitter<MoreState> emit) async {
     try {
       await repository.processPayout(event.payoutId);
+      add(LoadPayoutsQueueEvent());
+    } catch (e) {
+      emit(MoreError(e.toString()));
+    }
+  }
+
+  Future<void> _onRejectPayout(RejectPayoutEvent event, Emitter<MoreState> emit) async {
+    try {
+      await repository.rejectPayout(event.payoutId, event.reason);
       add(LoadPayoutsQueueEvent());
     } catch (e) {
       emit(MoreError(e.toString()));

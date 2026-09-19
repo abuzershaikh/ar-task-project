@@ -78,6 +78,7 @@ class _AppBootstrapWrapperState extends State<AppBootstrapWrapper> {
   bool _updateRequired = false;
   Map<String, dynamic>? _updateInfo;
   String _currentVersion = '1.0.0';
+  String _currentVersionCode = '1';
 
   @override
   void initState() {
@@ -89,12 +90,17 @@ class _AppBootstrapWrapperState extends State<AppBootstrapWrapper> {
     try {
       final info = await PackageInfo.fromPlatform();
       _currentVersion = info.version.isNotEmpty ? info.version : '1.0.0';
+      _currentVersionCode = info.buildNumber.isNotEmpty ? info.buildNumber : '1';
     } catch (_) {
       _currentVersion = '1.0.0';
+      _currentVersionCode = '1';
     }
 
     try {
-      final res = await ApiService.checkAppUpdate(_currentVersion);
+      final res = await ApiService.checkAppUpdate(
+        _currentVersion,
+        versionCode: _currentVersionCode,
+      );
       if (res != null && res['updateRequired'] == true) {
         if (mounted) {
           setState(() {
@@ -132,8 +138,7 @@ class _AppBootstrapWrapperState extends State<AppBootstrapWrapper> {
       return AppUpdateScreen(
         currentVersion: _currentVersion,
         latestVersion: _updateInfo!['latestVersion']?.toString() ?? '1.0.1',
-        downloadUrl: _updateInfo!['downloadUrl']?.toString() ??
-            'https://raw.githubusercontent.com/abuzershaikh/ar-task-project/main/Worker_App_Release.apk',
+        downloadUrl: _updateInfo!['downloadUrl']?.toString() ?? '',
         message: _updateInfo!['message']?.toString() ??
             'A new version of Task Reward Worker is available. Please update your app to continue.',
         releaseNotes: _updateInfo!['releaseNotes']?.toString() ??

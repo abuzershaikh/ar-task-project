@@ -125,18 +125,29 @@ export class WorkerEarningController {
 
         // Map withdrawals
         for (const w of withdrawals) {
+            const isRejected = (w.status || '').toUpperCase() === 'REJECTED';
+            const isPaid = (w.status || '').toUpperCase() === 'PAID';
+
+            let desc = 'Under Review / Processing';
+            if (isRejected) {
+                desc = w.rejectionReason ? `Declined: ${w.rejectionReason}` : 'Withdrawal Declined (Refunded to wallet)';
+            } else if (w.transactionId) {
+                desc = `Ref: ${w.transactionId}`;
+            } else if (isPaid) {
+                desc = 'Payout Completed';
+            }
+
             unified.push({
                 id: w.id,
                 type: 'WITHDRAWAL',
                 title: w.paymentMethodId ? `Payout via ${w.paymentMethodId}` : 'Withdrawal Request',
-                description: w.transactionId
-                    ? `Ref: ${w.transactionId}`
-                    : (w.status === WithdrawalStatus.PAID ? 'Payout Completed' : 'Under Review / Processing'),
+                description: desc,
                 amount: Number(w.amount || 0),
                 status: (w.status || 'REQUESTED').toUpperCase(),
                 date: w.createdAt,
                 createdAt: w.createdAt,
                 referenceId: w.transactionId || w.id,
+                rejectionReason: w.rejectionReason,
                 metadata: {
                     paymentMethodId: w.paymentMethodId,
                     transactionId: w.transactionId,

@@ -17,7 +17,7 @@ class AppUpdateScreen extends StatefulWidget {
     super.key,
     this.currentVersion = '1.0.0',
     this.latestVersion = '1.0.1',
-    this.downloadUrl = 'https://raw.githubusercontent.com/abuzershaikh/ar-task-project/main/Worker_App_Release.apk',
+    this.downloadUrl = '',
     this.message = 'A new version of Task Reward Worker is available. Please update your app to continue.',
     this.releaseNotes = '• High paying new tasks\n• Real-time notifications with instant task redirect\n• Performance optimizations and bug fixes',
   });

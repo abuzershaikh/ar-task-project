@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../service_builder/presentation/pages/app_update_management_screen.dart';
 
 class SystemSettingsScreen extends StatefulWidget {
   const SystemSettingsScreen({super.key});
@@ -107,6 +108,37 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Card(
+                    color: const Color(0xFF1E293B),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.system_update_rounded, color: Color(0xFF818CF8), size: 28),
+                      ),
+                      title: const Text(
+                        'App Version & Updates',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      subtitle: const Text(
+                        'Manage version codes, disable versions & setup redirect links',
+                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AppUpdateManagementScreen()),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Card(
                     child: SwitchListTile(
                       title: const Text('Maintenance Mode', style: TextStyle(fontWeight: FontWeight.bold)),

@@ -598,9 +598,9 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
         iconColor: const Color(0xFF10B981),
         bgColor: const Color(0xFFECFDF5),
       );
-    } else if (t.contains('TASK_REJECTED') || t.contains('REVIEW')) {
+    } else if (t.contains('PAYOUT_REJECTED') || t.contains('DECLINE') || t.contains('TASK_REJECTED') || t.contains('REVIEW')) {
       return _NotifStyle(
-        icon: Icons.warning_amber_rounded,
+        icon: Icons.cancel_rounded,
         iconColor: const Color(0xFFEF4444),
         bgColor: const Color(0xFFFEF2F2),
       );

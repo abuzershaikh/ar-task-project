@@ -5,6 +5,7 @@ import '../../../core/providers/profile_provider.dart';
 import '../../../core/providers/task_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../profile/screens/kyc_bank_details_screen.dart';
+import 'transactions_history_screen.dart';
 
 /// Withdrawal Screen:
 /// - Allows worker to enter payout amount, select dynamic quick chips, verify linked UPI/Bank/PayPal, and request instant payout.
@@ -362,6 +363,26 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
             ),
           ),
           centerTitle: true,
+          actions: [
+            IconButton(
+              tooltip: 'Transaction History',
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _blueIce,
+                  border: Border.all(color: _blueBorder),
+                ),
+                child: const Icon(Icons.history_rounded, color: _blueNavy, size: 18),
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TransactionsHistoryScreen()),
+                );
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
         ),
         body: SafeArea(
           child: SingleChildScrollView(

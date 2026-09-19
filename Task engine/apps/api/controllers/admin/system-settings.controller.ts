@@ -117,45 +117,123 @@ export class AdminSystemSettingsController {
     }
 
     @Get('app-updates')
-    @ApiOperation({ summary: 'Get App Version Update List and Release configuration' })
+    @ApiOperation({ summary: 'Get current App Updates & Version Registry settings' })
     async getAppUpdateSettings() {
         const updateVersionsSetting = await this.settingsRepo.findByKey('worker_app_update_versions');
+        const versionRegistrySetting = await this.settingsRepo.findByKey('worker_app_version_registry');
         const latestVersionSetting = await this.settingsRepo.findByKey('latest_worker_app_version');
+        const latestCodeSetting = await this.settingsRepo.findByKey('latest_worker_version_code');
         const apkUrlSetting = await this.settingsRepo.findByKey('latest_worker_apk_url');
         const updateMsgSetting = await this.settingsRepo.findByKey('force_update_message');
         const releaseNotesSetting = await this.settingsRepo.findByKey('worker_app_release_notes');
 
-        let updateList: string[] = [];
+        const rawApk = (apkUrlSetting?.value || '').toString();
+        const apkDownloadUrl = (rawApk.includes('github.com') || rawApk.includes('raw.githubusercontent.com')) ? '' : rawApk;
+        const latestVersion = (latestVersionSetting?.value || '1.0.5').toString();
+        const latestVersionCode = (latestCodeSetting?.value || '5').toString();
+        const updateMessage = (updateMsgSetting?.value || 'A new version of Task Reward Worker is available. Please update your app to continue.').toString();
+        const releaseNotes = (releaseNotesSetting?.value || '• New task execution engine\n• Real-time notification deep linking\n• Improved stability and security').toString();
+
+        let legacyUpdateList: string[] = [];
         try {
             if (updateVersionsSetting?.value) {
                 if (Array.isArray(updateVersionsSetting.value)) {
-                    updateList = updateVersionsSetting.value.map((v: any) => v.toString().trim());
+                    legacyUpdateList = updateVersionsSetting.value.map((v: any) => v.toString().trim());
                 } else if (typeof updateVersionsSetting.value === 'string') {
-                    updateList = JSON.parse(updateVersionsSetting.value).map((v: any) => v.toString().trim());
+                    legacyUpdateList = JSON.parse(updateVersionsSetting.value).map((v: any) => v.toString().trim());
                 }
             }
         } catch (_) {
-            updateList = [];
+            legacyUpdateList = [];
         }
+
+        let versionList: any[] = [];
+        try {
+            if (versionRegistrySetting?.value) {
+                if (Array.isArray(versionRegistrySetting.value)) {
+                    versionList = versionRegistrySetting.value;
+                } else if (typeof versionRegistrySetting.value === 'string') {
+                    versionList = JSON.parse(versionRegistrySetting.value);
+                }
+            }
+        } catch (_) {
+            versionList = [];
+        }
+
+        // Auto-seed or migrate if registry is empty
+        if (versionList.length === 0) {
+            if (legacyUpdateList.length > 0) {
+                versionList = legacyUpdateList.map((v, idx) => ({
+                    id: `v-${idx + 1}`,
+                    versionName: v,
+                    versionCode: v.replace(/\D/g, '') || `${idx + 1}`,
+                    status: 'disabled',
+                    updateUrl: apkDownloadUrl,
+                    message: updateMessage,
+                    updatedAt: new Date().toISOString(),
+                }));
+            } else {
+                versionList = [
+                    {
+                        id: 'v-1',
+                        versionName: '1.0.0',
+                        versionCode: '1',
+                        status: 'disabled',
+                        updateUrl: apkDownloadUrl,
+                        message: 'Initial release is deprecated. Please update to latest version.',
+                        updatedAt: new Date().toISOString(),
+                    },
+                    {
+                        id: 'v-2',
+                        versionName: '1.0.4',
+                        versionCode: '4',
+                        status: 'disabled',
+                        updateUrl: apkDownloadUrl,
+                        message: 'Older build is disabled. Please update to latest version.',
+                        updatedAt: new Date().toISOString(),
+                    },
+                    {
+                        id: 'v-3',
+                        versionName: latestVersion,
+                        versionCode: latestVersionCode,
+                        status: 'active',
+                        updateUrl: apkDownloadUrl,
+                        message: 'Current latest production release',
+                        updatedAt: new Date().toISOString(),
+                    },
+                ];
+            }
+        }
+
+        versionList = versionList.map((v: any) => {
+            if (v && v.updateUrl && (v.updateUrl.includes('github.com') || v.updateUrl.includes('raw.githubusercontent.com'))) {
+                return { ...v, updateUrl: '' };
+            }
+            return v;
+        });
 
         return {
             success: true,
             settings: {
-                updateList,
-                latestVersion: (latestVersionSetting?.value || '1.0.1').toString(),
-                apkDownloadUrl: (apkUrlSetting?.value || 'https://raw.githubusercontent.com/abuzershaikh/ar-task-project/main/Worker_App_Release.apk').toString(),
-                updateMessage: (updateMsgSetting?.value || 'A new version of Task Reward Worker is available. Please update your app to continue.').toString(),
-                releaseNotes: (releaseNotesSetting?.value || '• New task execution engine\n• Real-time notification deep linking\n• Improved stability and security').toString(),
+                versionList,
+                updateList: versionList.filter((v) => v.status === 'disabled').map((v) => v.versionName),
+                latestVersion,
+                latestVersionCode,
+                apkDownloadUrl,
+                updateMessage,
+                releaseNotes,
             },
         };
     }
 
     @Post('app-updates')
-    @ApiOperation({ summary: 'Update App Version Update List and Release configuration' })
+    @ApiOperation({ summary: 'Update App Version Registry and Release configuration' })
     async saveAppUpdateSettings(
         @Body() body: {
+            versionList?: any[];
             updateList?: string[];
             latestVersion?: string;
+            latestVersionCode?: string;
             apkDownloadUrl?: string;
             updateMessage?: string;
             releaseNotes?: string;
@@ -164,7 +242,25 @@ export class AdminSystemSettingsController {
     ) {
         const userId = user ? user.id : 'admin';
 
-        if (body.updateList !== undefined) {
+        if (body.versionList !== undefined) {
+            await this.settingsRepo.set(
+                'worker_app_version_registry',
+                body.versionList,
+                userId,
+                'Full registry of worker app version codes and status',
+            );
+            // Also sync legacy updateList
+            const disabledNames = body.versionList
+                .filter((v) => v.status === 'disabled')
+                .map((v) => (v.versionName || '').toString().trim())
+                .filter(Boolean);
+            await this.settingsRepo.set(
+                'worker_app_update_versions',
+                disabledNames,
+                userId,
+                'List of app versions that must update',
+            );
+        } else if (body.updateList !== undefined) {
             await this.settingsRepo.set(
                 'worker_app_update_versions',
                 body.updateList,
@@ -179,6 +275,15 @@ export class AdminSystemSettingsController {
                 body.latestVersion.trim(),
                 userId,
                 'Latest released version name',
+            );
+        }
+
+        if (body.latestVersionCode !== undefined) {
+            await this.settingsRepo.set(
+                'latest_worker_version_code',
+                body.latestVersionCode.trim(),
+                userId,
+                'Latest released version code',
             );
         }
 
@@ -224,50 +329,199 @@ export class AdminSystemSettingsController {
     }
 
     @Post('app-updates/add-version')
-    @ApiOperation({ summary: 'Add a single version string to the update list' })
+    @ApiOperation({ summary: 'Add a new version code or release to the registry' })
     async addVersionToUpdateList(
-        @Body() body: { version: string },
+        @Body() body: {
+            version?: string;
+            versionName?: string;
+            versionCode?: string;
+            status?: 'active' | 'disabled';
+            updateUrl?: string;
+            message?: string;
+        },
         @CurrentUser() user: User,
     ) {
         const userId = user ? user.id : 'admin';
-        const vToAdd = (body.version || '').trim();
-        if (!vToAdd) {
-            throw new NotFoundException('Version string is required');
+        const vName = (body.versionName || body.version || '').trim();
+        const vCode = (body.versionCode || vName.replace(/\D/g, '') || '1').trim();
+        const status = body.status === 'active' ? 'active' : 'disabled'; // default disabled
+
+        if (!vName && !vCode) {
+            throw new NotFoundException('Version name or version code is required');
         }
 
-        const updateVersionsSetting = await this.settingsRepo.findByKey('worker_app_update_versions');
-        let currentList: string[] = [];
+        const apkUrlSetting = await this.settingsRepo.findByKey('latest_worker_apk_url');
+        const rawApk = (apkUrlSetting?.value || '').toString();
+        const defaultApk = (rawApk.includes('github.com') || rawApk.includes('raw.githubusercontent.com')) ? '' : rawApk;
+        const updateUrl = (body.updateUrl || defaultApk).trim();
+
+        // Load existing registry
+        const versionRegistrySetting = await this.settingsRepo.findByKey('worker_app_version_registry');
+        let versionList: any[] = [];
         try {
-            if (updateVersionsSetting?.value) {
-                if (Array.isArray(updateVersionsSetting.value)) {
-                    currentList = updateVersionsSetting.value.map((v: any) => v.toString().trim());
-                } else if (typeof updateVersionsSetting.value === 'string') {
-                    currentList = JSON.parse(updateVersionsSetting.value).map((v: any) => v.toString().trim());
+            if (versionRegistrySetting?.value) {
+                if (Array.isArray(versionRegistrySetting.value)) {
+                    versionList = [...versionRegistrySetting.value];
+                } else if (typeof versionRegistrySetting.value === 'string') {
+                    versionList = JSON.parse(versionRegistrySetting.value);
                 }
             }
-        } catch (_) {}
-
-        if (!currentList.includes(vToAdd)) {
-            currentList.push(vToAdd);
-            await this.settingsRepo.set('worker_app_update_versions', currentList, userId, 'List of app versions that must update');
+        } catch (_) {
+            versionList = [];
         }
+
+        // Check if exists, update or add
+        const existingIdx = versionList.findIndex(
+            (v) => (v.versionName && v.versionName.toLowerCase() === vName.toLowerCase()) ||
+                   (v.versionCode && v.versionCode.toString() === vCode.toString())
+        );
+
+        const newRecord = {
+            id: existingIdx >= 0 ? versionList[existingIdx].id : `v-${Date.now()}`,
+            versionName: vName,
+            versionCode: vCode,
+            status,
+            updateUrl,
+            message: body.message || 'Please update your app to continue.',
+            updatedAt: new Date().toISOString(),
+        };
+
+        if (existingIdx >= 0) {
+            versionList[existingIdx] = newRecord;
+        } else {
+            versionList.push(newRecord);
+        }
+
+        await this.settingsRepo.set('worker_app_version_registry', versionList, userId, 'Full registry of worker app version codes');
+
+        // Sync legacy updateList
+        const disabledNames = versionList
+            .filter((v) => v.status === 'disabled')
+            .map((v) => (v.versionName || '').toString().trim())
+            .filter(Boolean);
+        await this.settingsRepo.set('worker_app_update_versions', disabledNames, userId, 'List of app versions that must update');
 
         return {
             success: true,
-            message: `Version '${vToAdd}' added to update list`,
-            updateList: currentList,
+            message: `Version '${vName}' (Code: ${vCode}) added as ${status.toUpperCase()}`,
+            versionRecord: newRecord,
+            versionList,
+        };
+    }
+
+    @Post('app-updates/toggle-status')
+    @ApiOperation({ summary: 'Toggle status of a version (Disable / Enable) and optionally set update link' })
+    async toggleVersionStatus(
+        @Body() body: {
+            id?: string;
+            versionName?: string;
+            versionCode?: string;
+            status: 'active' | 'disabled';
+            updateUrl?: string;
+            message?: string;
+        },
+        @CurrentUser() user: User,
+    ) {
+        const userId = user ? user.id : 'admin';
+        const targetId = body.id;
+        const targetName = (body.versionName || '').trim().toLowerCase();
+        const targetCode = (body.versionCode || '').trim();
+
+        const versionRegistrySetting = await this.settingsRepo.findByKey('worker_app_version_registry');
+        let versionList: any[] = [];
+        try {
+            if (versionRegistrySetting?.value) {
+                if (Array.isArray(versionRegistrySetting.value)) {
+                    versionList = [...versionRegistrySetting.value];
+                } else if (typeof versionRegistrySetting.value === 'string') {
+                    versionList = JSON.parse(versionRegistrySetting.value);
+                }
+            }
+        } catch (_) {
+            versionList = [];
+        }
+
+        let found = false;
+        for (const v of versionList) {
+            if (
+                (targetId && v.id === targetId) ||
+                (targetName && v.versionName && v.versionName.toLowerCase() === targetName) ||
+                (targetCode && v.versionCode && v.versionCode.toString() === targetCode)
+            ) {
+                v.status = body.status;
+                if (body.updateUrl) {
+                    v.updateUrl = body.updateUrl.trim();
+                }
+                if (body.message) {
+                    v.message = body.message.trim();
+                }
+                v.updatedAt = new Date().toISOString();
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            // Create a new record if not found
+            versionList.push({
+                id: targetId || `v-${Date.now()}`,
+                versionName: body.versionName || targetCode,
+                versionCode: targetCode || '1',
+                status: body.status,
+                updateUrl: body.updateUrl || '',
+                message: body.message || 'Please update your app to continue.',
+                updatedAt: new Date().toISOString(),
+            });
+        }
+
+        await this.settingsRepo.set('worker_app_version_registry', versionList, userId, 'Full registry of worker app version codes');
+
+        // Sync legacy updateList
+        const disabledNames = versionList
+            .filter((v) => v.status === 'disabled')
+            .map((v) => (v.versionName || '').toString().trim())
+            .filter(Boolean);
+        await this.settingsRepo.set('worker_app_update_versions', disabledNames, userId, 'List of app versions that must update');
+
+        return {
+            success: true,
+            message: `Version status updated to ${body.status.toUpperCase()}`,
+            versionList,
         };
     }
 
     @Delete('app-updates/remove-version/:version')
-    @ApiOperation({ summary: 'Remove a version string from the update list' })
+    @ApiOperation({ summary: 'Remove a version string or code from the registry' })
     async removeVersionFromUpdateList(
         @Param('version') version: string,
         @CurrentUser() user: User,
     ) {
         const userId = user ? user.id : 'admin';
-        const vToRemove = (version || '').trim();
+        const vToRemove = (version || '').trim().toLowerCase();
 
+        // 1. Remove from version registry
+        const versionRegistrySetting = await this.settingsRepo.findByKey('worker_app_version_registry');
+        let versionList: any[] = [];
+        try {
+            if (versionRegistrySetting?.value) {
+                if (Array.isArray(versionRegistrySetting.value)) {
+                    versionList = [...versionRegistrySetting.value];
+                } else if (typeof versionRegistrySetting.value === 'string') {
+                    versionList = JSON.parse(versionRegistrySetting.value);
+                }
+            }
+        } catch (_) {}
+
+        versionList = versionList.filter((v) => {
+            const matchName = v.versionName && v.versionName.toLowerCase() === vToRemove;
+            const matchCode = v.versionCode && v.versionCode.toString() === vToRemove;
+            const matchId = v.id && v.id === version;
+            return !matchName && !matchCode && !matchId;
+        });
+
+        await this.settingsRepo.set('worker_app_version_registry', versionList, userId, 'Full registry of worker app version codes');
+
+        // 2. Remove from legacy list
         const updateVersionsSetting = await this.settingsRepo.findByKey('worker_app_update_versions');
         let currentList: string[] = [];
         try {
@@ -280,7 +534,7 @@ export class AdminSystemSettingsController {
             }
         } catch (_) {}
 
-        currentList = currentList.filter((v) => v !== vToRemove && v !== `v${vToRemove}` && `v${v}` !== vToRemove);
+        currentList = currentList.filter((v) => v.toLowerCase() !== vToRemove && `v${v.toLowerCase()}` !== vToRemove);
         await this.settingsRepo.set('worker_app_update_versions', currentList, userId, 'List of app versions that must update');
 
         return {

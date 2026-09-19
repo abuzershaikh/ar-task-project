@@ -13,6 +13,7 @@ import 'risk_fraud_screen.dart';
 import 'system_settings_screen.dart';
 import 'notifications_announcements_screen.dart';
 import 'admin_profile_screen.dart';
+import '../../../service_builder/presentation/pages/app_update_management_screen.dart';
 
 class ControlCenterScreen extends StatelessWidget {
   const ControlCenterScreen({super.key});
@@ -28,6 +29,18 @@ class ControlCenterScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _buildSection('System Management', [
+            _buildMenuItem(
+              context,
+              Icons.system_update_rounded,
+              'App Version & Updates',
+              'Manage version codes, disable versions & update redirect URLs',
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AppUpdateManagementScreen()),
+                );
+              },
+            ),
             _buildMenuItem(
               context,
               Icons.settings,

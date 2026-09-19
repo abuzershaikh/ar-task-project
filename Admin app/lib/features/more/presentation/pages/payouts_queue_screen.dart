@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../data/models/more_models.dart';
 import '../bloc/more_bloc.dart';
 
 class PayoutsQueueScreen extends StatefulWidget {
@@ -201,12 +202,41 @@ class _PayoutsQueueScreenState extends State<PayoutsQueueScreen> {
                               Row(
                                 children: [
                                   Expanded(
-                                    child: ElevatedButton(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _showRejectDialog(context, item),
+                                      icon: const Icon(Icons.close_rounded, size: 16, color: AppColors.error),
+                                      label: const Text(
+                                        'Decline',
+                                        style: TextStyle(
+                                          color: AppColors.error,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(color: AppColors.error),
+                                        padding: const EdgeInsets.symmetric(vertical: 11),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    flex: 2,
+                                    child: ElevatedButton.icon(
                                       onPressed: () {
                                         context.read<MoreBloc>().add(ProcessPayoutEvent(item.id));
                                       },
-                                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-                                      child: const Text('Approve & Process'),
+                                      icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                                      label: const Text('Approve & Process'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.success,
+                                        padding: const EdgeInsets.symmetric(vertical: 11),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -268,6 +298,132 @@ class _PayoutsQueueScreenState extends State<PayoutsQueueScreen> {
             child: const Text('Approve All'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showRejectDialog(BuildContext context, PayoutItemModel item) {
+    String selectedReason = 'Invalid UPI ID / Bank account details';
+    final customReasonController = TextEditingController();
+    bool isCustom = false;
+
+    final reasons = [
+      'Invalid UPI ID / Bank account details',
+      'Account holder name mismatch',
+      'Suspicious / fraudulent activity detected',
+      'KYC or identity verification required',
+      'Other reason (type below)',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.cancel_rounded, color: AppColors.error),
+              SizedBox(width: 8),
+              Text('Decline Withdrawal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Decline payout of ₹${item.amount.toStringAsFixed(2)} for ${item.workerName.isNotEmpty ? item.workerName : 'Worker'}?',
+                  style: const TextStyle(fontSize: 13, color: AppColors.gray700),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Select decline reason:',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 6),
+                ...reasons.map((r) => RadioListTile<String>(
+                      title: Text(r, style: const TextStyle(fontSize: 12.5)),
+                      value: r,
+                      groupValue: selectedReason,
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() {
+                            selectedReason = val;
+                            isCustom = val.startsWith('Other');
+                          });
+                        }
+                      },
+                    )),
+                if (isCustom) ...[
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: customReasonController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter specific decline reason...',
+                      hintStyle: const TextStyle(fontSize: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: const [
+                      Icon(Icons.info_outline, size: 16, color: AppColors.info),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'The requested amount will be automatically refunded back to the worker\'s wallet balance.',
+                          style: TextStyle(fontSize: 11, color: AppColors.info),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final reasonToSubmit = isCustom
+                    ? (customReasonController.text.trim().isNotEmpty
+                        ? customReasonController.text.trim()
+                        : 'Admin declined payout request')
+                    : selectedReason;
+
+                Navigator.pop(dialogContext);
+                context.read<MoreBloc>().add(RejectPayoutEvent(item.id, reasonToSubmit));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Payout declined. ₹${item.amount.toStringAsFixed(2)} refunded to worker.'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Decline & Refund', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
       ),
     );
   }
