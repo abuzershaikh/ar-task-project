@@ -12,6 +12,8 @@ abstract class WorkersRemoteDataSource {
   Future<Map<String, dynamic>> getWorkerScoreHistory(String workerId);
   Future<List<dynamic>> getWorkerActivity(String workerId);
   Future<Map<String, dynamic>> getWorkerRisk(String workerId);
+  Future<void> deleteWorker(String workerId);
+  Future<void> batchDeleteWorkers(List<String> workerIds);
 }
 
 class WorkersRemoteDataSourceImpl implements WorkersRemoteDataSource {
@@ -84,5 +86,18 @@ class WorkersRemoteDataSourceImpl implements WorkersRemoteDataSource {
   Future<Map<String, dynamic>> getWorkerRisk(String workerId) async {
     final response = await _dioClient.get('${ApiEndpoints.workers}/$workerId/risk');
     return Map<String, dynamic>.from(response.data ?? {});
+  }
+
+  @override
+  Future<void> deleteWorker(String workerId) async {
+    await _dioClient.delete('${ApiEndpoints.workers}/$workerId');
+  }
+
+  @override
+  Future<void> batchDeleteWorkers(List<String> workerIds) async {
+    await _dioClient.post(
+      ApiEndpoints.workersBatchDelete,
+      data: {'ids': workerIds},
+    );
   }
 }

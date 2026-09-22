@@ -126,6 +126,17 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
                   ],
                 ),
               ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 20),
+                    SizedBox(width: 8),
+                    Text('Delete Buyer', style: TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
@@ -213,7 +224,67 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
       case 'add_credit':
         _showAddCreditDialog();
         break;
+      case 'delete':
+        _showDeleteConfirmDialog();
+        break;
     }
+  }
+
+  void _showDeleteConfirmDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEE2E2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Delete Buyer?',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to permanently delete this buyer account? All associated campaigns, orders, and wallet records will be wiped. This action cannot be undone.',
+          style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.read<BuyersBloc>().add(DeleteBuyerEvent(widget.buyerId));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Buyer deleted successfully.'),
+                  backgroundColor: Color(0xFF0F172A),
+                ),
+              );
+              Navigator.pop(context);
+            },
+            child: const Text('Delete Permanently', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showConfirmDialog(String title, String message) {

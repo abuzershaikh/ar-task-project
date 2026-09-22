@@ -5,6 +5,13 @@ import '../widgets/action_banner.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../../../../core/di/injection.dart';
+import '../../../support_chat/presentation/pages/admin_chat_list_screen.dart';
+import '../../../more/presentation/pages/task_reviews_queue_screen.dart';
+import '../../../more/presentation/pages/kyc_queue_screen.dart';
+import '../../../more/presentation/pages/payouts_queue_screen.dart';
+import '../../../more/presentation/pages/finance_ledger_screen.dart';
+import '../../../workers/presentation/pages/worker_directory_screen.dart';
+import '../../../buyers/presentation/pages/buyer_directory_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -18,6 +25,14 @@ class DashboardScreen extends StatelessWidget {
           title: const Text('Admin Command Center'),
           backgroundColor: AppColors.primary,
           actions: [
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_rounded),
+              tooltip: 'Support Chats',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminChatListScreen()),
+              ),
+            ),
             IconButton(
               icon: const Icon(Icons.notifications_outlined),
               onPressed: () {},
@@ -108,6 +123,15 @@ class DashboardScreen extends StatelessWidget {
                               icon: Icons.verified_user,
                               text: '$pendingKycCount Pending KYC Requests',
                               color: AppColors.warning,
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const KycQueueScreen()),
+                                );
+                                if (context.mounted) {
+                                  context.read<DashboardBloc>().add(LoadDashboardEvent());
+                                }
+                              },
                             ),
                             const SizedBox(height: 8),
                           ],
@@ -119,6 +143,15 @@ class DashboardScreen extends StatelessWidget {
                               icon: Icons.rate_review,
                               text: '$pendingReviewCount Task Reviews Needed',
                               color: AppColors.error,
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const TaskReviewsQueueScreen()),
+                                );
+                                if (context.mounted) {
+                                  context.read<DashboardBloc>().add(LoadDashboardEvent());
+                                }
+                              },
                             ),
                             const SizedBox(height: 8),
                           ],
@@ -128,6 +161,15 @@ class DashboardScreen extends StatelessWidget {
                           icon: Icons.account_balance_wallet,
                           text: '$pendingPayoutsCount Pending Payouts',
                           color: AppColors.info,
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const PayoutsQueueScreen()),
+                            );
+                            if (context.mounted) {
+                              context.read<DashboardBloc>().add(LoadDashboardEvent());
+                            }
+                          },
                         ),
                       
                       const SizedBox(height: 24),
@@ -157,6 +199,12 @@ class DashboardScreen extends StatelessWidget {
                             subtitle: '$activeWorkers Active',
                             icon: Icons.people,
                             color: AppColors.primary,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const WorkerDirectoryScreen()),
+                              );
+                            },
                           ),
                           KpiCard(
                             title: 'Total Buyers',
@@ -164,6 +212,12 @@ class DashboardScreen extends StatelessWidget {
                             subtitle: '$activeBuyers Active',
                             icon: Icons.business,
                             color: AppColors.secondary,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const BuyerDirectoryScreen()),
+                              );
+                            },
                           ),
                           KpiCard(
                             title: 'Pending Reviews',
@@ -171,6 +225,15 @@ class DashboardScreen extends StatelessWidget {
                             subtitle: 'Awaiting Action',
                             icon: Icons.rate_review,
                             color: AppColors.warning,
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const TaskReviewsQueueScreen()),
+                              );
+                              if (context.mounted) {
+                                context.read<DashboardBloc>().add(LoadDashboardEvent());
+                              }
+                            },
                           ),
                           KpiCard(
                             title: 'Pending KYC',
@@ -178,6 +241,15 @@ class DashboardScreen extends StatelessWidget {
                             subtitle: 'Verification Queue',
                             icon: Icons.error,
                             color: AppColors.error,
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const KycQueueScreen()),
+                              );
+                              if (context.mounted) {
+                                context.read<DashboardBloc>().add(LoadDashboardEvent());
+                              }
+                            },
                           ),
                           KpiCard(
                             title: 'Gross Volume',
@@ -185,6 +257,12 @@ class DashboardScreen extends StatelessWidget {
                             subtitle: 'Total Processed',
                             icon: Icons.currency_rupee,
                             color: AppColors.primary,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const FinanceLedgerScreen()),
+                              );
+                            },
                           ),
                           KpiCard(
                             title: 'Platform Margin',
@@ -192,6 +270,12 @@ class DashboardScreen extends StatelessWidget {
                             subtitle: 'Net Margin',
                             icon: Icons.trending_up,
                             color: AppColors.success,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const FinanceLedgerScreen()),
+                              );
+                            },
                           ),
                         ],
                       ),

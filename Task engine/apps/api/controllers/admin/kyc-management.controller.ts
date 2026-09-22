@@ -28,6 +28,17 @@ export class AdminKycManagementController {
     ) { }
 
 
+    @Get('pending')
+    @ApiOperation({ summary: 'List pending KYC verification applications' })
+    async getPendingKyc() {
+        const pending = await this.kycRepo.findPending();
+        return {
+            success: true,
+            applications: pending,
+            count: pending.length,
+        };
+    }
+
     @Get(':kycId')
     @ApiOperation({ summary: 'View specific worker KYC/Bank details' })
     async getKycDetails(@Param('kycId') kycId: string) {
@@ -46,17 +57,6 @@ export class AdminKycManagementController {
                 userId: worker?.userId,
                 status: worker?.status
             }
-        };
-    }
-
-    @Get('pending')
-    @ApiOperation({ summary: 'List pending KYC verification applications' })
-    async getPendingKyc() {
-        const pending = await this.kycRepo.findPending();
-        return {
-            success: true,
-            applications: pending,
-            count: pending.length,
         };
     }
 

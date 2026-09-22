@@ -9,6 +9,8 @@ abstract class WorkersLocalDataSource {
   Future<WorkerModel?> getCachedWorkerDetail(String workerId);
   Future<void> cacheWorkerDetail(String workerId, Map<String, dynamic> fullDetail);
   Future<Map<String, dynamic>?> getCachedWorkerFullDetail(String workerId);
+  Future<void> deleteWorker(String workerId);
+  Future<void> clearAllWorkers();
 }
 
 class WorkersLocalDataSourceImpl implements WorkersLocalDataSource {
@@ -33,10 +35,9 @@ class WorkersLocalDataSourceImpl implements WorkersLocalDataSource {
   @override
   Future<void> cacheWorkers(List<WorkerModel> workers) async {
     final db = await _dbManager.database;
+    await db.delete('workers');
     final batch = db.batch();
     
-    // Clear old workers or just replace
-    // We will use REPLACE to update existing and add new
     for (var worker in workers) {
       batch.insert(
         'workers',
@@ -98,5 +99,17 @@ class WorkersLocalDataSourceImpl implements WorkersLocalDataSource {
       return json.decode(maps.first['data'] as String) as Map<String, dynamic>;
     }
     return null;
+  }
+
+  @override
+  Future<void> deleteWorker(String workerId) async {
+    final db = await _dbManager.database;
+    await db.delete('workers', where: 'id = ?', whereArgs: [workerId]);
+  }
+
+  @override
+  Future<void> clearAllWorkers() async {
+    final db = await _dbManager.database;
+    await db.delete('workers');
   }
 }

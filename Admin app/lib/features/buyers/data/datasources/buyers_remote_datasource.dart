@@ -13,6 +13,8 @@ abstract class BuyersRemoteDataSource {
   Future<Map<String, dynamic>> getBuyerAnalytics(String buyerId);
   Future<List<dynamic>> getBuyerRatings(String buyerId);
   Future<void> adjustBuyerBalance(String buyerId, double amount, String reason);
+  Future<void> deleteBuyer(String buyerId);
+  Future<void> batchDeleteBuyers(List<String> buyerIds);
 }
 
 class BuyersRemoteDataSourceImpl implements BuyersRemoteDataSource {
@@ -91,6 +93,19 @@ class BuyersRemoteDataSourceImpl implements BuyersRemoteDataSource {
     await _dioClient.post(
       ApiEndpoints.buyerBalanceAdjust(buyerId),
       data: {'amount': amount, 'reason': reason},
+    );
+  }
+
+  @override
+  Future<void> deleteBuyer(String buyerId) async {
+    await _dioClient.delete(ApiEndpoints.buyerDelete(buyerId));
+  }
+
+  @override
+  Future<void> batchDeleteBuyers(List<String> buyerIds) async {
+    await _dioClient.post(
+      ApiEndpoints.buyersBatchDelete,
+      data: {'ids': buyerIds},
     );
   }
 }

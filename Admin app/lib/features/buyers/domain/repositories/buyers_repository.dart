@@ -14,6 +14,8 @@ abstract class BuyersRepository {
   Future<Map<String, dynamic>> getBuyerAnalytics(String buyerId);
   Future<List<dynamic>> getBuyerRatings(String buyerId);
   Future<void> adjustBuyerBalance(String buyerId, double amount, String reason);
+  Future<void> deleteBuyer(String buyerId);
+  Future<void> batchDeleteBuyers(List<String> buyerIds);
 }
 
 class BuyersRepositoryImpl implements BuyersRepository {
@@ -27,19 +29,17 @@ class BuyersRepositoryImpl implements BuyersRepository {
 
   @override
   Future<List<BuyerModel>> getBuyers({bool forceRefresh = false}) async {
-    if (!forceRefresh) {
+    try {
+      final remoteBuyers = await remoteDataSource.getBuyers();
+      await localDataSource.cacheBuyers(remoteBuyers);
+      return remoteBuyers;
+    } catch (e) {
       final localData = await localDataSource.getCachedBuyers();
       if (localData.isNotEmpty) {
-        remoteDataSource.getBuyers().then((remoteBuyers) {
-          localDataSource.cacheBuyers(remoteBuyers);
-        }).catchError((_) {});
         return localData;
       }
+      rethrow;
     }
-    
-    final remoteBuyers = await remoteDataSource.getBuyers();
-    await localDataSource.cacheBuyers(remoteBuyers);
-    return remoteBuyers;
   }
 
   @override
@@ -100,4 +100,22 @@ class BuyersRepositoryImpl implements BuyersRepository {
   @override
   Future<void> adjustBuyerBalance(String buyerId, double amount, String reason) =>
       remoteDataSource.adjustBuyerBalance(buyerId, amount, reason);
+
+  @override
+  Future<void> deleteBuyer(String buyerId) async {
+    try {
+      await remoteDataSource.deleteBuyer(buyerId);
+    } catch (_) {}
+    await localDataSource.deleteBuyer(buyerId);
+  }
+
+  @override
+  Future<void> batchDeleteBuyers(List<String> buyerIds) async {
+    try {
+      await remoteDataSource.batchDeleteBuyers(buyerIds);
+    } catch (_) {}
+    for (final id in buyerIds) {
+      await localDataSource.deleteBuyer(id);
+    }
+  }
 }

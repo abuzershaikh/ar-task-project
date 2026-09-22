@@ -54,3 +54,9 @@ task engine bug hunt/
 # Build old artifacts
 build_old/
 **/build_old/
+
+# Test screenshots and device dumps
+Admin app/*.png
+Admin app/*.xml
+Admin app/*.db
+Worker app/*.png

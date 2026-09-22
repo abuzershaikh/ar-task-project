@@ -18,6 +18,14 @@ class UpdateWorkerStatusEvent extends WorkersEvent {
   final String status;
   UpdateWorkerStatusEvent({required this.workerId, required this.status});
 }
+class DeleteWorkerEvent extends WorkersEvent {
+  final String workerId;
+  DeleteWorkerEvent(this.workerId);
+}
+class BatchDeleteWorkersEvent extends WorkersEvent {
+  final List<String> workerIds;
+  BatchDeleteWorkersEvent(this.workerIds);
+}
 
 abstract class WorkersState {}
 class WorkersInitial extends WorkersState {}
@@ -64,6 +72,8 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
     on<LoadWorkerDetailEvent>(_onLoadWorkerDetail);
     on<RefreshWorkerDetailEvent>(_onRefreshWorkerDetail);
     on<UpdateWorkerStatusEvent>(_onUpdateStatus);
+    on<DeleteWorkerEvent>(_onDeleteWorker);
+    on<BatchDeleteWorkersEvent>(_onBatchDeleteWorkers);
   }
 
   Future<void> _onLoadWorkers(LoadWorkersEvent event, Emitter<WorkersState> emit) async {
@@ -169,5 +179,22 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
         emit(WorkersError(e.toString()));
       }
     }
+  }
+
+  Future<void> _onDeleteWorker(DeleteWorkerEvent event, Emitter<WorkersState> emit) async {
+    try {
+      await repository.deleteWorker(event.workerId);
+    } catch (_) {}
+    _cachedWorkers.removeWhere((w) => w.id == event.workerId || w.userId == event.workerId);
+    emit(WorkersLoaded(List.from(_cachedWorkers)));
+  }
+
+  Future<void> _onBatchDeleteWorkers(BatchDeleteWorkersEvent event, Emitter<WorkersState> emit) async {
+    try {
+      await repository.batchDeleteWorkers(event.workerIds);
+    } catch (_) {}
+    final idSet = event.workerIds.toSet();
+    _cachedWorkers.removeWhere((w) => idSet.contains(w.id) || idSet.contains(w.userId));
+    emit(WorkersLoaded(List.from(_cachedWorkers)));
   }
 }

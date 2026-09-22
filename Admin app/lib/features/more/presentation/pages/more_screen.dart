@@ -7,6 +7,7 @@ import '../../../service_builder/presentation/pages/services_list_screen.dart';
 import '../../../service_builder/presentation/pages/task_expiry_settings_screen.dart';
 import '../../../service_builder/presentation/pages/app_update_management_screen.dart';
 import 'system_settings_screen.dart';
+import 'finance_ledger_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -157,7 +158,12 @@ class MoreScreen extends StatelessWidget {
             icon: Icons.account_balance_outlined,
             title: 'Finance & Ledger',
             subtitle: 'Platform financial overview',
-            onTap: () { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Feature coming soon'))); },
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const FinanceLedgerScreen()),
+              );
+            },
           ),
           _MenuItem(
             icon: Icons.receipt_long_outlined,

@@ -108,4 +108,8 @@ export class UserRepository {
     async updateStatus(id: string, status: any): Promise<void> {
         await this.repository.update(id, { status });
     }
+
+    async delete(id: string): Promise<void> {
+        await this.repository.delete(id);
+    }
 }

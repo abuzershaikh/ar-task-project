@@ -1,0 +1,14 @@
+name = "earnpost-chat-media-worker"
+main = "src/index.ts"
+compatibility_date = "2024-10-01"
+
+# Cloudflare R2 Storage Bucket Binding for Support Chat
+[[r2_buckets]]
+binding = "CHAT_MEDIA_BUCKET"
+bucket_name = "earnpost-chat-media"
+preview_bucket_name = "earnpost-chat-media"
+
+[vars]
+ENVIRONMENT = "production"
+MAX_UPLOAD_SIZE_MB = "50"
+PUBLIC_MEDIA_URL = "https://earnpost-chat-media-worker.zestbizar.workers.dev"

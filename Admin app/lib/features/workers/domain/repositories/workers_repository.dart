@@ -12,6 +12,8 @@ abstract class WorkersRepository {
   Future<Map<String, dynamic>> getWorkerScoreHistory(String workerId);
   Future<List<dynamic>> getWorkerActivity(String workerId);
   Future<Map<String, dynamic>> getWorkerRisk(String workerId);
+  Future<void> deleteWorker(String workerId);
+  Future<void> batchDeleteWorkers(List<String> workerIds);
 }
 
 class WorkersRepositoryImpl implements WorkersRepository {
@@ -25,20 +27,17 @@ class WorkersRepositoryImpl implements WorkersRepository {
 
   @override
   Future<List<WorkerModel>> getWorkers({bool forceRefresh = false}) async {
-    if (!forceRefresh) {
+    try {
+      final remoteWorkers = await remoteDataSource.getWorkers();
+      await localDataSource.cacheWorkers(remoteWorkers);
+      return remoteWorkers;
+    } catch (e) {
       final localData = await localDataSource.getCachedWorkers();
       if (localData.isNotEmpty) {
-        // Fetch in background to keep cache fresh
-        remoteDataSource.getWorkers().then((remoteWorkers) {
-          localDataSource.cacheWorkers(remoteWorkers);
-        }).catchError((_) {});
         return localData;
       }
+      rethrow;
     }
-    
-    final remoteWorkers = await remoteDataSource.getWorkers();
-    await localDataSource.cacheWorkers(remoteWorkers);
-    return remoteWorkers;
   }
 
   @override
@@ -110,4 +109,22 @@ class WorkersRepositoryImpl implements WorkersRepository {
 
   @override
   Future<Map<String, dynamic>> getWorkerRisk(String workerId) => remoteDataSource.getWorkerRisk(workerId);
+
+  @override
+  Future<void> deleteWorker(String workerId) async {
+    try {
+      await remoteDataSource.deleteWorker(workerId);
+    } catch (_) {}
+    await localDataSource.deleteWorker(workerId);
+  }
+
+  @override
+  Future<void> batchDeleteWorkers(List<String> workerIds) async {
+    try {
+      await remoteDataSource.batchDeleteWorkers(workerIds);
+    } catch (_) {}
+    for (final id in workerIds) {
+      await localDataSource.deleteWorker(id);
+    }
+  }
 }

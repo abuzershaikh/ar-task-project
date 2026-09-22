@@ -19,6 +19,7 @@ class ApiEndpoints {
   // ==================== Workers ====================
   static const String workers = '/admin/workers';
   static String workerById(String id) => '/admin/workers/$id';
+  static const String workersBatchDelete = '/admin/workers/batch-delete';
   static String workerScoreBreakdown(String id) => '/admin/workers/$id/score-breakdown';
   static String workerTasks(String id) => '/admin/workers/$id/tasks';
   static String workerEarnings(String id) => '/admin/workers/$id/earnings';
@@ -30,6 +31,8 @@ class ApiEndpoints {
   // ==================== Buyers ====================
   static const String buyers = '/admin/buyers';
   static String buyerById(String id) => '/admin/buyers/$id';
+  static const String buyersBatchDelete = '/admin/buyers/batch-delete';
+  static String buyerDelete(String id) => '/admin/buyers/$id';
   static String buyerBalanceLedger(String id) => '/admin/buyers/$id/balance-ledger';
   static String buyerOrders(String id) => '/admin/buyers/$id/orders';
   static String buyerApiKeys(String id) => '/admin/buyers/$id/api-keys';
@@ -84,6 +87,7 @@ class ApiEndpoints {
   // ==================== Analytics ====================
   static const String analyticsOverview = '/admin/analytics/overview';
   static const String analyticsRevenue = '/admin/analytics/revenue';
+  static const String analyticsLedger = '/admin/analytics/ledger';
   static const String analyticsTasks = '/admin/analytics/tasks';
   
   // ==================== Risk & Fraud ====================

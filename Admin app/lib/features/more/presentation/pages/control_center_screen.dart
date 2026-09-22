@@ -14,6 +14,7 @@ import 'system_settings_screen.dart';
 import 'notifications_announcements_screen.dart';
 import 'admin_profile_screen.dart';
 import '../../../service_builder/presentation/pages/app_update_management_screen.dart';
+import '../../../support_chat/presentation/pages/admin_chat_list_screen.dart';
 
 class ControlCenterScreen extends StatelessWidget {
   const ControlCenterScreen({super.key});
@@ -28,6 +29,18 @@ class ControlCenterScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildMenuItem(
+            context,
+            Icons.chat_bubble_rounded,
+            'Worker Support Chat & Broadcast',
+            'Live WhatsApp-like chat & bulk messages',
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AdminChatListScreen()),
+              );
+            },
+          ),
           _buildSection('System Management', [
             _buildMenuItem(
               context,

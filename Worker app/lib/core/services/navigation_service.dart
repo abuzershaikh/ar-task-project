@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'api_service.dart';
 import '../../features/task_detail/screens/task_detail_premium_screen.dart';
 import '../../features/wallet/screens/wallet_screen.dart';
+import '../../features/support_chat/screens/worker_support_chat_screen.dart';
 
 /// Global Navigation Service enabling deep-linking from push notifications,
 /// local notifications, and notification history.
@@ -249,6 +250,20 @@ class NavigationService {
     final nav = navigatorKey.currentState;
     if (nav != null) {
       nav.push(MaterialPageRoute(builder: (_) => const WalletScreen()));
+    }
+  }
+
+  /// Open Worker Support Chat Screen directly
+  static Future<void> openSupportChat() async {
+    NavigatorState? nav = navigatorKey.currentState;
+    int attempts = 0;
+    while (nav == null && attempts < 30) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      nav = navigatorKey.currentState;
+      attempts++;
+    }
+    if (nav != null) {
+      nav.push(MaterialPageRoute(builder: (_) => const WorkerSupportChatScreen()));
     }
   }
 }

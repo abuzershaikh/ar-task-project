@@ -13,6 +13,7 @@ import 'day_streak_screen.dart';
 import 'quality_score_screen.dart';
 import 'kyc_bank_details_screen.dart';
 import '../../keyboard/keyboard.dart';
+import '../../support_chat/screens/worker_support_chat_screen.dart';
 
 /// 🌿 3D Realistic Mayan Jungle Profile Screen
 /// - Full Emerald & Mayan Gold color theme
@@ -1124,13 +1125,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             subtitle: 'Get assistance with tasks or payouts',
             trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 20),
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: const Color(0xFF064E3B),
-                  content: Text(
-                    '24/7 Worker Support available at support@taskpost.com',
-                    style: GoogleFonts.poppins(color: const Color(0xFFA7F3D0)),
-                  ),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const WorkerSupportChatScreen(),
                 ),
               );
             },

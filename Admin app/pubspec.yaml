@@ -45,6 +45,7 @@ dependencies:
   
   # Networking
   dio: ^5.7.0
+  http: ^1.2.2
   retrofit: ^4.4.1
   json_annotation: ^4.9.0
   
@@ -67,7 +68,12 @@ dependencies:
   record: ^5.2.0
   audioplayers: ^6.1.0
   file_picker: ^8.1.4
+  image_picker: ^1.1.2
   permission_handler: ^11.3.1
+  url_launcher: ^6.3.0
+
+  # Real-time WebSocket
+  socket_io_client: ^3.0.2
 
 dev_dependencies:
   flutter_test:

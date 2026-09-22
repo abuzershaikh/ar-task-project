@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../widgets/worker_card.dart';
 import '../bloc/workers_bloc.dart';
 import 'worker_detail_screen.dart';
@@ -15,6 +14,8 @@ class WorkerDirectoryScreen extends StatefulWidget {
 class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
   String _selectedFilter = 'All';
   final TextEditingController _searchController = TextEditingController();
+  bool _isSelectionMode = false;
+  final Set<String> _selectedIds = {};
 
   @override
   void initState() {
@@ -28,45 +29,313 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF0F9FF),
-      appBar: AppBar(
-        titleSpacing: 14,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0284C7), Color(0xFF0EA5E9)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        title: const Row(
+  void _toggleSelectAll(List<dynamic> items) {
+    setState(() {
+      final allSelected = items.isNotEmpty && items.every((item) => _selectedIds.contains(item.id) || _selectedIds.contains(item.userId));
+      if (allSelected) {
+        for (final item in items) {
+          _selectedIds.remove(item.id);
+          _selectedIds.remove(item.userId);
+        }
+      } else {
+        for (final item in items) {
+          _selectedIds.add(item.id);
+        }
+      }
+    });
+  }
+
+  void _confirmDeleteSelected(BuildContext context) {
+    final count = _selectedIds.length;
+    if (count == 0) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
           children: [
-            Icon(Icons.badge_rounded, color: Colors.white, size: 20),
-            SizedBox(width: 8),
-            Text(
-              'Worker Operations',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEE2E2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Delete $count Worker${count > 1 ? 's' : ''}?',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              ),
             ),
           ],
         ),
-        backgroundColor: Colors.transparent,
+        content: Text(
+          'Are you sure you want to permanently delete $count selected worker account${count > 1 ? 's' : ''}? This will wipe their KYC profile, earnings, task records, and wallet history. This action cannot be undone.',
+          style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
-            onPressed: () => context.read<WorkersBloc>().add(LoadWorkersEvent()),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              final idsToDelete = _selectedIds.toList();
+              context.read<WorkersBloc>().add(BatchDeleteWorkersEvent(idsToDelete));
+              setState(() {
+                _selectedIds.clear();
+                _isSelectionMode = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Deleting $count worker${count > 1 ? 's' : ''}...'),
+                  backgroundColor: const Color(0xFF0F172A),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            child: const Text('Delete Permanently', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
-      body: BlocBuilder<WorkersBloc, WorkersState>(
-        builder: (context, state) {
-          if (state is WorkersLoading) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFF0284C7)));
-          }
+    );
+  }
+
+  void _confirmDeleteSingle(BuildContext context, dynamic worker) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEE2E2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Delete Worker?',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete "${worker.name}" (${worker.email.isNotEmpty ? worker.email : worker.id})?',
+          style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<WorkersBloc>().add(DeleteWorkerEvent(worker.id));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Deleting worker ${worker.name}...'),
+                  backgroundColor: const Color(0xFF0F172A),
+                ),
+              );
+            },
+            child: const Text('Delete Permanently', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<WorkersBloc, WorkersState>(
+      builder: (context, state) {
+        List<dynamic> currentFiltered = [];
+        if (state is WorkersLoaded) {
+          final query = _searchController.text.trim().toLowerCase();
+          currentFiltered = state.workers.where((w) {
+            final statusMatch = _selectedFilter == 'All' ||
+                w.status.toUpperCase() == _selectedFilter.toUpperCase() ||
+                (_selectedFilter == 'KYC' && w.kycStatus == 'VERIFIED');
+            final queryMatch = query.isEmpty ||
+                w.name.toLowerCase().contains(query) ||
+                w.email.toLowerCase().contains(query) ||
+                w.phone.toLowerCase().contains(query) ||
+                w.id.toLowerCase().contains(query);
+            return statusMatch && queryMatch;
+          }).toList();
+        }
+
+        final bool isAllSelected = currentFiltered.isNotEmpty &&
+            currentFiltered.every((w) => _selectedIds.contains(w.id) || _selectedIds.contains(w.userId));
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF0F9FF),
+          appBar: AppBar(
+            titleSpacing: 14,
+            elevation: 0,
+            leading: _isSelectionMode
+                ? IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
+                    onPressed: () {
+                      setState(() {
+                        _isSelectionMode = false;
+                        _selectedIds.clear();
+                      });
+                    },
+                  )
+                : null,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0284C7), Color(0xFF0EA5E9)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+            title: _isSelectionMode
+                ? Row(
+                    children: [
+                      Text(
+                        '${_selectedIds.length} Selected',
+                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  )
+                : const Row(
+                    children: [
+                      Icon(Icons.badge_rounded, color: Colors.white, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Worker Operations',
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+            backgroundColor: Colors.transparent,
+            actions: _isSelectionMode
+                ? [
+                    IconButton(
+                      tooltip: isAllSelected ? 'Deselect All' : 'Select All',
+                      icon: Icon(
+                        isAllSelected ? Icons.deselect_rounded : Icons.select_all_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                      onPressed: () => _toggleSelectAll(currentFiltered),
+                    ),
+                    IconButton(
+                      tooltip: 'Delete Selected',
+                      icon: Icon(
+                        Icons.delete_forever_rounded,
+                        color: _selectedIds.isNotEmpty ? const Color(0xFFFCA5A5) : Colors.white38,
+                        size: 24,
+                      ),
+                      onPressed: _selectedIds.isNotEmpty ? () => _confirmDeleteSelected(context) : null,
+                    ),
+                  ]
+                : [
+                    IconButton(
+                      tooltip: 'Select / Delete Multiple',
+                      icon: const Icon(Icons.checklist_rounded, color: Colors.white, size: 22),
+                      onPressed: () {
+                        setState(() {
+                          _isSelectionMode = true;
+                        });
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                      onPressed: () => context.read<WorkersBloc>().add(LoadWorkersEvent()),
+                    ),
+                  ],
+          ),
+          bottomNavigationBar: _isSelectionMode && _selectedIds.isNotEmpty
+              ? SafeArea(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: const Border(top: BorderSide(color: Color(0xFFBAE6FD), width: 1)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, -3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFDC2626),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.delete_forever_rounded, size: 20),
+                            label: Text(
+                              'Delete (${_selectedIds.length}) Workers',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            onPressed: () => _confirmDeleteSelected(context),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF64748B),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _selectedIds.clear();
+                              _isSelectionMode = false;
+                            });
+                          },
+                          child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : null,
+          body: _buildBody(context, state),
+        );
+      },
+    );
+  }
+
+  Widget _buildBody(BuildContext context, WorkersState state) {
+    if (state is WorkersLoading) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF0284C7)));
+    }
 
           if (state is WorkersError) {
             return Center(
@@ -243,6 +512,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                             itemCount: filtered.length,
                             itemBuilder: (context, index) {
                               final w = filtered[index];
+                              final isSelected = _selectedIds.contains(w.id) || _selectedIds.contains(w.userId);
                               return WorkerCard(
                                 workerId: w.id,
                                 name: w.name,
@@ -255,6 +525,19 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                                 status: w.status,
                                 totalEarned: w.totalEarnings,
                                 availableBalance: w.availableBalance,
+                                isSelectionMode: _isSelectionMode,
+                                isSelected: isSelected,
+                                onSelectChanged: (selected) {
+                                  setState(() {
+                                    if (selected == true) {
+                                      _selectedIds.add(w.id);
+                                    } else {
+                                      _selectedIds.remove(w.id);
+                                      _selectedIds.remove(w.userId);
+                                    }
+                                  });
+                                },
+                                onDelete: () => _confirmDeleteSingle(context, w),
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -270,12 +553,9 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                 ),
               ],
             );
-          }
+    }
 
-          return const SizedBox();
-        },
-      ),
-    );
+    return const SizedBox();
   }
 
   Widget _buildMetricItem(String label, String value, Color color) {

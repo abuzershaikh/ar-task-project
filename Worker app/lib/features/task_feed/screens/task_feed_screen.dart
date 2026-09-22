@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../../../core/providers/task_provider.dart';
 import '../../../shared/widgets/platform_logo.dart';
 import '../../task_detail/screens/task_detail_premium_screen.dart';
@@ -11,6 +12,8 @@ import '../../profile/screens/day_streak_screen.dart';
 import '../../profile/screens/quality_score_screen.dart';
 import '../../wallet/screens/wallet_screen.dart';
 import '../../notifications/screens/notification_history_screen.dart';
+import '../../support_chat/screens/worker_support_chat_screen.dart';
+import '../../support_chat/services/worker_chat_service.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/providers/profile_provider.dart';
 import '../widgets/task_feed_card.dart';
@@ -28,10 +31,24 @@ class TaskFeedScreen extends StatefulWidget {
   State<TaskFeedScreen> createState() => _TaskFeedScreenState();
 }
 
-class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObserver {
+class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObserver, TickerProviderStateMixin {
   String _selectedPlatform = 'All Tasks';
   Timer? _autoRefreshTimer;
   int _unreadNotifCount = 0;
+
+  // Support chat real-time alert state
+  int _supportUnreadCount = 0;
+  StreamSubscription? _supportMsgSub;
+  StreamSubscription? _supportUnreadSub;
+  StreamSubscription? _supportDeletedSub;
+  AudioPlayer? _supportAudioPlayer;
+
+  // Rotating glowing neon light ring around support icon
+  late final AnimationController _lightRotateController;
+
+  // Shake / vibrate wobble animation on incoming message
+  late final AnimationController _shakeController;
+  late final Animation<double> _shakeAnimation;
 
   // Banner Carousel controller and auto-scroll timer
   late final PageController _bannerController;
@@ -46,13 +63,106 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     _bannerController = PageController();
     WidgetsBinding.instance.addObserver(this);
 
+    // Rotating light around support icon (continuous smooth rotation)
+    _lightRotateController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
+
+    // Shake / vibrate wobble animation when message arrives
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: -0.16), weight: 1),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.16, end: 0.16), weight: 2),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.16, end: -0.12), weight: 2),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.12, end: 0.12), weight: 2),
+      TweenSequenceItem(tween: Tween<double>(begin: 0.12, end: -0.06), weight: 1.5),
+      TweenSequenceItem(tween: Tween<double>(begin: -0.06, end: 0.0), weight: 1.5),
+    ]).animate(CurvedAnimation(parent: _shakeController, curve: Curves.easeInOut));
+
     _startBannerAutoPlay();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshFeed();
       _loadUnreadNotifCount();
       _startAutoRefreshTimer();
+      _initSupportChatListener();
     });
+  }
+
+  void _initSupportChatListener() {
+    try {
+      _supportAudioPlayer = AudioPlayer();
+    } catch (_) {}
+
+    WorkerChatService.instance.initSocket();
+    _loadSupportUnreadCount();
+
+    _supportMsgSub?.cancel();
+    _supportMsgSub = WorkerChatService.instance.onNewMessage.listen((msg) {
+      if (msg.senderType == 'ADMIN' && mounted) {
+        final isCurrentTab = ModalRoute.of(context)?.isCurrent ?? true;
+        if (isCurrentTab) {
+          setState(() {
+            _supportUnreadCount++;
+          });
+          _triggerMessageAlert();
+        }
+      }
+    });
+
+    _supportUnreadSub?.cancel();
+    _supportUnreadSub = WorkerChatService.instance.onUnreadCountChanged.listen((count) {
+      if (mounted && count != _supportUnreadCount) {
+        final bool hadLess = count > _supportUnreadCount;
+        setState(() => _supportUnreadCount = count);
+        if (hadLess) {
+          _triggerMessageAlert();
+        }
+      }
+    });
+
+    _supportDeletedSub?.cancel();
+    _supportDeletedSub = WorkerChatService.instance.onAllMessagesDeleted.listen((_) {
+      if (mounted) {
+        setState(() => _supportUnreadCount = 0);
+      }
+    });
+  }
+
+  Future<void> _loadSupportUnreadCount() async {
+    try {
+      final count = await WorkerChatService.instance.fetchUnreadCount();
+      if (mounted) {
+        setState(() => _supportUnreadCount = count);
+      }
+    } catch (_) {}
+  }
+
+  void _triggerMessageAlert() {
+    // 1. Physical vibration
+    try {
+      HapticFeedback.vibrate();
+      Future.delayed(const Duration(milliseconds: 140), () => HapticFeedback.heavyImpact());
+      Future.delayed(const Duration(milliseconds: 280), () => HapticFeedback.mediumImpact());
+    } catch (_) {}
+
+    // 2. Play notification sound (native alert + audio chime)
+    try {
+      SystemSound.play(SystemSoundType.alert);
+    } catch (_) {}
+    try {
+      _supportAudioPlayer?.stop();
+      _supportAudioPlayer?.play(AssetSource('audio/support_ping.wav'), volume: 1.0);
+    } catch (_) {}
+
+    // 3. Visual icon shake / vibrate
+    if (mounted) {
+      _shakeController.forward(from: 0.0);
+    }
   }
 
   Future<void> _loadUnreadNotifCount() async {
@@ -77,6 +187,12 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
 
   @override
   void dispose() {
+    _supportMsgSub?.cancel();
+    _supportUnreadSub?.cancel();
+    _supportDeletedSub?.cancel();
+    _supportAudioPlayer?.dispose();
+    _lightRotateController.dispose();
+    _shakeController.dispose();
     _bannerTimer?.cancel();
     _bannerController.dispose();
     _autoRefreshTimer?.cancel();
@@ -88,6 +204,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _refreshFeed();
+      _loadSupportUnreadCount();
       _startAutoRefreshTimer();
       _startBannerAutoPlay();
     } else if (state == AppLifecycleState.paused) {
@@ -525,9 +642,131 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                       ),
                     ),
 
-                    // Right Icons: Notification Bell + Wallet Pill
+                    // Right Icons: Chat Support + Notification Bell + Wallet Pill
                     Row(
                       children: [
+                        // Chat Support Icon (1-on-1 Admin Support) with rotating light beam, vibration shake & unread badge
+                        InkWell(
+                          onTap: () async {
+                            setState(() => _supportUnreadCount = 0);
+                            WorkerChatService.instance.clearUnreadCount();
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const WorkerSupportChatScreen(),
+                              ),
+                            );
+                            _loadSupportUnreadCount();
+                          },
+                          borderRadius: BorderRadius.circular(22),
+                          child: AnimatedBuilder(
+                            animation: Listenable.merge([_lightRotateController, _shakeAnimation]),
+                            builder: (context, _) {
+                              final bool hasUnread = _supportUnreadCount > 0;
+
+                              return SizedBox(
+                                width: 38,
+                                height: 38,
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Rotating radiant neon light beam around the circular icon (spins when unread > 0)
+                                    if (hasUnread)
+                                      Transform.rotate(
+                                        angle: _lightRotateController.value * 2 * 3.141592653589793,
+                                        child: Container(
+                                          width: 44,
+                                          height: 44,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            gradient: const SweepGradient(
+                                              colors: [
+                                                Colors.transparent,
+                                                Color(0x2200E5FF),
+                                                Color(0xFF00E5FF),
+                                                Color(0xFF38BDF8),
+                                                Color(0xFFA855F7),
+                                                Colors.transparent,
+                                              ],
+                                              stops: [0.0, 0.4, 0.68, 0.85, 0.95, 1.0],
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(0xFF00E5FF).withValues(alpha: 0.55),
+                                                blurRadius: 10,
+                                                spreadRadius: 1.5,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+
+                                    // White circular support icon with shake wobble transform
+                                    Transform.rotate(
+                                      angle: _shakeAnimation.value,
+                                      child: Container(
+                                        width: 38,
+                                        height: 38,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: hasUnread
+                                                  ? const Color(0xFF00E5FF).withValues(alpha: 0.4)
+                                                  : Colors.black.withValues(alpha: 0.1),
+                                              blurRadius: hasUnread ? 8 : 6,
+                                            ),
+                                          ],
+                                        ),
+                                        padding: const EdgeInsets.all(5.5),
+                                        child: Image.asset(
+                                          'assets/images/support_agent_icon.png',
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Dynamic Unread Message Badge
+                                    if (hasUnread)
+                                      Positioned(
+                                        top: -3,
+                                        right: -3,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                          constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEF4444),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: Colors.white, width: 1.5),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(0xFFEF4444).withValues(alpha: 0.6),
+                                                blurRadius: 5,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            _supportUnreadCount > 99 ? '99+' : '$_supportUnreadCount',
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white,
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.w800,
+                                              height: 1.0,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
                         // Notification Bell with dynamic unread badge
                         InkWell(
                           onTap: () async {

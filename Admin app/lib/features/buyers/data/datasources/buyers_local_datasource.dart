@@ -9,6 +9,7 @@ abstract class BuyersLocalDataSource {
   Future<BuyerModel?> getCachedBuyerDetail(String buyerId);
   Future<void> cacheBuyerDetail(String buyerId, Map<String, dynamic> fullDetail);
   Future<Map<String, dynamic>?> getCachedBuyerFullDetail(String buyerId);
+  Future<void> deleteBuyer(String buyerId);
 }
 
 class BuyersLocalDataSourceImpl implements BuyersLocalDataSource {
@@ -33,6 +34,7 @@ class BuyersLocalDataSourceImpl implements BuyersLocalDataSource {
   @override
   Future<void> cacheBuyers(List<BuyerModel> buyers) async {
     final db = await _dbManager.database;
+    await db.delete('buyers');
     final batch = db.batch();
     
     for (var buyer in buyers) {
@@ -94,5 +96,11 @@ class BuyersLocalDataSourceImpl implements BuyersLocalDataSource {
       return json.decode(maps.first['data'] as String) as Map<String, dynamic>;
     }
     return null;
+  }
+
+  @override
+  Future<void> deleteBuyer(String buyerId) async {
+    final db = await _dbManager.database;
+    await db.delete('buyers', where: 'id = ?', whereArgs: [buyerId]);
   }
 }

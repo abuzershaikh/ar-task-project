@@ -124,6 +124,17 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
                   ],
                 ),
               ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 20),
+                    SizedBox(width: 8),
+                    Text('Delete Worker', style: TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
@@ -211,7 +222,67 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
       case 'change_status':
         _showStatusChangeDialog();
         break;
+      case 'delete':
+        _showDeleteConfirmDialog();
+        break;
     }
+  }
+
+  void _showDeleteConfirmDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFEE2E2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Delete Worker?',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to permanently delete this worker account? KYC profiles, earnings, task submissions, and wallet history will be permanently wiped. This action cannot be undone.',
+          style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.read<WorkersBloc>().add(DeleteWorkerEvent(widget.workerId));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Worker deleted successfully.'),
+                  backgroundColor: Color(0xFF0F172A),
+                ),
+              );
+              Navigator.pop(context);
+            },
+            child: const Text('Delete Permanently', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showConfirmDialog(String title, String message) {

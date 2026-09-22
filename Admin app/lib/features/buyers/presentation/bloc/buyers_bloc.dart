@@ -24,6 +24,14 @@ class AdjustBuyerBalanceEvent extends BuyersEvent {
   final String reason;
   AdjustBuyerBalanceEvent({required this.buyerId, required this.amount, required this.reason});
 }
+class DeleteBuyerEvent extends BuyersEvent {
+  final String buyerId;
+  DeleteBuyerEvent(this.buyerId);
+}
+class BatchDeleteBuyersEvent extends BuyersEvent {
+  final List<String> buyerIds;
+  BatchDeleteBuyersEvent(this.buyerIds);
+}
 
 abstract class BuyersState {}
 class BuyersInitial extends BuyersState {}
@@ -71,6 +79,8 @@ class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
     on<RefreshBuyerDetailEvent>(_onRefreshBuyerDetail);
     on<UpdateBuyerStatusEvent>(_onUpdateStatus);
     on<AdjustBuyerBalanceEvent>(_onAdjustBalance);
+    on<DeleteBuyerEvent>(_onDeleteBuyer);
+    on<BatchDeleteBuyersEvent>(_onBatchDeleteBuyers);
   }
 
   Future<void> _onLoadBuyers(LoadBuyersEvent event, Emitter<BuyersState> emit) async {
@@ -189,5 +199,22 @@ class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
         emit(BuyersError(e.toString()));
       }
     }
+  }
+
+  Future<void> _onDeleteBuyer(DeleteBuyerEvent event, Emitter<BuyersState> emit) async {
+    try {
+      await repository.deleteBuyer(event.buyerId);
+    } catch (_) {}
+    _cachedBuyers.removeWhere((b) => b.id == event.buyerId);
+    emit(BuyersLoaded(List.from(_cachedBuyers)));
+  }
+
+  Future<void> _onBatchDeleteBuyers(BatchDeleteBuyersEvent event, Emitter<BuyersState> emit) async {
+    try {
+      await repository.batchDeleteBuyers(event.buyerIds);
+    } catch (_) {}
+    final idSet = event.buyerIds.toSet();
+    _cachedBuyers.removeWhere((b) => idSet.contains(b.id));
+    emit(BuyersLoaded(List.from(_cachedBuyers)));
   }
 }

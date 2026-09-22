@@ -2,6 +2,7 @@ import {
     Controller,
     Get,
     Post,
+    Delete,
     Param,
     Body,
     NotFoundException,
@@ -18,6 +19,7 @@ import { RatingRepository } from '../../../../shared/database/repositories/ratin
 import { WalletRepository } from '../../../../shared/database/repositories/wallet.repository';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, UserStatus } from '../../../../shared/database/entities/user.entity';
+import { DataSource } from 'typeorm';
 
 @ApiTags('Admin - Worker Management')
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
@@ -33,6 +35,7 @@ export class AdminWorkerManagementController {
         private readonly withdrawalRepo: WithdrawalRepository,
         private readonly ratingRepo: RatingRepository,
         private readonly walletRepo: WalletRepository,
+        private readonly dataSource: DataSource,
     ) { }
 
     @Get()
@@ -266,6 +269,98 @@ export class AdminWorkerManagementController {
             success: true,
             worker: updated,
             message: `Minimum withdrawal limit for worker ${workerId} updated to ₹${body.minWithdrawalLimit}`,
+        };
+    }
+
+    private async performCascadeWorkerDelete(targetId: string): Promise<boolean> {
+        let worker = await this.workerRepo.findById(targetId);
+        let userId = worker?.userId;
+        let workerId = worker?.id;
+
+        if (!userId) {
+            const user = await this.userRepo.findById(targetId);
+            if (user) {
+                userId = user.id;
+                if (!worker) {
+                    const allWorkers = await this.workerRepo.findActiveWorkers();
+                    worker = allWorkers.find(w => w.userId === userId) || null;
+                    if (worker) workerId = worker.id;
+                }
+            }
+        }
+
+        if (!userId && !workerId) {
+            return true; // Already deleted, consider success
+        }
+
+        // Safety check: protect Super Admins & Admins
+        if (userId) {
+            const user = await this.userRepo.findById(userId);
+            if (user && (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN)) {
+                return false;
+            }
+        }
+
+        await this.dataSource.query('SET FOREIGN_KEY_CHECKS = 0;');
+        try {
+            if (workerId) {
+                await this.dataSource.query('DELETE FROM worker_completed_identities WHERE worker_key = ? OR worker_key = ?;', [workerId, userId || '']);
+                await this.dataSource.query('DELETE FROM campaign_worker_participation WHERE worker_id = ?;', [workerId]);
+                await this.dataSource.query('DELETE FROM task_submissions WHERE worker_id = ?;', [workerId]);
+                await this.dataSource.query('DELETE FROM task_assignments WHERE worker_id = ?;', [workerId]);
+                await this.dataSource.query('DELETE FROM worker_scores WHERE worker_id = ?;', [workerId]);
+                await this.dataSource.query('DELETE FROM kyc_profiles WHERE worker_id = ?;', [workerId]);
+                await this.dataSource.query('DELETE FROM earnings WHERE worker_id = ?;', [workerId]);
+                await this.dataSource.query('DELETE FROM withdrawals WHERE worker_id = ?;', [workerId]);
+                await this.dataSource.query('DELETE FROM ratings WHERE worker_id = ?;', [workerId]);
+                await this.dataSource.query('DELETE FROM workers WHERE id = ?;', [workerId]);
+            }
+            if (userId) {
+                await this.dataSource.query('DELETE FROM notifications WHERE user_id = ?;', [userId]);
+                await this.dataSource.query('DELETE FROM files WHERE uploaded_by = ?;', [userId]);
+                await this.dataSource.query('DELETE FROM wallet_transactions WHERE wallet_id IN (SELECT id FROM wallets WHERE user_id = ?);', [userId]);
+                await this.dataSource.query('DELETE FROM wallets WHERE user_id = ?;', [userId]);
+                await this.dataSource.query('DELETE FROM workers WHERE user_id = ?;', [userId]);
+                await this.dataSource.query('DELETE FROM users WHERE id = ?;', [userId]);
+            }
+        } finally {
+            await this.dataSource.query('SET FOREIGN_KEY_CHECKS = 1;');
+        }
+
+        return true;
+    }
+
+    @Post('batch-delete')
+    @ApiOperation({ summary: 'Batch delete multiple workers' })
+    async batchDeleteWorkers(@Body() body: { ids: string[] }) {
+        if (!body.ids || !Array.isArray(body.ids) || body.ids.length === 0) {
+            throw new BadRequestException('ids array is required');
+        }
+
+        let deletedCount = 0;
+        for (const id of body.ids) {
+            const success = await this.performCascadeWorkerDelete(id);
+            if (success) deletedCount++;
+        }
+
+        return {
+            success: true,
+            deletedCount,
+            message: `Successfully deleted ${deletedCount} worker(s)`,
+        };
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'Permanently delete worker and associated user' })
+    async deleteWorker(@Param('id') workerId: string) {
+        const success = await this.performCascadeWorkerDelete(workerId);
+        if (!success) {
+            throw new BadRequestException('Cannot delete administrator account');
+        }
+
+        return {
+            success: true,
+            message: `Worker ${workerId} permanently deleted`,
         };
     }
 }

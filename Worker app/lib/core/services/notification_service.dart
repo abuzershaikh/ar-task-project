@@ -9,7 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'api_service.dart';
-
+import '../../features/support_chat/services/worker_chat_service.dart';
 import 'navigation_service.dart';
 
 @pragma('vm:entry-point')
@@ -194,6 +194,9 @@ class NotificationService {
       debugPrint(
         '🔔 [FCM FOREGROUND] Title: ${message.notification?.title} | Body: ${message.notification?.body}',
       );
+      if (message.data['type'] == 'SUPPORT_CHAT' || message.notification?.title == 'Support Team') {
+        WorkerChatService.instance.fetchUnreadCount();
+      }
       _showLocalNotification(message);
     });
 
@@ -444,7 +447,9 @@ class NotificationService {
           (data['taskId'] ?? data['id'] ?? data['orderId'] ?? data['entityId'])
               ?.toString();
 
-      if (type.contains('EARNING') ||
+      if (type == 'SUPPORT_CHAT' || type.contains('SUPPORT')) {
+        NavigationService.openSupportChat();
+      } else if (type.contains('EARNING') ||
           type.contains('WITHDRAWAL') ||
           type.contains('PAYOUT')) {
         NavigationService.openWallet();

@@ -10,9 +10,8 @@ const config = {
 
 async function getLogs() {
   await ssh.connect(config);
-  const res = await ssh.execCommand('pm2 logs task-engine-api --lines 100 --nostream');
+  const res = await ssh.execCommand('pm2 status');
   console.log(res.stdout);
-  if (res.stderr) console.error(res.stderr);
   process.exit(0);
 }
 

@@ -1,0 +1,18 @@
+{
+  "name": "earnpost-chat-media-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker for Chat Support Media Storage (Images, Voice Notes, Audio) powered by Cloudflare R2",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "keywords": ["cloudflare", "worker", "r2", "chat", "media", "storage"],
+  "author": "Antigravity",
+  "license": "ISC",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241022.0",
+    "typescript": "^5.6.3",
+    "wrangler": "^4.85.0"
+  }
+}

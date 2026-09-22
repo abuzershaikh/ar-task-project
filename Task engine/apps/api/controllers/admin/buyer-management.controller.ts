@@ -2,9 +2,11 @@ import {
     Controller,
     Get,
     Post,
+    Delete,
     Param,
     Body,
     NotFoundException,
+    BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRepository } from '../../../../shared/database/repositories/user.repository';
@@ -13,6 +15,7 @@ import { TaskRepository } from '../../../../shared/database/repositories/task.re
 import { RatingRepository } from '../../../../shared/database/repositories/rating.repository';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, UserStatus } from '../../../../shared/database/entities/user.entity';
+import { DataSource } from 'typeorm';
 
 @ApiTags('Admin - Buyer Management')
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
@@ -24,6 +27,7 @@ export class AdminBuyerManagementController {
         private readonly orderRepo: OrderRepository,
         private readonly taskRepo: TaskRepository,
         private readonly ratingRepo: RatingRepository,
+        private readonly dataSource: DataSource,
     ) { }
 
     @Get()
@@ -180,6 +184,84 @@ export class AdminBuyerManagementController {
         return {
             success: true,
             message: `Buyer status updated to ${body.status}`,
+        };
+    }
+
+    private async performCascadeBuyerDelete(buyerId: string): Promise<boolean> {
+        const buyer = await this.userRepo.findById(buyerId);
+        if (!buyer) return true; // Already deleted, consider success
+
+        // Safety check: protect Admins and Super Admins
+        if (buyer.role === UserRole.ADMIN || buyer.role === UserRole.SUPER_ADMIN) {
+            return false;
+        }
+
+        await this.dataSource.query('SET FOREIGN_KEY_CHECKS = 0;');
+        try {
+            await this.dataSource.query(`
+                DELETE FROM task_submissions 
+                WHERE task_id IN (SELECT id FROM tasks WHERE order_id IN (SELECT id FROM orders WHERE buyer_id = ?));
+            `, [buyerId]);
+            await this.dataSource.query(`
+                DELETE FROM task_assignments 
+                WHERE task_id IN (SELECT id FROM tasks WHERE order_id IN (SELECT id FROM orders WHERE buyer_id = ?));
+            `, [buyerId]);
+            await this.dataSource.query(`
+                DELETE FROM tasks 
+                WHERE order_id IN (SELECT id FROM orders WHERE buyer_id = ?);
+            `, [buyerId]);
+            await this.dataSource.query(`
+                DELETE FROM order_units 
+                WHERE order_id IN (SELECT id FROM orders WHERE buyer_id = ?);
+            `, [buyerId]);
+            await this.dataSource.query(`
+                DELETE FROM task_generation_jobs 
+                WHERE order_id IN (SELECT id FROM orders WHERE buyer_id = ?);
+            `, [buyerId]);
+            await this.dataSource.query('DELETE FROM orders WHERE buyer_id = ?;', [buyerId]);
+            await this.dataSource.query('DELETE FROM wallet_transactions WHERE wallet_id IN (SELECT id FROM wallets WHERE user_id = ?);', [buyerId]);
+            await this.dataSource.query('DELETE FROM wallets WHERE user_id = ?;', [buyerId]);
+            await this.dataSource.query('DELETE FROM notifications WHERE user_id = ?;', [buyerId]);
+            await this.dataSource.query('DELETE FROM ratings WHERE buyer_id = ?;', [buyerId]);
+            await this.dataSource.query('DELETE FROM users WHERE id = ?;', [buyerId]);
+        } finally {
+            await this.dataSource.query('SET FOREIGN_KEY_CHECKS = 1;');
+        }
+
+        return true;
+    }
+
+    @Post('batch-delete')
+    @ApiOperation({ summary: 'Batch delete multiple buyers' })
+    async batchDeleteBuyers(@Body() body: { ids: string[] }) {
+        if (!body.ids || !Array.isArray(body.ids) || body.ids.length === 0) {
+            throw new BadRequestException('ids array is required');
+        }
+
+        let deletedCount = 0;
+        for (const id of body.ids) {
+            const success = await this.performCascadeBuyerDelete(id);
+            if (success) deletedCount++;
+        }
+
+        return {
+            success: true,
+            deletedCount,
+            message: `Successfully deleted ${deletedCount} buyer(s)`,
+        };
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'Permanently delete buyer and user account' })
+    async deleteBuyer(@Param('id') buyerId: string) {
+        const success = await this.performCascadeBuyerDelete(buyerId);
+        if (!success) {
+            throw new BadRequestException('Cannot delete administrator account');
+        }
+
+        return {
+            success: true,
+            message: `Buyer ${buyerId} permanently deleted`,
         };
     }
 }

@@ -234,4 +234,8 @@ export class WorkerRepository {
             });
         }
     }
+
+    async delete(id: string): Promise<void> {
+        await this.repository.delete(id);
+    }
 }

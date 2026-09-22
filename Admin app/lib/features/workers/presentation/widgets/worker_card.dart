@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
 
 class WorkerCard extends StatelessWidget {
   final String workerId;
@@ -14,6 +13,10 @@ class WorkerCard extends StatelessWidget {
   final double totalEarned;
   final double availableBalance;
   final VoidCallback onTap;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final ValueChanged<bool?>? onSelectChanged;
+  final VoidCallback? onDelete;
 
   const WorkerCard({
     super.key,
@@ -29,6 +32,10 @@ class WorkerCard extends StatelessWidget {
     required this.totalEarned,
     required this.availableBalance,
     required this.onTap,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onSelectChanged,
+    this.onDelete,
   });
 
   Color _getStatusColor() {
@@ -58,29 +65,47 @@ class WorkerCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isSelected ? const Color(0xFFF0F9FF) : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
-        boxShadow: const [
+        border: Border.all(
+          color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFBAE6FD),
+          width: isSelected ? 1.8 : 1.2,
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0C0284C7),
-            blurRadius: 8,
-            offset: Offset(0, 3),
+            color: isSelected ? const Color(0x1F0284C7) : const Color(0x0C0284C7),
+            blurRadius: isSelected ? 10 : 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: InkWell(
-        onTap: onTap,
+        onTap: isSelectionMode ? () => onSelectChanged?.call(!isSelected) : onTap,
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Header: Avatar + Name/Phone + Status Pill ───
+              // ── Header: Checkbox + Avatar + Name/Phone + Status Pill ───
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  if (isSelectionMode) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: isSelected,
+                          onChanged: onSelectChanged,
+                          activeColor: const Color(0xFF0284C7),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                        ),
+                      ),
+                    ),
+                  ],
                   Container(
                     width: 38,
                     height: 38,
@@ -156,6 +181,17 @@ class WorkerCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (onDelete != null && !isSelectionMode) ...[
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: onDelete,
+                      borderRadius: BorderRadius.circular(8),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFEF4444)),
+                      ),
+                    ),
+                  ],
                 ],
               ),
 
