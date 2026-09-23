@@ -82,6 +82,8 @@ export class AdminPayoutManagementController {
                     workerName: user?.fullName || (worker as any)?.fullName || 'Worker Account',
                     workerEmail: user?.email || '',
                     workerPhone: user?.phone || (worker as any)?.phone || '',
+                    avatarUrl: user?.avatarUrl || '',
+                    workerAvatarUrl: user?.avatarUrl || '',
                     paymentMethod,
                     paymentMethodId: w.paymentMethodId,
                     bankDetails: bankDetails || null,

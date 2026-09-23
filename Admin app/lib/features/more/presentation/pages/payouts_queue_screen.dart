@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../data/models/more_models.dart';
 import '../bloc/more_bloc.dart';
 
@@ -133,20 +134,41 @@ class _PayoutsQueueScreenState extends State<PayoutsQueueScreen> {
                                             ),
                                           ],
                                         ),
-                                         const SizedBox(height: 4),
-                                         Text(
-                                           item.workerName.isNotEmpty ? item.workerName : 'Worker Account',
-                                           style: const TextStyle(
-                                             fontWeight: FontWeight.w600,
-                                           ),
-                                         ),
-                                         Text(
-                                           item.workerEmail.isNotEmpty ? item.workerEmail : (item.workerId.length > 8 ? 'ID: #${item.workerId.substring(0, 8)}' : 'ID: ${item.workerId}'),
-                                           style: const TextStyle(
-                                             fontSize: 11,
-                                             color: AppColors.gray500,
-                                           ),
-                                         ),
+                                          const SizedBox(height: 6),
+                                          Row(
+                                            children: [
+                                              AppAvatar(
+                                                name: item.workerName,
+                                                imageUrl: item.avatarUrl,
+                                                userId: item.workerId,
+                                                radius: 16,
+                                                fontSize: 11,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      item.workerName.isNotEmpty ? item.workerName : 'Worker Account',
+                                                      style: const TextStyle(
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                    Text(
+                                                      item.workerEmail.isNotEmpty ? item.workerEmail : (item.workerId.length > 8 ? 'ID: #${item.workerId.substring(0, 8)}' : 'ID: ${item.workerId}'),
+                                                      style: const TextStyle(
+                                                        fontSize: 11,
+                                                        color: AppColors.gray500,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                       ],
                                     ),
                                   ),

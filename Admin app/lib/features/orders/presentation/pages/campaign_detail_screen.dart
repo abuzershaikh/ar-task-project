@@ -337,6 +337,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                           leading: AppAvatar(
                             name: workerName.toString(),
                             imageUrl: workerAvatarUrl?.toString(),
+                            userId: workerId,
                             radius: 19,
                             fontSize: 13,
                           ),

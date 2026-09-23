@@ -5,8 +5,10 @@ import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/widgets/image_viewer_dialog.dart';
+import '../../../../core/storage/local_avatar_cache.dart';
+import '../../../workers/domain/repositories/workers_repository.dart';
 
-class TaskReviewInspectorModal extends StatelessWidget {
+class TaskReviewInspectorModal extends StatefulWidget {
   final String submissionId;
   final String taskId;
   final String workerId;
@@ -28,6 +30,45 @@ class TaskReviewInspectorModal extends StatelessWidget {
     this.proofText,
   });
 
+  @override
+  State<TaskReviewInspectorModal> createState() => _TaskReviewInspectorModalState();
+}
+
+class _TaskReviewInspectorModalState extends State<TaskReviewInspectorModal> {
+  String? _avatarUrl;
+  late String _workerName;
+  late String _workerEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    _workerName = widget.workerName;
+    _workerEmail = widget.workerEmail;
+    _avatarUrl = widget.workerAvatarUrl;
+
+    if ((_avatarUrl == null || _avatarUrl!.isEmpty) && widget.workerId.isNotEmpty) {
+      _avatarUrl = LocalAvatarCache.getAvatarSync(widget.workerId);
+    }
+
+    if ((_avatarUrl == null || _avatarUrl!.isEmpty) && widget.workerId.isNotEmpty) {
+      getIt<WorkersRepository>().getWorkerDetail(widget.workerId).then((w) {
+        if (mounted) {
+          setState(() {
+            if (w.avatarUrl != null && w.avatarUrl!.isNotEmpty) {
+              _avatarUrl = w.avatarUrl;
+            }
+            if (_workerName.isEmpty && w.name.isNotEmpty) {
+              _workerName = w.name;
+            }
+            if (_workerEmail.isEmpty && w.email.isNotEmpty) {
+              _workerEmail = w.email;
+            }
+          });
+        }
+      }).catchError((_) {});
+    }
+  }
+
   String _formatId(String id) {
     if (id.length <= 12) return id;
     return '#${id.substring(0, 6)}...${id.substring(id.length - 4)}';
@@ -46,8 +87,9 @@ class TaskReviewInspectorModal extends StatelessWidget {
   }
 
   Widget _buildCopySnippet(BuildContext context, String label, String fullId) {
-    if (fullId.isEmpty)
+    if (fullId.isEmpty) {
       return const Text('N/A', style: TextStyle(color: Color(0xFF64748B)));
+    }
     return InkWell(
       onTap: () => _copyToClipboard(context, fullId, label),
       borderRadius: BorderRadius.circular(6),
@@ -79,13 +121,13 @@ class TaskReviewInspectorModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = workerName.isNotEmpty
-        ? workerName
-        : (workerId.length > 6
-            ? 'Worker #${workerId.substring(0, 6)}'
-            : workerId);
+    final displayName = _workerName.isNotEmpty
+        ? _workerName
+        : (widget.workerId.length > 6
+            ? 'Worker #${widget.workerId.substring(0, 6)}'
+            : widget.workerId);
 
-    String? normalizedProofUrl = proofUrl;
+    String? normalizedProofUrl = widget.proofUrl;
     if (normalizedProofUrl != null &&
         normalizedProofUrl.isNotEmpty &&
         !normalizedProofUrl.startsWith('http')) {
@@ -123,6 +165,14 @@ class TaskReviewInspectorModal extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
+                  AppAvatar(
+                    name: displayName,
+                    imageUrl: _avatarUrl,
+                    userId: widget.workerId,
+                    radius: 20,
+                    border: Border.all(color: const Color(0xFF059669), width: 1.5),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,20 +180,21 @@ class TaskReviewInspectorModal extends StatelessWidget {
                         const Text(
                           'Task Review Inspector',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF064E3B),
                           ),
                         ),
                         Text(
-                          workerEmail.isNotEmpty
-                              ? 'Worker: $displayName ($workerEmail)'
-                              : 'Worker: $displayName',
+                          _workerEmail.isNotEmpty
+                              ? '$displayName ($_workerEmail)'
+                              : displayName,
                           style: const TextStyle(
                             fontSize: 12,
                             color: Color(0xFF64748B),
                             fontWeight: FontWeight.w500,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -188,11 +239,11 @@ class TaskReviewInspectorModal extends StatelessWidget {
                             children: [
                               AppAvatar(
                                 name: displayName,
-                                imageUrl: workerAvatarUrl,
-                                userId: workerId,
-                                radius: 24,
+                                imageUrl: _avatarUrl,
+                                userId: widget.workerId,
+                                radius: 26,
                                 border: Border.all(
-                                    color: const Color(0xFF059669), width: 1.5),
+                                    color: const Color(0xFF059669), width: 2),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -202,14 +253,14 @@ class TaskReviewInspectorModal extends StatelessWidget {
                                     Text(
                                       displayName,
                                       style: const TextStyle(
-                                          fontSize: 15,
+                                          fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFF064E3B)),
                                     ),
                                     Text(
-                                      workerEmail.isNotEmpty
-                                          ? workerEmail
-                                          : 'ID: $workerId',
+                                      _workerEmail.isNotEmpty
+                                          ? _workerEmail
+                                          : 'Worker ID: ${_formatId(widget.workerId)}',
                                       style: const TextStyle(
                                           fontSize: 12,
                                           color: Color(0xFF64748B)),
@@ -223,18 +274,18 @@ class TaskReviewInspectorModal extends StatelessWidget {
                           const Divider(height: 1),
                           const SizedBox(height: 10),
                           _buildCustomRow(context, 'Task ID',
-                              _buildCopySnippet(context, 'Task ID', taskId)),
-                          if (submissionId.isNotEmpty)
+                              _buildCopySnippet(context, 'Task ID', widget.taskId)),
+                          if (widget.submissionId.isNotEmpty)
                             _buildCustomRow(
                                 context,
                                 'Submission ID',
                                 _buildCopySnippet(
-                                    context, 'Submission ID', submissionId)),
+                                    context, 'Submission ID', widget.submissionId)),
                           _buildCustomRow(
                               context,
                               'Worker ID',
                               _buildCopySnippet(
-                                  context, 'Worker ID', workerId)),
+                                  context, 'Worker ID', widget.workerId)),
                         ],
                       ),
                     ),
@@ -243,7 +294,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Text Proof (if available)
-                  if (proofText != null && proofText!.isNotEmpty) ...[
+                  if (widget.proofText != null && widget.proofText!.isNotEmpty) ...[
                     const Text('Worker Submitted Text / Notes',
                         style: TextStyle(
                             fontSize: 14,
@@ -259,7 +310,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
                         border: Border.all(color: const Color(0xFFCBD5E1)),
                       ),
                       child: Text(
-                        proofText!,
+                        widget.proofText!,
                         style: const TextStyle(
                             fontSize: 12.5,
                             color: Color(0xFF1E293B),
@@ -437,27 +488,6 @@ class TaskReviewInspectorModal extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label,
-              style: const TextStyle(
-                  color: Color(0xFF64748B),
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500)),
-          Text(value,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: Color(0xFF064E3B))),
-        ],
-      ),
-    );
-  }
-
   Widget _buildCustomRow(
       BuildContext context, String label, Widget rightWidget) {
     return Padding(
@@ -490,7 +520,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              final targetId = submissionId.isNotEmpty ? submissionId : taskId;
+              final targetId = widget.submissionId.isNotEmpty ? widget.submissionId : widget.taskId;
               try {
                 final dio = getIt<DioClient>();
                 await dio.post('/admin/reviews/$targetId/approve');
@@ -573,7 +603,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
-              final targetId = submissionId.isNotEmpty ? submissionId : taskId;
+              final targetId = widget.submissionId.isNotEmpty ? widget.submissionId : widget.taskId;
               try {
                 final dio = getIt<DioClient>();
                 await dio.post(

@@ -14,6 +14,7 @@ import { NotificationService } from '../../../../shared/services/notification.se
 import { NotificationType } from '../../../../shared/database/entities/notification.entity';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
+import { UserRepository } from '../../../../shared/database/repositories/user.repository';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
 
 @ApiTags('Admin - KYC Management')
@@ -24,6 +25,7 @@ export class AdminKycManagementController {
     constructor(
         private readonly kycRepo: KycRepository,
         private readonly workerRepo: WorkerRepository,
+        private readonly userRepo: UserRepository,
         private readonly notificationService: NotificationService,
     ) { }
 
@@ -32,10 +34,29 @@ export class AdminKycManagementController {
     @ApiOperation({ summary: 'List pending KYC verification applications' })
     async getPendingKyc() {
         const pending = await this.kycRepo.findPending();
+        const enriched = await Promise.all(
+            pending.map(async (k) => {
+                let user: User | null = null;
+                const worker = await this.workerRepo.findById(k.workerId);
+                if (worker && worker.userId) {
+                    user = await this.userRepo.findById(worker.userId);
+                }
+                if (!user) {
+                    user = await this.userRepo.findById(k.workerId);
+                }
+                return {
+                    ...k,
+                    workerName: user?.fullName || (k as any).workerName || 'Worker',
+                    workerEmail: user?.email || (k as any).workerEmail || '',
+                    avatarUrl: user?.avatarUrl || '',
+                    workerAvatarUrl: user?.avatarUrl || '',
+                };
+            })
+        );
         return {
             success: true,
-            applications: pending,
-            count: pending.length,
+            applications: enriched,
+            count: enriched.length,
         };
     }
 

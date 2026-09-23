@@ -97,6 +97,7 @@ class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
                                 workerId: item.workerId,
                                 workerName: item.workerName,
                                 workerEmail: item.workerEmail,
+                                workerAvatarUrl: item.avatarUrl,
                                 proofUrl: item.proofUrl,
                                 proofText: item.proofText,
                               ),
@@ -144,32 +145,67 @@ class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
                                   ],
                                 ),
                                 
-                                const SizedBox(height: 6),
+                                const SizedBox(height: 10),
                                 
-                                Row(
-                                  children: [
-                                    AppAvatar(
-                                      name: item.workerName.isNotEmpty ? item.workerName : 'Worker',
-                                      imageUrl: item.avatarUrl,
-                                      radius: 10,
-                                      fontSize: 9,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        item.workerName.isNotEmpty
-                                            ? (item.workerEmail.isNotEmpty ? '${item.workerName} (${item.workerEmail})' : item.workerName)
-                                            : (item.workerEmail.isNotEmpty ? item.workerEmail : 'Worker #${item.workerId.length > 6 ? item.workerId.substring(0, 6) : item.workerId}'),
-                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
-                                        overflow: TextOverflow.ellipsis,
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      AppAvatar(
+                                        name: item.workerName.isNotEmpty ? item.workerName : 'Worker',
+                                        imageUrl: item.avatarUrl,
+                                        userId: item.workerId,
+                                        radius: 18,
+                                        fontSize: 12,
+                                        border: Border.all(color: const Color(0xFF10B981), width: 1.2),
                                       ),
-                                    ),
-                                    if (item.proofUrl.isNotEmpty) ...[
-                                      const Icon(Icons.attachment_rounded, size: 14, color: Color(0xFF059669)),
-                                      const SizedBox(width: 2),
-                                      const Text('Proof Image', style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              item.workerName.isNotEmpty
+                                                  ? item.workerName
+                                                  : (item.workerEmail.isNotEmpty ? item.workerEmail : 'Worker #${item.workerId.length > 6 ? item.workerId.substring(0, 6) : item.workerId}'),
+                                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            Text(
+                                              item.workerEmail.isNotEmpty
+                                                  ? item.workerEmail
+                                                  : 'ID: ${item.workerId.length > 8 ? item.workerId.substring(0, 8) : item.workerId}',
+                                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (item.proofUrl.isNotEmpty) ...[
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFECFDF5),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.attachment_rounded, size: 14, color: Color(0xFF059669)),
+                                              SizedBox(width: 4),
+                                              Text('Proof', style: TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ],
-                                  ],
+                                  ),
                                 ),
                                 
                                 const SizedBox(height: 12),

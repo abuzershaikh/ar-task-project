@@ -10,6 +10,8 @@ import { CurrentUser } from '../../../../shared/auth/decorators/current-user.dec
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
 import { TaskSubmission } from '../../../../shared/database/entities/submission.entity';
 
+import { WorkerRepository } from '../../../../shared/database/repositories/worker.repository';
+
 @ApiTags('Admin - Review Queue')
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
 @ApiBearerAuth('bearer')
@@ -20,6 +22,7 @@ export class AdminReviewController {
         private readonly submissionRepo: SubmissionRepository,
         private readonly taskRepo: TaskRepository,
         private readonly userRepo: UserRepository,
+        private readonly workerRepo: WorkerRepository,
         private readonly orderRepo: OrderRepository,
     ) { }
 
@@ -39,12 +42,20 @@ export class AdminReviewController {
             } catch (_) {}
         }
 
+        let workerAvatarUrl = '';
         if (sub.workerId) {
             try {
-                const worker = await this.userRepo.findById(sub.workerId);
-                if (worker) {
-                    workerName = worker.fullName || (worker as any).name || 'Worker';
-                    workerEmail = worker.email || '';
+                let workerUser = await this.userRepo.findById(sub.workerId);
+                if (!workerUser) {
+                    const worker = await this.workerRepo.findById(sub.workerId);
+                    if (worker && worker.userId) {
+                        workerUser = await this.userRepo.findById(worker.userId);
+                    }
+                }
+                if (workerUser) {
+                    workerName = workerUser.fullName || (workerUser as any).name || 'Worker';
+                    workerEmail = workerUser.email || '';
+                    workerAvatarUrl = workerUser.avatarUrl || (workerUser as any).photoUrl || '';
                 }
             } catch (_) {}
         }
@@ -79,6 +90,8 @@ export class AdminReviewController {
             orderId,
             workerName,
             workerEmail,
+            avatarUrl: workerAvatarUrl,
+            workerAvatarUrl,
             proofUrl,
             proofScreenshotUrl: proofUrl,
             proofText,

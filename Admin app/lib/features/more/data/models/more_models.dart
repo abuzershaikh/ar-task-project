@@ -1,3 +1,5 @@
+import '../../../../core/storage/local_avatar_cache.dart';
+
 class KycItemModel {
   final String id;
   final String workerId;
@@ -28,12 +30,27 @@ class KycItemModel {
   });
 
   factory KycItemModel.fromJson(Map<String, dynamic> json) {
+    final workerId = json['workerId']?.toString() ?? '';
+    final rawAvatar = json['avatarUrl'] ??
+        json['avatar_url'] ??
+        json['photoUrl'] ??
+        json['worker']?['avatarUrl'] ??
+        json['worker']?['avatar_url'] ??
+        json['worker']?['photoUrl'] ??
+        json['workerAvatarUrl'];
+    final avatar = (rawAvatar != null && rawAvatar.toString().isNotEmpty)
+        ? rawAvatar.toString()
+        : (workerId.isNotEmpty ? LocalAvatarCache.getAvatarSync(workerId) : null);
+    if (workerId.isNotEmpty && avatar != null && avatar.isNotEmpty) {
+      LocalAvatarCache.saveAvatar(workerId, avatar);
+    }
+
     return KycItemModel(
       id: json['id']?.toString() ?? '',
-      workerId: json['workerId']?.toString() ?? '',
+      workerId: workerId,
       workerName: json['workerName'] ?? json['name'] ?? 'Worker',
       workerEmail: json['workerEmail'] ?? json['email'] ?? '',
-      avatarUrl: json['avatarUrl'] ?? json['avatar_url'] ?? json['photoUrl'] ?? json['worker']?['avatarUrl'] ?? json['worker']?['avatar_url'] ?? json['worker']?['photoUrl'],
+      avatarUrl: avatar,
       bankName: json['bankName'],
       accountNumber: json['accountNumber'],
       ifscCode: json['ifscCode'],
@@ -50,6 +67,7 @@ class PayoutItemModel {
   final String workerId;
   final String workerName;
   final String workerEmail;
+  final String? avatarUrl;
   final double amount;
   final String paymentMethod;
   final String status;
@@ -60,6 +78,7 @@ class PayoutItemModel {
     required this.workerId,
     required this.workerName,
     this.workerEmail = '',
+    this.avatarUrl,
     required this.amount,
     required this.paymentMethod,
     required this.status,
@@ -67,11 +86,27 @@ class PayoutItemModel {
   });
 
   factory PayoutItemModel.fromJson(Map<String, dynamic> json) {
+    final workerId = json['userId']?.toString() ?? json['workerId']?.toString() ?? '';
+    final rawAvatar = json['avatarUrl'] ??
+        json['avatar_url'] ??
+        json['photoUrl'] ??
+        json['worker']?['avatarUrl'] ??
+        json['worker']?['avatar_url'] ??
+        json['worker']?['photoUrl'] ??
+        json['workerAvatarUrl'];
+    final avatar = (rawAvatar != null && rawAvatar.toString().isNotEmpty)
+        ? rawAvatar.toString()
+        : (workerId.isNotEmpty ? LocalAvatarCache.getAvatarSync(workerId) : null);
+    if (workerId.isNotEmpty && avatar != null && avatar.isNotEmpty) {
+      LocalAvatarCache.saveAvatar(workerId, avatar);
+    }
+
     return PayoutItemModel(
       id: json['id']?.toString() ?? '',
-      workerId: json['userId']?.toString() ?? json['workerId']?.toString() ?? '',
+      workerId: workerId,
       workerName: json['workerName'] ?? 'Worker',
       workerEmail: json['workerEmail'] ?? json['email'] ?? '',
+      avatarUrl: avatar,
       amount: double.tryParse(json['amount']?.toString() ?? '0.0') ?? 0.0,
       paymentMethod: json['paymentMethod'] ?? json['method'] ?? json['paymentMethodId'] ?? 'UPI / Bank',
       status: json['status']?.toString().toUpperCase() ?? 'PENDING',
@@ -143,15 +178,30 @@ class ReviewItemModel {
           : 'http://65.20.77.112:3000/api/v1/files/raw/$extractedProofUrl';
     }
 
+    final workerId = json['workerId']?.toString() ?? '';
+    final rawAvatar = json['avatarUrl'] ??
+        json['avatar_url'] ??
+        json['photoUrl'] ??
+        json['worker']?['avatarUrl'] ??
+        json['worker']?['avatar_url'] ??
+        json['worker']?['photoUrl'] ??
+        json['workerAvatarUrl'];
+    final avatar = (rawAvatar != null && rawAvatar.toString().isNotEmpty)
+        ? rawAvatar.toString()
+        : (workerId.isNotEmpty ? LocalAvatarCache.getAvatarSync(workerId) : null);
+    if (workerId.isNotEmpty && avatar != null && avatar.isNotEmpty) {
+      LocalAvatarCache.saveAvatar(workerId, avatar);
+    }
+
     return ReviewItemModel(
       id: json['id']?.toString() ?? '',
       taskId: json['taskId']?.toString() ?? '',
       taskTitle: (json['taskTitle'] ?? json['taskType'] ?? 'Task Execution').toString(),
       orderId: (json['orderId'] ?? '').toString(),
-      workerId: json['workerId']?.toString() ?? '',
+      workerId: workerId,
       workerName: (json['workerName'] ?? json['worker']?['name'] ?? 'Worker').toString(),
       workerEmail: (json['workerEmail'] ?? json['worker']?['email'] ?? '').toString(),
-      avatarUrl: json['avatarUrl'] ?? json['avatar_url'] ?? json['photoUrl'] ?? json['worker']?['avatarUrl'] ?? json['worker']?['avatar_url'] ?? json['worker']?['photoUrl'],
+      avatarUrl: avatar,
       proofUrl: extractedProofUrl,
       proofText: extractedProofText,
       status: json['status']?.toString().toUpperCase() ?? 'SUBMITTED',

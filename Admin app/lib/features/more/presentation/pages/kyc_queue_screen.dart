@@ -70,6 +70,7 @@ class _KycQueueScreenState extends State<KycQueueScreen> {
                             AppAvatar(
                               name: kyc.workerName,
                               imageUrl: kyc.avatarUrl,
+                              userId: kyc.workerId,
                               radius: 20,
                             ),
                             const SizedBox(width: 12),
