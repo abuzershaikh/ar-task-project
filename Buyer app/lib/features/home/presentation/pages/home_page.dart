@@ -650,7 +650,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                     const SizedBox(width: 5),
                     Text(
-                      '₹${(d.walletBalance > 0 ? d.walletBalance : 3241).toStringAsFixed(0)}',
+                      '₹${d.walletBalance.toStringAsFixed(0)}',
                       style: GoogleFonts.outfit(
                         color: const Color(0xFF38BDF8),
                         fontSize: 13,
@@ -1243,7 +1243,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   ),
                                 ),
                                 Text(
-                                  '₹${(d.walletBalance > 0 ? d.walletBalance : 3241).toStringAsFixed(0)}',
+                                  '₹${d.walletBalance.toStringAsFixed(0)}',
                                   style: GoogleFonts.outfit(
                                     color: const Color(0xFF34D399),
                                     fontSize: 11.5,
