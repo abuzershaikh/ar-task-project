@@ -45,6 +45,7 @@ class OverviewTab extends StatelessWidget {
                 AppAvatar(
                   name: worker.name,
                   imageUrl: worker.avatarUrl,
+                  userId: worker.id,
                   radius: 30,
                   border: Border.all(color: const Color(0xFF0284C7), width: 2),
                 ),

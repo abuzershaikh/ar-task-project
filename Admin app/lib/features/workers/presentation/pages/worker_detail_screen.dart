@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../bloc/workers_bloc.dart';
+import '../../data/models/worker_model.dart';
 import '../widgets/worker_detail_tabs/overview_tab.dart';
 import '../widgets/worker_detail_tabs/tasks_tab.dart';
 import '../widgets/worker_detail_tabs/kyc_tab.dart';
@@ -14,10 +15,12 @@ import '../widgets/worker_detail_tabs/activity_tab.dart';
 
 class WorkerDetailScreen extends StatefulWidget {
   final String workerId;
+  final WorkerModel? initialWorker;
 
   const WorkerDetailScreen({
     super.key,
     required this.workerId,
+    this.initialWorker,
   });
 
   @override
@@ -64,22 +67,23 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
         ),
         title: BlocBuilder<WorkersBloc, WorkersState>(
           builder: (context, state) {
-            String name = 'Worker Intelligence Profile';
-            String email = shortId;
-            String? avatarUrl;
+            String name = widget.initialWorker?.name.isNotEmpty == true ? widget.initialWorker!.name : 'Worker Intelligence Profile';
+            String email = widget.initialWorker?.email.isNotEmpty == true ? widget.initialWorker!.email : shortId;
+            String? avatarUrl = widget.initialWorker?.avatarUrl;
             if (state is WorkerDetailLoaded &&
                 (state.worker.id == widget.workerId || state.worker.userId == widget.workerId)) {
               name = state.worker.name.isNotEmpty ? state.worker.name : 'Worker Profile';
               email = state.worker.email.isNotEmpty
                   ? state.worker.email
                   : (state.worker.phone.isNotEmpty ? state.worker.phone : shortId);
-              avatarUrl = state.worker.avatarUrl;
+              avatarUrl = state.worker.avatarUrl ?? avatarUrl;
             }
             return Row(
               children: [
                 AppAvatar(
                   name: name,
                   imageUrl: avatarUrl,
+                  userId: widget.workerId,
                   radius: 18,
                   border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
                 ),
@@ -202,7 +206,7 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
           }
           
           if (state is WorkerDetailLoaded) {
-            final detailState = state as WorkerDetailLoaded;
+            final detailState = state;
             if (detailState.worker.id != widget.workerId && detailState.worker.userId != widget.workerId) {
               return const Center(child: CircularProgressIndicator(color: Color(0xFF0284C7)));
             }
@@ -210,7 +214,7 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
               controller: _tabController,
               children: [
                 OverviewTab(worker: detailState.worker, tasks: detailState.tasks, earnings: detailState.earnings),
-                TasksTab(tasks: detailState.tasks),
+                TasksTab(tasks: detailState.tasks, worker: detailState.worker),
                 KycTab(worker: detailState.worker),
                 EarningsTab(worker: detailState.worker, earnings: detailState.earnings),
                 RatingsTab(worker: detailState.worker, ratings: detailState.ratings),

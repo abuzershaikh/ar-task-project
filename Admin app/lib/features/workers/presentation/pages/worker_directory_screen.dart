@@ -543,7 +543,10 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => WorkerDetailScreen(workerId: w.id),
+                                      builder: (_) => WorkerDetailScreen(
+                                        workerId: w.id,
+                                        initialWorker: w,
+                                      ),
                                     ),
                                   );
                                 },

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../bloc/buyers_bloc.dart';
+import '../../data/models/buyer_model.dart';
 import '../widgets/buyer_detail_tabs/overview_tab.dart';
 import '../widgets/buyer_detail_tabs/orders_tab.dart';
 import '../widgets/buyer_detail_tabs/tasks_tab.dart';
@@ -14,10 +15,12 @@ import '../widgets/buyer_detail_tabs/risk_tab.dart';
 
 class BuyerDetailScreen extends StatefulWidget {
   final String buyerId;
+  final BuyerModel? initialBuyer;
 
   const BuyerDetailScreen({
     super.key,
     required this.buyerId,
+    this.initialBuyer,
   });
 
   @override
@@ -69,19 +72,20 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
         ),
         title: BlocBuilder<BuyersBloc, BuyersState>(
           builder: (context, state) {
-            String name = 'Buyer Commercial Profile';
-            String email = shortId;
-            String? avatarUrl;
+            String name = widget.initialBuyer?.name.isNotEmpty == true ? widget.initialBuyer!.name : 'Buyer Commercial Profile';
+            String email = widget.initialBuyer?.email.isNotEmpty == true ? widget.initialBuyer!.email : shortId;
+            String? avatarUrl = widget.initialBuyer?.avatarUrl;
             if (state is BuyerDetailLoaded && state.buyer.id == widget.buyerId) {
               name = state.buyer.name.isNotEmpty ? state.buyer.name : 'Buyer Profile';
               email = state.buyer.email.isNotEmpty ? state.buyer.email : shortId;
-              avatarUrl = state.buyer.avatarUrl;
+              avatarUrl = state.buyer.avatarUrl ?? avatarUrl;
             }
             return Row(
               children: [
                 AppAvatar(
                   name: name,
                   imageUrl: avatarUrl,
+                  userId: widget.buyerId,
                   radius: 18,
                   border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
                 ),
@@ -204,7 +208,7 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
           }
           
           if (state is BuyerDetailLoaded) {
-            final detailState = state as BuyerDetailLoaded;
+            final detailState = state;
             if (detailState.buyer.id != widget.buyerId) {
               return const Center(child: CircularProgressIndicator(color: Color(0xFF4F46E5)));
             }
@@ -213,7 +217,7 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
               children: [
                 OverviewTab(buyer: detailState.buyer, orders: detailState.orders, payments: detailState.payments),
                 OrdersTab(buyer: detailState.buyer, orders: detailState.orders),
-                TasksTab(tasks: detailState.tasks),
+                TasksTab(tasks: detailState.tasks, buyer: detailState.buyer),
                 PaymentsTab(buyer: detailState.buyer, payments: detailState.payments),
                 ReviewsTab(buyer: detailState.buyer, reviews: detailState.reviews),
                 AnalyticsTab(buyer: detailState.buyer, orders: detailState.orders),

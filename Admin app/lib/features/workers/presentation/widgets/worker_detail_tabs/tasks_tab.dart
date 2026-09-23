@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/app_avatar.dart';
+import '../../../data/models/worker_model.dart';
 
 class TasksTab extends StatefulWidget {
   final List<dynamic> tasks;
+  final WorkerModel? worker;
 
   const TasksTab({
     super.key,
     required this.tasks,
+    this.worker,
   });
 
   @override
@@ -24,11 +27,63 @@ class _TasksTabState extends State<TasksTab> {
       return status == _selectedFilter.toLowerCase();
     }).toList();
 
+    final workerName = widget.worker?.name.isNotEmpty == true ? widget.worker!.name : 'Worker';
+    final workerAvatar = widget.worker?.avatarUrl;
+    final workerId = widget.worker?.id ?? '';
+
     return Column(
       children: [
+        // Worker Identity & Total Tasks Banner
+        if (widget.worker != null)
+          Container(
+            margin: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0284C7).withValues(alpha: 0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                AppAvatar(
+                  name: workerName,
+                  imageUrl: workerAvatar,
+                  userId: workerId,
+                  radius: 20,
+                  border: Border.all(color: const Color(0xFF0284C7), width: 1.5),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$workerName\'s Tasks',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF0F172A)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Total ${widget.tasks.length} task submissions recorded',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // Filter Chips
         Container(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -117,19 +172,33 @@ class _TasksTabState extends State<TasksTab> {
                         border: Border.all(color: const Color(0xFFBAE6FD), width: 1),
                       ),
                       child: ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: bgColor,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.task_alt_rounded, color: statusColor, size: 18),
+                        leading: AppAvatar(
+                          name: workerName,
+                          imageUrl: workerAvatar,
+                          userId: workerId,
+                          radius: 19,
+                          fontSize: 12,
+                          border: Border.all(color: const Color(0xFFBAE6FD), width: 1),
                         ),
                         title: Text(
                           title,
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
                         ),
-                        subtitle: Text('Status: $status', style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
+                        subtitle: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: bgColor,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                status,
+                                style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
                         trailing: Text(
                           reward,
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0284C7)),
@@ -143,4 +212,3 @@ class _TasksTabState extends State<TasksTab> {
     );
   }
 }
-

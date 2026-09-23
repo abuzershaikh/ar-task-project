@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../network/dio_client.dart';
 import '../storage/secure_storage_service.dart';
 import '../storage/local_storage_service.dart';
+import '../storage/local_avatar_cache.dart';
 import '../network/network_info.dart';
 import '../database/app_database.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
@@ -61,6 +62,12 @@ Future<void> initializeDependencies() async {
   getIt.registerLazySingleton(() => DioClient(getIt()));
   getIt.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl());
   getIt.registerLazySingleton(() => AppDatabase.instance);
+  
+  // Local Avatar Cache (Memory + SQLite)
+  try {
+    final db = await AppDatabase.instance.database;
+    await LocalAvatarCache.init(db);
+  } catch (_) {}
   
   // Auth Feature
   getIt.registerLazySingleton<AuthRemoteDataSource>(

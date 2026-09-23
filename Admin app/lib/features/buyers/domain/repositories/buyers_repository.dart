@@ -1,6 +1,6 @@
+import '../../../../core/storage/local_avatar_cache.dart';
 import '../../data/models/buyer_model.dart';
 import '../../data/datasources/buyers_remote_datasource.dart';
-
 import '../../data/datasources/buyers_local_datasource.dart';
 
 abstract class BuyersRepository {
@@ -31,6 +31,11 @@ class BuyersRepositoryImpl implements BuyersRepository {
   Future<List<BuyerModel>> getBuyers({bool forceRefresh = false}) async {
     try {
       final remoteBuyers = await remoteDataSource.getBuyers();
+      for (final b in remoteBuyers) {
+        if (b.avatarUrl != null && b.avatarUrl!.isNotEmpty) {
+          LocalAvatarCache.saveAvatar(b.id, b.avatarUrl);
+        }
+      }
       await localDataSource.cacheBuyers(remoteBuyers);
       return remoteBuyers;
     } catch (e) {
@@ -45,19 +50,38 @@ class BuyersRepositoryImpl implements BuyersRepository {
   @override
   Future<BuyerModel> getBuyerDetail(String buyerId, {bool forceRefresh = false}) async {
     if (!forceRefresh) {
-      final localData = await localDataSource.getCachedBuyerDetail(buyerId);
+      var localData = await localDataSource.getCachedBuyerDetail(buyerId);
       if (localData != null) {
-        remoteDataSource.getBuyerDetail(buyerId).then((remoteBuyer) async {
-          final fullDetail = remoteBuyer.toJson();
-          final orders = await remoteDataSource.getBuyerOrders(buyerId).catchError((_) => []);
-          fullDetail['orders_cache'] = orders;
-          await localDataSource.cacheBuyerDetail(buyerId, fullDetail);
-        }).catchError((_) {});
-        return localData;
+        // If avatarUrl is missing locally, check LocalAvatarCache
+        if (localData.avatarUrl == null || localData.avatarUrl!.isEmpty) {
+          final cachedAvatar = await LocalAvatarCache.getAvatar(buyerId);
+          if (cachedAvatar != null && cachedAvatar.isNotEmpty) {
+            localData = localData.copyWith(avatarUrl: cachedAvatar);
+          }
+        }
+
+        // Return local immediately if avatar is present
+        if (localData.avatarUrl != null && localData.avatarUrl!.isNotEmpty) {
+          // Background sync
+          remoteDataSource.getBuyerDetail(buyerId).then((remoteBuyer) async {
+            if (remoteBuyer.avatarUrl != null && remoteBuyer.avatarUrl!.isNotEmpty) {
+              await LocalAvatarCache.saveAvatar(buyerId, remoteBuyer.avatarUrl);
+            }
+            final fullDetail = remoteBuyer.toJson();
+            final orders = await remoteDataSource.getBuyerOrders(buyerId).catchError((_) => []);
+            fullDetail['orders_cache'] = orders;
+            await localDataSource.cacheBuyerDetail(buyerId, fullDetail);
+          }).catchError((_) {});
+          return localData;
+        }
+        // If local avatar is null, fetch immediately from remote VPS
       }
     }
 
     final remoteBuyer = await remoteDataSource.getBuyerDetail(buyerId);
+    if (remoteBuyer.avatarUrl != null && remoteBuyer.avatarUrl!.isNotEmpty) {
+      await LocalAvatarCache.saveAvatar(buyerId, remoteBuyer.avatarUrl);
+    }
     final fullDetail = remoteBuyer.toJson();
     final orders = await remoteDataSource.getBuyerOrders(buyerId).catchError((_) => []);
     fullDetail['orders_cache'] = orders;

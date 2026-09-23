@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/widgets/image_viewer_dialog.dart';
@@ -11,6 +12,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
   final String workerId;
   final String workerName;
   final String workerEmail;
+  final String? workerAvatarUrl;
   final String? proofUrl;
   final String? proofText;
 
@@ -21,6 +23,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
     required this.workerId,
     this.workerName = '',
     this.workerEmail = '',
+    this.workerAvatarUrl,
     this.proofUrl,
     this.proofText,
   });
@@ -43,7 +46,8 @@ class TaskReviewInspectorModal extends StatelessWidget {
   }
 
   Widget _buildCopySnippet(BuildContext context, String label, String fullId) {
-    if (fullId.isEmpty) return const Text('N/A', style: TextStyle(color: Color(0xFF64748B)));
+    if (fullId.isEmpty)
+      return const Text('N/A', style: TextStyle(color: Color(0xFF64748B)));
     return InkWell(
       onTap: () => _copyToClipboard(context, fullId, label),
       borderRadius: BorderRadius.circular(6),
@@ -75,11 +79,19 @@ class TaskReviewInspectorModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = workerName.isNotEmpty ? workerName : (workerId.length > 6 ? 'Worker #${workerId.substring(0, 6)}' : workerId);
+    final displayName = workerName.isNotEmpty
+        ? workerName
+        : (workerId.length > 6
+            ? 'Worker #${workerId.substring(0, 6)}'
+            : workerId);
 
     String? normalizedProofUrl = proofUrl;
-    if (normalizedProofUrl != null && normalizedProofUrl.isNotEmpty && !normalizedProofUrl.startsWith('http')) {
-      final clean = normalizedProofUrl.startsWith('/') ? normalizedProofUrl : '/$normalizedProofUrl';
+    if (normalizedProofUrl != null &&
+        normalizedProofUrl.isNotEmpty &&
+        !normalizedProofUrl.startsWith('http')) {
+      final clean = normalizedProofUrl.startsWith('/')
+          ? normalizedProofUrl
+          : '/$normalizedProofUrl';
       normalizedProofUrl = clean.contains('/files/raw')
           ? 'http://65.20.77.112:3000$clean'
           : 'http://65.20.77.112:3000/api/v1/files/raw/$normalizedProofUrl';
@@ -105,7 +117,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            
+
             // Header
             Padding(
               padding: const EdgeInsets.all(16),
@@ -124,7 +136,9 @@ class TaskReviewInspectorModal extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          workerEmail.isNotEmpty ? 'Worker: $displayName ($workerEmail)' : 'Worker: $displayName',
+                          workerEmail.isNotEmpty
+                              ? 'Worker: $displayName ($workerEmail)'
+                              : 'Worker: $displayName',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Color(0xFF64748B),
@@ -141,9 +155,9 @@ class TaskReviewInspectorModal extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const Divider(height: 1),
-            
+
             // Content
             Expanded(
               child: ListView(
@@ -155,7 +169,8 @@ class TaskReviewInspectorModal extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
+                      border: Border.all(
+                          color: const Color(0xFFA7F3D0), width: 1.2),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x08059669),
@@ -171,13 +186,13 @@ class TaskReviewInspectorModal extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFECFDF5),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.verified_user_rounded, color: Color(0xFF059669), size: 24),
+                              AppAvatar(
+                                name: displayName,
+                                imageUrl: workerAvatarUrl,
+                                userId: workerId,
+                                radius: 24,
+                                border: Border.all(
+                                    color: const Color(0xFF059669), width: 1.5),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -186,11 +201,18 @@ class TaskReviewInspectorModal extends StatelessWidget {
                                   children: [
                                     Text(
                                       displayName,
-                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF064E3B)),
+                                      style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF064E3B)),
                                     ),
                                     Text(
-                                      workerEmail.isNotEmpty ? workerEmail : 'ID: $workerId',
-                                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                      workerEmail.isNotEmpty
+                                          ? workerEmail
+                                          : 'ID: $workerId',
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF64748B)),
                                     ),
                                   ],
                                 ),
@@ -200,20 +222,33 @@ class TaskReviewInspectorModal extends StatelessWidget {
                           const SizedBox(height: 12),
                           const Divider(height: 1),
                           const SizedBox(height: 10),
-                          _buildCustomRow(context, 'Task ID', _buildCopySnippet(context, 'Task ID', taskId)),
+                          _buildCustomRow(context, 'Task ID',
+                              _buildCopySnippet(context, 'Task ID', taskId)),
                           if (submissionId.isNotEmpty)
-                            _buildCustomRow(context, 'Submission ID', _buildCopySnippet(context, 'Submission ID', submissionId)),
-                          _buildCustomRow(context, 'Worker ID', _buildCopySnippet(context, 'Worker ID', workerId)),
+                            _buildCustomRow(
+                                context,
+                                'Submission ID',
+                                _buildCopySnippet(
+                                    context, 'Submission ID', submissionId)),
+                          _buildCustomRow(
+                              context,
+                              'Worker ID',
+                              _buildCopySnippet(
+                                  context, 'Worker ID', workerId)),
                         ],
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
 
                   // Text Proof (if available)
                   if (proofText != null && proofText!.isNotEmpty) ...[
-                    const Text('Worker Submitted Text / Notes', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF064E3B))),
+                    const Text('Worker Submitted Text / Notes',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF064E3B))),
                     const SizedBox(height: 8),
                     Container(
                       width: double.infinity,
@@ -225,21 +260,29 @@ class TaskReviewInspectorModal extends StatelessWidget {
                       ),
                       child: Text(
                         proofText!,
-                        style: const TextStyle(fontSize: 12.5, color: Color(0xFF1E293B), height: 1.4),
+                        style: const TextStyle(
+                            fontSize: 12.5,
+                            color: Color(0xFF1E293B),
+                            height: 1.4),
                       ),
                     ),
                     const SizedBox(height: 16),
                   ],
-                  
+
                   // Proof Inspector
-                  const Text('Submission Proof Screenshot', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF064E3B))),
+                  const Text('Submission Proof Screenshot',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF064E3B))),
                   const SizedBox(height: 10),
-                  
+
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
+                      border: Border.all(
+                          color: const Color(0xFFA7F3D0), width: 1.2),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,47 +290,66 @@ class TaskReviewInspectorModal extends StatelessWidget {
                         // Screenshot Preview
                         InkWell(
                           onTap: () {
-                            if (normalizedProofUrl != null && normalizedProofUrl.isNotEmpty) {
-                              ImageViewerDialog.show(context, imageUrl: normalizedProofUrl, title: 'Proof Screenshot');
+                            if (normalizedProofUrl != null &&
+                                normalizedProofUrl.isNotEmpty) {
+                              ImageViewerDialog.show(context,
+                                  imageUrl: normalizedProofUrl,
+                                  title: 'Proof Screenshot');
                             }
                           },
                           child: Container(
                             height: 240,
                             width: double.infinity,
                             color: AppColors.gray100,
-                            child: normalizedProofUrl != null && normalizedProofUrl.startsWith('http')
+                            child: normalizedProofUrl != null &&
+                                    normalizedProofUrl.startsWith('http')
                                 ? Image.network(
                                     normalizedProofUrl,
                                     fit: BoxFit.contain,
                                     loadingBuilder: (ctx, child, progress) {
                                       if (progress == null) return child;
-                                      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                                      return const Center(
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2));
                                     },
-                                    errorBuilder: (ctx, err, stack) => const Center(
+                                    errorBuilder: (ctx, err, stack) =>
+                                        const Center(
                                       child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.broken_image_rounded, size: 48, color: Colors.grey),
+                                          Icon(Icons.broken_image_rounded,
+                                              size: 48, color: Colors.grey),
                                           SizedBox(height: 6),
-                                          Text('Failed to load image', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                          Text('Failed to load image',
+                                              style: TextStyle(
+                                                  color: Colors.grey,
+                                                  fontSize: 12)),
                                         ],
                                       ),
                                     ),
                                   )
                                 : const Center(
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.image, size: 64, color: AppColors.gray400),
+                                        Icon(Icons.image,
+                                            size: 64, color: AppColors.gray400),
                                         SizedBox(height: 8),
-                                        Text('Screenshot Preview', style: TextStyle(color: AppColors.gray600)),
-                                        Text('(Tap to view full screen)', style: TextStyle(fontSize: 12, color: AppColors.gray500)),
+                                        Text('Screenshot Preview',
+                                            style: TextStyle(
+                                                color: AppColors.gray600)),
+                                        Text('(Tap to view full screen)',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                color: AppColors.gray500)),
                                       ],
                                     ),
                                   ),
                           ),
                         ),
-                        
+
                         Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
@@ -297,11 +359,17 @@ class TaskReviewInspectorModal extends StatelessWidget {
                                 children: [
                                   ElevatedButton.icon(
                                     onPressed: () {
-                                      if (normalizedProofUrl != null && normalizedProofUrl.isNotEmpty) {
-                                        ImageViewerDialog.show(context, imageUrl: normalizedProofUrl, title: 'Proof Screenshot');
+                                      if (normalizedProofUrl != null &&
+                                          normalizedProofUrl.isNotEmpty) {
+                                        ImageViewerDialog.show(context,
+                                            imageUrl: normalizedProofUrl,
+                                            title: 'Proof Screenshot');
                                       } else {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('No image URL available')),
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content: Text(
+                                                  'No image URL available')),
                                         );
                                       }
                                     },
@@ -320,13 +388,15 @@ class TaskReviewInspectorModal extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Review Decision Buttons
-                  const Text('Review Decision', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text('Review Decision',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
-                  
+
                   Row(
                     children: [
                       Expanded(
@@ -356,7 +426,7 @@ class TaskReviewInspectorModal extends StatelessWidget {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 100),
                 ],
               ),
@@ -373,20 +443,33 @@ class TaskReviewInspectorModal extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12.5, fontWeight: FontWeight.w500)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF064E3B))),
+          Text(label,
+              style: const TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500)),
+          Text(value,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: Color(0xFF064E3B))),
         ],
       ),
     );
   }
 
-  Widget _buildCustomRow(BuildContext context, String label, Widget rightWidget) {
+  Widget _buildCustomRow(
+      BuildContext context, String label, Widget rightWidget) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12.5, fontWeight: FontWeight.w500)),
+          Text(label,
+              style: const TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500)),
           rightWidget,
         ],
       ),
@@ -398,9 +481,12 @@ class TaskReviewInspectorModal extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Approve Task'),
-        content: const Text('Are you sure you want to approve this task submission?'),
+        content: const Text(
+            'Are you sure you want to approve this task submission?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
@@ -411,18 +497,24 @@ class TaskReviewInspectorModal extends StatelessWidget {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Task approved successfully!'), backgroundColor: Colors.green),
+                    const SnackBar(
+                        content: Text('Task approved successfully!'),
+                        backgroundColor: Colors.green),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to approve: $e'), backgroundColor: AppColors.error),
+                    SnackBar(
+                        content: Text('Failed to approve: $e'),
+                        backgroundColor: AppColors.error),
                   );
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: Colors.white),
             child: const Text('Confirm Approve'),
           ),
         ],
@@ -450,10 +542,15 @@ class TaskReviewInspectorModal extends StatelessWidget {
                 border: OutlineInputBorder(),
               ),
               items: const [
-                DropdownMenuItem(value: 'INVALID_PROOF', child: Text('Invalid Proof')),
-                DropdownMenuItem(value: 'INCOMPLETE_STEP', child: Text('Incomplete Steps')),
-                DropdownMenuItem(value: 'DUPLICATE_SUBMISSION', child: Text('Duplicate Submission')),
-                DropdownMenuItem(value: 'POOR_QUALITY', child: Text('Poor Quality')),
+                DropdownMenuItem(
+                    value: 'INVALID_PROOF', child: Text('Invalid Proof')),
+                DropdownMenuItem(
+                    value: 'INCOMPLETE_STEP', child: Text('Incomplete Steps')),
+                DropdownMenuItem(
+                    value: 'DUPLICATE_SUBMISSION',
+                    child: Text('Duplicate Submission')),
+                DropdownMenuItem(
+                    value: 'POOR_QUALITY', child: Text('Poor Quality')),
               ],
               onChanged: (value) => selectedReason = value,
             ),
@@ -470,7 +567,9 @@ class TaskReviewInspectorModal extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
@@ -487,18 +586,24 @@ class TaskReviewInspectorModal extends StatelessWidget {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Submission rejected.'), backgroundColor: Colors.red),
+                    const SnackBar(
+                        content: Text('Submission rejected.'),
+                        backgroundColor: Colors.red),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to reject: $e'), backgroundColor: AppColors.error),
+                    SnackBar(
+                        content: Text('Failed to reject: $e'),
+                        backgroundColor: AppColors.error),
                   );
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white),
             child: const Text('Reject'),
           ),
         ],
@@ -506,4 +611,3 @@ class TaskReviewInspectorModal extends StatelessWidget {
     );
   }
 }
-

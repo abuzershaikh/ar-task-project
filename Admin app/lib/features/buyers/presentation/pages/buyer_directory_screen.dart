@@ -525,7 +525,10 @@ class _BuyerDirectoryScreenState extends State<BuyerDirectoryScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => BuyerDetailScreen(buyerId: b.id),
+                                       builder: (_) => BuyerDetailScreen(
+                                        buyerId: b.id,
+                                        initialBuyer: b,
+                                      ),
                               ),
                             );
                           },

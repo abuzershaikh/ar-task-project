@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../storage/local_avatar_cache.dart';
 import '../theme/app_colors.dart';
 
 /// Reusable avatar widget that displays Google/Gmail profile photos
 /// with graceful caching and stylized fallback initials.
 class AppAvatar extends StatelessWidget {
   final String? imageUrl;
+  final String? userId;
   final String name;
   final double radius;
   final double? fontSize;
@@ -20,6 +22,7 @@ class AppAvatar extends StatelessWidget {
     super.key,
     required this.name,
     this.imageUrl,
+    this.userId,
     this.radius = 20,
     this.fontSize,
     this.backgroundColor,
@@ -64,11 +67,20 @@ class AppAvatar extends StatelessWidget {
     final initial = _getInitial();
     final effectiveFontSize = fontSize ?? (effectiveRadius * 0.85);
 
-    final String? validUrl = (imageUrl != null &&
-            imageUrl!.trim().isNotEmpty &&
-            (imageUrl!.startsWith('http://') || imageUrl!.startsWith('https://')))
-        ? imageUrl!.trim()
+    String? candidateUrl = imageUrl;
+    if ((candidateUrl == null || candidateUrl.trim().isEmpty) && userId != null && userId!.trim().isNotEmpty) {
+      candidateUrl = LocalAvatarCache.getAvatarSync(userId);
+    }
+
+    final String? validUrl = (candidateUrl != null &&
+            candidateUrl.trim().isNotEmpty &&
+            (candidateUrl.startsWith('http://') || candidateUrl.startsWith('https://')))
+        ? candidateUrl.trim()
         : null;
+
+    if (validUrl != null && userId != null && userId!.trim().isNotEmpty) {
+      LocalAvatarCache.saveAvatar(userId, validUrl);
+    }
 
     Widget avatarContent;
 

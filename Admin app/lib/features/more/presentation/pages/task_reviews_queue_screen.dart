@@ -202,6 +202,7 @@ class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
                                             workerId: item.workerId,
                                             workerName: item.workerName,
                                             workerEmail: item.workerEmail,
+                                            workerAvatarUrl: item.avatarUrl,
                                             proofUrl: item.proofUrl,
                                             proofText: item.proofText,
                                           ),

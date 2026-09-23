@@ -1,3 +1,4 @@
+import '../../../../core/storage/local_avatar_cache.dart';
 import '../../data/models/worker_model.dart';
 import '../../data/datasources/workers_remote_datasource.dart';
 import '../../data/datasources/workers_local_datasource.dart';
@@ -29,6 +30,14 @@ class WorkersRepositoryImpl implements WorkersRepository {
   Future<List<WorkerModel>> getWorkers({bool forceRefresh = false}) async {
     try {
       final remoteWorkers = await remoteDataSource.getWorkers();
+      for (final w in remoteWorkers) {
+        if (w.avatarUrl != null && w.avatarUrl!.isNotEmpty) {
+          LocalAvatarCache.saveAvatar(w.id, w.avatarUrl);
+          if (w.userId.isNotEmpty) {
+            LocalAvatarCache.saveAvatar(w.userId, w.avatarUrl);
+          }
+        }
+      }
       await localDataSource.cacheWorkers(remoteWorkers);
       return remoteWorkers;
     } catch (e) {
@@ -43,22 +52,46 @@ class WorkersRepositoryImpl implements WorkersRepository {
   @override
   Future<WorkerModel> getWorkerDetail(String workerId, {bool forceRefresh = false}) async {
     if (!forceRefresh) {
-      final localData = await localDataSource.getCachedWorkerDetail(workerId);
+      var localData = await localDataSource.getCachedWorkerDetail(workerId);
       if (localData != null) {
-        // Fetch in background
-        remoteDataSource.getWorkerDetail(workerId).then((remoteWorker) async {
-          final fullDetail = remoteWorker.toJson();
-          final tasks = await remoteDataSource.getWorkerTasks(workerId).catchError((_) => []);
-          final earnings = await remoteDataSource.getWorkerEarnings(workerId).catchError((_) => []);
-          fullDetail['tasks_cache'] = tasks;
-          fullDetail['earnings_cache'] = earnings;
-          await localDataSource.cacheWorkerDetail(workerId, fullDetail);
-        }).catchError((_) {});
-        return localData;
+        // If avatarUrl is missing locally, check LocalAvatarCache
+        if (localData.avatarUrl == null || localData.avatarUrl!.isEmpty) {
+          final cachedAvatar = await LocalAvatarCache.getAvatar(workerId);
+          if (cachedAvatar != null && cachedAvatar.isNotEmpty) {
+            localData = localData.copyWith(avatarUrl: cachedAvatar);
+          }
+        }
+
+        // Return local immediately if avatar is present
+        if (localData.avatarUrl != null && localData.avatarUrl!.isNotEmpty) {
+          // Background sync
+          remoteDataSource.getWorkerDetail(workerId).then((remoteWorker) async {
+            if (remoteWorker.avatarUrl != null && remoteWorker.avatarUrl!.isNotEmpty) {
+              await LocalAvatarCache.saveAvatar(workerId, remoteWorker.avatarUrl);
+              if (remoteWorker.userId.isNotEmpty) {
+                await LocalAvatarCache.saveAvatar(remoteWorker.userId, remoteWorker.avatarUrl);
+              }
+            }
+            final fullDetail = remoteWorker.toJson();
+            final tasks = await remoteDataSource.getWorkerTasks(workerId).catchError((_) => []);
+            final earnings = await remoteDataSource.getWorkerEarnings(workerId).catchError((_) => []);
+            fullDetail['tasks_cache'] = tasks;
+            fullDetail['earnings_cache'] = earnings;
+            await localDataSource.cacheWorkerDetail(workerId, fullDetail);
+          }).catchError((_) {});
+          return localData;
+        }
+        // If local avatar is null, fetch immediately from remote VPS
       }
     }
 
     final remoteWorker = await remoteDataSource.getWorkerDetail(workerId);
+    if (remoteWorker.avatarUrl != null && remoteWorker.avatarUrl!.isNotEmpty) {
+      await LocalAvatarCache.saveAvatar(workerId, remoteWorker.avatarUrl);
+      if (remoteWorker.userId.isNotEmpty) {
+        await LocalAvatarCache.saveAvatar(remoteWorker.userId, remoteWorker.avatarUrl);
+      }
+    }
     final fullDetail = remoteWorker.toJson();
     final tasks = await remoteDataSource.getWorkerTasks(workerId).catchError((_) => []);
     final earnings = await remoteDataSource.getWorkerEarnings(workerId).catchError((_) => []);

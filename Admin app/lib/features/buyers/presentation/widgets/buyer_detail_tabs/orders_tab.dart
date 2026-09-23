@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/widgets/app_avatar.dart';
 import '../../../data/models/buyer_model.dart';
 
 class OrdersTab extends StatelessWidget {
@@ -19,6 +20,10 @@ class OrdersTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final buyerName = buyer?.name.isNotEmpty == true ? buyer!.name : 'Buyer';
+    final buyerAvatar = buyer?.avatarUrl;
+    final buyerId = buyer?.id ?? '';
+
     if (orders.isEmpty) {
       return Container(
         margin: const EdgeInsets.all(14),
@@ -45,11 +50,60 @@ class OrdersTab extends StatelessWidget {
 
     return ListView.builder(
       padding: const EdgeInsets.all(14),
-      itemCount: orders.length,
+      itemCount: orders.length + (buyer != null ? 1 : 0),
       itemBuilder: (context, index) {
-        final item = orders[index];
-        final rawId = (item['id'] ?? 'ORD-${index + 1}').toString();
-        final title = (item['title'] ?? item['name'] ?? 'Campaign #${index + 1}').toString();
+        if (buyer != null && index == 0) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFDDD6FE), width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF4F46E5).withValues(alpha: 0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                AppAvatar(
+                  name: buyerName,
+                  imageUrl: buyerAvatar,
+                  userId: buyerId,
+                  radius: 20,
+                  border: Border.all(color: const Color(0xFF4F46E5), width: 1.5),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$buyerName\'s Campaigns',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF1E1B4B)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Total ${orders.length} orders created',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final itemIndex = buyer != null ? index - 1 : index;
+        final item = orders[itemIndex];
+        final rawId = (item['id'] ?? 'ORD-${itemIndex + 1}').toString();
+        final title = (item['title'] ?? item['name'] ?? 'Campaign #${itemIndex + 1}').toString();
         final status = (item['status'] ?? 'ACTIVE').toString().toUpperCase();
         final budget = item['totalAmount'] != null ? '₹${item['totalAmount']}' : (item['budget'] != null ? '₹${item['budget']}' : '₹0.00');
         final tasksRequired = item['totalTasksRequired'] ?? item['tasksRequired'] ?? 0;
@@ -85,11 +139,20 @@ class OrdersTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      _formatOrderId(rawId),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF4F46E5)),
+                    AppAvatar(
+                      name: buyerName,
+                      imageUrl: buyerAvatar,
+                      userId: buyerId,
+                      radius: 12,
+                      fontSize: 9,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _formatOrderId(rawId),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF4F46E5)),
+                      ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -130,7 +193,7 @@ class OrdersTab extends StatelessWidget {
                       ),
                     if (rewardPerTask != null)
                       Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text('Per Task', style: TextStyle(fontSize: 10, color: Color(0xFF6B7280))),
                           Text(rewardPerTask, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
@@ -146,7 +209,3 @@ class OrdersTab extends StatelessWidget {
     );
   }
 }
-
-// Backward compatibility alias
-typedef BuyerOrdersTab = OrdersTab;
-

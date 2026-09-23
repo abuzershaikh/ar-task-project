@@ -405,6 +405,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                                 workerId: workerId,
                                 workerName: workerName.toString(),
                                 workerEmail: workerEmail.toString(),
+                                workerAvatarUrl: workerAvatarUrl?.toString(),
                                 proofUrl: proofUrl.isNotEmpty ? proofUrl : null,
                                 proofText: proofText.isNotEmpty ? proofText : null,
                               ),

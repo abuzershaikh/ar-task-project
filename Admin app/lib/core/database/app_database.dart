@@ -43,11 +43,23 @@ class AppDatabase {
         last_updated INTEGER NOT NULL
       )
     ''');
+
+    // Avatar Cache Table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS avatar_cache (
+        user_id TEXT PRIMARY KEY,
+        avatar_url TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future<void> clearAll() async {
     final db = await instance.database;
     await db.delete('workers');
     await db.delete('buyers');
+    try {
+      await db.delete('avatar_cache');
+    } catch (_) {}
   }
 }

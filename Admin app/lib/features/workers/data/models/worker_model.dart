@@ -1,3 +1,5 @@
+import '../../../../core/storage/local_avatar_cache.dart';
+
 class WorkerModel {
   final String id;
   final String userId;
@@ -41,9 +43,30 @@ class WorkerModel {
         ? (double.tryParse(rawScore.toString()) ?? (parsedRating * 20))
         : (parsedRating * 20);
 
+    final String extractedId = json['id']?.toString() ?? json['_id']?.toString() ?? '';
+    final String extractedUserId = json['userId']?.toString() ?? user['id']?.toString() ?? '';
+
+    String? avatar = json['avatarUrl']?.toString() ??
+        json['avatar_url']?.toString() ??
+        json['photoUrl']?.toString() ??
+        user['avatarUrl']?.toString() ??
+        user['avatar_url']?.toString() ??
+        user['photoUrl']?.toString();
+
+    // Check local cache if not present in payload
+    if (avatar == null || avatar.trim().isEmpty) {
+      avatar = LocalAvatarCache.getAvatarSync(extractedId) ??
+          LocalAvatarCache.getAvatarSync(extractedUserId);
+    } else {
+      LocalAvatarCache.saveAvatar(extractedId, avatar);
+      if (extractedUserId.isNotEmpty) {
+        LocalAvatarCache.saveAvatar(extractedUserId, avatar);
+      }
+    }
+
     return WorkerModel(
-      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
-      userId: json['userId']?.toString() ?? user['id']?.toString() ?? '',
+      id: extractedId,
+      userId: extractedUserId,
       name: json['name'] ?? user['name'] ?? user['email']?.toString().split('@').first ?? 'Worker',
       email: json['email'] ?? user['email'] ?? '',
       phone: json['phone'] ?? user['phone'] ?? '',
@@ -55,7 +78,7 @@ class WorkerModel {
       availableBalance: double.tryParse(json['availableBalance']?.toString() ?? json['balance']?.toString() ?? '0.0') ?? 0.0,
       score: calculatedScore.clamp(0.0, 100.0),
       tier: json['tier']?.toString() ?? 'Silver',
-      avatarUrl: json['avatarUrl']?.toString() ?? json['avatar_url']?.toString() ?? json['photoUrl']?.toString() ?? user['avatarUrl']?.toString() ?? user['avatar_url']?.toString() ?? user['photoUrl']?.toString(),
+      avatarUrl: avatar,
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
     );
   }
@@ -75,7 +98,44 @@ class WorkerModel {
       'availableBalance': availableBalance,
       'score': score,
       'tier': tier,
+      'avatarUrl': avatarUrl,
       'createdAt': createdAt?.toIso8601String(),
     };
+  }
+
+  WorkerModel copyWith({
+    String? id,
+    String? userId,
+    String? name,
+    String? email,
+    String? phone,
+    String? status,
+    String? kycStatus,
+    double? rating,
+    int? completedTasks,
+    double? totalEarnings,
+    double? availableBalance,
+    double? score,
+    String? tier,
+    String? avatarUrl,
+    DateTime? createdAt,
+  }) {
+    return WorkerModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      status: status ?? this.status,
+      kycStatus: kycStatus ?? this.kycStatus,
+      rating: rating ?? this.rating,
+      completedTasks: completedTasks ?? this.completedTasks,
+      totalEarnings: totalEarnings ?? this.totalEarnings,
+      availableBalance: availableBalance ?? this.availableBalance,
+      score: score ?? this.score,
+      tier: tier ?? this.tier,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      createdAt: createdAt ?? this.createdAt,
+    );
   }
 }
