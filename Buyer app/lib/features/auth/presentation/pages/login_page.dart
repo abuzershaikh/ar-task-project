@@ -290,7 +290,7 @@ class _LoginPageState extends State<LoginPage> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Container(
-                      height: 185,
+                      height: 195,
                       width: double.infinity,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(22),
@@ -310,7 +310,7 @@ class _LoginPageState extends State<LoginPage> {
                             Image.asset(
                               'assets/images/marketing_team_hero.jpg',
                               fit: BoxFit.cover,
-                              alignment: const Alignment(0, -0.2),
+                              alignment: const Alignment(0, -0.3),
                             ),
                             Positioned.fill(
                               child: DecoratedBox(
