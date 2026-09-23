@@ -7,6 +7,7 @@ class BuyerModel {
   final int totalOrders;
   final int activeCampaigns;
   final double totalSpend;
+  final String? avatarUrl;
   final DateTime? createdAt;
 
   BuyerModel({
@@ -18,6 +19,7 @@ class BuyerModel {
     required this.totalOrders,
     required this.activeCampaigns,
     required this.totalSpend,
+    this.avatarUrl,
     this.createdAt,
   });
 
@@ -32,6 +34,7 @@ class BuyerModel {
       totalOrders: metrics['totalOrdersCount'] ?? json['totalOrders'] ?? 0,
       activeCampaigns: metrics['activeOrdersCount'] ?? json['activeCampaigns'] ?? 0,
       totalSpend: double.tryParse(metrics['totalSpend']?.toString() ?? json['totalSpend']?.toString() ?? '0.0') ?? 0.0,
+      avatarUrl: json['avatarUrl']?.toString() ?? json['avatar_url']?.toString() ?? json['photoUrl']?.toString(),
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
     );
   }

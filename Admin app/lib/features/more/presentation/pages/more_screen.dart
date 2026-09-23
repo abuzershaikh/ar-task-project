@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 
 import '../../../service_builder/presentation/pages/services_list_screen.dart';
@@ -34,14 +35,11 @@ class MoreScreen extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const CircleAvatar(
+                const AppAvatar(
+                  name: 'Admin',
                   radius: 32,
-                  backgroundColor: AppColors.white,
-                  child: Icon(
-                    Icons.person,
-                    size: 32,
-                    color: AppColors.primary,
-                  ),
+                  fontSize: 24,
+                  fallbackIcon: Icons.admin_panel_settings_rounded,
                 ),
                 const SizedBox(width: 16),
                 const Expanded(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../bloc/workers_bloc.dart';
 import '../widgets/worker_detail_tabs/overview_tab.dart';
 import '../widgets/worker_detail_tabs/tasks_tab.dart';
@@ -65,22 +66,37 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
           builder: (context, state) {
             String name = 'Worker Intelligence Profile';
             String email = shortId;
+            String? avatarUrl;
             if (state is WorkerDetailLoaded &&
                 (state.worker.id == widget.workerId || state.worker.userId == widget.workerId)) {
               name = state.worker.name.isNotEmpty ? state.worker.name : 'Worker Profile';
               email = state.worker.email.isNotEmpty
                   ? state.worker.email
                   : (state.worker.phone.isNotEmpty ? state.worker.phone : shortId);
+              avatarUrl = state.worker.avatarUrl;
             }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            return Row(
               children: [
-                Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white), overflow: TextOverflow.ellipsis),
-                Text(
-                  email,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFFE0F2FE), fontWeight: FontWeight.w500),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                AppAvatar(
+                  name: name,
+                  imageUrl: avatarUrl,
+                  radius: 18,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white), overflow: TextOverflow.ellipsis),
+                      Text(
+                        email,
+                        style: const TextStyle(fontSize: 11, color: Color(0xFFE0F2FE), fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );

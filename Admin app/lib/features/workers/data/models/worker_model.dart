@@ -12,6 +12,7 @@ class WorkerModel {
   final double availableBalance;
   final double score;
   final String tier;
+  final String? avatarUrl;
   final DateTime? createdAt;
 
   WorkerModel({
@@ -28,6 +29,7 @@ class WorkerModel {
     this.availableBalance = 0.0,
     this.score = 0.0,
     required this.tier,
+    this.avatarUrl,
     this.createdAt,
   });
 
@@ -53,6 +55,7 @@ class WorkerModel {
       availableBalance: double.tryParse(json['availableBalance']?.toString() ?? json['balance']?.toString() ?? '0.0') ?? 0.0,
       score: calculatedScore.clamp(0.0, 100.0),
       tier: json['tier']?.toString() ?? 'Silver',
+      avatarUrl: json['avatarUrl']?.toString() ?? json['avatar_url']?.toString() ?? json['photoUrl']?.toString() ?? user['avatarUrl']?.toString() ?? user['avatar_url']?.toString() ?? user['photoUrl']?.toString(),
       createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
     );
   }

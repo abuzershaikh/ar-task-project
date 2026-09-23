@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../bloc/more_bloc.dart';
 import '../../../orders/presentation/widgets/task_review_inspector_modal.dart';
 
@@ -147,21 +148,22 @@ class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
                                 
                                 Row(
                                   children: [
-                                    CircleAvatar(
+                                    AppAvatar(
+                                      name: item.workerName.isNotEmpty ? item.workerName : 'Worker',
+                                      imageUrl: item.avatarUrl,
                                       radius: 10,
-                                      backgroundColor: AppColors.primary.withOpacity(0.1),
-                                      child: const Text('W', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                                      fontSize: 9,
                                     ),
                                     const SizedBox(width: 6),
-                                     Expanded(
-                                       child: Text(
-                                         item.workerName.isNotEmpty
-                                             ? (item.workerEmail.isNotEmpty ? '${item.workerName} (${item.workerEmail})' : item.workerName)
-                                             : (item.workerEmail.isNotEmpty ? item.workerEmail : 'Worker #${item.workerId.length > 6 ? item.workerId.substring(0, 6) : item.workerId}'),
-                                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
-                                         overflow: TextOverflow.ellipsis,
-                                       ),
-                                     ),
+                                    Expanded(
+                                      child: Text(
+                                        item.workerName.isNotEmpty
+                                            ? (item.workerEmail.isNotEmpty ? '${item.workerName} (${item.workerEmail})' : item.workerName)
+                                            : (item.workerEmail.isNotEmpty ? item.workerEmail : 'Worker #${item.workerId.length > 6 ? item.workerId.substring(0, 6) : item.workerId}'),
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                     if (item.proofUrl.isNotEmpty) ...[
                                       const Icon(Icons.attachment_rounded, size: 14, color: Color(0xFF059669)),
                                       const SizedBox(width: 2),

@@ -518,6 +518,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                                 name: w.name,
                                 email: w.email,
                                 phone: w.phone,
+                                avatarUrl: w.avatarUrl,
                                 rating: w.rating,
                                 score: w.score,
                                 totalTasks: w.completedTasks,

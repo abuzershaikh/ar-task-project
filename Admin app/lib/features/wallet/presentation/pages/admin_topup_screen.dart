@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../data/repositories/admin_wallet_repository.dart';
 
 class AdminTopupScreen extends StatefulWidget {
@@ -247,6 +248,8 @@ class _AdminTopupScreenState extends State<AdminTopupScreen> {
                             final wallet = buyer['wallet'] ?? {};
                             final double available = (wallet['availableBalance'] ?? 0.0).toDouble();
 
+                            final avatarUrl = buyer['avatarUrl'] ?? buyer['avatar_url'] ?? buyer['photoUrl'];
+
                             return Container(
                               decoration: BoxDecoration(
                                 color: Colors.white,
@@ -265,17 +268,10 @@ class _AdminTopupScreenState extends State<AdminTopupScreen> {
                                 child: Row(
                                   children: [
                                     // Avatar
-                                    CircleAvatar(
+                                    AppAvatar(
+                                      name: fullName,
+                                      imageUrl: avatarUrl,
                                       radius: 24,
-                                      backgroundColor: AppColors.primary.withOpacity(0.1),
-                                      child: Text(
-                                        fullName.isNotEmpty ? fullName[0].toUpperCase() : 'B',
-                                        style: const TextStyle(
-                                          color: AppColors.primary,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18,
-                                        ),
-                                      ),
                                     ),
                                     const SizedBox(width: 12),
 
@@ -483,6 +479,7 @@ class _BuyerTopupModalState extends State<_BuyerTopupModal> {
     final email = widget.buyer['email'] ?? '';
     final wallet = widget.buyer['wallet'] ?? {};
     final double available = (wallet['availableBalance'] ?? 0.0).toDouble();
+    final avatarUrl = widget.buyer['avatarUrl'] ?? widget.buyer['avatar_url'] ?? widget.buyer['photoUrl'];
 
     return Container(
       decoration: const BoxDecoration(
@@ -519,11 +516,10 @@ class _BuyerTopupModalState extends State<_BuyerTopupModal> {
             // Header info
             Row(
               children: [
-                CircleAvatar(
+                AppAvatar(
+                  name: fullName,
+                  imageUrl: avatarUrl,
                   radius: 20,
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
-                  child: Text(fullName.isNotEmpty ? fullName[0].toUpperCase() : 'B',
-                      style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

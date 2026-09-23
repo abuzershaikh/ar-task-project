@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_avatar.dart';
 
 class BuyerCard extends StatelessWidget {
   final String buyerId;
   final String companyName;
   final String email;
+  final String? avatarUrl;
   final int totalOrders;
   final int activeCampaigns;
   final double totalSpend;
@@ -19,6 +21,7 @@ class BuyerCard extends StatelessWidget {
     required this.buyerId,
     required this.companyName,
     required this.email,
+    this.avatarUrl,
     required this.totalOrders,
     required this.activeCampaigns,
     required this.totalSpend,
@@ -106,34 +109,10 @@ class BuyerCard extends StatelessWidget {
                       ),
                     ),
                   ],
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF4F46E5), Color(0xFF818CF8)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF4F46E5).withOpacity(0.25),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        companyName.isNotEmpty ? companyName[0].toUpperCase() : 'B',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
+                  AppAvatar(
+                    name: companyName,
+                    imageUrl: avatarUrl,
+                    radius: 19,
                   ),
                   const SizedBox(width: 10),
                   Expanded(

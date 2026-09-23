@@ -224,6 +224,7 @@ export class WalletService {
                     id: buyer.id,
                     fullName: buyer.fullName || buyer.email.split('@')[0],
                     email: buyer.email,
+                    avatarUrl: buyer.avatarUrl || null,
                     phone: buyer.phone,
                     role: buyer.role,
                     status: buyer.status,

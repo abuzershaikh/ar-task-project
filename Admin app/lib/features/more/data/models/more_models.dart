@@ -8,6 +8,7 @@ class KycItemModel {
   final String? ifscCode;
   final String? upiId;
   final String? paypalId;
+  final String? avatarUrl;
   final String status;
   final DateTime? submittedAt;
 
@@ -16,6 +17,7 @@ class KycItemModel {
     required this.workerId,
     required this.workerName,
     this.workerEmail = '',
+    this.avatarUrl,
     this.bankName,
     this.accountNumber,
     this.ifscCode,
@@ -31,6 +33,7 @@ class KycItemModel {
       workerId: json['workerId']?.toString() ?? '',
       workerName: json['workerName'] ?? json['name'] ?? 'Worker',
       workerEmail: json['workerEmail'] ?? json['email'] ?? '',
+      avatarUrl: json['avatarUrl'] ?? json['avatar_url'] ?? json['photoUrl'] ?? json['worker']?['avatarUrl'] ?? json['worker']?['avatar_url'] ?? json['worker']?['photoUrl'],
       bankName: json['bankName'],
       accountNumber: json['accountNumber'],
       ifscCode: json['ifscCode'],
@@ -87,6 +90,7 @@ class ReviewItemModel {
   final String workerId;
   final String workerName;
   final String workerEmail;
+  final String? avatarUrl;
   final String proofUrl;
   final String proofText;
   final String status;
@@ -100,6 +104,7 @@ class ReviewItemModel {
     required this.workerId,
     this.workerName = 'Worker',
     this.workerEmail = '',
+    this.avatarUrl,
     required this.proofUrl,
     this.proofText = '',
     required this.status,
@@ -146,6 +151,7 @@ class ReviewItemModel {
       workerId: json['workerId']?.toString() ?? '',
       workerName: (json['workerName'] ?? json['worker']?['name'] ?? 'Worker').toString(),
       workerEmail: (json['workerEmail'] ?? json['worker']?['email'] ?? '').toString(),
+      avatarUrl: json['avatarUrl'] ?? json['avatar_url'] ?? json['photoUrl'] ?? json['worker']?['avatarUrl'] ?? json['worker']?['avatar_url'] ?? json['worker']?['photoUrl'],
       proofUrl: extractedProofUrl,
       proofText: extractedProofText,
       status: json['status']?.toString().toUpperCase() ?? 'SUBMITTED',

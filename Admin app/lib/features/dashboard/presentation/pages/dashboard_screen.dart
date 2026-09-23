@@ -12,6 +12,8 @@ import '../../../more/presentation/pages/payouts_queue_screen.dart';
 import '../../../more/presentation/pages/finance_ledger_screen.dart';
 import '../../../workers/presentation/pages/worker_directory_screen.dart';
 import '../../../buyers/presentation/pages/buyer_directory_screen.dart';
+import '../../../more/presentation/pages/admin_profile_screen.dart';
+import '../../../../core/widgets/app_avatar.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -39,9 +41,16 @@ class DashboardScreen extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: CircleAvatar(
-                backgroundColor: AppColors.white.withOpacity(0.2),
-                child: const Icon(Icons.person, color: AppColors.white, size: 20),
+              child: GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminProfileScreen()),
+                ),
+                child: const AppAvatar(
+                  name: 'Admin',
+                  radius: 17,
+                  backgroundColor: AppColors.secondary,
+                ),
               ),
             ),
           ],

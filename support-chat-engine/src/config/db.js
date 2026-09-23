@@ -25,6 +25,7 @@ async function initTables() {
         worker_name VARCHAR(255) NULL,
         worker_phone VARCHAR(50) NULL,
         worker_email VARCHAR(255) NULL,
+        worker_avatar_url VARCHAR(500) NULL,
         last_message_text TEXT NULL,
         last_message_type VARCHAR(20) DEFAULT 'TEXT',
         last_message_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -55,7 +56,10 @@ async function initTables() {
         INDEX idx_msg_worker (worker_id),
         INDEX idx_msg_created (created_at ASC)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
+    // Safe column migrations for existing deployments
+    try {
+      await connection.query(`ALTER TABLE support_conversations ADD COLUMN IF NOT EXISTS worker_avatar_url VARCHAR(500) NULL AFTER worker_email`);
+    } catch (_) {}
 
     console.log('[DB] Support chat tables verified successfully.');
   } catch (err) {

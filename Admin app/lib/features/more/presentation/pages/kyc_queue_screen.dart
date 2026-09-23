@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../bloc/more_bloc.dart';
 
 class KycQueueScreen extends StatefulWidget {
@@ -66,9 +67,10 @@ class _KycQueueScreenState extends State<KycQueueScreen> {
                       children: [
                         Row(
                           children: [
-                            CircleAvatar(
-                              backgroundColor: AppColors.primary.withOpacity(0.1),
-                              child: Text(kyc.workerName.isNotEmpty ? kyc.workerName.substring(0, 1).toUpperCase() : 'W'),
+                            AppAvatar(
+                              name: kyc.workerName,
+                              imageUrl: kyc.avatarUrl,
+                              radius: 20,
                             ),
                             const SizedBox(width: 12),
                             Expanded(

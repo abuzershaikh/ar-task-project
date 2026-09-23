@@ -3,6 +3,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../auth/presentation/pages/login_screen.dart';
+import '../../../../core/widgets/app_avatar.dart';
 
 class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({super.key});
@@ -56,10 +57,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       padding: const EdgeInsets.all(24),
                       child: Column(
                         children: [
-                          const CircleAvatar(
+                          AppAvatar(
+                            name: _email.isNotEmpty ? _email : 'Admin',
                             radius: 40,
-                            backgroundColor: AppColors.primary,
-                            child: Icon(Icons.admin_panel_settings, color: Colors.white, size: 48),
+                            fallbackIcon: Icons.admin_panel_settings_rounded,
+                            fontSize: 26,
                           ),
                           const SizedBox(height: 16),
                           Text(_email, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),

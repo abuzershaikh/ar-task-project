@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../data/models/support_conversation_model.dart';
 import '../../data/services/support_chat_service.dart';
 import 'admin_chat_screen.dart';
@@ -655,35 +656,13 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
               ),
               const SizedBox(width: 4),
             ],
-            // Avatar
-            Stack(
-              children: [
-                CircleAvatar(
-                  radius: 25,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                  child: Text(
-                    conv.workerName.isNotEmpty ? conv.workerName[0].toUpperCase() : 'W',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 13,
-                    height: 13,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF22C55E),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                  ),
-                ),
-              ],
+            // Avatar with Google profile photo support
+            AppAvatar(
+              name: conv.workerName,
+              imageUrl: conv.workerAvatarUrl,
+              radius: 25,
+              showOnlineBadge: true,
+              isOnline: true,
             ),
             const SizedBox(width: 14),
 

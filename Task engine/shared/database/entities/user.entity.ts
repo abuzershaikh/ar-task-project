@@ -38,6 +38,9 @@ export class User {
     @Column({ name: 'full_name' })
     fullName: string;
 
+    @Column({ name: 'avatar_url', nullable: true })
+    avatarUrl: string;
+
     @Column({ type: 'enum', enum: UserRole })
     role: UserRole;
 

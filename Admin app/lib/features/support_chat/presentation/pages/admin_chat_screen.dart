@@ -7,6 +7,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_avatar.dart';
 import '../../data/models/support_conversation_model.dart';
 import '../../data/models/support_message_model.dart';
 import '../../data/services/support_chat_service.dart';
@@ -567,13 +568,10 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
       foregroundColor: Colors.white,
       title: Row(
         children: [
-          CircleAvatar(
+          AppAvatar(
+            name: conv.workerName,
+            imageUrl: conv.workerAvatarUrl,
             radius: 19,
-            backgroundColor: Colors.white24,
-            child: Text(
-              conv.workerName.isNotEmpty ? conv.workerName[0].toUpperCase() : 'W',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
-            ),
           ),
           const SizedBox(width: 10),
           Expanded(

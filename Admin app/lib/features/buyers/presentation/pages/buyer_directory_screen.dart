@@ -504,6 +504,7 @@ class _BuyerDirectoryScreenState extends State<BuyerDirectoryScreen> {
                           buyerId: b.id,
                           companyName: b.name,
                           email: b.email,
+                          avatarUrl: b.avatarUrl,
                           totalOrders: b.totalOrders,
                           activeCampaigns: b.activeCampaigns,
                           totalSpend: b.totalSpend,

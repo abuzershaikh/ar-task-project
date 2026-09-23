@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/app_avatar.dart';
 
 class WorkerCard extends StatelessWidget {
   final String workerId;
   final String name;
   final String email;
   final String phone;
+  final String? avatarUrl;
   final double rating;
   final double score;
   final int totalTasks;
@@ -24,6 +26,7 @@ class WorkerCard extends StatelessWidget {
     required this.name,
     this.email = '',
     required this.phone,
+    this.avatarUrl,
     required this.rating,
     required this.score,
     required this.totalTasks,
@@ -106,34 +109,10 @@ class WorkerCard extends StatelessWidget {
                       ),
                     ),
                   ],
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0284C7), Color(0xFF38BDF8)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0284C7).withOpacity(0.25),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : 'W',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
+                  AppAvatar(
+                    name: name,
+                    imageUrl: avatarUrl,
+                    radius: 19,
                   ),
                   const SizedBox(width: 10),
                   Expanded(

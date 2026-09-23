@@ -47,12 +47,18 @@ export class UserSyncService {
       const fullName = firestoreUser?.name || resolvedEmail.split('@')[0];
       const phone = firestoreUser?.phone || null;
       const role = firestoreUser?.role === 'BUYER' ? UserRole.BUYER : preferredRole;
+      const avatarUrl = firestoreUser?.photoUrl || firestoreUser?.photoURL || firestoreUser?.avatarUrl || null;
 
       // 2b. Check if user already exists in MySQL with resolved email (Prevents Duplicate Entry error when emailOrId is a UID)
       user = await this.userRepo.findByEmail(resolvedEmail);
       if (user) {
         this.logger.log(`Found existing MySQL user by resolved email ${resolvedEmail} (${user.id}).`);
-        await this.userRepo.update(user.id, { lastLogin: now });
+        const updatePayload: any = { lastLogin: now };
+        if (avatarUrl && !user.avatarUrl) {
+          updatePayload.avatarUrl = avatarUrl;
+          user.avatarUrl = avatarUrl;
+        }
+        await this.userRepo.update(user.id, updatePayload);
         user.lastLogin = now;
 
         if (user.role === UserRole.WORKER || preferredRole === UserRole.WORKER) {
@@ -66,6 +72,7 @@ export class UserSyncService {
         id: firestoreUser?.uid || undefined,
         email: resolvedEmail,
         fullName,
+        avatarUrl,
         phone,
         password: 'FIREBASE_AUTH_USER',
         role,

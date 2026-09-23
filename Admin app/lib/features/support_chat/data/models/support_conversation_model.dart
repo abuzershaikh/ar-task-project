@@ -12,6 +12,7 @@ class SupportConversationModel {
   final DateTime? lastActiveAt;
   final int totalTasksCompleted;
   final String? workerStatus;
+  final String? workerAvatarUrl;
 
   const SupportConversationModel({
     required this.id,
@@ -27,6 +28,7 @@ class SupportConversationModel {
     this.lastActiveAt,
     this.totalTasksCompleted = 0,
     this.workerStatus,
+    this.workerAvatarUrl,
   });
 
   factory SupportConversationModel.fromJson(Map<String, dynamic> json) {
@@ -48,6 +50,7 @@ class SupportConversationModel {
           : null,
       totalTasksCompleted: int.tryParse(json['total_tasks_completed']?.toString() ?? '0') ?? 0,
       workerStatus: json['worker_status']?.toString(),
+      workerAvatarUrl: json['worker_avatar_url']?.toString() ?? json['avatar_url']?.toString() ?? json['avatarUrl']?.toString(),
     );
   }
 

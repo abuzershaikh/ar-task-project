@@ -14,25 +14,31 @@ class ChatService {
    * Get or create conversation for a worker
    */
   async getOrCreateConversation(workerId, workerDetails = {}) {
+    // Lookup user & worker info from DB
+    const [userRows] = await pool.query(
+      `SELECT u.id, u.email, u.avatar_url, w.full_name, w.phone 
+       FROM users u 
+       LEFT JOIN workers w ON w.user_id = u.id 
+       WHERE u.id = ? OR u.email = ? LIMIT 1`,
+      [workerId, workerDetails.email || '']
+    );
+
+    const userInfo = userRows[0] || {};
+    const avatar = workerDetails.avatarUrl || workerDetails.photoUrl || userInfo.avatar_url || '';
+
     const [existing] = await pool.query(
       'SELECT * FROM support_conversations WHERE worker_id = ? LIMIT 1',
       [workerId]
     );
 
     if (existing.length > 0) {
+      if (avatar && (!existing[0].worker_avatar_url || existing[0].worker_avatar_url === '')) {
+        await pool.query('UPDATE support_conversations SET worker_avatar_url = ? WHERE id = ?', [avatar, existing[0].id]);
+        existing[0].worker_avatar_url = avatar;
+      }
       return existing[0];
     }
 
-    // Lookup user & worker info from DB
-    const [userRows] = await pool.query(
-      `SELECT u.id, u.email, w.full_name, w.phone 
-       FROM users u 
-       LEFT JOIN workers w ON w.user_id = u.id 
-       WHERE u.id = ? LIMIT 1`,
-      [workerId]
-    );
-
-    const userInfo = userRows[0] || {};
     const name = workerDetails.name || userInfo.full_name || userInfo.email?.split('@')[0] || 'Worker';
     const email = workerDetails.email || userInfo.email || '';
     const phone = workerDetails.phone || userInfo.phone || '';
@@ -40,9 +46,9 @@ class ChatService {
     const newId = uuidv4();
     await pool.query(
       `INSERT INTO support_conversations 
-       (id, worker_id, worker_name, worker_phone, worker_email, last_message_text, last_message_type, last_message_at, unread_admin_count, unread_worker_count)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 0, 0)`,
-      [newId, workerId, name, phone, email, 'Started conversation', 'TEXT']
+       (id, worker_id, worker_name, worker_phone, worker_email, worker_avatar_url, last_message_text, last_message_type, last_message_at, unread_admin_count, unread_worker_count)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0, 0)`,
+      [newId, workerId, name, phone, email, avatar, 'Started conversation', 'TEXT']
     );
 
     const [created] = await pool.query('SELECT * FROM support_conversations WHERE id = ?', [newId]);
@@ -55,9 +61,11 @@ class ChatService {
   async getConversations({ search = '', limit = 50, offset = 0 } = {}) {
     let query = `
       SELECT c.*, 
+             COALESCE(NULLIF(c.worker_avatar_url, ''), u.avatar_url) as worker_avatar_url,
              w.last_active_at, w.total_tasks_completed, w.status as worker_status
       FROM support_conversations c
       LEFT JOIN workers w ON w.user_id = c.worker_id
+      LEFT JOIN users u ON (u.id = c.worker_id OR u.email = c.worker_email)
     `;
     const params = [];
 

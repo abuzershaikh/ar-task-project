@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/orders_bloc.dart';
 import '../widgets/task_review_inspector_modal.dart';
+import '../../../../core/widgets/app_avatar.dart';
 
 class CampaignDetailScreen extends StatefulWidget {
   final String orderId;
@@ -322,6 +323,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                       final workerId = item['workerId']?.toString() ?? item['assignedTo']?.toString() ?? 'W-${100 + index}';
                       final workerName = item['workerName'] ?? item['worker']?['name'] ?? (item['workerEmail'] != null ? item['workerEmail'].toString().split('@').first : (workerId.length > 6 ? 'Worker #${workerId.substring(0, 6)}' : workerId));
                       final workerEmail = item['workerEmail'] ?? item['worker']?['email'] ?? '';
+                      final workerAvatarUrl = item['workerAvatarUrl'] ?? item['avatarUrl'] ?? item['avatar_url'] ?? item['worker']?['avatarUrl'] ?? item['worker']?['avatar_url'] ?? item['worker']?['photoUrl'];
                       final status = (item['status']?.toString() ?? 'PENDING').toUpperCase();
 
                       return Container(
@@ -332,12 +334,11 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                           border: Border.all(color: const Color(0xFFA7F3D0), width: 1),
                         ),
                         child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: const Color(0xFFECFDF5),
-                            child: Text(
-                              workerName.toString().isNotEmpty ? workerName.toString().substring(0, 1).toUpperCase() : 'W',
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
-                            ),
+                          leading: AppAvatar(
+                            name: workerName.toString(),
+                            imageUrl: workerAvatarUrl?.toString(),
+                            radius: 19,
+                            fontSize: 13,
                           ),
                           title: Row(
                             children: [
