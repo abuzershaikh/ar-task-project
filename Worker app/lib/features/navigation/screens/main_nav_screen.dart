@@ -177,11 +177,15 @@ class _MainNavScreenState extends State<MainNavScreen> {
                   ],
                 ),
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFFDE047),
+                  width: 2,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.55),
-                    blurRadius: 10,
-                    spreadRadius: 1,
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.65),
+                    blurRadius: 12,
+                    spreadRadius: 2,
                     offset: const Offset(0, 2),
                   ),
                 ],

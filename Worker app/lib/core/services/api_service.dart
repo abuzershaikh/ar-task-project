@@ -26,7 +26,7 @@ import 'crashlytics_service.dart';
 class ApiService {
   static String get baseUrl => AppConstants.apiBaseUrl;
 
-  static void _reportApiError({
+  static void reportApiError({
     required String endpoint,
     required String method,
     int? statusCode,
@@ -612,5 +612,6 @@ class ApiService {
     return {};
   }
 }
+
 
 

@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 84" width="100%" height="100%">
+  <defs>
+    <!-- Wood Plank Gradients -->
+    <linearGradient id="tfWoodMain" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8B4513"/>
+      <stop offset="25%" stop-color="#A55A26"/>
+      <stop offset="60%" stop-color="#70360D"/>
+      <stop offset="100%" stop-color="#4A1F05"/>
+    </linearGradient>
+    <linearGradient id="tfWoodEdge" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5C2907"/>
+      <stop offset="100%" stop-color="#2D1202"/>
+    </linearGradient>
+    <linearGradient id="tfWoodHighlight" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D98A48" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#FFA866" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#D98A48" stop-opacity="0.6"/>
+    </linearGradient>
+
+    <!-- Leaf Gradients -->
+    <linearGradient id="tfLeafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#99E832"/>
+      <stop offset="45%" stop-color="#4CB814"/>
+      <stop offset="100%" stop-color="#1B6605"/>
+    </linearGradient>
+    <linearGradient id="tfLeafDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3C990F"/>
+      <stop offset="100%" stop-color="#144A03"/>
+    </linearGradient>
+
+    <!-- Text Gradients -->
+    <linearGradient id="tfWhiteText" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="70%" stop-color="#EDEDED"/>
+      <stop offset="100%" stop-color="#D1D5DB"/>
+    </linearGradient>
+    <linearGradient id="tfGreenText" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#84FF4D"/>
+      <stop offset="35%" stop-color="#22C55E"/>
+      <stop offset="85%" stop-color="#15803D"/>
+      <stop offset="100%" stop-color="#0F5127"/>
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="tfShadow" x="-10%" y="-10%" width="125%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+    <filter id="tfTextGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+
+  <!-- BACKGROUND SHADOW -->
+  <path d="M18 16 C 50 14, 90 18, 140 14 C 190 12, 230 15, 262 18 C 270 20, 274 26, 272 35 C 275 48, 270 62, 260 70 C 230 74, 180 71, 140 73 C 90 75, 45 72, 16 68 C 8 62, 6 48, 8 36 C 7 24, 11 18, 18 16 Z" 
+        fill="#000000" opacity="0.45" transform="translate(0, 5)"/>
+
+  <!-- JUNGLE VINES & CORNER LEAVES (Behind) -->
+  <g id="tf-vines-back">
+    <!-- Top Left Leaves -->
+    <path d="M12 22 C 4 10, 16 0, 30 4 C 36 12, 28 26, 18 25 Z" fill="url(#tfLeafDark)" stroke="#0D3802" stroke-width="1.2"/>
+    <path d="M22 14 C 18 2, 34 -4, 46 2 C 50 12, 38 20, 28 18 Z" fill="url(#tfLeafGrad)" stroke="#0D3802" stroke-width="1.2"/>
+    <!-- Bottom Right Leaves -->
+    <path d="M250 56 C 265 52, 278 64, 270 76 C 258 84, 246 72, 248 62 Z" fill="url(#tfLeafDark)" stroke="#0D3802" stroke-width="1.2"/>
+    <path d="M236 64 C 250 68, 260 82, 248 90 C 235 94, 228 80, 232 70 Z" fill="url(#tfLeafGrad)" stroke="#0D3802" stroke-width="1.2"/>
+  </g>
+
+  <!-- WOOD PLANK BASE (Bevel 3D Bottom) -->
+  <path d="M14 18 C 45 15, 95 19, 140 15 C 195 13, 235 17, 264 20 C 272 23, 275 29, 274 38 C 276 52, 272 65, 262 72 C 228 76, 180 73, 140 75 C 90 77, 45 74, 15 70 C 6 64, 4 50, 6 38 C 5 26, 8 20, 14 18 Z" 
+        fill="url(#tfWoodEdge)" stroke="#220D01" stroke-width="2"/>
+
+  <!-- MAIN WOOD PLANK -->
+  <path d="M14 14 C 45 11, 95 15, 140 11 C 195 9, 235 13, 264 16 C 272 19, 275 25, 274 34 C 276 48, 272 61, 262 68 C 228 72, 180 69, 140 71 C 90 73, 45 70, 15 66 C 6 60, 4 46, 6 34 C 5 22, 8 16, 14 14 Z" 
+        fill="url(#tfWoodMain)" stroke="#3E1A04" stroke-width="3"/>
+
+  <!-- WOOD GRAIN TEXTURE LINES & TOP HIGHLIGHT -->
+  <path d="M18 16 C 60 13, 120 17, 180 14 C 220 13, 255 18, 260 18" stroke="url(#tfWoodHighlight)" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <path d="M22 28 C 75 25, 145 28, 210 26 C 240 25, 258 29, 262 28" stroke="#481F05" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.45"/>
+  <path d="M18 52 C 60 55, 130 51, 195 54 C 230 52, 255 50, 260 51" stroke="#481F05" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.4"/>
+  <path d="M20 62 C 65 65, 120 63, 180 64 C 220 62, 250 63, 256 63" stroke="#D98A48" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.4"/>
+
+  <!-- WOOD NAILS / BOLTS -->
+  <circle cx="22" cy="40" r="3.2" fill="#2E1303" stroke="#7A421A" stroke-width="1"/>
+  <circle cx="22" cy="39" r="1.2" fill="#D98A48" opacity="0.7"/>
+  <circle cx="258" cy="42" r="3.2" fill="#2E1303" stroke="#7A421A" stroke-width="1"/>
+  <circle cx="258" cy="41" r="1.2" fill="#D98A48" opacity="0.7"/>
+
+  <!-- FOREGROUND SPROUTS & LEAVES -->
+  <path d="M6 34 C -2 24, 4 14, 14 18 C 18 24, 14 34, 8 36 Z" fill="url(#tfLeafGrad)" stroke="#0E3802" stroke-width="1.2"/>
+  <path d="M266 28 C 276 20, 284 30, 278 40 C 270 42, 264 36, 266 28 Z" fill="url(#tfLeafGrad)" stroke="#0E3802" stroke-width="1.2"/>
+
+</svg>

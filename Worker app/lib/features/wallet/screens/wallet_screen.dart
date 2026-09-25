@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
@@ -12,11 +13,12 @@ import 'transactions_history_screen.dart';
 import '../../notifications/screens/notification_history_screen.dart';
 
 /// Jungle Themed Wallet Screen:
-/// - Edge-to-edge 3D tropical jungle canopy header with realistic monstera foliage & golden sunlight
-/// - Standalone 3D CoinBar Lottie balance holder (all extra card boxes, 100% payout text, circles removed)
-/// - Live balance & privacy eye toggle accurately positioned inside the golden coin bar slot
-/// - Jungle-themed Quick Actions & Withdrawal Info with glowing fireflies & lush foliage
-/// - Low-volume soothing ambient jungle bird chirping sound effect matching theme
+/// - Full-screen immersive rainforest background with ambient sun rays & canopy mist
+/// - Authentic 3D Gaming Carved Wooden Board (SVG) with embedded gold medallion & recessed balance slot
+/// - Live balance & privacy eye toggle accurately positioned inside the wooden slot
+/// - Gamified Milestone Progress Bar to ₹100 instant cashout threshold
+/// - Jungle-themed Quick Actions & Withdrawal Info with glowing fireflies & live tropical rain
+/// - Living Animated Jungle Parrot on Branch preserved with 100% fidelity
 class WalletScreen extends StatefulWidget {
   final bool isCurrentTab;
 
@@ -105,18 +107,66 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
       ),
-      child: Scaffold(
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          primaryTextTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).primaryTextTheme),
+          textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme).apply(
+            fontFamily: 'Poppins',
+          ),
+        ),
+        child: Scaffold(
         backgroundColor: const Color(0xFF01140B), // Deep Dark Jungle Emerald
         body: Stack(
           children: [
-            // ── 1. Dynamic Rainforest Rain in Background (Behind all cards & text) ──
+            // ── 1. Full-Screen Realistic Rainforest Background Image ───────
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/rainforest_pure_bg.jpg',
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                errorBuilder: (context, error, stackTrace) => Image.asset(
+                  'assets/images/jungle_wallet_bg.jpg',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+
+            // ── 2. Deep Emerald Atmosphere & Dark Vignette Overlay ────────
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      const Color(0xFF01140B).withValues(alpha: 0.65),
+                      const Color(0xFF01140B).withValues(alpha: 0.78),
+                      const Color(0xFF01140B).withValues(alpha: 0.90),
+                      const Color(0xFF01140B),
+                    ],
+                    stops: const [0.0, 0.35, 0.72, 1.0],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── 3. Dynamic Rainforest Rain Overlay (Behind cards & text) ──
             const Positioned.fill(
               child: IgnorePointer(
                 child: _DynamicRainforestRainOverlay(),
               ),
             ),
 
-            // ── 2. Foreground Scrollable Content & Jungle Cards ───────────
+            // ── 4. Ambient Glowing Fireflies Overlay ──────────────────────
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _JungleFireflyPainter(),
+                ),
+              ),
+            ),
+
+            // ── 5. Foreground Scrollable Content & Jungle Gaming Cards ─────
             RefreshIndicator(
               color: const Color(0xFF22C55E),
               backgroundColor: const Color(0xFF032617),
@@ -128,39 +178,58 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── 1. Top Jungle Canopy with CoinBar Lottie Balance ─────────
+                    // ── 1. Top Jungle Canopy with Gaming Wooden Board ──────
                     _buildJungleTopHero(context, topPadding, walletBalance),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 16),
 
-                    // ── 2. Withdrawal Rules & Info Banner ─────────────────────────
+                    // ── 2. Withdrawal Milestone Progress Card ──────────────
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: _buildJungleWithdrawalInfoCard(walletBalance),
                     ),
                     const SizedBox(height: 22),
 
-                    // ── 3. Quick Actions Section ──────────────────────────────────
+                    // ── 3. Quick Actions Section ──────────────────────────
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        'Quick Actions',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.2,
-                        ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4ADE80),
+                              borderRadius: BorderRadius.circular(2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF4ADE80).withValues(alpha: 0.6),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Quick Actions',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 12),
 
-                    // Button 1: Withdraw Earnings
+                    // Button 1: Withdraw Earnings (Instant UPI / Bank)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: _buildJungleActionButton(
                         context: context,
                         title: 'Withdraw Earnings',
-                        subtitle: 'Transfer funds directly to your UPI ID or Bank',
+                        subtitle: 'Instant direct transfer to UPI ID or Bank Account',
                         icon: Icons.account_balance_wallet_rounded,
                         iconBgColor: const Color(0xFF064E2B),
                         iconColor: const Color(0xFF4ADE80),
@@ -190,7 +259,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                       child: _buildJungleActionButton(
                         context: context,
                         title: 'Transaction History',
-                        subtitle: 'View detailed records of payouts & earnings',
+                        subtitle: 'Complete verified ledger of payouts & earnings',
                         icon: Icons.receipt_long_rounded,
                         iconBgColor: const Color(0xFF0F3A4A),
                         iconColor: const Color(0xFF38BDF8),
@@ -212,7 +281,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                     ),
                     const SizedBox(height: 24),
 
-                    // ── 4. Bottom Jungle Foliage & Plant Base ─────────────────────
+                    // ── 5. Bottom Jungle Foliage with Animated Living Parrot
                     _buildJungleBottomFoliage(),
                   ],
                 ),
@@ -221,10 +290,11 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
           ],
         ),
       ),
+      ),
     );
   }
 
-  // ── Top Jungle Canopy Header with Standalone CoinBar ───────────────────────
+  // ── Top Jungle Canopy Header with Gaming Wooden Board ───────────────────────
   Widget _buildJungleTopHero(
     BuildContext context,
     double topPadding,
@@ -234,7 +304,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
       width: double.infinity,
       child: Stack(
         children: [
-          // 1. Realistic 3D Jungle Canopy Background Image (Original natural scale)
+          // 1. Realistic 3D Jungle Canopy Header Image
           Positioned.fill(
             child: Image.asset(
               'assets/images/jungle_wallet_bg.jpg',
@@ -258,7 +328,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
             ),
           ),
 
-          // 2. Smooth Vignette & Dark Emerald Shadow Fade (Melt seamlessly into Minimum Limit card section)
+          // 2. Smooth Vignette & Dark Emerald Fade into Content
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -268,29 +338,22 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                   colors: [
                     Colors.black.withValues(alpha: 0.40),
                     Colors.transparent,
-                    const Color(0xFF01140B).withValues(alpha: 0.45),
+                    const Color(0xFF01140B).withValues(alpha: 0.50),
                     const Color(0xFF01140B),
                   ],
-                  stops: const [0.0, 0.40, 0.75, 1.0],
+                  stops: const [0.0, 0.40, 0.80, 1.0],
                 ),
               ),
             ),
           ),
 
-          // 3. Glowing Firefly Particles
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _JungleFireflyPainter(),
-            ),
-          ),
-
-          // 4. Foreground Content: Title Bar & Standalone CoinBar Lottie
+          // 3. Foreground Content: Header Bar & 3D Gaming Wooden Signboard
           Padding(
-            padding: EdgeInsets.fromLTRB(16, topPadding + 10, 16, 10),
+            padding: EdgeInsets.fromLTRB(16, topPadding + 10, 16, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Top Header Row ───────────────────────────────────────────
+                // ── Top Header Title Row ──────────────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -311,8 +374,9 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                                     fontWeight: FontWeight.w700,
                                     shadows: [
                                       Shadow(
-                                        color: Colors.black.withValues(alpha: 0.8),
+                                        color: Colors.black.withValues(alpha: 0.9),
                                         blurRadius: 8,
+                                        offset: const Offset(1, 2),
                                       ),
                                     ],
                                   ),
@@ -320,13 +384,18 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                                 TextSpan(
                                   text: 'Wallet',
                                   style: GoogleFonts.poppins(
-                                    color: const Color(0xFF22C55E),
+                                    color: const Color(0xFF4ADE80),
                                     fontSize: 24,
                                     fontWeight: FontWeight.w900,
                                     shadows: [
                                       Shadow(
-                                        color: Colors.black.withValues(alpha: 0.8),
+                                        color: Colors.black.withValues(alpha: 0.9),
                                         blurRadius: 8,
+                                        offset: const Offset(1, 2),
+                                      ),
+                                      Shadow(
+                                        color: const Color(0xFF22C55E).withValues(alpha: 0.6),
+                                        blurRadius: 14,
                                       ),
                                     ],
                                   ),
@@ -335,32 +404,52 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            'Available Earnings & Cashout',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withValues(alpha: 0.8),
-                                  blurRadius: 6,
+                          Row(
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF22C55E),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Color(0xFF22C55E),
+                                      blurRadius: 6,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Available Earnings & Cashout',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withValues(alpha: 0.8),
+                                      blurRadius: 6,
+                                    ),
+                                  ],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
 
-                    // Right Actions: Audio Toggle + Eye Toggle + Notification Bell
+                    // Right Actions: Audio Toggle + Privacy Eye + Notification Bell
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Jungle Ambient Audio Toggle (Mute/Unmute)
+                        // Jungle Audio Toggle
                         InkWell(
                           onTap: () async {
                             setState(() {
@@ -380,7 +469,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                               color: const Color(0xFF032617).withValues(alpha: 0.85),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0xFF22C55E).withValues(alpha: 0.35),
+                                color: const Color(0xFF22C55E).withValues(alpha: 0.4),
                               ),
                               boxShadow: [
                                 BoxShadow(
@@ -412,7 +501,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                               color: const Color(0xFF032617).withValues(alpha: 0.85),
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
-                                color: const Color(0xFF22C55E).withValues(alpha: 0.35),
+                                color: const Color(0xFF22C55E).withValues(alpha: 0.4),
                               ),
                               boxShadow: [
                                 BoxShadow(
@@ -459,7 +548,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                               color: const Color(0xFF032617).withValues(alpha: 0.85),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0xFF22C55E).withValues(alpha: 0.35),
+                                color: const Color(0xFF22C55E).withValues(alpha: 0.4),
                               ),
                               boxShadow: [
                                 BoxShadow(
@@ -479,16 +568,15 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-                // ── Standalone 3D CoinBar Lottie Balance Display ─────────────
-                // Clean and organic: No outer box, no extra 100% payout text, no circles!
+                // ── 3D Gaming Wooden Signboard Balance Display (SVG) ────────
                 Center(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final barWidth = constraints.maxWidth > 420 ? 420.0 : constraints.maxWidth;
-                      // Ratio 500:150 (3.333)
-                      final barHeight = barWidth / (500 / 148);
+                      final barWidth = constraints.maxWidth > 440 ? 440.0 : constraints.maxWidth;
+                      // Proportions: 500 width / 150 height (3.333 ratio)
+                      final barHeight = barWidth / (500 / 150);
 
                       return SizedBox(
                         width: barWidth,
@@ -496,56 +584,20 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            // 0. Ambient Floor Shadow & Golden Halo under CoinBar
-                            Positioned(
-                              left: barWidth * 0.08,
-                              right: barWidth * 0.08,
-                              bottom: 0,
-                              height: 14,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(100),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.90),
-                                      blurRadius: 26,
-                                      spreadRadius: 4,
-                                      offset: const Offset(0, 8),
-                                    ),
-                                    BoxShadow(
-                                      color: const Color(0xFFF59E0B).withValues(alpha: 0.20),
-                                      blurRadius: 32,
-                                      spreadRadius: 2,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            // 1. CoinBar Lottie Animation (500x150)
+                            // 1. Gaming Carved Wooden Board SVG
                             Positioned.fill(
-                              child: Lottie.asset(
-                                'assets/animations/coin_bar.json',
+                              child: SvgPicture.asset(
+                                'assets/svg/wallet_wooden_board.svg',
                                 fit: BoxFit.fill,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
-                                      ),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                  );
-                                },
                               ),
                             ),
 
-                            // 2. User Balance accurately centered inside the golden CoinBar slot
+                            // 2. User Balance accurately centered in the recessed plate
                             Positioned(
-                              left: barWidth * 0.31,
-                              right: barWidth * 0.12,
-                              top: barHeight * 0.25,
-                              bottom: barHeight * 0.18,
+                              left: barWidth * 0.30,
+                              right: barWidth * 0.08,
+                              top: barHeight * 0.33,
+                              bottom: barHeight * 0.12,
                               child: Center(
                                 child: FittedBox(
                                   fit: BoxFit.scaleDown,
@@ -553,11 +605,11 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                                   child: Text(
                                     _isBalanceVisible
                                         ? '₹${walletBalance.toStringAsFixed(2)}'
-                                        : '₹••••••',
+                                        : '₹ • • • •',
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontSize: 32,
+                                      color: const Color(0xFFFFFBEB),
+                                      fontSize: 34,
                                       fontWeight: FontWeight.w900,
                                       letterSpacing: -0.5,
                                       shadows: [
@@ -567,8 +619,8 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                                           offset: const Offset(0, 2),
                                         ),
                                         Shadow(
-                                          color: const Color(0xFFD97706).withValues(alpha: 0.6),
-                                          blurRadius: 14,
+                                          color: const Color(0xFFF59E0B).withValues(alpha: 0.8),
+                                          blurRadius: 18,
                                         ),
                                       ],
                                     ),
@@ -582,7 +634,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                     },
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -591,78 +643,180 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
     );
   }
 
-  // ── Jungle Themed Withdrawal Rules Info Card ────────────────────────────────
+  // ── Gamified Withdrawal Milestone Progress Card ─────────────────────────────
   Widget _buildJungleWithdrawalInfoCard(double walletBalance) {
     final bool isEligible = walletBalance >= 100;
+    final double progress = (walletBalance / 100.0).clamp(0.0, 1.0);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF032617),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isEligible
-              ? const Color(0xFF22C55E).withValues(alpha: 0.4)
-              : const Color(0xFFF59E0B).withValues(alpha: 0.4),
-          width: 1.2,
+              ? const Color(0xFF22C55E).withValues(alpha: 0.6)
+              : const Color(0xFFF59E0B).withValues(alpha: 0.5),
+          width: 1.5,
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            isEligible ? const Color(0xFF054528) : const Color(0xFF2E1905),
+            const Color(0xFF021B0F),
+          ],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: isEligible
+                ? const Color(0xFF22C55E).withValues(alpha: 0.25)
+                : const Color(0xFFF59E0B).withValues(alpha: 0.15),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              color: isEligible
-                  ? const Color(0xFF064E2B)
-                  : const Color(0xFF3B2304),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isEligible
-                    ? const Color(0xFF22C55E)
-                    : const Color(0xFFF59E0B),
-                width: 1.2,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isEligible
+                        ? [const Color(0xFF16A34A), const Color(0xFF065F46)]
+                        : [const Color(0xFFD97706), const Color(0xFF78350F)],
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isEligible ? const Color(0xFF86EFAC) : const Color(0xFFFDE047),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isEligible
+                          ? const Color(0xFF22C55E).withValues(alpha: 0.5)
+                          : const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  isEligible ? Icons.verified_rounded : Icons.lock_clock_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
-            ),
-            child: Icon(
-              isEligible ? Icons.verified_rounded : Icons.info_outline_rounded,
-              color: isEligible
-                  ? const Color(0xFF4ADE80)
-                  : const Color(0xFFFBBF24),
-              size: 20,
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isEligible
+                          ? '🎉 Instant Cashout Unlocked!'
+                          : 'Payout Milestone (Min. ₹100)',
+                      style: GoogleFonts.poppins(
+                        color: isEligible ? const Color(0xFF4ADE80) : const Color(0xFFFDE047),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isEligible
+                          ? 'Zero fees • Direct to UPI / Bank transfer'
+                          : 'Earn ₹${(100 - walletBalance).clamp(0, 100).toStringAsFixed(0)} more to cashout immediately',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isEligible
+                      ? const Color(0xFF22C55E).withValues(alpha: 0.2)
+                      : const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isEligible ? const Color(0xFF4ADE80) : const Color(0xFFFBBF24),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  isEligible ? 'READY' : '${(progress * 100).toInt()}%',
+                  style: GoogleFonts.poppins(
+                    color: isEligible ? const Color(0xFF86EFAC) : const Color(0xFFFEF08A),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isEligible ? 'Eligible for Instant Withdrawal' : 'Minimum Limit ₹100',
-                  style: GoogleFonts.poppins(
-                    color: isEligible
-                        ? const Color(0xFF4ADE80)
-                        : const Color(0xFFFBBF24),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13.5,
+          const SizedBox(height: 14),
+
+          // Animated Milestone Progress Track
+          Stack(
+            children: [
+              Container(
+                height: 8,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: progress,
+                child: Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isEligible
+                          ? [const Color(0xFF22C55E), const Color(0xFF86EFAC)]
+                          : [const Color(0xFFF59E0B), const Color(0xFFFDE047)],
+                    ),
+                    borderRadius: BorderRadius.circular(4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isEligible ? const Color(0xFF22C55E) : const Color(0xFFF59E0B))
+                            .withValues(alpha: 0.8),
+                        blurRadius: 6,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Min. ₹100 • Max. ₹10,000 per payout request (Zero Fees)',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 11,
-                  ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '₹0',
+                style: GoogleFonts.poppins(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
+              ),
+              Text(
+                isEligible ? '₹100 (Threshold Reached)' : '₹100 Target',
+                style: GoogleFonts.poppins(
+                  color: isEligible ? const Color(0xFF86EFAC) : const Color(0xFFFDE047),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -687,12 +841,20 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
         color: const Color(0xFF032617),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0xFF08482A),
-          width: 1,
+          color: const Color(0xFF22C55E).withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF063A22),
+            Color(0xFF022013),
+          ],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
+            color: Colors.black.withValues(alpha: 0.30),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -714,8 +876,14 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                     color: iconBgColor,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: iconColor.withValues(alpha: 0.3),
+                      color: iconColor.withValues(alpha: 0.35),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: iconColor.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                      ),
+                    ],
                   ),
                   child: Icon(icon, color: iconColor, size: 23),
                 ),
@@ -764,7 +932,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                       Text(
                         subtitle,
                         style: GoogleFonts.poppins(
-                          color: Colors.white.withValues(alpha: 0.65),
+                          color: Colors.white.withValues(alpha: 0.70),
                           fontSize: 11,
                         ),
                         maxLines: 1,
@@ -775,10 +943,17 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                 ),
 
                 // Arrow
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: Color(0xFF22C55E),
-                  size: 15,
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF22C55E).withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: Color(0xFF4ADE80),
+                    size: 13,
+                  ),
                 ),
               ],
             ),
@@ -787,8 +962,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
       ),
     );
   }
-
-  // ── Bottom Jungle Plants & Foliage Base with Animated Parrot ──────────────
+// ── Bottom Jungle Plants & Foliage Base with Animated Parrot ──────────────
   Widget _buildJungleBottomFoliage() {
     return SizedBox(
       width: double.infinity,

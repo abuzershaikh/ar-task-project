@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 50" width="100%" height="100%">
+  <defs>
+    <linearGradient id="upiBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="70%" stop-color="#F1F5F9"/>
+      <stop offset="100%" stop-color="#E2E8F0"/>
+    </linearGradient>
+    <filter id="upiShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <!-- 3D Base -->
+  <rect x="2" y="5" width="76" height="42" rx="12" fill="#000000" opacity="0.3"/>
+  <rect x="2" y="3" width="76" height="42" rx="12" fill="#CBD5E1"/>
+  <!-- Front -->
+  <rect x="2" y="1" width="76" height="42" rx="12" fill="url(#upiBg)" stroke="#FFFFFF" stroke-width="1.5"/>
+  <!-- Specular -->
+  <rect x="6" y="3" width="68" height="16" rx="8" fill="#FFFFFF" opacity="0.5"/>
+  <!-- UPI Text and Arrow -->
+  <text x="25" y="28" font-family="'Poppins', 'Arial Black', sans-serif" font-weight="900" font-size="18" fill="#0F172A" font-style="italic">UPI</text>
+  <!-- Orange & Green UPI Arrows -->
+  <path d="M 58 16 L 66 23 L 58 30 Z" fill="#097939"/>
+  <path d="M 64 16 L 72 23 L 64 30 Z" fill="#ED752E"/>
+</svg>

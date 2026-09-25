@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 280" width="100%" height="100%" preserveAspectRatio="none">
+  <defs>
+    <!-- Wood Gradient -->
+    <linearGradient id="wdMain" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#9E5624"/>
+      <stop offset="18%" stop-color="#BD6F31"/>
+      <stop offset="65%" stop-color="#7A3912"/>
+      <stop offset="100%" stop-color="#4E2007"/>
+    </linearGradient>
+
+    <!-- Wood Base Bevel Bottom Planks -->
+    <linearGradient id="wdBevel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5C2508"/>
+      <stop offset="100%" stop-color="#2E1002"/>
+    </linearGradient>
+
+    <linearGradient id="wdInnerShadow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2D1103" stop-opacity="0.55"/>
+      <stop offset="25%" stop-color="#451C06" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#1F0B02" stop-opacity="0.6"/>
+    </linearGradient>
+
+    <!-- Leaf Gradients -->
+    <linearGradient id="wdLeafG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A3E635"/>
+      <stop offset="45%" stop-color="#4ADE80"/>
+      <stop offset="85%" stop-color="#15803D"/>
+      <stop offset="100%" stop-color="#14532D"/>
+    </linearGradient>
+    <linearGradient id="wdLeafDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#052E16"/>
+    </linearGradient>
+
+    <!-- Gold Edge Highlight -->
+    <linearGradient id="wdGoldRim" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EAB308" stop-opacity="0.4"/>
+      <stop offset="30%" stop-color="#FDE047" stop-opacity="0.85"/>
+      <stop offset="70%" stop-color="#FACC15" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#CA8A04" stop-opacity="0.4"/>
+    </linearGradient>
+
+    <filter id="wdDropShadow" x="-2%" y="-5%" width="104%" height="118%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <!-- 1. Ambient Drop Shadow -->
+  <path d="M 28 22 
+           C 120 18, 250 24, 380 20 
+           C 510 16, 680 22, 820 18 
+           C 910 16, 965 20, 976 34 
+           C 986 52, 982 180, 974 218 
+           C 968 244, 955 258, 930 262 
+           C 820 266, 640 262, 500 265 
+           C 360 268, 180 263, 72 265 
+           C 38 262, 22 248, 16 220 
+           C 10 178, 14 62, 20 36 
+           C 22 28, 25 24, 28 22 Z" 
+        fill="#000000" opacity="0.5" transform="translate(0, 7)"/>
+
+  <!-- 2. Bottom Wooden Shelf Foundation (Supports the card like in mobile games) -->
+  <path d="M 40 228 
+           C 180 224, 450 227, 600 225 
+           C 750 223, 900 226, 960 228 
+           L 968 252 
+           C 930 264, 780 266, 520 266 
+           C 280 266, 110 264, 32 252 Z" 
+        fill="url(#wdBevel)" stroke="#220B02" stroke-width="2.5"/>
+
+  <!-- Foundation wood plank notches -->
+  <path d="M 220 230 L 225 264 M 460 228 L 465 265 M 710 229 L 715 264 M 860 230 L 863 260" 
+        stroke="#1A0701" stroke-width="3" opacity="0.6"/>
+
+  <!-- 3. Decorative Leaves (Behind Main Board) -->
+  <!-- Top Left Vines -->
+  <path d="M 12 40 C 2 24, 18 10, 36 18 C 42 28, 30 46, 18 42 Z" fill="url(#wdLeafDark)" stroke="#0E3802" stroke-width="1.5"/>
+  <path d="M 28 22 C 22 8, 42 2, 58 10 C 62 24, 48 34, 34 30 Z" fill="url(#wdLeafG)" stroke="#0E3802" stroke-width="1.5"/>
+  <path d="M 52 14 C 58 2, 78 4, 86 16 C 84 28, 68 32, 58 24 Z" fill="url(#wdLeafG)" stroke="#0E3802" stroke-width="1.5"/>
+  <!-- Top Right Vines -->
+  <path d="M 940 24 C 956 12, 976 22, 968 38 C 954 48, 936 38, 940 24 Z" fill="url(#wdLeafG)" stroke="#0E3802" stroke-width="1.5"/>
+  <!-- Bottom Left Corner Foliage -->
+  <path d="M 8 200 C -4 218, 8 244, 28 242 C 38 238, 36 214, 18 206 Z" fill="url(#wdLeafDark)" stroke="#0E3802" stroke-width="1.5"/>
+  <path d="M 22 222 C 14 238, 30 260, 50 252 C 58 244, 52 226, 34 224 Z" fill="url(#wdLeafG)" stroke="#0E3802" stroke-width="1.5"/>
+  <!-- Bottom Right Foliage -->
+  <path d="M 952 214 C 970 208, 988 226, 978 244 C 962 254, 946 238, 952 214 Z" fill="url(#wdLeafG)" stroke="#0E3802" stroke-width="1.5"/>
+
+  <!-- 4. Main Wood Plank Slab Body -->
+  <path d="M 30 18 
+           C 120 14, 240 20, 370 16 
+           C 500 12, 670 18, 810 14 
+           C 900 12, 955 16, 968 28 
+           C 978 44, 974 165, 968 208 
+           C 962 228, 946 238, 922 242 
+           C 810 246, 630 242, 490 245 
+           C 350 248, 170 243, 68 245 
+           C 36 242, 22 228, 18 204 
+           C 12 165, 16 52, 22 30 
+           C 24 22, 27 19, 30 18 Z" 
+        fill="url(#wdMain)" stroke="#381403" stroke-width="4.5"/>
+
+  <!-- 5. Inner Wood Plank Depth & Ambient Vignette -->
+  <path d="M 34 22 
+           C 120 18, 240 24, 370 20 
+           C 500 16, 670 22, 810 18 
+           C 900 16, 950 20, 962 30 
+           C 972 46, 968 162, 962 204 
+           C 956 222, 942 232, 918 236 
+           C 810 240, 630 236, 490 239 
+           C 350 242, 170 237, 72 239 
+           C 42 236, 28 222, 24 200 
+           C 18 162, 22 56, 26 34 Z" 
+        fill="url(#wdInnerShadow)"/>
+
+  <!-- 6. Golden Edge Rim (Carved top edge highlight) -->
+  <path d="M 32 20 
+           C 120 16, 240 22, 370 18 
+           C 500 14, 670 20, 810 16 
+           C 900 14, 952 18, 964 28" 
+        stroke="url(#wdGoldRim)" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+  <!-- 7. Organic Wood Grain Lines across the board -->
+  <path d="M 40 42 C 180 34, 420 40, 650 36 C 800 34, 920 42, 955 40" stroke="#E08B48" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <path d="M 36 78 C 220 70, 520 76, 780 72 C 890 70, 945 76, 958 74" stroke="#481F05" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.4"/>
+  <path d="M 38 128 C 260 120, 580 126, 820 122 C 900 120, 950 126, 956 124" stroke="#3D1802" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.35"/>
+  <path d="M 36 178 C 210 186, 500 180, 750 184 C 870 182, 940 178, 955 180" stroke="#481F05" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0.4"/>
+  <path d="M 42 226 C 240 220, 540 224, 780 222 C 880 220, 930 224, 945 222" stroke="#E08B48" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.5"/>
+
+  <!-- 8. Corner Screws / Golden Studs -->
+  <circle cx="36" cy="34" r="4.2" fill="#2E1102" stroke="#9E5624" stroke-width="1.5"/>
+  <circle cx="35" cy="33" r="1.5" fill="#FDE047" opacity="0.75"/>
+  <circle cx="956" cy="34" r="4.2" fill="#2E1102" stroke="#9E5624" stroke-width="1.5"/>
+  <circle cx="955" cy="33" r="1.5" fill="#FDE047" opacity="0.75"/>
+  <circle cx="36" cy="228" r="4.2" fill="#2E1102" stroke="#9E5624" stroke-width="1.5"/>
+  <circle cx="35" cy="227" r="1.5" fill="#FDE047" opacity="0.75"/>
+  <circle cx="954" cy="228" r="4.2" fill="#2E1102" stroke="#9E5624" stroke-width="1.5"/>
+  <circle cx="953" cy="227" r="1.5" fill="#FDE047" opacity="0.75"/>
+
+  <!-- 9. Foreground Sprouts clinging to edges -->
+  <path d="M 16 112 C 4 104, 8 88, 22 94 C 28 100, 24 114, 16 112 Z" fill="url(#wdLeafG)" stroke="#0E3802" stroke-width="1.2"/>
+  <path d="M 968 142 C 980 134, 984 148, 974 156 C 966 158, 962 148, 968 142 Z" fill="url(#wdLeafG)" stroke="#0E3802" stroke-width="1.2"/>
+  <path d="M 54 246 C 64 256, 78 252, 74 242 C 68 238, 58 240, 54 246 Z" fill="url(#wdLeafG)" stroke="#0E3802" stroke-width="1.2"/>
+</svg>

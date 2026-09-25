@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 64" width="100%" height="100%">
+  <defs>
+    <linearGradient id="sbGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#46FF82"/>
+      <stop offset="25%" stop-color="#1FD657"/>
+      <stop offset="75%" stop-color="#00A83A"/>
+      <stop offset="100%" stop-color="#006622"/>
+    </linearGradient>
+    <filter id="sbShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Drop Shadow -->
+  <rect x="6" y="10" width="148" height="50" rx="25" fill="#000000" opacity="0.35"/>
+  <!-- 3D Depth Bottom Edge -->
+  <rect x="6" y="8" width="148" height="50" rx="25" fill="#004718"/>
+  <!-- Main Glossy Body -->
+  <rect x="6" y="4" width="148" height="50" rx="25" fill="url(#sbGrad)" stroke="#7AFF9E" stroke-width="2.5"/>
+
+  <!-- Top Specular Highlight Arc -->
+  <path d="M 28 10 C 60 6, 100 6, 132 10" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" fill="none" opacity="0.65"/>
+  <rect x="16" y="8" width="128" height="20" rx="10" fill="#FFFFFF" opacity="0.12"/>
+
+  <!-- Play Arrow Icon with 3D Bevel -->
+  <polygon points="38,21 57,32 38,43" fill="#003311"/>
+  <polygon points="38,19 57,30 38,41" fill="#FFFFFF"/>
+
+  <!-- "Start" Text with Embossed 3D Shadow -->
+  <text x="68" y="38" font-family="'Poppins', 'Arial Black', sans-serif" font-weight="900" font-size="22" fill="#003813" letter-spacing="0.5">Start</text>
+  <text x="68" y="36" font-family="'Poppins', 'Arial Black', sans-serif" font-weight="900" font-size="22" fill="#FFFFFF" letter-spacing="0.5">Start</text>
+</svg>

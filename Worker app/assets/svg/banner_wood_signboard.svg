@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 240" width="100%" height="100%">
+  <defs>
+    <linearGradient id="sbWoodMain" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#9C5422"/>
+      <stop offset="20%" stop-color="#B86C32"/>
+      <stop offset="65%" stop-color="#73350F"/>
+      <stop offset="100%" stop-color="#4A1E06"/>
+    </linearGradient>
+    <linearGradient id="sbWoodEdge" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#542206"/>
+      <stop offset="100%" stop-color="#240B01"/>
+    </linearGradient>
+    <linearGradient id="sbGoldRim" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FDE047" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#CA8A04" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shadow -->
+  <path d="M 16 20 C 80 14, 200 18, 318 16 C 328 18, 334 26, 332 38 C 335 90, 330 170, 324 210 C 318 224, 308 230, 280 232 C 180 236, 80 232, 22 230 C 10 226, 6 214, 8 198 C 6 140, 8 60, 12 30 C 12 24, 14 22, 16 20 Z" 
+        fill="#000000" opacity="0.45" transform="translate(0, 7)"/>
+
+  <!-- 3D Bottom Wood Base -->
+  <path d="M 16 16 C 80 10, 200 14, 318 12 C 328 14, 334 22, 332 34 C 335 86, 330 166, 324 206 C 318 220, 308 226, 280 228 C 180 232, 80 228, 22 226 C 10 222, 6 210, 8 194 C 6 136, 8 56, 12 26 C 12 20, 14 18, 16 16 Z" 
+        fill="url(#sbWoodEdge)" stroke="#1F0901" stroke-width="3"/>
+
+  <!-- Main Plank -->
+  <path d="M 16 12 C 80 6, 200 10, 318 8 C 328 10, 334 18, 332 30 C 335 82, 330 162, 324 202 C 318 216, 308 222, 280 224 C 180 228, 80 224, 22 222 C 10 218, 6 206, 8 190 C 6 132, 8 52, 12 22 C 12 16, 14 14, 16 12 Z" 
+        fill="url(#sbWoodMain)" stroke="#3B1503" stroke-width="3.5"/>
+
+  <!-- Golden Edge Highlight Top -->
+  <path d="M 18 14 C 80 8, 200 12, 316 10" stroke="url(#sbGoldRim)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Wood Grains -->
+  <path d="M 22 36 C 90 28, 200 32, 310 30" stroke="#E08B48" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <path d="M 20 86 C 110 80, 220 84, 314 82" stroke="#481F05" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.4"/>
+  <path d="M 24 140 C 100 144, 220 138, 312 142" stroke="#3D1802" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.35"/>
+  <path d="M 20 196 C 90 192, 200 198, 308 194" stroke="#E08B48" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.5"/>
+
+  <!-- Iron Nails -->
+  <circle cx="28" cy="28" r="3.5" fill="#240D01" stroke="#9C5422" stroke-width="1"/>
+  <circle cx="27" cy="27" r="1.2" fill="#FDE047" opacity="0.8"/>
+  <circle cx="310" cy="24" r="3.5" fill="#240D01" stroke="#9C5422" stroke-width="1"/>
+  <circle cx="309" cy="23" r="1.2" fill="#FDE047" opacity="0.8"/>
+</svg>

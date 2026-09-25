@@ -32,16 +32,22 @@ void main() async {
   }
 
   // Initialize Firebase Crashlytics & Global Error Reporting
-  await CrashlyticsService.initialize();
+  try {
+    await CrashlyticsService.initialize();
+  } catch (e) {
+    debugPrint('Crashlytics init error: $e');
+  }
 
-  // Initialize Firebase Messaging Background Handler & Push Engine
+  // Run app immediately so the Flutter engine draws the first frame and clears the native splash screen!
+  runApp(const TaskRewardApp());
+
+  // Initialize Firebase Messaging Background Handler & Push Engine in the background
   try {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    await NotificationService.instance.initialize();
+    NotificationService.instance.initialize();
   } catch (e) {
     debugPrint('Firebase messaging init error: $e');
   }
-  runApp(const TaskRewardApp());
 }
 
 class TaskRewardApp extends StatelessWidget {
@@ -88,7 +94,7 @@ class _AppBootstrapWrapperState extends State<AppBootstrapWrapper> {
 
   Future<void> _checkForAppUpdate() async {
     try {
-      final info = await PackageInfo.fromPlatform();
+      final info = await PackageInfo.fromPlatform().timeout(const Duration(seconds: 2));
       _currentVersion = info.version.isNotEmpty ? info.version : '1.0.0';
       _currentVersionCode = info.buildNumber.isNotEmpty ? info.buildNumber : '1';
     } catch (_) {
@@ -100,7 +106,7 @@ class _AppBootstrapWrapperState extends State<AppBootstrapWrapper> {
       final res = await ApiService.checkAppUpdate(
         _currentVersion,
         versionCode: _currentVersionCode,
-      );
+      ).timeout(const Duration(seconds: 3));
       if (res != null && res['updateRequired'] == true) {
         if (mounted) {
           setState(() {

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="100%" height="100%">
+  <defs>
+    <radialGradient id="targetGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4ADE80" stop-opacity="0.6"/>
+      <stop offset="60%" stop-color="#22C55E" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#15803D" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ringGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#86EFAC"/>
+      <stop offset="40%" stop-color="#22C55E"/>
+      <stop offset="100%" stop-color="#14532D"/>
+    </linearGradient>
+    <linearGradient id="ringGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#BBF7D0"/>
+      <stop offset="50%" stop-color="#4ADE80"/>
+      <stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+    <radialGradient id="bullCenter" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#86EFAC"/>
+      <stop offset="85%" stop-color="#16A34A"/>
+      <stop offset="100%" stop-color="#14532D"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Ambient Glow -->
+  <circle cx="24" cy="24" r="23" fill="url(#targetGlow)"/>
+
+  <!-- Outer Ring Shadow -->
+  <circle cx="24" cy="25" r="18" fill="#000000" opacity="0.4"/>
+
+  <!-- Outer Ring Base -->
+  <circle cx="24" cy="24" r="18" fill="none" stroke="#052E16" stroke-width="4.5"/>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="url(#ringGrad1)" stroke-width="3.5"/>
+
+  <!-- Middle Ring -->
+  <circle cx="24" cy="24" r="11.5" fill="none" stroke="#052E16" stroke-width="3.5"/>
+  <circle cx="24" cy="24" r="11.5" fill="none" stroke="url(#ringGrad2)" stroke-width="2.5"/>
+
+  <!-- Center Bullseye Dot -->
+  <circle cx="24" cy="24.8" r="5.5" fill="#000000" opacity="0.35"/>
+  <circle cx="24" cy="24" r="5.5" fill="url(#bullCenter)" stroke="#052E16" stroke-width="1.2"/>
+
+  <!-- Crosshair markers -->
+  <line x1="24" y1="2" x2="24" y2="7" stroke="#86EFAC" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="24" y1="41" x2="24" y2="46" stroke="#22C55E" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="2" y1="24" x2="7" y2="24" stroke="#86EFAC" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="41" y1="24" x2="46" y2="24" stroke="#22C55E" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- Specular shine -->
+  <ellipse cx="22" cy="22" rx="2" ry="1.2" fill="#FFFFFF" opacity="0.8" transform="rotate(-30 22 22)"/>
+</svg>

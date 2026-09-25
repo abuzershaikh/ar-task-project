@@ -116,11 +116,14 @@ class NotificationService {
         criticalAlert: false,
         provisional: false,
         sound: true,
-      );
+      ).timeout(const Duration(seconds: 3));
       debugPrint('🔔 [FCM PERMISSION] Status: ${settings.authorizationStatus}');
 
-      if (await Permission.notification.isDenied) {
-        await Permission.notification.request();
+      if (settings.authorizationStatus != AuthorizationStatus.authorized &&
+          settings.authorizationStatus != AuthorizationStatus.provisional) {
+        if (await Permission.notification.isDenied) {
+          await Permission.notification.request().timeout(const Duration(seconds: 3));
+        }
       }
     } catch (e) {
       debugPrint('⚠️ [FCM PERMISSION ERROR]: $e');
@@ -132,7 +135,7 @@ class NotificationService {
   /// Subscribe worker to global and task topics
   Future<void> _subscribeToWorkerTopics() async {
     try {
-      await _fcm.subscribeToTopic('workers');
+      await _fcm.subscribeToTopic('workers').timeout(const Duration(seconds: 3));
       debugPrint('🔔 [FCM TOPIC] Subscribed to topic: workers');
     } catch (e) {
       debugPrint('⚠️ [FCM TOPIC] Subscription error: $e');
@@ -142,7 +145,7 @@ class NotificationService {
   /// Fetch FCM Token and register locally
   Future<void> _retrieveAndStoreToken() async {
     try {
-      _fcmToken = await _fcm.getToken();
+      _fcmToken = await _fcm.getToken().timeout(const Duration(seconds: 4));
       if (_fcmToken != null) {
         debugPrint(
           '🔑 [FCM TOKEN] Retrieved: ${_fcmToken!.substring(0, 15)}...',
@@ -385,7 +388,7 @@ class NotificationService {
       final safeExt = iconUrl.contains('.jpg') ? 'jpg' : 'png';
       localIconPath = await _downloadAndSaveFile(
         iconUrl,
-        'notif_icon_${notificationId}.$safeExt',
+        'notif_icon_$notificationId.$safeExt',
       );
     }
 

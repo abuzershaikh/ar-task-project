@@ -1,0 +1,56 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="1200dp"
+    android:height="450dp"
+    android:viewportWidth="1200"
+    android:viewportHeight="450">
+    <!-- Bottom Planks -->
+    <path
+        android:pathData="M60,350 L75,410 L150,425 L1080,425 L1130,405 L1145,350 Z"
+        android:fillColor="#542407" />
+    <path
+        android:pathData="M75,410 L150,425 L300,420 L305,390 L280,385 L75,390 Z"
+        android:fillColor="#421901"
+        android:strokeColor="#240D00"
+        android:strokeWidth="2" />
+    <path
+        android:pathData="M380,423 L620,423 L625,390 L375,390 Z"
+        android:fillColor="#522002"
+        android:strokeColor="#240D00"
+        android:strokeWidth="2" />
+    <path
+        android:pathData="M720,423 L960,423 L965,390 L715,390 Z"
+        android:fillColor="#441A02"
+        android:strokeColor="#240D00"
+        android:strokeWidth="2" />
+    <path
+        android:pathData="M1020,420 L1130,405 L1120,380 L1015,385 Z"
+        android:fillColor="#3D1601"
+        android:strokeColor="#240D00"
+        android:strokeWidth="2" />
+    <!-- Main Board -->
+    <path
+        android:pathData="M100,115 C170,125 230,100 320,115 C400,95 480,120 560,105 C650,118 730,96 820,110 C910,98 1000,120 1115,110 C1145,130 1165,170 1160,220 C1170,290 1145,340 1120,370 C990,360 870,380 750,365 C630,380 510,360 380,375 C260,362 170,380 75,365 C50,330 60,260 65,210 C55,160 75,125 100,115 Z"
+        android:strokeColor="#3B1703"
+        android:strokeWidth="6">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="600"
+                android:startY="100"
+                android:endX="600"
+                android:endY="380"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#A25725" />
+                <item android:offset="0.25" android:color="#BA6C32" />
+                <item android:offset="0.7" android:color="#803D14" />
+                <item android:offset="1.0" android:color="#542407" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Wood Highlight Curve -->
+    <path
+        android:pathData="M110,125 C230,115 360,120 480,112 C600,122 750,108 880,118 C980,110 1060,125 1105,122"
+        android:strokeColor="#D48648"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
+</vector>

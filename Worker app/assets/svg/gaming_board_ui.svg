@@ -1,0 +1,234 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 450" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="subtle" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+
+    <!-- Gradients -->
+    <linearGradient id="woodGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#A25725"/>
+      <stop offset="25%" stop-color="#BA6C32"/>
+      <stop offset="70%" stop-color="#803D14"/>
+      <stop offset="100%" stop-color="#542407"/>
+    </linearGradient>
+
+    <linearGradient id="woodEdgeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6E3511"/>
+      <stop offset="100%" stop-color="#3B1703"/>
+    </linearGradient>
+
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9FE834"/>
+      <stop offset="50%" stop-color="#55B315"/>
+      <stop offset="100%" stop-color="#1E6603"/>
+    </linearGradient>
+
+    <linearGradient id="crownGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF275"/>
+      <stop offset="40%" stop-color="#FFB300"/>
+      <stop offset="100%" stop-color="#CC6600"/>
+    </linearGradient>
+
+    <linearGradient id="ytBaseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F2D1A1"/>
+      <stop offset="100%" stop-color="#C29662"/>
+    </linearGradient>
+    
+    <linearGradient id="ytRedGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FF3838"/>
+      <stop offset="50%" stop-color="#E60000"/>
+      <stop offset="100%" stop-color="#990000"/>
+    </linearGradient>
+
+    <linearGradient id="startBtnGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3DF577"/>
+      <stop offset="35%" stop-color="#00D04E"/>
+      <stop offset="85%" stop-color="#009432"/>
+      <stop offset="100%" stop-color="#006622"/>
+    </linearGradient>
+
+    <linearGradient id="coinPillGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#693005"/>
+      <stop offset="100%" stop-color="#3D1801"/>
+    </linearGradient>
+    
+    <linearGradient id="coinGoldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF066"/>
+      <stop offset="50%" stop-color="#FFB800"/>
+      <stop offset="100%" stop-color="#D97700"/>
+    </linearGradient>
+
+    <linearGradient id="easyTagGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#148F32"/>
+      <stop offset="100%" stop-color="#084E18"/>
+    </linearGradient>
+    
+    <linearGradient id="timeTagGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0D7C8F"/>
+      <stop offset="100%" stop-color="#063E48"/>
+    </linearGradient>
+  </defs>
+
+  <style>
+    .title-txt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-weight: 900; font-size: 38px; }
+    .sub-txt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-weight: 700; font-size: 30px; }
+    .tag-txt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-weight: 800; font-size: 26px; }
+    .coin-txt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-weight: 900; font-size: 42px; }
+    .start-txt { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-weight: 900; font-size: 42px; }
+  </style>
+
+  <!-- DECORATIVE CORNER LEAVES -->
+  <g id="decor-leaves" filter="url(#shadow)">
+    <path d="M1030 110 C1035 60, 1075 55, 1100 80 C1120 110, 1090 145, 1055 140 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M1075 85 C1130 90, 1160 140, 1130 180 C1090 190, 1070 150, 1075 85 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M1125 180 C1175 190, 1195 240, 1170 280 C1130 290, 1105 240, 1125 180 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M1105 270 C1160 300, 1165 350, 1130 380 C1090 380, 1075 330, 1105 270 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+
+    <path d="M180 80 C190 30, 240 30, 255 70 C265 110, 220 135, 185 120 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M170 120 C140 100, 100 120, 95 160 C90 200, 140 210, 165 180 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M25 260 C2 300, 15 360, 65 370 C105 370, 120 310, 80 270 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M30 360 C55 350, 105 380, 95 420 C70 440, 20 420, 30 360 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+  </g>
+
+  <!-- BOTTOM WOOD FOUNDATION / PLANKS -->
+  <g id="bottom-slab" filter="url(#shadow)">
+    <path d="M60 350 L75 410 L150 425 L1080 425 L1130 405 L1145 350 Z" fill="url(#woodEdgeGrad)"/>
+    <path d="M75 410 L150 425 L300 420 L305 390 L280 385 L75 390 Z" fill="#421901" stroke="#240D00" stroke-width="2"/>
+    <path d="M380 423 L620 423 L625 390 L375 390 Z" fill="#522002" stroke="#240D00" stroke-width="2"/>
+    <path d="M720 423 L960 423 L965 390 L715 390 Z" fill="#441A02" stroke="#240D00" stroke-width="2"/>
+    <path d="M1020 420 L1130 405 L1120 380 L1015 385 Z" fill="#3D1601" stroke="#240D00" stroke-width="2"/>
+  </g>
+
+  <!-- MAIN WOOD BOARD -->
+  <g id="main-board" filter="url(#shadow)">
+    <path d="M100 115 
+             C 170 125, 230 100, 320 115 
+             C 400 95, 480 120, 560 105 
+             C 650 118, 730 96, 820 110 
+             C 910 98, 1000 120, 1115 110 
+             C 1145 130, 1165 170, 1160 220 
+             C 1170 290, 1145 340, 1120 370 
+             C 990 360, 870 380, 750 365 
+             C 630 380, 510 360, 380 375 
+             C 260 362, 170 380, 75 365 
+             C 50 330, 60 260, 65 210 
+             C 55 160, 75 125, 100 115 Z" 
+          fill="url(#woodGrad)" stroke="#3B1703" stroke-width="6"/>
+
+    <path d="M110 125 C 230 115, 360 120, 480 112 C 600 122, 750 108, 880 118 C 980 110, 1060 125, 1105 122" 
+          stroke="#D48648" stroke-width="4" stroke-linecap="round" fill="none"/>
+
+    <path d="M300 160 C 480 150, 720 155, 900 165" stroke="#70330D" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.6"/>
+    <path d="M280 230 C 450 240, 680 235, 750 240" stroke="#5E2B0B" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.5"/>
+    <path d="M310 300 C 500 295, 750 310, 920 295" stroke="#6E320D" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.6"/>
+  </g>
+
+  <!-- YOUTUBE TILE ON THE LEFT -->
+  <g id="yt-block" filter="url(#shadow)">
+    <rect x="50" y="145" width="220" height="210" rx="42" fill="url(#ytBaseGrad)" stroke="#5E3F21" stroke-width="7"/>
+    <path d="M52 215 L268 215" stroke="#69431D" stroke-width="4"/>
+    <path d="M52 285 L268 285" stroke="#69431D" stroke-width="4"/>
+    <path d="M145 147 L145 215" stroke="#69431D" stroke-width="4"/>
+    <path d="M175 215 L175 285" stroke="#69431D" stroke-width="4"/>
+    <path d="M125 285 L125 353" stroke="#69431D" stroke-width="4"/>
+    <rect x="56" y="151" width="208" height="198" rx="36" fill="none" stroke="#FFF0D4" stroke-width="3" opacity="0.6"/>
+
+    <!-- YouTube Red Pill -->
+    <g filter="url(#subtle)">
+      <rect x="75" y="180" width="165" height="135" rx="38" fill="#7A0000"/>
+      <rect x="75" y="174" width="165" height="135" rx="38" fill="url(#ytRedGrad)" stroke="#FFA3A3" stroke-width="3"/>
+      <path d="M105 180 Q157 175 210 180" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+      <polygon points="142,212 188,241 142,270" fill="#EEEEEE" filter="url(#subtle)"/>
+      <polygon points="142,212 188,241 142,270" fill="#FFFFFF"/>
+    </g>
+  </g>
+
+  <!-- GOLD CROWN -->
+  <g id="crown" filter="url(#shadow)">
+    <path d="M60 145 C95 125, 140 120, 165 140 L160 170 C135 155, 95 155, 65 175 Z" fill="#944B00"/>
+    <path d="M62 140 
+             L 50 100 C 50 90, 65 85, 75 95 L 95 125 
+             L 115 65 C 122 55, 138 55, 145 65 L 165 125 
+             L 185 95 C 195 85, 210 90, 210 100 L 198 140 
+             C 160 120, 100 120, 62 140 Z" 
+          fill="url(#crownGrad)" stroke="#FFE875" stroke-width="3"/>
+    <circle cx="58" cy="95" r="9" fill="#FFF275" stroke="#D47A00" stroke-width="2"/>
+    <circle cx="130" cy="62" r="11" fill="#FFF275" stroke="#D47A00" stroke-width="2"/>
+    <circle cx="202" cy="95" r="9" fill="#FFF275" stroke="#D47A00" stroke-width="2"/>
+    <circle cx="130" cy="120" r="8" fill="#00A2FF" stroke="#004A80" stroke-width="2"/>
+  </g>
+
+  <!-- LEAVES AROUND TILE -->
+  <g id="tile-leaves">
+    <path d="M195 315 C215 305, 260 325, 255 355 C230 375, 195 345, 195 315 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M215 345 C240 345, 275 375, 250 405 C220 405, 205 375, 215 345 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M70 330 C85 365, 80 405, 45 405 C25 385, 40 345, 70 330 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+  </g>
+
+  <!-- TEXT AREA -->
+  <g id="texts">
+    <!-- Header: Watch & Engage -->
+    <text x="315" y="193" class="title-txt" fill="#000" stroke="#000" stroke-width="8" stroke-linejoin="round">Watch &amp; Engage: How to ...</text>
+    <text x="315" y="193" class="title-txt" fill="#FFFFFF">Watch &amp; Engage: How to ...</text>
+
+    <!-- Subtitle: Watch, Like, sub & Comment -->
+    <text x="320" y="254" class="sub-txt" fill="#2E1405" stroke="#2E1405" stroke-width="4" stroke-linejoin="round">Watch, Like, sub &amp; Comment</text>
+    <text x="320" y="254" class="sub-txt" fill="#FFF0D4">Watch, Like, sub &amp; Comment</text>
+  </g>
+
+  <!-- BADGES -->
+  <!-- Easy Badge -->
+  <g id="easy-pill" filter="url(#subtle)">
+    <rect x="325" y="302" width="165" height="58" rx="29" fill="#073B11"/>
+    <rect x="325" y="297" width="165" height="58" rx="29" fill="url(#easyTagGrad)" stroke="#23D950" stroke-width="3"/>
+    <!-- Bolt -->
+    <path d="M358 307 L343 331 L356 331 L348 349 L370 324 L358 324 Z" fill="#FFE600" stroke="#8A6500" stroke-width="1"/>
+    <text x="378" y="337" class="tag-txt" fill="#FFFFFF">Easy</text>
+  </g>
+
+  <!-- Time Badge -->
+  <g id="time-pill" filter="url(#subtle)">
+    <rect x="505" y="302" width="185" height="58" rx="29" fill="#03272E"/>
+    <rect x="505" y="297" width="185" height="58" rx="29" fill="url(#timeTagGrad)" stroke="#1DD9FA" stroke-width="3"/>
+    <!-- Clock -->
+    <circle cx="538" cy="326" r="14" fill="none" stroke="#FFFFFF" stroke-width="3.5"/>
+    <polyline points="538,318 538,326 545,326" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round"/>
+    <text x="564" y="337" class="tag-txt" fill="#FFFFFF">~1 Min</text>
+  </g>
+
+  <!-- REWARD COIN PILL (TOP-RIGHT) -->
+  <g id="coin-reward" filter="url(#shadow)">
+    <rect x="880" y="115" width="235" height="98" rx="49" fill="#2E1100"/>
+    <rect x="880" y="110" width="235" height="95" rx="47" fill="url(#coinPillGrad)" stroke="#C77D22" stroke-width="4"/>
+    
+    <!-- Golden Coin -->
+    <g filter="url(#subtle)">
+      <circle cx="932" cy="157" r="40" fill="#994D00"/>
+      <circle cx="932" cy="155" r="40" fill="url(#coinGoldGrad)" stroke="#FFF59E" stroke-width="2.5"/>
+      <circle cx="932" cy="155" r="32" fill="none" stroke="#B86E00" stroke-width="2" stroke-dasharray="4 2"/>
+      <text x="918" y="169" class="coin-txt" fill="#693005">₹</text>
+      <text x="918" y="167" class="coin-txt" fill="#FFF280">₹</text>
+    </g>
+
+    <text x="988" y="174" class="coin-txt" fill="#291100" stroke="#291100" stroke-width="4" stroke-linejoin="round">+ ₹2</text>
+    <text x="988" y="174" class="coin-txt" fill="#FFDA66">+ ₹2</text>
+  </g>
+
+  <!-- START BUTTON -->
+  <g id="start-btn" filter="url(#shadow)">
+    <rect x="820" y="240" width="300" height="120" rx="60" fill="#004D1A"/>
+    <rect x="820" y="230" width="300" height="120" rx="60" fill="url(#startBtnGrad)" stroke="#6BFF9A" stroke-width="4.5"/>
+    <path d="M860 245 C 930 235, 1010 235, 1080 245" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+    <rect x="835" y="240" width="270" height="50" rx="25" fill="#FFFFFF" opacity="0.1"/>
+
+    <!-- Triangle Icon -->
+    <polygon points="888,266 933,289 888,312" fill="#D4D4D4"/>
+    <polygon points="888,263 933,286 888,309" fill="#FFFFFF"/>
+
+    <text x="950" y="302" class="start-txt" fill="#003813" stroke="#003813" stroke-width="5" stroke-linejoin="round">Start</text>
+    <text x="950" y="302" class="start-txt" fill="#FFFFFF">Start</text>
+  </g>
+</svg>

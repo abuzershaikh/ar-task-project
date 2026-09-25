@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../network/dio_client.dart';
@@ -20,8 +21,6 @@ import '../../features/service_builder/data/repositories/service_builder_reposit
 import '../../features/service_builder/presentation/bloc/service_builder_bloc.dart';
 
 import '../../features/dashboard/data/repositories/dashboard_repository.dart';
-import '../../features/dashboard/presentation/bloc/dashboard_bloc.dart';
-
 import '../../features/dashboard/presentation/bloc/dashboard_bloc.dart';
 
 import '../../features/workers/data/datasources/workers_remote_datasource.dart';
@@ -60,6 +59,7 @@ Future<void> initializeDependencies() async {
   getIt.registerLazySingleton(() => SecureStorageService(getIt()));
   getIt.registerLazySingleton(() => LocalStorageService(getIt()));
   getIt.registerLazySingleton(() => DioClient(getIt()));
+  getIt.registerLazySingleton<Dio>(() => getIt<DioClient>().dio);
   getIt.registerLazySingleton<NetworkInfo>(() => NetworkInfoImpl());
   getIt.registerLazySingleton(() => AppDatabase.instance);
   

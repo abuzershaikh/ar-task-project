@@ -1,16 +1,10 @@
 import 'dart:convert';
 import 'dart:math' as math;
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../domain/models/service_model.dart';
 import '../../domain/models/pricing_config.dart';
 import '../../domain/models/template_element.dart';
-import '../../domain/models/element_category.dart';
-import '../../domain/models/element_type.dart';
-import '../../domain/models/visibility_context.dart';
-import '../../domain/models/editability_mode.dart';
-import '../../domain/models/action_type.dart';
 import '../../domain/repositories/service_builder_repository.dart';
 
 class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {

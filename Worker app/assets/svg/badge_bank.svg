@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 50" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bkBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="70%" stop-color="#0284C7"/>
+      <stop offset="100%" stop-color="#0369A1"/>
+    </linearGradient>
+  </defs>
+  <!-- 3D Base -->
+  <rect x="2" y="5" width="52" height="42" rx="12" fill="#000000" opacity="0.3"/>
+  <rect x="2" y="3" width="52" height="42" rx="12" fill="#0C4A6E"/>
+  <!-- Front -->
+  <rect x="2" y="1" width="52" height="42" rx="12" fill="url(#bkBg)" stroke="#BAE6FD" stroke-width="1.5"/>
+  <!-- Specular -->
+  <rect x="6" y="3" width="44" height="15" rx="7" fill="#FFFFFF" opacity="0.35"/>
+  <!-- Bank Classical Icon -->
+  <g fill="#FFFFFF" transform="translate(14, 10)">
+    <!-- Roof Triangle -->
+    <polygon points="14,2 1,10 27,10"/>
+    <!-- Pillars -->
+    <rect x="3" y="12" width="3.5" height="10" rx="0.5"/>
+    <rect x="9.5" y="12" width="3.5" height="10" rx="0.5"/>
+    <rect x="15.5" y="12" width="3.5" height="10" rx="0.5"/>
+    <rect x="21.5" y="12" width="3.5" height="10" rx="0.5"/>
+    <!-- Base Plinth -->
+    <rect x="1" y="22" width="26" height="3" rx="1"/>
+  </g>
+</svg>

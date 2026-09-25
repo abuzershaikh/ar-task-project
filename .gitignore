@@ -56,6 +56,9 @@ build_old/
 **/build_old/
 
 # Test screenshots and device dumps
+*.png
+/*.png
+/*.svg
 Admin app/*.png
 Admin app/*.xml
 Admin app/*.db

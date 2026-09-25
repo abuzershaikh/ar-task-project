@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 54" width="100%" height="100%">
+  <defs>
+    <linearGradient id="ciwMain" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="35%" stop-color="#F8FAFC"/>
+      <stop offset="85%" stop-color="#E2E8F0"/>
+      <stop offset="100%" stop-color="#CBD5E1"/>
+    </linearGradient>
+  </defs>
+  <!-- Shadow -->
+  <rect x="3" y="6" width="154" height="44" rx="22" fill="#000000" opacity="0.3"/>
+  <!-- 3D Bevel Bottom -->
+  <rect x="3" y="4" width="154" height="44" rx="22" fill="#94A3B8"/>
+  <!-- Front -->
+  <rect x="3" y="2" width="154" height="44" rx="22" fill="url(#ciwMain)" stroke="#FFFFFF" stroke-width="2"/>
+  <!-- Specular Arc -->
+  <path d="M 22 5 C 50 3, 110 3, 138 5" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <rect x="12" y="4" width="136" height="16" rx="8" fill="#FFFFFF" opacity="0.4"/>
+</svg>

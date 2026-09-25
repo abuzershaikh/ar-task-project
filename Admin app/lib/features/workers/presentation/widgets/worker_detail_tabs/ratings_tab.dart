@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../../core/theme/app_colors.dart';
 import '../../../data/models/worker_model.dart';
 
 class RatingsTab extends StatelessWidget {

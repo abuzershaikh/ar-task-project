@@ -86,3 +86,8 @@ flutter {
 tasks.withType<com.android.build.gradle.internal.tasks.CheckAarMetadataTask> {
     enabled = false
 }
+
+tasks.matching { it.name.startsWith("uploadCrashlytics") }.configureEach {
+    enabled = false
+}
+

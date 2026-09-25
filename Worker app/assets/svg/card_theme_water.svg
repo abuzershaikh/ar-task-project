@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 280" width="100%" height="100%" preserveAspectRatio="none">
+  <defs>
+    <!-- Water Main Gradient -->
+    <linearGradient id="wtMain" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="20%" stop-color="#0369A1"/>
+      <stop offset="65%" stop-color="#075985"/>
+      <stop offset="100%" stop-color="#082F49"/>
+    </linearGradient>
+
+    <!-- Water Base Bevel Bottom Planks -->
+    <linearGradient id="wtBevel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0C4A6E"/>
+      <stop offset="100%" stop-color="#041E2F"/>
+    </linearGradient>
+
+    <linearGradient id="wtInnerShadow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#02273F" stop-opacity="0.6"/>
+      <stop offset="30%" stop-color="#034B76" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#011827" stop-opacity="0.65"/>
+    </linearGradient>
+
+    <!-- Water Stream / Waves Highlights -->
+    <linearGradient id="wtWaveG" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.3"/>
+      <stop offset="35%" stop-color="#BAE6FD" stop-opacity="0.85"/>
+      <stop offset="70%" stop-color="#38BDF8" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0.4"/>
+    </linearGradient>
+
+    <!-- Glowing Cyan Rim -->
+    <linearGradient id="wtCyanRim" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.4"/>
+      <stop offset="30%" stop-color="#67E8F9" stop-opacity="0.9"/>
+      <stop offset="70%" stop-color="#A5F3FC" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0891B2" stop-opacity="0.4"/>
+    </linearGradient>
+
+    <!-- Water Plant Foliage Gradients -->
+    <linearGradient id="wtLeafG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="50%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#064E3B"/>
+    </linearGradient>
+    <linearGradient id="wtLeafDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#022C22"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 1. Ambient Drop Shadow -->
+  <path d="M 28 22 
+           C 120 18, 250 24, 380 20 
+           C 510 16, 680 22, 820 18 
+           C 910 16, 965 20, 976 34 
+           C 986 52, 982 180, 974 218 
+           C 968 244, 955 258, 930 262 
+           C 820 266, 640 262, 500 265 
+           C 360 268, 180 263, 72 265 
+           C 38 262, 22 248, 16 220 
+           C 10 178, 14 62, 20 36 
+           C 22 28, 25 24, 28 22 Z" 
+        fill="#000000" opacity="0.5" transform="translate(0, 7)"/>
+
+  <!-- 2. Bottom Frozen Water / Stone Foundation -->
+  <path d="M 40 228 
+           C 180 224, 450 227, 600 225 
+           C 750 223, 900 226, 960 228 
+           L 968 252 
+           C 930 264, 780 266, 520 266 
+           C 280 266, 110 264, 32 252 Z" 
+        fill="url(#wtBevel)" stroke="#021E2F" stroke-width="2.5"/>
+
+  <!-- Foundation Ice / Stone Blocks -->
+  <path d="M 220 230 L 225 264 M 460 228 L 465 265 M 710 229 L 715 264 M 860 230 L 863 260" 
+        stroke="#021622" stroke-width="3" opacity="0.7"/>
+
+  <!-- 3. Decorative Water Leaves & Droplets (Behind) -->
+  <!-- Top Left Leaves -->
+  <path d="M 12 40 C 2 24, 18 10, 36 18 C 42 28, 30 46, 18 42 Z" fill="url(#wtLeafDark)" stroke="#023020" stroke-width="1.5"/>
+  <path d="M 28 22 C 22 8, 42 2, 58 10 C 62 24, 48 34, 34 30 Z" fill="url(#wtLeafG)" stroke="#023020" stroke-width="1.5"/>
+  <!-- Top Right Waterfall Splash Droplets -->
+  <circle cx="952" cy="22" r="5" fill="#BAE6FD" opacity="0.8"/>
+  <circle cx="970" cy="30" r="3.5" fill="#67E8F9" opacity="0.75"/>
+  <circle cx="940" cy="14" r="2.5" fill="#FFFFFF" opacity="0.9"/>
+  <!-- Bottom Left Water Lily Foliage -->
+  <path d="M 8 200 C -4 218, 8 244, 28 242 C 38 238, 36 214, 18 206 Z" fill="url(#wtLeafDark)" stroke="#023020" stroke-width="1.5"/>
+  <path d="M 22 222 C 14 238, 30 260, 50 252 C 58 244, 52 226, 34 224 Z" fill="url(#wtLeafG)" stroke="#023020" stroke-width="1.5"/>
+  <path d="M 952 214 C 970 208, 988 226, 978 244 C 962 254, 946 238, 952 214 Z" fill="url(#wtLeafG)" stroke="#023020" stroke-width="1.5"/>
+
+  <!-- 4. Main Luminous Water Plank Body -->
+  <path d="M 30 18 
+           C 120 14, 240 20, 370 16 
+           C 500 12, 670 18, 810 14 
+           C 900 12, 955 16, 968 28 
+           C 978 44, 974 165, 968 208 
+           C 962 228, 946 238, 922 242 
+           C 810 246, 630 242, 490 245 
+           C 350 248, 170 243, 68 245 
+           C 36 242, 22 228, 18 204 
+           C 12 165, 16 52, 22 30 
+           C 24 22, 27 19, 30 18 Z" 
+        fill="url(#wtMain)" stroke="#082F49" stroke-width="4.5"/>
+
+  <!-- 5. Inner Water Vignette Depth -->
+  <path d="M 34 22 
+           C 120 18, 240 24, 370 20 
+           C 500 16, 670 22, 810 18 
+           C 900 16, 950 20, 962 30 
+           C 972 46, 968 162, 962 204 
+           C 956 222, 942 232, 918 236 
+           C 810 240, 630 236, 490 239 
+           C 350 242, 170 237, 72 239 
+           C 42 236, 28 222, 24 200 
+           C 18 162, 22 56, 26 34 Z" 
+        fill="url(#wtInnerShadow)"/>
+
+  <!-- 6. Glowing Cyan Rim Highlight -->
+  <path d="M 32 20 
+           C 120 16, 240 22, 370 18 
+           C 500 14, 670 20, 810 16 
+           C 900 14, 952 18, 964 28" 
+        stroke="url(#wtCyanRim)" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+  <!-- 7. Flowing Water Stream Texture Lines -->
+  <path d="M 40 42 C 180 34, 420 40, 650 36 C 800 34, 920 42, 955 40" stroke="url(#wtWaveG)" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <path d="M 36 78 C 220 72, 520 78, 780 74 C 890 72, 945 78, 958 76" stroke="#034B76" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.6"/>
+  <path d="M 38 128 C 260 122, 580 128, 820 124 C 900 122, 950 128, 956 126" stroke="#082F49" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <path d="M 36 178 C 210 184, 500 180, 750 184 C 870 182, 940 178, 955 180" stroke="#0284C7" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <path d="M 42 226 C 240 222, 540 226, 780 224 C 880 222, 930 226, 945 224" stroke="url(#wtWaveG)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+
+  <!-- Mini Waterfall Mist & Splash Bubbles -->
+  <ellipse cx="600" cy="180" rx="35" ry="12" fill="#BAE6FD" opacity="0.15"/>
+  <circle cx="580" cy="175" r="3" fill="#E0F2FE" opacity="0.5"/>
+  <circle cx="610" cy="178" r="2.5" fill="#E0F2FE" opacity="0.6"/>
+  <circle cx="630" cy="173" r="2" fill="#E0F2FE" opacity="0.4"/>
+
+  <!-- 8. Corner Cyan Crystal Studs -->
+  <circle cx="36" cy="34" r="4.2" fill="#041E2F" stroke="#38BDF8" stroke-width="1.5"/>
+  <circle cx="35" cy="33" r="1.5" fill="#E0F2FE" opacity="0.9"/>
+  <circle cx="956" cy="34" r="4.2" fill="#041E2F" stroke="#38BDF8" stroke-width="1.5"/>
+  <circle cx="955" cy="33" r="1.5" fill="#E0F2FE" opacity="0.9"/>
+  <circle cx="36" cy="228" r="4.2" fill="#041E2F" stroke="#38BDF8" stroke-width="1.5"/>
+  <circle cx="35" cy="227" r="1.5" fill="#E0F2FE" opacity="0.9"/>
+  <circle cx="954" cy="228" r="4.2" fill="#041E2F" stroke="#38BDF8" stroke-width="1.5"/>
+  <circle cx="953" cy="227" r="1.5" fill="#E0F2FE" opacity="0.9"/>
+
+  <!-- 9. Foreground Water Droplets and Leaf Accents -->
+  <circle cx="18" cy="108" r="4" fill="#BAE6FD" opacity="0.8"/>
+  <circle cx="16" cy="106" r="1.5" fill="#FFFFFF"/>
+  <circle cx="972" cy="148" r="3.5" fill="#BAE6FD" opacity="0.75"/>
+  <path d="M 54 246 C 64 256, 78 252, 74 242 C 68 238, 58 240, 54 246 Z" fill="url(#wtLeafG)" stroke="#023020" stroke-width="1.2"/>
+</svg>

@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:lottie/lottie.dart';
 import '../../../core/providers/task_provider.dart';
 import '../../../shared/widgets/platform_logo.dart';
 import '../../task_detail/screens/task_detail_premium_screen.dart';
@@ -55,7 +57,18 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
   int _currentBannerIndex = 0;
   Timer? _bannerTimer;
 
-  static const int _totalBannerSlides = 4;
+  static const int _totalBannerSlides = 3;
+
+  // Floating golden coin animation in hero banner
+  late final AnimationController _floatingCoinController;
+  late final Animation<double> _floatingCoinAnimation;
+
+  // Refresh icon rotation controller
+  late final AnimationController _refreshSpinController;
+
+  // Real animated falling rain controller and particles
+  late final AnimationController _rainController;
+  late final List<_RainDropData> _rainDrops;
 
   @override
   void initState() {
@@ -63,11 +76,46 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     _bannerController = PageController();
     WidgetsBinding.instance.addObserver(this);
 
+    // Continuous smooth falling rain animation (60 FPS)
+    _rainController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    )..repeat();
+
+    final rand = math.Random(1337);
+    _rainDrops = List.generate(85, (index) {
+      final isForeground = index % 3 == 0;
+      return _RainDropData(
+        x: rand.nextDouble(),
+        y: rand.nextDouble(),
+        speed: isForeground ? (1.35 + rand.nextDouble() * 0.75) : (0.75 + rand.nextDouble() * 0.45),
+        length: isForeground ? (20.0 + rand.nextDouble() * 12.0) : (11.0 + rand.nextDouble() * 7.0),
+        thickness: isForeground ? 1.3 : 0.85,
+        alpha: isForeground ? 0.32 : 0.16,
+        hasSplash: rand.nextDouble() > 0.45,
+      );
+    });
+
     // Rotating light around support icon (continuous smooth rotation)
     _lightRotateController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
     )..repeat();
+
+    // Floating golden coins animation in hero banner
+    _floatingCoinController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+    _floatingCoinAnimation = Tween<double>(begin: -4.0, end: 4.0).animate(
+      CurvedAnimation(parent: _floatingCoinController, curve: Curves.easeInOut),
+    );
+
+    // Refresh icon spin controller
+    _refreshSpinController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
 
     // Shake / vibrate wobble animation when message arrives
     _shakeController = AnimationController(
@@ -90,6 +138,25 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
       _loadUnreadNotifCount();
       _startAutoRefreshTimer();
       _initSupportChatListener();
+    });
+  }
+
+  Future<void> _refreshFeed() async {
+    if (!mounted) return;
+    final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+    await Future.wait([
+      taskProvider.fetchAvailableTasks(),
+      taskProvider.fetchWalletData(),
+      _loadUnreadNotifCount(),
+    ]);
+  }
+
+  void _startAutoRefreshTimer() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        _refreshFeed();
+      }
     });
   }
 
@@ -179,75 +246,30 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
       final nextPage = (_currentBannerIndex + 1) % _totalBannerSlides;
       _bannerController.animateToPage(
         nextPage,
-        duration: const Duration(milliseconds: 600),
+        duration: const Duration(milliseconds: 550),
         curve: Curves.easeInOutCubic,
       );
     });
   }
 
-  @override
-  void dispose() {
-    _supportMsgSub?.cancel();
-    _supportUnreadSub?.cancel();
-    _supportDeletedSub?.cancel();
-    _supportAudioPlayer?.dispose();
-    _lightRotateController.dispose();
-    _shakeController.dispose();
-    _bannerTimer?.cancel();
-    _bannerController.dispose();
-    _autoRefreshTimer?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _refreshFeed();
-      _loadSupportUnreadCount();
-      _startAutoRefreshTimer();
-      _startBannerAutoPlay();
-    } else if (state == AppLifecycleState.paused) {
-      _autoRefreshTimer?.cancel();
-      _bannerTimer?.cancel();
-    }
-  }
-
-  void _startAutoRefreshTimer() {
-    _autoRefreshTimer?.cancel();
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      if (mounted) {
-        final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-        taskProvider.fetchAvailableTasks(silent: true);
-        taskProvider.fetchWalletData();
-      }
-    });
-  }
-
-  void _refreshFeed() {
-    if (!mounted) return;
-    final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-    taskProvider.fetchAvailableTasks();
-    taskProvider.fetchWalletData();
-  }
-
   String _detectCategory(dynamic task) {
-    if (task == null) return 'other';
+    if (task == null || task is! Map) return 'other';
 
-    final type = (task['taskType'] ?? task['task_type'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toUpperCase();
-    final serviceCode = (task['serviceCode'] ?? task['service_code'] ?? '').toString().toUpperCase();
-    final title = (task['title'] ?? task['serviceTitle'] ?? task['serviceName'] ?? '').toString().toLowerCase();
+    final req = (task['requirements'] is Map)
+        ? (task['requirements'] as Map)
+        : (task['requirement'] is Map ? (task['requirement'] as Map) : {});
+    final meta = (task['metadata'] is Map) ? (task['metadata'] as Map) : {};
 
-    Map<String, dynamic> req = {};
-    if (task['requirements'] is Map) {
-      req = Map<String, dynamic>.from(task['requirements'] as Map);
-    }
-    final reqServiceName = (req['serviceName'] ?? '').toString().toLowerCase();
-    final reqCategory = (req['category'] ?? '').toString().toLowerCase();
-    final reqPlatform = (req['platform'] ?? '').toString().toLowerCase();
-    final targetUrl = (req['targetUrl'] ?? req['url'] ?? '').toString().toLowerCase();
+    final type = (task['taskType'] ?? task['type'] ?? req['taskType'] ?? '').toString().toUpperCase().trim();
+    final serviceCode = (task['serviceCode'] ?? req['serviceCode'] ?? '').toString().toUpperCase().trim();
+    final title = (task['title'] ?? req['title'] ?? req['videoTitle'] ?? req['appName'] ?? meta['appName'] ?? req['serviceName'] ?? '').toString().toLowerCase().trim();
+    final targetUrl = (task['targetUrl'] ?? req['targetUrl'] ?? '').toString().toLowerCase().trim();
 
-    // 1. App Install (Highest Precedence - NEVER match with YouTube)
+    final reqPlatform = (req['platform'] ?? task['platform'] ?? '').toString().toLowerCase().trim();
+    final reqCategory = (req['category'] ?? task['category'] ?? '').toString().toLowerCase().trim();
+    final reqServiceName = (req['serviceName'] ?? '').toString().toLowerCase().trim();
+
+    // 1. App Installs have highest priority!
     if (type == 'APP_INSTALL' ||
         serviceCode.contains('APP_INSTALL') ||
         title.contains('install & open') ||
@@ -255,11 +277,12 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
         title.contains('install app') ||
         reqServiceName.contains('install & open') ||
         reqServiceName.contains('app install') ||
-        reqCategory.contains('app install')) {
+        reqCategory.contains('app install') ||
+        reqCategory.contains('install')) {
       return 'app_install';
     }
 
-    // 2. Google Maps / Local Reviews / Business - Checked before generic URL matches
+    // 2. Google Maps / Local Reviews / Business
     if (type.contains('GOOGLE_BUSINESS') ||
         serviceCode.contains('GOOGLE_BUSINESS') ||
         type.contains('GOOGLE_MAPS') ||
@@ -275,6 +298,9 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
         reqCategory.contains('google business') ||
         reqCategory.contains('google maps') ||
         reqCategory.contains('google') ||
+        reqPlatform == 'google' ||
+        reqPlatform == 'google_business' ||
+        reqPlatform == 'google_maps' ||
         targetUrl.contains('maps.google.com') ||
         targetUrl.contains('share.google') ||
         targetUrl.contains('maps.app.goo.gl') ||
@@ -293,13 +319,14 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
       return 'playstore';
     }
 
-    // 4. YouTube (Only if NOT an App Install!)
+    // 4. YouTube
     if (type.startsWith('YOUTUBE') ||
         serviceCode.startsWith('YOUTUBE') ||
         serviceCode.startsWith('YT_') ||
         title.contains('youtube') ||
         reqServiceName.contains('youtube') ||
         reqCategory.contains('youtube') ||
+        reqPlatform == 'youtube' ||
         targetUrl.contains('youtube.com') ||
         targetUrl.contains('youtu.be')) {
       return 'youtube';
@@ -312,15 +339,16 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
         title.contains('instagram') ||
         reqServiceName.contains('instagram') ||
         reqCategory.contains('instagram') ||
+        reqPlatform == 'instagram' ||
         targetUrl.contains('instagram.com')) {
       return 'instagram';
     }
 
     // Fallback: check raw platform tag safely
-    final rawPlatform = (task['platform'] ?? reqPlatform).toString().toLowerCase().trim();
+    final rawPlatform = reqPlatform.isNotEmpty ? reqPlatform : (task['platform'] ?? '').toString().toLowerCase().trim();
     if (rawPlatform == 'playstore') return 'playstore';
-    if (rawPlatform == 'youtube' && !title.contains('install') && type != 'APP_INSTALL') return 'youtube';
-    if (rawPlatform == 'instagram' && !title.contains('install') && type != 'APP_INSTALL') return 'instagram';
+    if (rawPlatform == 'youtube') return 'youtube';
+    if (rawPlatform == 'instagram') return 'instagram';
     if (rawPlatform == 'google' || rawPlatform == 'google_business' || rawPlatform == 'google_maps' || rawPlatform.contains('map')) return 'google_maps';
 
     return 'other';
@@ -332,7 +360,6 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     final cat = _detectCategory(task);
 
     if (filterKey == 'playstore') {
-      // Play Store category shows both App Installs and Play Store Reviews
       return cat == 'playstore' || cat == 'app_install';
     }
     if (filterKey == 'app_install') {
@@ -374,196 +401,284 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
         statusBarColor: Colors.transparent,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        body: RefreshIndicator(
-          color: const Color(0xFF00875A),
-          onRefresh: () async {
-            await taskProvider.fetchAvailableTasks();
-            await taskProvider.fetchWalletData();
-          },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── 1. Top Emerald Multi-Slide Hero Banner (Edge-to-edge) ────
-                _buildHeroBanner(context, walletBalance),
-                const SizedBox(height: 16),
-
-                // ── 2. Platform Filter Chips ─────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildPlatformChips(),
+        backgroundColor: const Color(0xFF01140C),
+        body: Stack(
+          children: [
+            // ── 1. Pristine Deep Rainforest Background (Clean, No Pre-baked Rain) ──
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/rainforest_pure_bg.jpg',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: const Color(0xFF01140C),
                 ),
-                const SizedBox(height: 18),
+              ),
+            ),
 
-                // ── 3. Section Header ("Available Tasks" + Refresh) ──────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Available Tasks',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFF0F172A),
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.1,
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () {
-                          taskProvider.fetchAvailableTasks();
-                          taskProvider.fetchWalletData();
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          child: Row(
-                            children: [
-                              Text(
-                                'Refresh',
-                                style: GoogleFonts.poppins(
-                                  color: const Color(0xFF00875A),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.refresh_rounded,
-                                size: 15,
-                                color: Color(0xFF00875A),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+            // ── 2. Deep Forest Emerald Mist Gradient Overlay ──
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      const Color(0xFF01140C).withValues(alpha: 0.62),
+                      const Color(0xFF022416).withValues(alpha: 0.42),
+                      const Color(0xFF01100A).withValues(alpha: 0.70),
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+              ),
+            ),
 
-                // ── 4. Task Feed Cards List (Real Backend Tasks Only) ────────
-                if (taskProvider.isLoading && tasksToDisplay.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(40.0),
-                    child: Center(
-                      child: CircularProgressIndicator(color: Color(0xFF00875A)),
+            // ── 3. Real Dynamic Animated Rain Simulation (60 FPS Physics Particles) ──
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _RealAnimatedRainPainter(
+                    animation: _rainController,
+                    drops: _rainDrops,
+                  ),
+                ),
+              ),
+            ),
+
+            // ── 4. Scrollable Feed Content ──
+            RefreshIndicator(
+              color: const Color(0xFF34D399),
+              onRefresh: () async {
+                await taskProvider.fetchAvailableTasks();
+                await taskProvider.fetchWalletData();
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── 1. Top Emerald Multi-Slide Hero Banner (Edge-to-edge) ────
+                    _buildHeroBanner(context, walletBalance),
+                    const SizedBox(height: 16),
+
+                    // ── 2. Platform Filter Chips ─────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildPlatformChips(),
                     ),
-                  )
-                else if (filteredTasks.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 36.0, horizontal: 24),
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 64,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE6F4EA),
-                                shape: BoxShape.circle,
+                    const SizedBox(height: 18),
+
+                    // ── 3. Section Header ("Available Tasks" + Refresh) ──────────
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              SvgPicture.asset(
+                                'assets/svg/icon_bullseye_target.svg',
+                                width: 26,
+                                height: 26,
                               ),
-                              child: const Icon(
-                                Icons.task_alt_rounded,
-                                size: 34,
-                                color: Color(0xFF00875A),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              _selectedPlatform == 'All Tasks'
-                                  ? 'No Tasks Available Right Now'
-                                  : 'No Tasks Found for ${_getSelectedCategoryLabel()}',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15.5,
-                                color: const Color(0xFF0F172A),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'New campaigns are added continuously by buyers. Pull down or tap Refresh below to check for new tasks.',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: const Color(0xFF64748B),
-                                height: 1.4,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF00875A),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              icon: const Icon(Icons.refresh_rounded, size: 16),
-                              label: Text(
-                                'Refresh Tasks',
+                              const SizedBox(width: 8),
+                              Text(
+                                'Available Tasks',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.2,
+                                  shadows: const [
+                                    Shadow(
+                                      color: Colors.black87,
+                                      offset: Offset(0, 2),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              onPressed: () {
-                                taskProvider.fetchAvailableTasks();
-                                taskProvider.fetchWalletData();
-                              },
+                            ],
+                          ),
+                          InkWell(
+                            onTap: () {
+                              _refreshSpinController.forward(from: 0.0);
+                              taskProvider.fetchAvailableTasks();
+                              taskProvider.fetchWalletData();
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [Color(0xFF04331C), Color(0xFF01140A)],
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: const Color(0xFF34D399),
+                                  width: 1.4,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black45,
+                                    blurRadius: 4,
+                                    offset: Offset(0, 1.5),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Refresh',
+                                    style: GoogleFonts.poppins(
+                                      color: const Color(0xFF34D399),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  RotationTransition(
+                                    turns: _refreshSpinController,
+                                    child: const Icon(
+                                      Icons.refresh_rounded,
+                                      size: 15,
+                                      color: Color(0xFF34D399),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredTasks.length,
-                      itemBuilder: (context, index) {
-                        final task = filteredTasks[index];
-                        return TaskFeedCard(
-                          task: task,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => TaskDetailPremiumScreen(task: task),
-                              ),
+                    const SizedBox(height: 12),
+
+                    // ── 4. Task Feed Cards List (Real Backend Tasks Only) ────────
+                    if (taskProvider.isLoading && tasksToDisplay.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: Center(
+                          child: CircularProgressIndicator(color: Color(0xFF34D399)),
+                        ),
+                      )
+                    else if (filteredTasks.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 36.0, horizontal: 24),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF022013).withValues(alpha: 0.88),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFF104A30).withValues(alpha: 0.8)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.35),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 64,
+                                  height: 64,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF043820),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: const Color(0xFF34D399).withValues(alpha: 0.5)),
+                                  ),
+                                  child: const Icon(
+                                    Icons.task_alt_rounded,
+                                    size: 34,
+                                    color: Color(0xFF34D399),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Text(
+                                  _selectedPlatform == 'All Tasks'
+                                      ? 'No Tasks Available Right Now'
+                                      : 'No Tasks Found for ${_getSelectedCategoryLabel()}',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15.5,
+                                    color: Colors.white,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'New campaigns are added continuously by buyers. Pull down or tap Refresh below to check for new tasks.',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: const Color(0xFF94A3B8),
+                                    height: 1.4,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF00875A),
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                                  label: Text(
+                                    'Refresh Tasks',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    taskProvider.fetchAvailableTasks();
+                                    taskProvider.fetchWalletData();
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: filteredTasks.length,
+                          itemBuilder: (context, index) {
+                            final task = filteredTasks[index];
+                            return TaskFeedCard(
+                              task: task,
+                              index: index,
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => TaskDetailPremiumScreen(task: task),
+                                  ),
+                                );
+                              },
                             );
                           },
-                        );
-                      },
-                    ),
-                  ),
-                const SizedBox(height: 36),
-              ],
+                        ),
+                      ),
+                    const SizedBox(height: 36),
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -575,24 +690,35 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
 
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF011F11),
-            Color(0xFF03351C),
-            Color(0xFF044827),
-            Color(0xFF022714),
+            Color(0xFF011A0E),
+            Color(0xFF032F1A),
+            Color(0xFF043F24),
+            Color(0xFF021B0F),
           ],
         ),
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(32),
           bottomRight: Radius.circular(32),
         ),
+        border: const Border(
+          bottom: BorderSide(
+            color: Color(0xFF22C55E),
+            width: 2.2,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Color(0x3300875A),
+            color: const Color(0xFF22C55E).withValues(alpha: 0.35),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+          const BoxShadow(
+            color: Colors.black87,
             blurRadius: 16,
             offset: Offset(0, 8),
           ),
@@ -608,7 +734,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
           ),
 
           Padding(
-            padding: EdgeInsets.fromLTRB(18, topPadding + 10, 18, 14),
+            padding: EdgeInsets.fromLTRB(16, topPadding + 8, 16, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -616,36 +742,61 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Brand Title: Task Feed
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Task ',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 23,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.2,
+                    // Brand Title: 3D Carved Wooden Signboard "Task Feed"
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/svg/header_task_feed_title.svg',
+                          height: 44,
+                          width: 145,
+                          fit: BoxFit.fill,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 2),
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Task ',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 18.5,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.3,
+                                    shadows: const [
+                                      Shadow(color: Color(0xFF260D02), offset: Offset(1.5, 1.5), blurRadius: 0),
+                                      Shadow(color: Color(0xFF260D02), offset: Offset(-1, -1), blurRadius: 0),
+                                      Shadow(color: Colors.black87, offset: Offset(0, 2), blurRadius: 3),
+                                    ],
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: 'Feed',
+                                  style: GoogleFonts.poppins(
+                                    color: const Color(0xFF4ADE80),
+                                    fontSize: 18.5,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.3,
+                                    shadows: const [
+                                      Shadow(color: Color(0xFF073310), offset: Offset(1.5, 1.5), blurRadius: 0),
+                                      Shadow(color: Color(0xFF073310), offset: Offset(-1, -1), blurRadius: 0),
+                                      Shadow(color: Colors.black87, offset: Offset(0, 2), blurRadius: 3),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          TextSpan(
-                            text: 'Feed',
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFF22C55E),
-                              fontSize: 23,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
 
-                    // Right Icons: Chat Support + Notification Bell + Wallet Pill
+                    // Right Icons: Support Chat + 3D Avatar + Notification Bell + 3D Wallet Pill
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Chat Support Icon (1-on-1 Admin Support) with rotating light beam, vibration shake & unread badge
+                        // Chat Support Icon (1-on-1 Admin Support) with rotating light beam & unread badge
                         InkWell(
                           onTap: () async {
                             setState(() => _supportUnreadCount = 0);
@@ -657,26 +808,25 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                             );
                             _loadSupportUnreadCount();
                           },
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius: BorderRadius.circular(20),
                           child: AnimatedBuilder(
                             animation: Listenable.merge([_lightRotateController, _shakeAnimation]),
                             builder: (context, _) {
                               final bool hasUnread = _supportUnreadCount > 0;
 
                               return SizedBox(
-                                width: 38,
-                                height: 38,
+                                width: 34,
+                                height: 34,
                                 child: Stack(
                                   clipBehavior: Clip.none,
                                   alignment: Alignment.center,
                                   children: [
-                                    // Rotating radiant neon light beam around the circular icon (spins when unread > 0)
                                     if (hasUnread)
                                       Transform.rotate(
                                         angle: _lightRotateController.value * 2 * 3.141592653589793,
                                         child: Container(
-                                          width: 44,
-                                          height: 44,
+                                          width: 38,
+                                          height: 38,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
                                             gradient: const SweepGradient(
@@ -693,66 +843,64 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                                             boxShadow: [
                                               BoxShadow(
                                                 color: const Color(0xFF00E5FF).withValues(alpha: 0.55),
-                                                blurRadius: 10,
-                                                spreadRadius: 1.5,
+                                                blurRadius: 8,
                                               ),
                                             ],
                                           ),
                                         ),
                                       ),
-
-                                    // White circular support icon with shake wobble transform
                                     Transform.rotate(
                                       angle: _shakeAnimation.value,
                                       child: Container(
-                                        width: 38,
-                                        height: 38,
+                                        width: 36,
+                                        height: 36,
                                         decoration: BoxDecoration(
-                                          color: Colors.white,
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [Color(0xFF0D9488), Color(0xFF044E3B)],
+                                          ),
                                           shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: const Color(0xFF2DD4BF),
+                                            width: 1.6,
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
                                               color: hasUnread
-                                                  ? const Color(0xFF00E5FF).withValues(alpha: 0.4)
-                                                  : Colors.black.withValues(alpha: 0.1),
-                                              blurRadius: hasUnread ? 8 : 6,
+                                                  ? const Color(0xFF00E5FF).withValues(alpha: 0.6)
+                                                  : const Color(0xFF0D9488).withValues(alpha: 0.35),
+                                              blurRadius: 8,
                                             ),
                                           ],
                                         ),
-                                        padding: const EdgeInsets.all(5.5),
-                                        child: Image.asset(
-                                          'assets/images/support_agent_icon.png',
-                                          fit: BoxFit.contain,
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.headset_mic_rounded,
+                                            color: Colors.white,
+                                            size: 19,
+                                          ),
                                         ),
                                       ),
                                     ),
-
-                                    // Dynamic Unread Message Badge
                                     if (hasUnread)
                                       Positioned(
                                         top: -3,
                                         right: -3,
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                          constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFEF4444),
                                             shape: BoxShape.circle,
                                             border: Border.all(color: Colors.white, width: 1.5),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: const Color(0xFFEF4444).withValues(alpha: 0.6),
-                                                blurRadius: 5,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
                                           ),
                                           alignment: Alignment.center,
                                           child: Text(
                                             _supportUnreadCount > 99 ? '99+' : '$_supportUnreadCount',
                                             style: GoogleFonts.poppins(
                                               color: Colors.white,
-                                              fontSize: 8.5,
+                                              fontSize: 8,
                                               fontWeight: FontWeight.w800,
                                               height: 1.0,
                                             ),
@@ -777,45 +925,41 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                             );
                             _loadUnreadNotifCount();
                           },
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(18),
                           child: Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              Container(
-                                width: 38,
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.1),
-                                      blurRadius: 6,
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.notifications_none_rounded,
-                                  color: Color(0xFF1E293B),
-                                  size: 20,
-                                ),
+                              SvgPicture.asset(
+                                'assets/svg/icon_notif_bell.svg',
+                                width: 36,
+                                height: 36,
                               ),
                               if (_unreadNotifCount > 0)
                                 Positioned(
                                   top: -2,
                                   right: -2,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFEF4444),
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444),
                                       shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 1.5),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFFEF4444).withValues(alpha: 0.6),
+                                          blurRadius: 4,
+                                        ),
+                                      ],
                                     ),
+                                    alignment: Alignment.center,
                                     child: Text(
                                       _unreadNotifCount > 9 ? '9+' : '$_unreadNotifCount',
                                       style: GoogleFonts.poppins(
                                         color: Colors.white,
-                                        fontSize: 8.5,
+                                        fontSize: 8,
                                         fontWeight: FontWeight.bold,
+                                        height: 1.0,
                                       ),
                                     ),
                                   ),
@@ -825,23 +969,33 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                         ),
                         const SizedBox(width: 8),
 
-                        // Wallet Pill Container
+                        // 3D Glossy Emerald Wallet Pill Container
                         InkWell(
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => const WalletScreen()),
                             );
                           },
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius: BorderRadius.circular(18),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5.5),
+                            height: 36,
+                            padding: const EdgeInsets.symmetric(horizontal: 9),
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(22),
+                              gradient: const LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Color(0xFF045A30), Color(0xFF023219)],
+                              ),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: const Color(0xFF22C55E),
+                                width: 1.6,
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.08),
-                                  blurRadius: 6,
+                                  color: const Color(0xFF22C55E).withValues(alpha: 0.4),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
@@ -849,32 +1003,32 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
-                                  width: 22,
-                                  height: 22,
+                                  width: 19,
+                                  height: 19,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFE6F4EA),
-                                    borderRadius: BorderRadius.circular(6),
+                                    color: const Color(0xFF22C55E),
+                                    borderRadius: BorderRadius.circular(5.5),
                                   ),
                                   child: const Icon(
                                     Icons.account_balance_wallet_rounded,
-                                    color: Color(0xFF00875A),
-                                    size: 13,
+                                    color: Colors.white,
+                                    size: 12,
                                   ),
                                 ),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 5),
                                 Text(
                                   '₹${walletBalance.toStringAsFixed(0)}',
                                   style: GoogleFonts.poppins(
-                                    color: const Color(0xFF0F172A),
-                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
                                     fontSize: 13,
                                   ),
                                 ),
-                                const SizedBox(width: 3),
+                                const SizedBox(width: 2),
                                 const Icon(
                                   Icons.chevron_right_rounded,
-                                  color: Color(0xFF94A3B8),
-                                  size: 16,
+                                  color: Color(0xFF86EFAC),
+                                  size: 15,
                                 ),
                               ],
                             ),
@@ -886,7 +1040,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                 ),
                 const SizedBox(height: 16),
 
-                // ── Hero Banner Carousel (Swipeable & Auto-play) ─────────────
+                // Hero Banner Carousel (Swipeable & Auto-play)
                 SizedBox(
                   height: 155,
                   child: PageView(
@@ -897,40 +1051,49 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                       });
                     },
                     children: [
-                      // Slide 1: Complete Tasks & Earn Rewards (Treasure Box + Platform Badges)
+                      // Slide 1: Jungle Treasure Hero Board (Explorer Boy & Chest)
                       _buildSlideOne(context),
 
-                      // Slide 2: Daily Streak Bonus Multiplier (Coin Bar + Fire & Streak)
+                      // Slide 2: Daily Streak Bonus Multiplier (Red Panda Explorer)
                       _buildSlideTwo(context),
 
-                      // Slide 3: Instant Withdrawal Payouts (Bank/UPI/PayPal)
-                      _buildSlideThree(context),
-
-                      // Slide 4: High Quality Score & VIP Campaigns
+                      // Slide 3: High Quality Score & VIP Campaigns
                       _buildSlideFour(context),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
 
-                // ── Carousel Active Indicator Dots ───────────────────────────
+                // Carousel Active Indicator Dots
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(_totalBannerSlides, (index) {
-                    final isActive = _currentBannerIndex == index;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                      width: isActive ? 18 : 5,
-                      height: 4.5,
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? Colors.white
-                            : Colors.white.withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    );
-                  }),
+                  children: List.generate(
+                    _totalBannerSlides,
+                    (index) {
+                      final isActive = _currentBannerIndex == index;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: isActive ? 22 : 6,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? const Color(0xFF22C55E)
+                              : Colors.white.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(3),
+                          boxShadow: isActive
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(0xFF22C55E).withValues(alpha: 0.8),
+                                    blurRadius: 8,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 const SizedBox(height: 4),
               ],
@@ -941,688 +1104,544 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     );
   }
 
-  // ── Slide 1: Complete Tasks & Earn Rewards ─────────────────────────────────
+  // ── Slide 1: Complete Tasks & Earn Rewards (Jungle Treasure Chest) ─────────
   Widget _buildSlideOne(BuildContext context) {
-    return Stack(
-      children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.54,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Complete Tasks',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  'Earn Daily Rewards',
-                  style: GoogleFonts.poppins(
-                    color: const Color(0xFF4ADE80),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Complete social tasks & earn instant cash',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 9.5,
-                    height: 1.2,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Start Earning',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFF03351C),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 10.5,
-                        ),
-                      ),
-                      const SizedBox(width: 3),
-                      const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: Color(0xFF03351C),
-                        size: 12,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    final screenW = MediaQuery.of(context).size.width;
+    final signW = (screenW * 0.44).clamp(150.0, 180.0);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. High Resolution 3D Jungle Treasure Hero Background
+          // Explorer boy and open glowing chest are positioned prominently on the RIGHT half
+          Image.asset(
+            'assets/images/jungle_treasure_hero_bg.jpg',
+            fit: BoxFit.cover,
+            alignment: Alignment.centerRight,
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: const Color(0xFF03351C),
             ),
           ),
-        ),
-        Positioned(
-          right: -10,
-          top: 0,
-          bottom: 0,
-          width: MediaQuery.of(context).size.width * 0.46,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Center(
-                child: SizedBox(
-                  width: 130,
-                  height: 130,
-                  child: Lottie.asset(
-                    'assets/animations/treasure_box.json',
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 54);
-                    },
-                  ),
-                ),
+
+          // 2. Soft darkening vignette ONLY behind the wooden sign on the left
+          // This keeps the explorer boy and open treasure chest completely bright and visible!
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Colors.black.withValues(alpha: 0.78),
+                  Colors.black.withValues(alpha: 0.40),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.40, 0.55],
               ),
-              Positioned(
-                top: 2,
-                left: 30,
-                child: _buildFloatingBadge(
-                  child: const PlatformLogo(platform: 'youtube', size: 28),
-                ),
-              ),
-              Positioned(
-                top: 14,
-                right: 12,
-                child: _buildFloatingBadge(
-                  child: const PlatformLogo(platform: 'instagram', size: 28),
-                ),
-              ),
-              Positioned(
-                top: 50,
-                left: 4,
-                child: _buildFloatingBadge(
-                  child: const PlatformLogo(platform: 'google', size: 26),
-                ),
-              ),
-              Positioned(
-                bottom: 12,
-                left: 20,
-                child: _buildFloatingBadge(
-                  child: const PlatformLogo(platform: 'facebook', size: 28),
-                ),
-              ),
-              Positioned(
-                bottom: 18,
-                right: 8,
-                child: _buildFloatingBadge(
-                  child: const PlatformLogo(platform: 'x', size: 26),
-                ),
-              ),
-              Positioned(top: 18, left: 0, child: _buildGoldenCoin(14)),
-              Positioned(top: 4, right: 48, child: _buildGoldenCoin(10)),
-              Positioned(bottom: 30, left: 56, child: _buildGoldenCoin(12)),
-              Positioned(bottom: 6, right: 40, child: _buildGoldenCoin(14)),
-            ],
+            ),
           ),
-        ),
-      ],
+
+          // 3. Left Side: Compact Wooden Signboard Overlay
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 6, top: 6, bottom: 6),
+              child: SizedBox(
+                width: signW,
+                child: Stack(
+                  children: [
+                    // Wooden signboard background frame
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: 0.96,
+                        child: SvgPicture.asset(
+                          'assets/svg/banner_wood_signboard.svg',
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                    ),
+
+                    // Signboard Content
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          // ⚡ Instant Payouts Badge
+                          SvgPicture.asset(
+                            'assets/svg/badge_instant_payouts.svg',
+                            height: 18,
+                          ),
+
+                          // Direct to Bank / UPI
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Direct to',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.1,
+                                  shadows: const [
+                                    Shadow(color: Colors.black87, offset: Offset(0, 1.5), blurRadius: 3),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                'Bank / UPI',
+                                style: GoogleFonts.poppins(
+                                  color: const Color(0xFFFDE047),
+                                  fontSize: 15.0,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.1,
+                                  shadows: const [
+                                    Shadow(color: Colors.black87, offset: Offset(0, 1.5), blurRadius: 3),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          // Subtitle
+                          Text(
+                            'Instant withdraw to UPI, Bank & PayPal',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white.withValues(alpha: 0.90),
+                              fontSize: 8.0,
+                              fontWeight: FontWeight.w500,
+                              height: 1.15,
+                            ),
+                            maxLines: 2,
+                          ),
+
+                          // 3D Emerald "Open Wallet ->" Button
+                          InkWell(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const WalletScreen()),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: SvgPicture.asset(
+                              'assets/svg/btn_open_wallet_emerald.svg',
+                              height: 27,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 4. Subtle Floating Rupee Coin animations near the open treasure chest (bottom right)
+          Positioned(
+            right: 28,
+            bottom: 12,
+            child: AnimatedBuilder(
+              animation: _floatingCoinAnimation,
+              builder: (context, child) => Transform.translate(
+                offset: Offset(0, -_floatingCoinAnimation.value * 3),
+                child: child,
+              ),
+              child: _buildGoldenCoin(13),
+            ),
+          ),
+
+          Positioned(
+            right: 90,
+            bottom: 18,
+            child: AnimatedBuilder(
+              animation: _floatingCoinAnimation,
+              builder: (context, child) => Transform.translate(
+                offset: Offset(0, _floatingCoinAnimation.value * 4),
+                child: child,
+              ),
+              child: _buildGoldenCoin(11),
+            ),
+          ),
+
+          // Top right subtle verified shield
+          Positioned(
+            right: 8,
+            top: 8,
+            child: SvgPicture.asset(
+              'assets/svg/badge_shield_verified.svg',
+              width: 26,
+              height: 28,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   // ── Slide 2: Daily Streak Bonus Multiplier ─────────────────────────────────
   Widget _buildSlideTwo(BuildContext context) {
-    return Stack(
-      children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.54,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Daily Streak',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  'Up to 2X Bonus',
-                  style: GoogleFonts.poppins(
-                    color: const Color(0xFFFBBF24),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  '7-day active streak unlocks cash multiplier',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 9.5,
-                    height: 1.2,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const DayStreakScreen()),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF2A1002), Color(0xFF180800), Color(0xFF0D0300)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFFF59E0B).withValues(alpha: 0.55),
+            width: 1.5,
+          ),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 14),
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.48,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Daily Streak',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'View Streak',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 10.5,
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'Up to 2X Bonus',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFFFBBF24),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          height: 1.15,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '7-day active streak unlocks cash multiplier',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 9.5,
+                          height: 1.2,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const DayStreakScreen()),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'View Streak',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 10.5,
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              const Icon(
+                                Icons.arrow_forward_rounded,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 3),
-                        const Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white,
-                          size: 12,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-        Positioned(
-          right: -10,
-          top: 0,
-          bottom: 0,
-          width: MediaQuery.of(context).size.width * 0.46,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Center(
-                child: Container(
-                  width: 82,
-                  height: 82,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const RadialGradient(
-                      colors: [
-                        Color(0xFFFBBF24),
-                        Color(0xFFEA580C),
-                        Color(0xFF9A3412),
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFEA580C).withValues(alpha: 0.5),
-                        blurRadius: 20,
-                        spreadRadius: 3,
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.local_fire_department_rounded,
-                      color: Colors.white,
-                      size: 46,
+            Positioned(
+              right: 6,
+              top: 6,
+              bottom: 6,
+              width: MediaQuery.of(context).size.width * 0.44,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // 3D Cartoon Companion: Red Panda Explorer raising flaming streak torches
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.asset(
+                      'assets/images/streak_cartoon_companion.jpg',
+                      fit: BoxFit.cover,
+                      alignment: Alignment.center,
+                      errorBuilder: (context, error, stackTrace) => const SizedBox(),
                     ),
                   ),
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 20,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEA580C),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFEA580C).withValues(alpha: 0.4),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 18),
-                ),
-              ),
-              Positioned(
-                bottom: 16,
-                left: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFF59E0B)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFBBF24), size: 12),
-                      const SizedBox(width: 4),
-                      Text(
-                        '7-DAY STREAK',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFFFDE68A),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 9.5,
+                  // Floating Fire Multiplier badge
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFF97316), Color(0xFFDC2626)],
                         ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFEA580C).withValues(alpha: 0.5),
+                            blurRadius: 8,
+                          ),
+                        ],
                       ),
-                    ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 13),
+                          const SizedBox(width: 2),
+                          Text(
+                            '2X BONUS',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  // Floating 7-day streak pill at bottom
+                  Positioned(
+                    bottom: 4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.70),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFF59E0B), width: 1.2),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.bolt_rounded, color: Color(0xFFFBBF24), size: 12),
+                          const SizedBox(width: 3),
+                          Text(
+                            '7-DAY STREAK',
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFFFDE68A),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 8.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Positioned(top: 14, left: 10, child: _buildGoldenCoin(14)),
-              Positioned(bottom: 24, right: 14, child: _buildGoldenCoin(12)),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  // ── Slide 3: Instant Withdrawal Payouts ────────────────────────────────────
-  Widget _buildSlideThree(BuildContext context) {
-    return Stack(
-      children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.54,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Instant Payouts',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  'Direct to Bank / UPI',
-                  style: GoogleFonts.poppins(
-                    color: const Color(0xFF38BDF8),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Withdraw earnings to UPI, Bank & PayPal',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 9.5,
-                    height: 1.2,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const WalletScreen()),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0284C7),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0284C7).withValues(alpha: 0.3),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Open Wallet',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 10.5,
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-                        const Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white,
-                          size: 12,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          right: -10,
-          top: 0,
-          bottom: 0,
-          width: MediaQuery.of(context).size.width * 0.46,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Center(
-                child: SizedBox(
-                  width: 120,
-                  height: 120,
-                  child: Lottie.asset(
-                    'assets/animations/treasure_box.json',
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF38BDF8), size: 54);
-                    },
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 10,
-                right: 18,
-                child: Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF059669),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF059669).withValues(alpha: 0.4),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.verified_user_rounded, color: Colors.white, size: 18),
-                ),
-              ),
-              Positioned(
-                bottom: 12,
-                left: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.65),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF38BDF8)),
-                  ),
-                  child: Text(
-                    'UPI • Bank • PayPal',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 9.5,
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(top: 20, left: 14, child: _buildGoldenCoin(13)),
-              Positioned(bottom: 26, right: 18, child: _buildGoldenCoin(11)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 
   // ── Slide 4: High Quality Score & VIP Campaigns ────────────────────────────
   Widget _buildSlideFour(BuildContext context) {
-    return Stack(
-      children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.54,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Quality Score',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  'VIP Tasks Access',
-                  style: GoogleFonts.poppins(
-                    color: const Color(0xFFC084FC),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'High accuracy score unlocks premium tasks',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontSize: 9.5,
-                    height: 1.2,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const QualityScoreScreen()),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF9333EA),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF9333EA).withValues(alpha: 0.3),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Check Score',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 10.5,
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-                        const Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white,
-                          size: 12,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF22083D), Color(0xFF130324), Color(0xFF090014)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFFC084FC).withValues(alpha: 0.55),
+            width: 1.5,
           ),
         ),
-        Positioned(
-          right: -10,
-          top: 0,
-          bottom: 0,
-          width: MediaQuery.of(context).size.width * 0.46,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Center(
-                child: Container(
-                  width: 82,
-                  height: 82,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const RadialGradient(
-                      colors: [
-                        Color(0xFFD8B4FE),
-                        Color(0xFF9333EA),
-                        Color(0xFF581C87),
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF9333EA).withValues(alpha: 0.5),
-                        blurRadius: 20,
-                        spreadRadius: 3,
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.workspace_premium_rounded,
-                      color: Colors.white,
-                      size: 46,
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 6,
-                right: 22,
-                child: Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
-                        blurRadius: 8,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.star_rounded, color: Colors.white, size: 18),
-                ),
-              ),
-              Positioned(
-                bottom: 14,
-                left: 16,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.65),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFC084FC)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+        child: Stack(
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 14),
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.48,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.verified_rounded, color: Color(0xFFD8B4FE), size: 12),
-                      const SizedBox(width: 4),
-                      Consumer<ProfileProvider>(
-                        builder: (context, prof, _) {
-                          final score = prof.liveQualityScore;
-                          final text = score > 0
-                              ? '${score.toStringAsFixed(0)}% QUALITY SCORE'
-                              : 'QUALITY SCORE';
-                          return Text(
-                            text,
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFFE9D5FF),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 9.0,
-                            ),
+                      Text(
+                        'Quality Score',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'VIP Tasks Access',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFFC084FC),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          height: 1.15,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'High accuracy score unlocks premium tasks',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 9.5,
+                          height: 1.2,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const QualityScoreScreen()),
                           );
                         },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF9333EA),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF9333EA).withValues(alpha: 0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Check Score',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 10.5,
+                                ),
+                              ),
+                              const SizedBox(width: 3),
+                              const Icon(
+                                Icons.arrow_forward_rounded,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              Positioned(top: 22, left: 16, child: _buildGoldenCoin(12)),
-              Positioned(bottom: 28, right: 12, child: _buildGoldenCoin(13)),
-            ],
-          ),
+            ),
+            Positioned(
+              right: 6,
+              top: 6,
+              bottom: 6,
+              width: MediaQuery.of(context).size.width * 0.44,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // 3D Lottie Treasure Box Animation
+                  Lottie.asset(
+                    'assets/animations/treasure_box.json',
+                    width: 95,
+                    height: 95,
+                    fit: BoxFit.contain,
+                  ),
+                  // Floating Quality Score / VIP Access badge
+                  Positioned(
+                    bottom: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.70),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFC084FC), width: 1.2),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.workspace_premium_rounded, color: Color(0xFFD8B4FE), size: 13),
+                          const SizedBox(width: 4),
+                          Consumer<ProfileProvider>(
+                            builder: (context, prof, _) {
+                              final score = prof.liveQualityScore;
+                              final text = score > 0
+                                  ? '${score.toStringAsFixed(0)}% VIP SCORE'
+                                  : 'VIP ACCESS';
+                              return Text(
+                                text,
+                                style: GoogleFonts.poppins(
+                                  color: const Color(0xFFE9D5FF),
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 9.0,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildFloatingBadge({required Widget child}) {
-    return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
 
   Widget _buildGoldenCoin(double size) {
     return Container(
@@ -1694,61 +1713,88 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
           final isSelected = _selectedPlatform == c['key'];
 
           return Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 10),
             child: InkWell(
               onTap: () {
                 setState(() {
                   _selectedPlatform = c['key'] as String;
                 });
               },
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF00875A) : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  gradient: isSelected
+                      ? const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFF22C55E),
+                            Color(0xFF16A34A),
+                            Color(0xFF14532D),
+                          ],
+                        )
+                      : const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFFFFFFF),
+                            Color(0xFFF8FAFC),
+                            Color(0xFFE2E8F0),
+                          ],
+                        ),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected
-                        ? const Color(0xFF00875A)
-                        : const Color(0xFFE2E8F0),
-                    width: 1,
+                    color: isSelected ? const Color(0xFF86EFAC) : const Color(0xFFCBD5E1),
+                    width: isSelected ? 1.8 : 1.4,
                   ),
                   boxShadow: [
-                    if (!isSelected)
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.02),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
+                    BoxShadow(
+                      color: isSelected
+                          ? const Color(0xFF22C55E).withValues(alpha: 0.5)
+                          : Colors.black.withValues(alpha: 0.2),
+                      blurRadius: isSelected ? 10 : 5,
+                      offset: const Offset(0, 2.5),
+                    ),
                   ],
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     if (c['asset'] != null)
                       Image.asset(
                         c['asset'] as String,
-                        width: 17,
-                        height: 17,
+                        width: 19,
+                        height: 19,
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) =>
-                            Icon(Icons.apps_rounded, size: 16, color: isSelected ? Colors.white : const Color(0xFF00875A)),
+                            Icon(Icons.apps_rounded, size: 18, color: isSelected ? Colors.white : const Color(0xFF1E293B)),
                       )
                     else if (c['icon'] != null)
                       Icon(
                         c['icon'] as IconData,
-                        size: 16,
-                        color: isSelected ? Colors.white : const Color(0xFF00875A),
+                        size: 18,
+                        color: isSelected ? Colors.white : const Color(0xFF1E293B),
                       )
                     else if (c['logo'] != null)
-                      PlatformLogo(platform: c['logo'] as String, size: 17),
-                    const SizedBox(width: 7),
+                      PlatformLogo(platform: c['logo'] as String, size: 19),
+                    const SizedBox(width: 8),
                     Text(
                       c['label'] as String,
                       style: GoogleFonts.poppins(
-                        color: isSelected ? Colors.white : const Color(0xFF334155),
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                        fontSize: 12.5,
+                        color: isSelected ? Colors.white : const Color(0xFF0F172A),
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                        fontSize: 13,
+                        shadows: isSelected
+                            ? const [
+                                Shadow(
+                                  color: Colors.black45,
+                                  offset: Offset(0, 1),
+                                  blurRadius: 2,
+                                ),
+                              ]
+                            : null,
                       ),
                     ),
                   ],
@@ -1799,4 +1845,93 @@ class _SparkleBackgroundPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Data model for individual raindrops in the tropical forest particle system
+class _RainDropData {
+  final double x;
+  final double y;
+  final double speed;
+  final double length;
+  final double thickness;
+  final double alpha;
+  final bool hasSplash;
+
+  const _RainDropData({
+    required this.x,
+    required this.y,
+    required this.speed,
+    required this.length,
+    required this.thickness,
+    required this.alpha,
+    required this.hasSplash,
+  });
+}
+
+/// Custom painter for real dynamic continuous falling tropical forest rain
+class _RealAnimatedRainPainter extends CustomPainter {
+  final Animation<double> animation;
+  final List<_RainDropData> drops;
+
+  _RealAnimatedRainPainter({required this.animation, required this.drops})
+      : super(repaint: animation);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
+
+    final progress = animation.value;
+    const windSlantX = -3.5;
+
+    // Atmospheric forest mist glow
+    final mistGlow = Paint()
+      ..color = const Color(0xFF10B981).withValues(alpha: 0.04)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 50);
+
+    canvas.drawCircle(Offset(size.width * 0.25, size.height * 0.35), 90, mistGlow);
+    canvas.drawCircle(Offset(size.width * 0.80, size.height * 0.65), 110, mistGlow);
+
+    for (int i = 0; i < drops.length; i++) {
+      final drop = drops[i];
+
+      // Seamless continuous cyclic vertical position
+      final currentYFraction = (drop.y + (progress * drop.speed)) % 1.0;
+      final startY = currentYFraction * size.height;
+      // Cyclic horizontal position with wind slant
+      final startX = (drop.x * size.width + (currentYFraction * windSlantX * 3)) % size.width;
+      final endX = startX + windSlantX;
+      final endY = startY + drop.length;
+
+      final paint = Paint()
+        ..color = Color.fromRGBO(220, 245, 255, drop.alpha)
+        ..strokeWidth = drop.thickness
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawLine(Offset(startX, startY), Offset(endX, endY), paint);
+
+      // Splash ripples at bottom when raindrops hit the floor/canopy
+      if (drop.hasSplash && currentYFraction > 0.90) {
+        final splashProgress = (currentYFraction - 0.90) / 0.10;
+        final splashOpacity = (1.0 - splashProgress) * 0.25;
+        final splashPaint = Paint()
+          ..color = Color.fromRGBO(180, 235, 255, splashOpacity)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.9;
+
+        final splashW = splashProgress * 10.0;
+        final splashH = splashProgress * 3.5;
+        canvas.drawOval(
+          Rect.fromCenter(
+            center: Offset(startX, size.height - 12 + (i % 8)),
+            width: splashW,
+            height: splashH,
+          ),
+          splashPaint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RealAnimatedRainPainter oldDelegate) => true;
 }

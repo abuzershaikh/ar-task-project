@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 380" width="100%" height="100%">
+  <defs>
+
+    <linearGradient id="woodGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#A25725"/>
+      <stop offset="25%" stop-color="#BA6C32"/>
+      <stop offset="70%" stop-color="#803D14"/>
+      <stop offset="100%" stop-color="#542407"/>
+    </linearGradient>
+
+    <linearGradient id="woodEdgeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6E3511"/>
+      <stop offset="100%" stop-color="#3B1703"/>
+    </linearGradient>
+
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9FE834"/>
+      <stop offset="50%" stop-color="#55B315"/>
+      <stop offset="100%" stop-color="#1E6603"/>
+    </linearGradient>
+
+    <linearGradient id="crownGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF275"/>
+      <stop offset="40%" stop-color="#FFB300"/>
+      <stop offset="100%" stop-color="#CC6600"/>
+    </linearGradient>
+
+    <linearGradient id="ytBaseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F2D1A1"/>
+      <stop offset="100%" stop-color="#C29662"/>
+    </linearGradient>
+    
+    <linearGradient id="ytRedGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FF3838"/>
+      <stop offset="50%" stop-color="#E60000"/>
+      <stop offset="100%" stop-color="#990000"/>
+    </linearGradient>
+
+    <linearGradient id="startBtnGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3DF577"/>
+      <stop offset="35%" stop-color="#00D04E"/>
+      <stop offset="85%" stop-color="#009432"/>
+      <stop offset="100%" stop-color="#006622"/>
+    </linearGradient>
+
+    <linearGradient id="coinPillGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#693005"/>
+      <stop offset="100%" stop-color="#3D1801"/>
+    </linearGradient>
+    
+    <linearGradient id="coinGoldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF066"/>
+      <stop offset="50%" stop-color="#FFB800"/>
+      <stop offset="100%" stop-color="#D97700"/>
+    </linearGradient>
+
+    <linearGradient id="easyTagGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#148F32"/>
+      <stop offset="100%" stop-color="#084E18"/>
+    </linearGradient>
+    
+    <linearGradient id="timeTagGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0D7C8F"/>
+      <stop offset="100%" stop-color="#063E48"/>
+    </linearGradient>
+
+    <linearGradient id="instaGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFDC80"/>
+      <stop offset="30%" stop-color="#F77737"/>
+      <stop offset="60%" stop-color="#F56040"/>
+      <stop offset="80%" stop-color="#FD1D1D"/>
+      <stop offset="100%" stop-color="#C13584"/>
+    </linearGradient>
+
+    <linearGradient id="telegramGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#29B6F6"/>
+      <stop offset="50%" stop-color="#0288D1"/>
+      <stop offset="100%" stop-color="#01579B"/>
+    </linearGradient>
+
+    <linearGradient id="mapsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#34A853"/>
+      <stop offset="50%" stop-color="#0F9D58"/>
+      <stop offset="100%" stop-color="#0B6036"/>
+    </linearGradient>
+
+    <linearGradient id="xGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2C2C2E"/>
+      <stop offset="50%" stop-color="#1C1C1E"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+
+    <linearGradient id="playGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2D3748"/>
+      <stop offset="100%" stop-color="#1A202C"/>
+    </linearGradient>
+
+  </defs>
+  
+  <!-- JUNGLE LEAVES AROUND TILE (Shadow) -->
+  <g id="leaves-shadow" opacity="0.35" transform="translate(0, 6)">
+    <path d="M175 280 C195 270, 240 290, 235 320 C210 340, 175 310, 175 280 Z" fill="#000000"/>
+    <path d="M195 310 C220 310, 255 340, 230 370 C200 370, 185 340, 195 310 Z" fill="#000000"/>
+    <path d="M50 295 C65 330, 60 370, 25 370 C5 350, 20 310, 50 295 Z" fill="#000000"/>
+  </g>
+
+  <!-- JUNGLE LEAVES -->
+  <g id="leaves">
+    <path d="M175 280 C195 270, 240 290, 235 320 C210 340, 175 310, 175 280 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M195 310 C220 310, 255 340, 230 370 C200 370, 185 340, 195 310 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M50 295 C65 330, 60 370, 25 370 C5 350, 20 310, 50 295 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+  </g>
+
+  <!-- CARVED STONE/TIMBER BLOCK SHADOW -->
+  <rect x="30" y="118" width="220" height="210" rx="42" fill="#000000" opacity="0.35"/>
+
+  <!-- CARVED STONE/TIMBER BLOCK BASE -->
+  <g id="tile-base">
+    <rect x="30" y="110" width="220" height="210" rx="42" fill="url(#ytBaseGrad)" stroke="#5E3F21" stroke-width="7"/>
+    <path d="M32 180 L248 180" stroke="#69431D" stroke-width="4"/>
+    <path d="M32 250 L248 250" stroke="#69431D" stroke-width="4"/>
+    <path d="M125 112 L125 180" stroke="#69431D" stroke-width="4"/>
+    <path d="M155 180 L155 250" stroke="#69431D" stroke-width="4"/>
+    <path d="M105 250 L105 318" stroke="#69431D" stroke-width="4"/>
+    <rect x="36" y="116" width="208" height="198" rx="36" fill="none" stroke="#FFF0D4" stroke-width="3" opacity="0.6"/>
+  </g>
+
+  <!-- PLATFORM BADGE CENTER -->
+  
+  <g id="play-pill">
+    <rect x="55" y="145" width="165" height="135" rx="38" fill="#DDE3EA"/>
+    <rect x="55" y="139" width="165" height="135" rx="38" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="3"/>
+    <path d="M85 145 Q137 140 190 145" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+    
+    <!-- Play Triangle Multi-Color (Google Play style) -->
+    <path d="M102 170 L156 206.5 L102 243 Z" fill="#4285F4"/>
+    <path d="M102 170 L140 206.5 L102 243 Z" fill="#00C1A6" opacity="0.7"/>
+    <path d="M156 206.5 L132 223 L102 243 Z" fill="#EA4335"/>
+    <path d="M102 170 L132 190 L156 206.5 Z" fill="#FBBC04"/>
+    <path d="M132 190 L156 206.5 L132 223 Z" fill="#34A853"/>
+  </g>
+
+
+  <!-- GOLDEN CROWN ON TOP -->
+  <g id="crown">
+    <path d="M40 113 C75 93, 120 88, 145 108 L140 138 C115 123, 75 123, 45 143 Z" fill="#000000" opacity="0.3"/>
+    <path d="M40 110 C75 90, 120 85, 145 105 L140 135 C115 120, 75 120, 45 140 Z" fill="#944B00"/>
+    <path d="M42 105 
+             L 30 65 C 30 55, 45 50, 55 60 L 75 90 
+             L 95 30 C 102 20, 118 20, 125 30 L 145 90 
+             L 165 60 C 175 50, 190 55, 190 65 L 178 105 
+             C 140 85, 80 85, 42 105 Z" 
+          fill="url(#crownGrad)" stroke="#FFE875" stroke-width="3"/>
+    <circle cx="38" cy="60" r="9" fill="#FFF275" stroke="#D47A00" stroke-width="2"/>
+    <circle cx="110" cy="27" r="11" fill="#FFF275" stroke="#D47A00" stroke-width="2"/>
+    <circle cx="182" cy="60" r="9" fill="#FFF275" stroke="#D47A00" stroke-width="2"/>
+    <circle cx="110" cy="85" r="8" fill="#00A2FF" stroke="#004A80" stroke-width="2"/>
+  </g>
+</svg>

@@ -161,7 +161,7 @@ class NavigationService {
   }
 
   /// Find a task matching category (Instagram or App Install)
-  static Map<String, dynamic>? _findCategoryMatchingTask(
+  static Map<String, dynamic>? findCategoryMatchingTask(
     List<dynamic> tasks, {
     required bool isInstagram,
     required bool isAppInstall,

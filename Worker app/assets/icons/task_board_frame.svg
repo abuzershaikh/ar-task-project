@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 450" width="100%" height="100%">
+  <defs>
+
+    <linearGradient id="woodGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#A25725"/>
+      <stop offset="25%" stop-color="#BA6C32"/>
+      <stop offset="70%" stop-color="#803D14"/>
+      <stop offset="100%" stop-color="#542407"/>
+    </linearGradient>
+
+    <linearGradient id="woodEdgeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6E3511"/>
+      <stop offset="100%" stop-color="#3B1703"/>
+    </linearGradient>
+
+    <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9FE834"/>
+      <stop offset="50%" stop-color="#55B315"/>
+      <stop offset="100%" stop-color="#1E6603"/>
+    </linearGradient>
+
+    <linearGradient id="crownGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF275"/>
+      <stop offset="40%" stop-color="#FFB300"/>
+      <stop offset="100%" stop-color="#CC6600"/>
+    </linearGradient>
+
+    <linearGradient id="ytBaseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F2D1A1"/>
+      <stop offset="100%" stop-color="#C29662"/>
+    </linearGradient>
+    
+    <linearGradient id="ytRedGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FF3838"/>
+      <stop offset="50%" stop-color="#E60000"/>
+      <stop offset="100%" stop-color="#990000"/>
+    </linearGradient>
+
+    <linearGradient id="startBtnGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3DF577"/>
+      <stop offset="35%" stop-color="#00D04E"/>
+      <stop offset="85%" stop-color="#009432"/>
+      <stop offset="100%" stop-color="#006622"/>
+    </linearGradient>
+
+    <linearGradient id="coinPillGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#693005"/>
+      <stop offset="100%" stop-color="#3D1801"/>
+    </linearGradient>
+    
+    <linearGradient id="coinGoldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFF066"/>
+      <stop offset="50%" stop-color="#FFB800"/>
+      <stop offset="100%" stop-color="#D97700"/>
+    </linearGradient>
+
+    <linearGradient id="easyTagGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#148F32"/>
+      <stop offset="100%" stop-color="#084E18"/>
+    </linearGradient>
+    
+    <linearGradient id="timeTagGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0D7C8F"/>
+      <stop offset="100%" stop-color="#063E48"/>
+    </linearGradient>
+
+    <linearGradient id="instaGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFDC80"/>
+      <stop offset="30%" stop-color="#F77737"/>
+      <stop offset="60%" stop-color="#F56040"/>
+      <stop offset="80%" stop-color="#FD1D1D"/>
+      <stop offset="100%" stop-color="#C13584"/>
+    </linearGradient>
+
+    <linearGradient id="telegramGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#29B6F6"/>
+      <stop offset="50%" stop-color="#0288D1"/>
+      <stop offset="100%" stop-color="#01579B"/>
+    </linearGradient>
+
+    <linearGradient id="mapsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#34A853"/>
+      <stop offset="50%" stop-color="#0F9D58"/>
+      <stop offset="100%" stop-color="#0B6036"/>
+    </linearGradient>
+
+    <linearGradient id="xGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2C2C2E"/>
+      <stop offset="50%" stop-color="#1C1C1E"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+
+    <linearGradient id="playGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2D3748"/>
+      <stop offset="100%" stop-color="#1A202C"/>
+    </linearGradient>
+
+  </defs>
+
+  <!-- DECORATIVE CORNER LEAVES SHADOW -->
+  <g id="decor-leaves-shadow" opacity="0.45" transform="translate(0, 8)">
+    <path d="M1030 110 C1035 60, 1075 55, 1100 80 C1120 110, 1090 145, 1055 140 Z" fill="#000000"/>
+    <path d="M1075 85 C1130 90, 1160 140, 1130 180 C1090 190, 1070 150, 1075 85 Z" fill="#000000"/>
+    <path d="M1125 180 C1175 190, 1195 240, 1170 280 C1130 290, 1105 240, 1125 180 Z" fill="#000000"/>
+    <path d="M1105 270 C1160 300, 1165 350, 1130 380 C1090 380, 1075 330, 1105 270 Z" fill="#000000"/>
+    <path d="M180 80 C190 30, 240 30, 255 70 C265 110, 220 135, 185 120 Z" fill="#000000"/>
+    <path d="M170 120 C140 100, 100 120, 95 160 C90 200, 140 210, 165 180 Z" fill="#000000"/>
+    <path d="M25 260 C2 300, 15 360, 65 370 C105 370, 120 310, 80 270 Z" fill="#000000"/>
+    <path d="M30 360 C55 350, 105 380, 95 420 C70 440, 20 420, 30 360 Z" fill="#000000"/>
+  </g>
+
+  <!-- DECORATIVE CORNER LEAVES -->
+  <g id="decor-leaves">
+    <path d="M1030 110 C1035 60, 1075 55, 1100 80 C1120 110, 1090 145, 1055 140 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M1075 85 C1130 90, 1160 140, 1130 180 C1090 190, 1070 150, 1075 85 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M1125 180 C1175 190, 1195 240, 1170 280 C1130 290, 1105 240, 1125 180 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M1105 270 C1160 300, 1165 350, 1130 380 C1090 380, 1075 330, 1105 270 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+
+    <path d="M180 80 C190 30, 240 30, 255 70 C265 110, 220 135, 185 120 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M170 120 C140 100, 100 120, 95 160 C90 200, 140 210, 165 180 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M25 260 C2 300, 15 360, 65 370 C105 370, 120 310, 80 270 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+    <path d="M30 360 C55 350, 105 380, 95 420 C70 440, 20 420, 30 360 Z" fill="url(#leafGrad)" stroke="#114202" stroke-width="2.5"/>
+  </g>
+
+  <!-- BOTTOM WOOD FOUNDATION SHADOW -->
+  <path d="M60 358 L75 418 L150 433 L1080 433 L1130 413 L1145 358 Z" fill="#000000" opacity="0.4"/>
+
+  <!-- BOTTOM WOOD FOUNDATION / PLANKS -->
+  <g id="bottom-slab">
+    <path d="M60 350 L75 410 L150 425 L1080 425 L1130 405 L1145 350 Z" fill="url(#woodEdgeGrad)"/>
+    <path d="M75 410 L150 425 L300 420 L305 390 L280 385 L75 390 Z" fill="#421901" stroke="#240D00" stroke-width="2"/>
+    <path d="M380 423 L620 423 L625 390 L375 390 Z" fill="#522002" stroke="#240D00" stroke-width="2"/>
+    <path d="M720 423 L960 423 L965 390 L715 390 Z" fill="#441A02" stroke="#240D00" stroke-width="2"/>
+    <path d="M1020 420 L1130 405 L1120 380 L1015 385 Z" fill="#3D1601" stroke="#240D00" stroke-width="2"/>
+  </g>
+
+  <!-- MAIN WOOD BOARD SHADOW -->
+  <path d="M100 123 
+           C 170 133, 230 108, 320 123 
+           C 400 103, 480 128, 560 113 
+           C 650 126, 730 104, 820 118 
+           C 910 106, 1000 128, 1115 118 
+           C 1145 138, 1165 178, 1160 228 
+           C 1170 298, 1145 348, 1120 378 
+           C 990 368, 870 388, 750 373 
+           C 630 388, 510 368, 380 383 
+           C 260 370, 170 388, 75 373 
+           C 50 338, 60 268, 65 218 
+           C 55 168, 75 133, 100 123 Z" fill="#000000" opacity="0.45"/>
+
+  <!-- MAIN WOOD BOARD -->
+  <g id="main-board">
+    <path d="M100 115 
+             C 170 125, 230 100, 320 115 
+             C 400 95, 480 120, 560 105 
+             C 650 118, 730 96, 820 110 
+             C 910 98, 1000 120, 1115 110 
+             C 1145 130, 1165 170, 1160 220 
+             C 1170 290, 1145 340, 1120 370 
+             C 990 360, 870 380, 750 365 
+             C 630 380, 510 360, 380 375 
+             C 260 362, 170 380, 75 365 
+             C 50 330, 60 260, 65 210 
+             C 55 160, 75 125, 100 115 Z" 
+          fill="url(#woodGrad)" stroke="#3B1703" stroke-width="6"/>
+
+    <path d="M110 125 C 230 115, 360 120, 480 112 C 600 122, 750 108, 880 118 C 980 110, 1060 125, 1105 122" 
+          stroke="#D48648" stroke-width="4" stroke-linecap="round" fill="none"/>
+
+    <path d="M300 160 C 480 150, 720 155, 900 165" stroke="#70330D" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.6"/>
+    <path d="M280 230 C 450 240, 680 235, 750 240" stroke="#5E2B0B" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.5"/>
+    <path d="M310 300 C 500 295, 750 310, 920 295" stroke="#6E320D" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.6"/>
+  </g>
+</svg>
