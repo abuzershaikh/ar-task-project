@@ -14,7 +14,7 @@ import { OrderRepository } from '../../../../shared/database/repositories/order.
 import { TaskRepository } from '../../../../shared/database/repositories/task.repository';
 import { RatingRepository } from '../../../../shared/database/repositories/rating.repository';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
-import { UserRole, UserStatus } from '../../../../shared/database/entities/user.entity';
+import { UserRole, UserStatus, User } from '../../../../shared/database/entities/user.entity';
 import { DataSource } from 'typeorm';
 
 @ApiTags('Admin - Buyer Management')
@@ -33,7 +33,13 @@ export class AdminBuyerManagementController {
     @Get()
     @ApiOperation({ summary: 'List all buyers' })
     async listBuyers() {
-        const buyers = await this.userRepo.findByRole(UserRole.BUYER);
+        const buyers = await this.dataSource
+            .getRepository(User)
+            .createQueryBuilder('u')
+            .where('u.role = :buyerRole', { buyerRole: UserRole.BUYER })
+            .orWhere('u.id IN (SELECT DISTINCT o.buyer_id FROM orders o WHERE o.buyer_id IS NOT NULL)')
+            .orderBy('u.createdAt', 'DESC')
+            .getMany();
         const results = await Promise.all(buyers.map(async (b) => {
             const orders = await this.orderRepo.findByBuyer(b.id);
             const activeOrders = orders.filter((o) => (o.status || '').toUpperCase() === 'ACTIVE');

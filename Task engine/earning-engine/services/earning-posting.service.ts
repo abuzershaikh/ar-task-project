@@ -10,6 +10,7 @@ import { Task } from '../../shared/database/entities/task.entity';
 import { Order } from '../../shared/database/entities/order.entity';
 import { Wallet } from '../../shared/database/entities/wallet.entity';
 import { WalletTransaction } from '../../shared/database/entities/wallet-transaction.entity';
+import { RedisCacheService } from '../../shared/services/redis-cache.service';
 
 /**
  * Earning ko ledger me post aur reverse karta hai safely with DB Transactions & Wallet Integrity
@@ -22,6 +23,7 @@ export class EarningPostingService {
         private readonly dataSource: DataSource,
         private readonly earningRepo: EarningRepository,
         private readonly eventEmitter: EventEmitter2,
+        private readonly redisCache: RedisCacheService,
     ) { }
 
     async post(earningData: EarningType): Promise<void> {
@@ -134,6 +136,12 @@ export class EarningPostingService {
 
         // Trigger Realtime Score Recalculation & DB persistence
         this.eventEmitter.emit('worker.score.recalculate', resolvedWorkerId);
+
+        // Invalidate worker wallet cache so updated balance is immediately live
+        await this.redisCache.del(
+            `cache:worker:wallet:${resolvedWorkerId}`,
+            `cache:worker:wallet:${earningData.workerId}`,
+        );
     }
 
     async reverse(earningId: string): Promise<void> {
@@ -235,5 +243,11 @@ export class EarningPostingService {
 
         // Trigger Score Recalculation after reversal
         this.eventEmitter.emit('worker.score.recalculate', resolvedWorkerId);
+
+        // Invalidate worker wallet cache so deduction is immediately live
+        await this.redisCache.del(
+            `cache:worker:wallet:${resolvedWorkerId}`,
+            `cache:worker:wallet:${earning.workerId}`,
+        );
     }
 }

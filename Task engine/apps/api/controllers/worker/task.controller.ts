@@ -25,6 +25,7 @@ import { EarningEngineService } from '../../../../earning-engine/earning.service
 import { EarningRepository } from '../../../../shared/database/repositories/earning.repository';
 import { SystemSettingsRepository } from '../../../../shared/database/repositories/system-settings.repository';
 import { NotificationEngineService } from '../../../../notification-engine/notification.service';
+import { RedisCacheService } from '../../../../shared/services/redis-cache.service';
 
 @ApiTags('Worker - Tasks')
 @Roles(UserRole.WORKER)
@@ -44,6 +45,7 @@ export class WorkerTaskController {
         private readonly earningRepo: EarningRepository,
         private readonly settingsRepo: SystemSettingsRepository,
         private readonly notificationEngine: NotificationEngineService,
+        private readonly redisCache: RedisCacheService,
     ) { }
 
     @Get()
@@ -51,8 +53,15 @@ export class WorkerTaskController {
     @ApiQuery({ name: 'status', required: false })
     async getTasks(@CurrentUser() user: User, @Query('status') status?: string) {
         if (status === 'available') {
+            const cacheKey = `cache:worker:available:${user.id}`;
+            const cached = await this.redisCache.get<any>(cacheKey);
+            if (cached) {
+                return { success: true, tasks: cached.tasks, _fromCache: true };
+            }
             const tasks = await this.taskEngine.getAvailableTasks(user.id, user.email);
-            return { success: true, tasks };
+            const response = { success: true, tasks };
+            await this.redisCache.set(cacheKey, response, 5); // 5 sec TTL
+            return response;
         }
 
         const tasks = await this.taskEngine.getWorkerTasks(user.id, status, user.email);
@@ -62,12 +71,23 @@ export class WorkerTaskController {
     @Get('available')
     @ApiOperation({ summary: 'Get available tasks for worker' })
     async getAvailableTasks(@CurrentUser() user: User) {
+        const cacheKey = `cache:worker:available:${user.id}`;
+        const cached = await this.redisCache.get<any>(cacheKey);
+        if (cached) {
+            return {
+                ...cached,
+                _fromCache: true,
+            };
+        }
+
         const tasks = await this.taskEngine.getAvailableTasks(user.id, user.email);
-        return {
+        const response = {
             success: true,
             tasks,
             message: 'Available tasks fetched',
         };
+        await this.redisCache.set(cacheKey, response, 5); // 5 sec TTL
+        return response;
     }
 
     @Get('assigned')
@@ -510,6 +530,9 @@ export class WorkerTaskController {
             orderUnitId: task.orderUnitId,
         });
 
+        // Invalidate worker available tasks cache so accepted task disappears immediately
+        await this.redisCache.del(`cache:worker:available:${user.id}`);
+
         return {
             success: true,
             taskId,
@@ -539,6 +562,9 @@ export class WorkerTaskController {
         }
 
         await this.executionEngine.submitTaskExecution(taskId, user.id, body, user.email);
+
+        // Invalidate worker available tasks and wallet cache
+        await this.redisCache.invalidateWorker(user.id);
 
         return {
             success: true,

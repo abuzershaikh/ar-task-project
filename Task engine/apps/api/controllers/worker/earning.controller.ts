@@ -19,6 +19,7 @@ import { PayoutEngineService } from '../../../../payout-engine/payout.service';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
+import { RedisCacheService } from '../../../../shared/services/redis-cache.service';
 
 function formatTaskType(type: string): string {
     if (!type) return 'Task';
@@ -41,6 +42,7 @@ export class WorkerEarningController {
         private readonly taskRepo: TaskRepository,
         private readonly walletTxRepo: WalletTransactionRepository,
         private readonly payoutEngine: PayoutEngineService,
+        private readonly redisCache: RedisCacheService,
     ) { }
 
     @Get()
@@ -198,6 +200,15 @@ export class WorkerEarningController {
     @Get('wallet')
     @ApiOperation({ summary: 'Get worker wallet summary with minimum withdrawal threshold' })
     async getWallet(@CurrentUser() user: User) {
+        const cacheKey = `cache:worker:wallet:${user.id}`;
+        const cached = await this.redisCache.get<any>(cacheKey);
+        if (cached) {
+            return {
+                ...cached,
+                _fromCache: true,
+            };
+        }
+
         const worker = await this.workerRepo.findByUserId(user.id);
         const workerIds = Array.from(new Set([user.id, worker?.id].filter(Boolean) as string[]));
         const minWithdrawalLimit = worker?.profile?.minWithdrawalLimit || this.payoutEngine.getMinWithdrawalLimit();
@@ -226,7 +237,7 @@ export class WorkerEarningController {
         // Fetch wallet table record for user
         const wallet = await this.walletRepo.findByUserId(user.id);
 
-        return {
+        const response = {
             success: true,
             worker,
             wallet: {
@@ -241,6 +252,11 @@ export class WorkerEarningController {
                 withdrawalsCount: withdrawals.length,
             },
         };
+
+        // Cache for 15 seconds
+        await this.redisCache.set(cacheKey, response, 15);
+
+        return response;
     }
 
     @Get('balance')
@@ -305,6 +321,9 @@ export class WorkerEarningController {
             idempotencyKey: effectiveIdempotencyKey,
             metadata: body.metadata,
         });
+
+        // Invalidate wallet cache so withdrawal is instantly reflected
+        await this.redisCache.del(`cache:worker:wallet:${user.id}`);
 
         return {
             success: true,

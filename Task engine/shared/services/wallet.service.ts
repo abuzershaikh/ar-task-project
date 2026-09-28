@@ -201,21 +201,25 @@ export class WalletService {
      */
     async getAllBuyersWithWallet(search?: string) {
         let query = this.dataSource
-            .createQueryBuilder(User, 'u')
-            .where('u.role = :buyerRole OR u.role = :superRole', {
-                buyerRole: UserRole.BUYER,
-                superRole: UserRole.SUPER_ADMIN,
-            });
+            .createQueryBuilder(User, 'u');
 
         if (search && search.trim().length > 0) {
             const term = `%${search.trim().toLowerCase()}%`;
-            query = query.andWhere(
-                '(LOWER(u.fullName) LIKE :term OR LOWER(u.email) LIKE :term OR u.id LIKE :term)',
+            query = query.where(
+                '(LOWER(u.fullName) LIKE :term OR LOWER(u.email) LIKE :term OR u.phone LIKE :term OR u.id LIKE :term)',
                 { term },
+            );
+        } else {
+            query = query.where(
+                '(u.role = :buyerRole OR u.role = :superRole OR u.id IN (SELECT DISTINCT o.buyer_id FROM orders o WHERE o.buyer_id IS NOT NULL))',
+                {
+                    buyerRole: UserRole.BUYER,
+                    superRole: UserRole.SUPER_ADMIN,
+                },
             );
         }
 
-        const buyers = await query.getMany();
+        const buyers = await query.orderBy('u.createdAt', 'DESC').getMany();
 
         const results = await Promise.all(
             buyers.map(async (buyer) => {
