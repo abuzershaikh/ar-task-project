@@ -1,15 +1,17 @@
 const { NodeSSH } = require('node-ssh');
 const ssh = new NodeSSH();
 
-async function getLogs() {
-    await ssh.connect({
-      host: '95.179.178.6',
-      username: 'root',
-      password: 'i_G72#y}(6gACDDU'
-    });
-    const result = await ssh.execCommand('pm2 logs task-engine --lines 100 --nostream');
-    console.log(result.stdout);
-    console.error(result.stderr);
-    ssh.dispose();
+async function main() {
+  await ssh.connect({
+    host: '65.20.77.112',
+    username: 'root',
+    password: 'G8u$RW{5m46buXgw',
+  });
+
+  const res = await ssh.execCommand('pm2 logs task-engine-api --lines 100 --nostream');
+  console.log(res.stdout || res.stderr);
+
+  ssh.dispose();
 }
-getLogs();
+
+main().catch(console.error);

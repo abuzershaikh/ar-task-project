@@ -27,8 +27,15 @@ class ChatController {
   async getWorkerChat(req, res) {
     try {
       const { workerId } = req.params;
-      const { limit, offset } = req.query;
-      const data = await chatService.getMessagesByWorkerId(workerId, { limit, offset });
+      const { limit, offset, name, email, phone, avatarUrl } = req.query;
+      const data = await chatService.getMessagesByWorkerId(workerId, {
+        limit,
+        offset,
+        name,
+        email,
+        phone,
+        avatarUrl,
+      });
       return res.json({ success: true, data });
     } catch (err) {
       console.error('[ChatController] getWorkerChat error:', err);

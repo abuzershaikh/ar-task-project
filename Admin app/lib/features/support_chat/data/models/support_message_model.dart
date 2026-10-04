@@ -107,4 +107,32 @@ class SupportMessageModel {
       'created_at': createdAt.toIso8601String(),
     };
   }
+
+  SupportMessageModel copyWith({
+    String? id,
+    String? conversationId,
+    String? workerId,
+    String? senderType,
+    String? messageType,
+    String? content,
+    String? mediaUrl,
+    String? youtubeId,
+    int? durationSeconds,
+    bool? isRead,
+    DateTime? createdAt,
+  }) {
+    return SupportMessageModel(
+      id: id ?? this.id,
+      conversationId: conversationId ?? this.conversationId,
+      workerId: workerId ?? this.workerId,
+      senderType: senderType ?? this.senderType,
+      messageType: messageType ?? this.messageType,
+      content: content ?? this.content,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      youtubeId: youtubeId ?? this.youtubeId,
+      durationSeconds: durationSeconds ?? this.durationSeconds,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }

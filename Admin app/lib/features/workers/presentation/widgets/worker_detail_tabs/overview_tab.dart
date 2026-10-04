@@ -14,6 +14,36 @@ class OverviewTab extends StatelessWidget {
     this.earnings = const [],
   });
 
+  Color _getStatusBg(String status) {
+    switch (status.toUpperCase()) {
+      case 'ACTIVE':
+        return const Color(0xFFDCFCE7);
+      case 'INACTIVE':
+        return const Color(0xFFF1F5F9);
+      case 'SUSPENDED':
+        return const Color(0xFFFEF3C7);
+      case 'BANNED':
+        return const Color(0xFFFEE2E2);
+      default:
+        return const Color(0xFFF1F5F9);
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toUpperCase()) {
+      case 'ACTIVE':
+        return const Color(0xFF16A34A);
+      case 'INACTIVE':
+        return const Color(0xFF475569);
+      case 'SUSPENDED':
+        return const Color(0xFFD97706);
+      case 'BANNED':
+        return const Color(0xFFDC2626);
+      default:
+        return const Color(0xFF475569);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final joinedDate = worker.createdAt != null
@@ -80,7 +110,7 @@ class OverviewTab extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: worker.status == 'ACTIVE' ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                              color: _getStatusBg(worker.status),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -88,7 +118,7 @@ class OverviewTab extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: worker.status == 'ACTIVE' ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                color: _getStatusColor(worker.status),
                               ),
                             ),
                           ),
@@ -127,7 +157,9 @@ class OverviewTab extends StatelessWidget {
               _buildInfoRow('Full Name', worker.name, const Color(0xFF0F172A)),
               _buildInfoRow('Email Address', worker.email, const Color(0xFF0F172A)),
               _buildInfoRow('Phone Number', worker.phone.isNotEmpty ? worker.phone : 'Not Provided', const Color(0xFF64748B)),
-              _buildInfoRow('Account Status', worker.status, worker.status == 'ACTIVE' ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+              _buildInfoRow('Account Status', worker.status, _getStatusColor(worker.status)),
+              _buildInfoRow('Activity Status', worker.activityStatus, worker.activityStatus == 'ACTIVE' ? const Color(0xFF16A34A) : const Color(0xFF64748B)),
+              _buildInfoRow('Last Active', worker.lastActiveAt != null ? '${worker.lastActiveAt!.day}/${worker.lastActiveAt!.month}/${worker.lastActiveAt!.year}' : (worker.lastLogin != null ? '${worker.lastLogin!.day}/${worker.lastLogin!.month}/${worker.lastLogin!.year}' : 'Never'), const Color(0xFF64748B)),
               _buildInfoRow('KYC Verification', worker.kycStatus, (worker.kycStatus == 'VERIFIED' || worker.kycStatus == 'APPROVED') ? const Color(0xFF16A34A) : const Color(0xFFD97706)),
               _buildInfoRow('Registration Date', joinedDate, const Color(0xFF64748B)),
               _buildInfoRow('Worker UID', worker.userId.isNotEmpty ? worker.userId : worker.id, const Color(0xFF0284C7)),

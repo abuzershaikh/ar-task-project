@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../data/models/worker_model.dart';
 import '../widgets/worker_card.dart';
 import '../bloc/workers_bloc.dart';
 import 'worker_detail_screen.dart';
@@ -168,6 +169,19 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
     );
   }
 
+  bool _isWorkerMatchingFilter(dynamic w, String filter) {
+    final s = w.status.toString().toUpperCase();
+    final kyc = w.kycStatus.toString().toUpperCase();
+    final act = (w is WorkerModel) ? w.activityStatus.toUpperCase() : (s == 'ACTIVE' ? 'ACTIVE' : 'INACTIVE');
+
+    if (filter == 'All') return true;
+    if (filter == 'ACTIVE') return s == 'ACTIVE' && act == 'ACTIVE';
+    if (filter == 'INACTIVE') return s == 'INACTIVE' || act == 'INACTIVE' || (s != 'ACTIVE' && s != 'SUSPENDED' && s != 'BANNED');
+    if (filter == 'SUSPENDED') return s == 'SUSPENDED';
+    if (filter == 'KYC') return kyc == 'VERIFIED' || kyc == 'APPROVED';
+    return s == filter.toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<WorkersBloc, WorkersState>(
@@ -176,22 +190,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
         if (state is WorkersLoaded) {
           final query = _searchController.text.trim().toLowerCase();
           currentFiltered = state.workers.where((w) {
-            bool statusMatch = false;
-            final s = w.status.toUpperCase();
-            if (_selectedFilter == 'All') {
-              statusMatch = true;
-            } else if (_selectedFilter == 'ACTIVE') {
-              statusMatch = s == 'ACTIVE';
-            } else if (_selectedFilter == 'INACTIVE') {
-              statusMatch = s == 'INACTIVE' || s != 'ACTIVE';
-            } else if (_selectedFilter == 'SUSPENDED') {
-              statusMatch = s == 'SUSPENDED';
-            } else if (_selectedFilter == 'KYC') {
-              statusMatch = w.kycStatus == 'VERIFIED';
-            } else {
-              statusMatch = s == _selectedFilter.toUpperCase();
-            }
-
+            final statusMatch = _isWorkerMatchingFilter(w, _selectedFilter);
             final queryMatch = query.isEmpty ||
                 w.name.toLowerCase().contains(query) ||
                 w.email.toLowerCase().contains(query) ||
@@ -373,9 +372,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
             final allWorkers = state.workers;
             final query = _searchController.text.trim().toLowerCase();
             final filtered = allWorkers.where((w) {
-              final statusMatch = _selectedFilter == 'All' ||
-                  w.status.toUpperCase() == _selectedFilter.toUpperCase() ||
-                  (_selectedFilter == 'KYC' && w.kycStatus == 'VERIFIED');
+              final statusMatch = _isWorkerMatchingFilter(w, _selectedFilter);
               final queryMatch = query.isEmpty ||
                   w.name.toLowerCase().contains(query) ||
                   w.email.toLowerCase().contains(query) ||
@@ -384,11 +381,9 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
               return statusMatch && queryMatch;
             }).toList();
 
-            final int activeCount = allWorkers.where((w) => w.status.toUpperCase() == 'ACTIVE').length;
-            final int kycCount = allWorkers.where((w) => w.kycStatus == 'VERIFIED').length;
-            final double avgRating = allWorkers.isNotEmpty
-                ? (allWorkers.map((w) => w.rating).reduce((a, b) => a + b) / allWorkers.length)
-                : 5.0;
+            final int activeCount = allWorkers.where((w) => _isWorkerMatchingFilter(w, 'ACTIVE')).length;
+            final int inactiveCount = allWorkers.where((w) => _isWorkerMatchingFilter(w, 'INACTIVE')).length;
+            final int kycCount = allWorkers.where((w) => _isWorkerMatchingFilter(w, 'KYC')).length;
 
             return Column(
               children: [
@@ -419,9 +414,9 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                       Container(height: 24, width: 1, color: const Color(0xFF7DD3FC)),
                       _buildMetricItem('Active', '$activeCount', const Color(0xFF16A34A)),
                       Container(height: 24, width: 1, color: const Color(0xFF7DD3FC)),
-                      _buildMetricItem('KYC Verified', '$kycCount', const Color(0xFF0284C7)),
+                      _buildMetricItem('Inactive', '$inactiveCount', const Color(0xFF64748B)),
                       Container(height: 24, width: 1, color: const Color(0xFF7DD3FC)),
-                      _buildMetricItem('Platform Rating', '${avgRating > 0 ? avgRating.toStringAsFixed(1) : '5.0'} ★', const Color(0xFFD97706)),
+                      _buildMetricItem('KYC', '$kycCount', const Color(0xFF0284C7)),
                     ],
                   ),
                 ),
@@ -474,10 +469,10 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                   builder: (context) {
                     final allWorkers = state.workers;
                     final allCount = allWorkers.length;
-                    final activeCount = allWorkers.where((w) => w.status.toUpperCase() == 'ACTIVE').length;
-                    final inactiveCount = allWorkers.where((w) => w.status.toUpperCase() != 'ACTIVE').length;
-                    final suspendedCount = allWorkers.where((w) => w.status.toUpperCase() == 'SUSPENDED').length;
-                    final kycCount = allWorkers.where((w) => w.kycStatus == 'VERIFIED').length;
+                    final activeCount = allWorkers.where((w) => _isWorkerMatchingFilter(w, 'ACTIVE')).length;
+                    final inactiveCount = allWorkers.where((w) => _isWorkerMatchingFilter(w, 'INACTIVE')).length;
+                    final suspendedCount = allWorkers.where((w) => _isWorkerMatchingFilter(w, 'SUSPENDED')).length;
+                    final kycCount = allWorkers.where((w) => _isWorkerMatchingFilter(w, 'KYC')).length;
 
                     final filterList = [
                       {'key': 'All', 'label': 'All ($allCount)'},

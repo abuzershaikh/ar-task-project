@@ -3,6 +3,7 @@ import { CategoryFilterService } from '../../matching-engine/filters/category-fi
 import { CapacityFilterService } from '../../matching-engine/filters/capacity-filter.service';
 import { RankingCalculator } from '../../ranking-engine/calculators/ranking-calculator';
 import { EligibilityEngineService } from '../../eligibility-engine/eligibility.service';
+import { MatchingDecisionService } from '../../matching-engine/services/matching-decision.service';
 
 describe('Matching Engine Hardened Tests', () => {
     describe('1. Location Filter Edge Cases (Undefined State & Case Insensitivity)', () => {
@@ -129,6 +130,36 @@ describe('Matching Engine Hardened Tests', () => {
             const map = await eligibilityEngine.batchCheckEligibility(['W1', 'W2'], 'TASK-1');
             expect(map.get('W1')?.isEligible).toBe(true);
             expect(map.get('W3')?.isEligible).toBeUndefined(); // Missing entry is undefined, evaluated fail-closed as false in CandidateService
+        });
+    });
+
+    describe('6. Low-score worker matching', () => {
+        it('keeps a low-score worker eligible and ranks it below a higher-score worker', async () => {
+            const scoringEngine: any = {
+                calculateBatchScores: jest.fn().mockResolvedValue(new Map([
+                    ['W-HIGH', { totalScore: 90 }],
+                    ['W-LOW', { totalScore: 12 }],
+                ])),
+            };
+            const rankingEngine: any = {
+                rankWorkers: jest.fn().mockResolvedValue([
+                    { workerId: 'W-HIGH', rank: 1 },
+                    { workerId: 'W-LOW', rank: 2 },
+                ]),
+            };
+            const decisionService = new MatchingDecisionService(scoringEngine, rankingEngine);
+
+            const result = await decisionService.decide(
+                [{ workerId: 'W-HIGH' }, { workerId: 'W-LOW' }] as any,
+                { taskId: 'TASK-1', filters: [] } as any,
+            );
+
+            expect(result.matchedWorkers.map((worker) => worker.workerId)).toEqual(['W-HIGH', 'W-LOW']);
+            expect(rankingEngine.rankWorkers).toHaveBeenCalledWith(
+                ['W-HIGH', 'W-LOW'],
+                'TASK-1',
+                expect.any(Map),
+            );
         });
     });
 });

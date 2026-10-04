@@ -32,9 +32,10 @@ export class UserSyncService {
         await this.userRepo.update(user.id, { lastLogin: now });
         user.lastLogin = now;
 
-        // Ensure Worker record exists in MySQL if user is a WORKER or accessing as WORKER
+        // Ensure Worker record exists in MySQL and update lastActiveAt
         if (user.role === UserRole.WORKER || preferredRole === UserRole.WORKER) {
           await this.ensureWorkerRecord(user.id);
+          await this.workerRepo.updateLastActiveAt(user.id);
         }
         return user;
       }
@@ -63,6 +64,7 @@ export class UserSyncService {
 
         if (user.role === UserRole.WORKER || preferredRole === UserRole.WORKER) {
           await this.ensureWorkerRecord(user.id);
+          await this.workerRepo.updateLastActiveAt(user.id);
         }
         return user;
       }
@@ -85,6 +87,7 @@ export class UserSyncService {
       // 4. Create Worker record in MySQL if WORKER
       if (role === UserRole.WORKER) {
         await this.ensureWorkerRecord(user.id);
+        await this.workerRepo.updateLastActiveAt(user.id);
       }
 
       return user;

@@ -1,6 +1,7 @@
 class SupportConversationModel {
   final String id;
   final String workerId;
+  final String? workerActualId;
   final String workerName;
   final String workerPhone;
   final String workerEmail;
@@ -17,6 +18,7 @@ class SupportConversationModel {
   const SupportConversationModel({
     required this.id,
     required this.workerId,
+    this.workerActualId,
     required this.workerName,
     required this.workerPhone,
     required this.workerEmail,
@@ -32,12 +34,30 @@ class SupportConversationModel {
   });
 
   factory SupportConversationModel.fromJson(Map<String, dynamic> json) {
+    // Resolve clean name (avoid generic 'Worker' fallback if email/name exists)
+    String rawName = json['worker_name']?.toString().trim() ?? '';
+    final rawEmail = json['worker_email']?.toString().trim() ?? '';
+    final rawPhone = json['worker_phone']?.toString().trim() ?? '';
+
+    String resolvedName = rawName;
+    if (resolvedName.isEmpty || resolvedName.toLowerCase() == 'worker') {
+      if (rawEmail.isNotEmpty) {
+        resolvedName = rawEmail.split('@')[0];
+      } else if (rawPhone.isNotEmpty) {
+        resolvedName = rawPhone;
+      } else {
+        final wId = json['worker_id']?.toString() ?? '';
+        resolvedName = wId.length > 6 ? 'Worker #${wId.substring(0, 6)}' : 'Worker';
+      }
+    }
+
     return SupportConversationModel(
       id: json['id']?.toString() ?? '',
       workerId: json['worker_id']?.toString() ?? '',
-      workerName: json['worker_name']?.toString() ?? 'Worker',
-      workerPhone: json['worker_phone']?.toString() ?? '',
-      workerEmail: json['worker_email']?.toString() ?? '',
+      workerActualId: json['worker_actual_id']?.toString(),
+      workerName: resolvedName,
+      workerPhone: rawPhone,
+      workerEmail: rawEmail,
       lastMessageText: json['last_message_text']?.toString() ?? '',
       lastMessageType: json['last_message_type']?.toString() ?? 'TEXT',
       lastMessageAt: json['last_message_at'] != null 
@@ -64,6 +84,7 @@ class SupportConversationModel {
     return SupportConversationModel(
       id: id,
       workerId: workerId,
+      workerActualId: workerActualId,
       workerName: workerName,
       workerPhone: workerPhone,
       workerEmail: workerEmail,
@@ -75,6 +96,7 @@ class SupportConversationModel {
       lastActiveAt: lastActiveAt,
       totalTasksCompleted: totalTasksCompleted,
       workerStatus: workerStatus,
+      workerAvatarUrl: workerAvatarUrl,
     );
   }
 }

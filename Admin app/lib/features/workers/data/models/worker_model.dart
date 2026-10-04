@@ -7,6 +7,8 @@ class WorkerModel {
   final String email;
   final String phone;
   final String status;
+  final String accountStatus;
+  final String activityStatus;
   final String kycStatus;
   final double rating;
   final int completedTasks;
@@ -16,6 +18,8 @@ class WorkerModel {
   final String tier;
   final String? avatarUrl;
   final DateTime? createdAt;
+  final DateTime? lastActiveAt;
+  final DateTime? lastLogin;
 
   WorkerModel({
     required this.id,
@@ -24,6 +28,8 @@ class WorkerModel {
     required this.email,
     required this.phone,
     required this.status,
+    this.accountStatus = 'ACTIVE',
+    this.activityStatus = 'ACTIVE',
     required this.kycStatus,
     required this.rating,
     required this.completedTasks,
@@ -33,6 +39,8 @@ class WorkerModel {
     required this.tier,
     this.avatarUrl,
     this.createdAt,
+    this.lastActiveAt,
+    this.lastLogin,
   });
 
   factory WorkerModel.fromJson(Map<String, dynamic> json) {
@@ -64,13 +72,20 @@ class WorkerModel {
       }
     }
 
+    final String rawStatus = json['status']?.toString().toUpperCase() ?? 'ACTIVE';
+    final String rawAccountStatus = json['accountStatus']?.toString().toUpperCase() ?? rawStatus;
+    final String rawActivityStatus = json['activityStatus']?.toString().toUpperCase() ??
+        (rawStatus == 'ACTIVE' ? 'ACTIVE' : 'INACTIVE');
+
     return WorkerModel(
       id: extractedId,
       userId: extractedUserId,
       name: json['name'] ?? user['name'] ?? user['email']?.toString().split('@').first ?? 'Worker',
       email: json['email'] ?? user['email'] ?? '',
       phone: json['phone'] ?? user['phone'] ?? '',
-      status: json['status']?.toString().toUpperCase() ?? 'ACTIVE',
+      status: rawStatus,
+      accountStatus: rawAccountStatus,
+      activityStatus: rawActivityStatus,
       kycStatus: json['kycStatus']?.toString().toUpperCase() ?? 'VERIFIED',
       rating: parsedRating,
       completedTasks: json['completedTasks'] ?? json['totalCompletedTasks'] ?? 0,
@@ -79,7 +94,9 @@ class WorkerModel {
       score: calculatedScore.clamp(0.0, 100.0),
       tier: json['tier']?.toString() ?? 'Silver',
       avatarUrl: avatar,
-      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
+      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
+      lastActiveAt: json['lastActiveAt'] != null ? DateTime.tryParse(json['lastActiveAt'].toString()) : null,
+      lastLogin: json['lastLogin'] != null ? DateTime.tryParse(json['lastLogin'].toString()) : null,
     );
   }
 
@@ -91,6 +108,8 @@ class WorkerModel {
       'email': email,
       'phone': phone,
       'status': status,
+      'accountStatus': accountStatus,
+      'activityStatus': activityStatus,
       'kycStatus': kycStatus,
       'rating': rating,
       'completedTasks': completedTasks,
@@ -100,6 +119,8 @@ class WorkerModel {
       'tier': tier,
       'avatarUrl': avatarUrl,
       'createdAt': createdAt?.toIso8601String(),
+      'lastActiveAt': lastActiveAt?.toIso8601String(),
+      'lastLogin': lastLogin?.toIso8601String(),
     };
   }
 
@@ -110,6 +131,8 @@ class WorkerModel {
     String? email,
     String? phone,
     String? status,
+    String? accountStatus,
+    String? activityStatus,
     String? kycStatus,
     double? rating,
     int? completedTasks,
@@ -119,6 +142,8 @@ class WorkerModel {
     String? tier,
     String? avatarUrl,
     DateTime? createdAt,
+    DateTime? lastActiveAt,
+    DateTime? lastLogin,
   }) {
     return WorkerModel(
       id: id ?? this.id,
@@ -127,6 +152,8 @@ class WorkerModel {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       status: status ?? this.status,
+      accountStatus: accountStatus ?? this.accountStatus,
+      activityStatus: activityStatus ?? this.activityStatus,
       kycStatus: kycStatus ?? this.kycStatus,
       rating: rating ?? this.rating,
       completedTasks: completedTasks ?? this.completedTasks,
@@ -136,6 +163,8 @@ class WorkerModel {
       tier: tier ?? this.tier,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       createdAt: createdAt ?? this.createdAt,
+      lastActiveAt: lastActiveAt ?? this.lastActiveAt,
+      lastLogin: lastLogin ?? this.lastLogin,
     );
   }
 }

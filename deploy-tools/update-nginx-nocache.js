@@ -23,25 +23,39 @@ async function run() {
         try_files $uri $uri/ /index.html;
     }
 
-    location = /index.html {
+    location ~* \.(js|json|html)$ {
         add_header Cache-Control "no-cache, no-store, must-revalidate";
         add_header Pragma "no-cache";
         add_header Expires "0";
     }
 
-    location = /flutter_service_worker.js {
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-        add_header Pragma "no-cache";
-        add_header Expires "0";
+    # Support Chat REST API & Uploads
+    location ^~ /support-chat/ {
+        proxy_pass http://127.0.0.1:3005/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 300;
     }
 
-    location = /version.json {
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-        add_header Pragma "no-cache";
-        add_header Expires "0";
+    location = /support-chat {
+        return 301 /support-chat/;
     }
 
-    location /api/v1/ {
+    # Support Chat Real-time WebSocket
+    location ^~ /socket.io/ {
+        proxy_pass http://127.0.0.1:3005/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 86400;
+    }
+
+    location ^~ /api/v1/ {
         proxy_pass http://127.0.0.1:3000/api/v1/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -73,19 +87,39 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    location = /index.html {
+    location ~* \.(js|json|html)$ {
         add_header Cache-Control "no-cache, no-store, must-revalidate";
         add_header Pragma "no-cache";
         add_header Expires "0";
     }
 
-    location = /flutter_service_worker.js {
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-        add_header Pragma "no-cache";
-        add_header Expires "0";
+    # Support Chat REST API & Uploads
+    location ^~ /support-chat/ {
+        proxy_pass http://127.0.0.1:3005/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 300;
     }
 
-    location /api/v1/ {
+    location = /support-chat {
+        return 301 /support-chat/;
+    }
+
+    # Support Chat Real-time WebSocket
+    location ^~ /socket.io/ {
+        proxy_pass http://127.0.0.1:3005/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_read_timeout 86400;
+    }
+
+    location ^~ /api/v1/ {
         proxy_pass http://127.0.0.1:3000/api/v1/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

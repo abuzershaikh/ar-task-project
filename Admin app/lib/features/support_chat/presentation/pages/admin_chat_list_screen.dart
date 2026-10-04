@@ -3,10 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_avatar.dart';
+import '../../../workers/presentation/pages/worker_detail_screen.dart';
 import '../../data/models/support_conversation_model.dart';
 import '../../data/services/support_chat_service.dart';
 import 'admin_chat_screen.dart';
 import 'admin_bulk_broadcast_screen.dart';
+
+enum ChatFilter {
+  all,
+  unread,
+  newMessages,
+  activeToday,
+}
 
 class AdminChatListScreen extends StatefulWidget {
   const AdminChatListScreen({super.key});
@@ -22,6 +30,45 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
   List<SupportConversationModel> _conversations = [];
   bool _isLoading = true;
   int _totalUnread = 0;
+  ChatFilter _selectedFilter = ChatFilter.all;
+
+  bool _isToday(DateTime dt) {
+    final ist = dt.toUtc().add(const Duration(hours: 5, minutes: 30));
+    final nowIst = DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
+    return ist.year == nowIst.year && ist.month == nowIst.month && ist.day == nowIst.day;
+  }
+
+  List<SupportConversationModel> get _filteredConversations {
+    switch (_selectedFilter) {
+      case ChatFilter.all:
+        return _conversations;
+      case ChatFilter.unread:
+        return _conversations.where((c) => c.unreadAdminCount > 0).toList();
+      case ChatFilter.newMessages:
+        return _conversations.where((c) {
+          final isRecent = DateTime.now().difference(c.lastMessageAt).inHours < 24;
+          return c.unreadAdminCount > 0 || c.totalTasksCompleted == 0 || isRecent;
+        }).toList();
+      case ChatFilter.activeToday:
+        return _conversations.where((c) => _isToday(c.lastMessageAt)).toList();
+    }
+  }
+
+  void _openWorkerProfile(SupportConversationModel conv) {
+    final targetId = conv.workerActualId ?? conv.workerId;
+    if (targetId.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => WorkerDetailScreen(workerId: targetId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Worker profile ID not available')),
+      );
+    }
+  }
 
   // ── Selection & Delete Mode ───────────────────────────────────────────────
   bool _isSelectionMode = false;
@@ -317,6 +364,8 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final displayList = _filteredConversations;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       appBar: _isSelectionMode ? _buildSelectionAppBar() : _buildNormalAppBar(),
@@ -324,21 +373,23 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _conversations.isEmpty
               ? _buildEmptyState()
-              : RefreshIndicator(
-                  onRefresh: () => _loadConversations(),
-                  child: ListView.separated(
-                    itemCount: _conversations.length,
-                    separatorBuilder: (_, __) => const Divider(
-                      height: 1,
-                      indent: 74,
-                      color: Color(0xFFE2E8F0),
+              : displayList.isEmpty
+                  ? _buildFilterEmptyState()
+                  : RefreshIndicator(
+                      onRefresh: () => _loadConversations(),
+                      child: ListView.separated(
+                        itemCount: displayList.length,
+                        separatorBuilder: (_, __) => const Divider(
+                          height: 1,
+                          indent: 74,
+                          color: Color(0xFFE2E8F0),
+                        ),
+                        itemBuilder: (context, index) {
+                          final conv = displayList[index];
+                          return _buildConversationTile(conv);
+                        },
+                      ),
                     ),
-                    itemBuilder: (context, index) {
-                      final conv = _conversations[index];
-                      return _buildConversationTile(conv);
-                    },
-                  ),
-                ),
       floatingActionButton: _isSelectionMode
           ? null
           : FloatingActionButton.extended(
@@ -500,43 +551,249 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
         ),
       ],
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(60),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+        preferredSize: const Size.fromHeight(114),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Search Bar
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Container(
+                height: 42,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(21),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (_) => _loadConversations(silent: true),
-              decoration: InputDecoration(
-                hintText: 'Search workers by name, email, phone...',
-                hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          _loadConversations();
-                        },
-                      )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (_) => _loadConversations(silent: true),
+                  decoration: InputDecoration(
+                    hintText: 'Search workers by name, email, phone...',
+                    hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                    prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              _loadConversations();
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 11),
+                  ),
+                ),
               ),
             ),
+
+            // Horizontal Filter Chipcards
+            _buildFilterChipsRow(),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChipsRow() {
+    final unreadCount = _conversations.where((c) => c.unreadAdminCount > 0).length;
+    final newCount = _conversations.where((c) {
+      final isRecent = DateTime.now().difference(c.lastMessageAt).inHours < 24;
+      return c.unreadAdminCount > 0 || c.totalTasksCompleted == 0 || isRecent;
+    }).length;
+    final todayCount = _conversations.where((c) => _isToday(c.lastMessageAt)).length;
+    final allCount = _conversations.length;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          _buildChipCard(
+            filter: ChatFilter.all,
+            title: 'All Chats',
+            icon: Icons.forum_rounded,
+            count: allCount,
           ),
+          const SizedBox(width: 8),
+          _buildChipCard(
+            filter: ChatFilter.unread,
+            title: 'Unread',
+            icon: Icons.mark_chat_unread_rounded,
+            count: unreadCount,
+            badgeColor: const Color(0xFF10B981), // Emerald
+            showZero: false,
+          ),
+          const SizedBox(width: 8),
+          _buildChipCard(
+            filter: ChatFilter.newMessages,
+            title: 'New Messages',
+            icon: Icons.fiber_new_rounded,
+            count: newCount,
+            badgeColor: const Color(0xFF3B82F6), // Blue
+            showZero: false,
+          ),
+          const SizedBox(width: 8),
+          _buildChipCard(
+            filter: ChatFilter.activeToday,
+            title: 'Active Today',
+            icon: Icons.today_rounded,
+            count: todayCount,
+            badgeColor: const Color(0xFF8B5CF6), // Purple
+            showZero: false,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChipCard({
+    required ChatFilter filter,
+    required String title,
+    required IconData icon,
+    required int count,
+    Color? badgeColor,
+    bool showZero = true,
+  }) {
+    final isSelected = _selectedFilter == filter;
+
+    return InkWell(
+      onTap: () {
+        setState(() => _selectedFilter = filter);
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Colors.white
+              : Colors.white.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.25),
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: isSelected ? AppColors.primary : Colors.white,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? AppColors.primary : Colors.white,
+              ),
+            ),
+            if (count > 0 || showZero) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? (badgeColor ?? AppColors.primary)
+                      : (badgeColor?.withValues(alpha: 0.9) ?? Colors.white.withValues(alpha: 0.25)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterEmptyState() {
+    String label = 'conversations';
+    if (_selectedFilter == ChatFilter.unread) label = 'unread conversations';
+    if (_selectedFilter == ChatFilter.newMessages) label = 'new message conversations';
+    if (_selectedFilter == ChatFilter.activeToday) label = 'conversations active today';
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE2E8F0),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.filter_alt_off_rounded,
+                size: 30,
+                color: Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'No $label',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Try switching your filter or clearing search to view other worker conversations.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.clear_all_rounded, size: 18),
+              label: const Text('Show All Chats'),
+              onPressed: () {
+                setState(() {
+                  _selectedFilter = ChatFilter.all;
+                  _searchController.clear();
+                });
+                _loadConversations();
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -656,17 +913,41 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
               ),
               const SizedBox(width: 4),
             ],
-            // Avatar with Google profile photo support
-            AppAvatar(
-              name: conv.workerName,
-              imageUrl: conv.workerAvatarUrl,
-              radius: 25,
-              showOnlineBadge: true,
-              isOnline: true,
+            // Avatar with profile view interaction
+            GestureDetector(
+              onTap: () => _openWorkerProfile(conv),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AppAvatar(
+                    name: conv.workerName,
+                    imageUrl: conv.workerAvatarUrl,
+                    radius: 25,
+                    showOnlineBadge: true,
+                    isOnline: true,
+                  ),
+                  Positioned(
+                    bottom: -2,
+                    right: -2,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.person_rounded,
+                        size: 9,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(width: 14),
 
-            // Middle Column: Name, phone/email, last message
+            // Middle Column: Name, profile action, phone/email, last message
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -688,19 +969,73 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
                       if (isNew) ...[
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
                             color: const Color(0xFFDBEAFE),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text(
                             'NEW',
-                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                            style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
                           ),
                         ),
                       ],
+                      const SizedBox(width: 6),
+                      // Tappable worker profile button
+                      InkWell(
+                        onTap: () => _openWorkerProfile(conv),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2), width: 0.8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.badge_rounded, size: 10, color: AppColors.primary),
+                              SizedBox(width: 3),
+                              Text(
+                                'Profile',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
+                  if (conv.workerPhone.isNotEmpty || conv.workerEmail.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(
+                          conv.workerPhone.isNotEmpty ? Icons.phone_rounded : Icons.email_rounded,
+                          size: 11,
+                          color: const Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            conv.workerPhone.isNotEmpty ? conv.workerPhone : conv.workerEmail,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 3),
                   Row(
                     children: [

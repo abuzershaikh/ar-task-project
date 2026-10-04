@@ -173,7 +173,12 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
       await repository.updateWorkerStatus(event.workerId, event.status);
       _cachedWorkers = _cachedWorkers.map((w) {
         if (w.id == event.workerId || w.userId == event.workerId) {
-          return w.copyWith(status: event.status.toUpperCase());
+          final s = event.status.toUpperCase();
+          return w.copyWith(
+            status: s,
+            accountStatus: s,
+            activityStatus: s == 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
+          );
         }
         return w;
       }).toList();

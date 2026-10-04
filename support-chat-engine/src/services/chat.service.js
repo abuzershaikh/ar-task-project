@@ -16,15 +16,19 @@ class ChatService {
   async getOrCreateConversation(workerId, workerDetails = {}) {
     // Lookup user & worker info from DB
     const [userRows] = await pool.query(
-      `SELECT u.id, u.email, u.avatar_url, w.full_name, w.phone 
+      `SELECT u.id, u.email, u.full_name as user_full_name, u.avatar_url, 
+              w.id as worker_actual_id, w.full_name as worker_full_name, w.phone as worker_phone, u.phone as user_phone
        FROM users u 
-       LEFT JOIN workers w ON w.user_id = u.id 
+       LEFT JOIN workers w ON (w.user_id = u.id OR w.id = ?)
        WHERE u.id = ? OR u.email = ? LIMIT 1`,
-      [workerId, workerDetails.email || '']
+      [workerId, workerId, workerDetails.email || '']
     );
 
     const userInfo = userRows[0] || {};
     const avatar = workerDetails.avatarUrl || workerDetails.photoUrl || userInfo.avatar_url || '';
+    const resolvedName = workerDetails.name || userInfo.user_full_name || userInfo.worker_full_name || userInfo.email?.split('@')[0] || 'Worker';
+    const email = workerDetails.email || userInfo.email || '';
+    const phone = workerDetails.phone || userInfo.user_phone || userInfo.worker_phone || '';
 
     const [existing] = await pool.query(
       'SELECT * FROM support_conversations WHERE worker_id = ? LIMIT 1',
@@ -32,23 +36,51 @@ class ChatService {
     );
 
     if (existing.length > 0) {
+      let needsUpdate = false;
+      const updates = [];
+      const updateParams = [];
+
       if (avatar && (!existing[0].worker_avatar_url || existing[0].worker_avatar_url === '')) {
-        await pool.query('UPDATE support_conversations SET worker_avatar_url = ? WHERE id = ?', [avatar, existing[0].id]);
+        updates.push('worker_avatar_url = ?');
+        updateParams.push(avatar);
         existing[0].worker_avatar_url = avatar;
+        needsUpdate = true;
+      }
+
+      if (resolvedName && resolvedName !== 'Worker' && (existing[0].worker_name === 'Worker' || !existing[0].worker_name)) {
+        updates.push('worker_name = ?');
+        updateParams.push(resolvedName);
+        existing[0].worker_name = resolvedName;
+        needsUpdate = true;
+      }
+
+      if (email && (!existing[0].worker_email || existing[0].worker_email === '')) {
+        updates.push('worker_email = ?');
+        updateParams.push(email);
+        existing[0].worker_email = email;
+        needsUpdate = true;
+      }
+
+      if (phone && (!existing[0].worker_phone || existing[0].worker_phone === '')) {
+        updates.push('worker_phone = ?');
+        updateParams.push(phone);
+        existing[0].worker_phone = phone;
+        needsUpdate = true;
+      }
+
+      if (needsUpdate) {
+        updateParams.push(existing[0].id);
+        await pool.query(`UPDATE support_conversations SET ${updates.join(', ')} WHERE id = ?`, updateParams);
       }
       return existing[0];
     }
-
-    const name = workerDetails.name || userInfo.full_name || userInfo.email?.split('@')[0] || 'Worker';
-    const email = workerDetails.email || userInfo.email || '';
-    const phone = workerDetails.phone || userInfo.phone || '';
 
     const newId = uuidv4();
     await pool.query(
       `INSERT INTO support_conversations 
        (id, worker_id, worker_name, worker_phone, worker_email, worker_avatar_url, last_message_text, last_message_type, last_message_at, unread_admin_count, unread_worker_count)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0, 0)`,
-      [newId, workerId, name, phone, email, avatar, 'Started conversation', 'TEXT']
+      [newId, workerId, resolvedName, phone, email, avatar, 'Started conversation', 'TEXT']
     );
 
     const [created] = await pool.query('SELECT * FROM support_conversations WHERE id = ?', [newId]);
@@ -58,25 +90,36 @@ class ChatService {
   /**
    * Get conversations for Admin (WhatsApp-like list)
    */
-  async getConversations({ search = '', limit = 50, offset = 0 } = {}) {
+  async getConversations({ search = '', limit = 100, offset = 0 } = {}) {
     let query = `
       SELECT c.*, 
+             COALESCE(NULLIF(NULLIF(c.worker_name, 'Worker'), ''), u.full_name, w.full_name, u.email, 'Worker') as worker_name,
+             COALESCE(NULLIF(c.worker_email, ''), u.email, '') as worker_email,
+             COALESCE(NULLIF(c.worker_phone, ''), u.phone, w.phone, '') as worker_phone,
              COALESCE(NULLIF(c.worker_avatar_url, ''), u.avatar_url) as worker_avatar_url,
+             COALESCE(w.id, c.worker_id) as worker_actual_id,
              w.last_active_at, w.total_tasks_completed, w.status as worker_status
       FROM support_conversations c
-      LEFT JOIN workers w ON w.user_id = c.worker_id
-      LEFT JOIN users u ON (u.id = c.worker_id OR u.email = c.worker_email)
+      LEFT JOIN workers w ON (w.user_id = c.worker_id OR w.id = c.worker_id)
+      LEFT JOIN users u ON (u.id = c.worker_id OR u.id = w.user_id OR (c.worker_email != '' AND u.email = c.worker_email))
     `;
     const params = [];
 
     if (search && search.trim()) {
-      query += ` WHERE (c.worker_name LIKE ? OR c.worker_email LIKE ? OR c.worker_phone LIKE ? OR c.last_message_text LIKE ?)`;
+      query += ` WHERE (
+        COALESCE(NULLIF(NULLIF(c.worker_name, 'Worker'), ''), u.full_name, 'Worker') LIKE ? 
+        OR u.email LIKE ? 
+        OR c.worker_email LIKE ? 
+        OR c.worker_phone LIKE ? 
+        OR u.phone LIKE ? 
+        OR c.last_message_text LIKE ?
+      )`;
       const term = `%${search.trim()}%`;
-      params.push(term, term, term, term);
+      params.push(term, term, term, term, term, term);
     }
 
     query += ` ORDER BY c.last_message_at DESC LIMIT ? OFFSET ?`;
-    params.push(parseInt(limit, 10), parseInt(offset, 10));
+    params.push(parseInt(limit, 10) || 100, parseInt(offset, 10) || 0);
 
     const [rows] = await pool.query(query, params);
 
@@ -96,12 +139,14 @@ class ChatService {
    * Get messages for a conversation
    */
   async getMessages(conversationId, { limit = 100, offset = 0 } = {}) {
+    const lim = parseInt(limit, 10) || 100;
+    const off = parseInt(offset, 10) || 0;
     const [rows] = await pool.query(
       `SELECT * FROM support_messages 
-       WHERE conversation_id = ? 
+       WHERE conversation_id = ? OR worker_id = ?
        ORDER BY created_at ASC 
        LIMIT ? OFFSET ?`,
-      [conversationId, parseInt(limit, 10), parseInt(offset, 10)]
+      [conversationId, conversationId, lim, off]
     );
     return rows;
   }
@@ -109,8 +154,8 @@ class ChatService {
   /**
    * Get messages by worker ID directly (for worker app convenience)
    */
-  async getMessagesByWorkerId(workerId, { limit = 100, offset = 0 } = {}) {
-    const conv = await this.getOrCreateConversation(workerId);
+  async getMessagesByWorkerId(workerId, { limit = 100, offset = 0, name, email, phone, avatarUrl } = {}) {
+    const conv = await this.getOrCreateConversation(workerId, { name, email, phone, avatarUrl });
     const messages = await this.getMessages(conv.id, { limit, offset });
     return {
       conversation: conv,
@@ -210,7 +255,7 @@ class ChatService {
         [conversationId]
       );
       await pool.query(
-        'UPDATE support_messages SET is_read = 1 WHERE conversation_id = ? AND sender_type = "WORKER"',
+        'UPDATE support_messages SET is_read = 1 WHERE conversation_id = ? AND sender_type = "WORKER" AND is_read = 0',
         [conversationId]
       );
     } else {
@@ -219,7 +264,7 @@ class ChatService {
         [conversationId]
       );
       await pool.query(
-        'UPDATE support_messages SET is_read = 1 WHERE conversation_id = ? AND sender_type = "ADMIN"',
+        'UPDATE support_messages SET is_read = 1 WHERE conversation_id = ? AND sender_type = "ADMIN" AND is_read = 0',
         [conversationId]
       );
     }

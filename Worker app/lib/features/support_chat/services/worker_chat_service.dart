@@ -202,7 +202,20 @@ class WorkerChatService {
     SupportMediaCache.instance.purgeExpiredCache().ignore();
 
     try {
-      final uri = Uri.parse('$_apiBase/worker/$workerId');
+      final user = FirebaseAuth.instance.currentUser;
+      final name = user?.displayName ?? '';
+      final email = user?.email ?? '';
+      final phone = user?.phoneNumber ?? '';
+      final photo = user?.photoURL ?? '';
+
+      final queryParams = <String, String>{
+        if (name.isNotEmpty) 'name': name,
+        if (email.isNotEmpty) 'email': email,
+        if (phone.isNotEmpty) 'phone': phone,
+        if (photo.isNotEmpty) 'avatarUrl': photo,
+      };
+
+      final uri = Uri.parse('$_apiBase/worker/$workerId').replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
       final res = await http.get(uri).timeout(const Duration(seconds: 8));
 
       if (res.statusCode == 200) {

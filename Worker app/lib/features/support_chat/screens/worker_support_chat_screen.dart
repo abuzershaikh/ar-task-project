@@ -129,7 +129,16 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
     });
 
     _readSub = _chatService.onMessagesRead.listen((_) {
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {
+          for (int i = 0; i < _messages.length; i++) {
+            if (_messages[i].isWorker && !_messages[i].isRead) {
+              _messages[i] = _messages[i].copyWith(isRead: true);
+            }
+          }
+        });
+        _chatService.saveMessagesToCache(_messages);
+      }
     });
 
     _delSub = _chatService.onMessagesDeleted.listen((deletedIds) {
@@ -640,10 +649,12 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
                       ),
                       if (isWorker) ...[
                         const SizedBox(width: 4),
-                        const Icon(
+                        Icon(
                           Icons.done_all_rounded,
                           size: 15,
-                          color: Color(0xFF53BDEB), // WhatsApp Blue Read Ticks
+                          color: msg.isRead
+                              ? const Color(0xFF53BDEB) // WhatsApp Blue Read Ticks
+                              : const Color(0xFF8696A0), // WhatsApp Grey Delivered Ticks
                         ),
                       ],
                     ],

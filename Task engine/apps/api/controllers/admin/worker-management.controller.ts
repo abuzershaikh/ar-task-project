@@ -5,6 +5,7 @@ import {
     Delete,
     Param,
     Body,
+    Query,
     NotFoundException,
     BadRequestException,
 } from '@nestjs/common';
@@ -19,6 +20,7 @@ import { RatingRepository } from '../../../../shared/database/repositories/ratin
 import { WalletRepository } from '../../../../shared/database/repositories/wallet.repository';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, UserStatus } from '../../../../shared/database/entities/user.entity';
+import { Worker } from '../../../../shared/database/entities/worker.entity';
 import { DataSource } from 'typeorm';
 
 @ApiTags('Admin - Worker Management')
@@ -39,9 +41,13 @@ export class AdminWorkerManagementController {
     ) { }
 
     @Get()
-    @ApiOperation({ summary: 'List all workers' })
-    async listWorkers() {
-        const workerRecords = await this.workerRepo.findActiveWorkers();
+    @ApiOperation({ summary: 'List all workers with status/activity filter' })
+    async listWorkers(
+        @Query('status') statusQuery?: string,
+        @Query('activity') activityQuery?: string,
+        @Query('search') searchQuery?: string,
+    ) {
+        const workerRecords = await this.dataSource.getRepository(Worker).find();
         const userWorkers = await this.userRepo.findByRole(UserRole.WORKER);
 
         const workerMap = new Map<string, any>();
@@ -49,7 +55,9 @@ export class AdminWorkerManagementController {
             workerMap.set(w.userId, w);
         }
 
-        const results = await Promise.all(userWorkers.map(async (u) => {
+        const cutoff48h = Date.now() - 48 * 60 * 60 * 1000;
+
+        let results = await Promise.all(userWorkers.map(async (u) => {
             const w = workerMap.get(u.id);
             const earnings = await this.earningRepo.findByWorker(u.id);
             const totalEarned = earnings.reduce((sum, e) => sum + Number(e.amount || 0), 0);
@@ -58,6 +66,18 @@ export class AdminWorkerManagementController {
             const scoreRecord = w ? await this.scoreRepo.findByWorker(w.id) : null;
             const score = scoreRecord ? Number(scoreRecord.totalScore) : Math.round(Number(w?.averageRating || 4.8) * 20);
 
+            const lastActive = w?.lastActiveAt || u.lastLogin || (u as any).last_login;
+            const isRecentlyActive = lastActive && new Date(lastActive).getTime() > cutoff48h;
+            const rawAccountStatus = (u.status || w?.status || 'ACTIVE').toUpperCase();
+
+            // Determine effective status: functional activity if account status is ACTIVE
+            let effectiveStatus = rawAccountStatus;
+            if (rawAccountStatus === 'ACTIVE') {
+                effectiveStatus = isRecentlyActive ? 'ACTIVE' : 'INACTIVE';
+            }
+
+            const activityStatus = isRecentlyActive ? 'ACTIVE' : 'INACTIVE';
+
             return {
                 id: w?.id || u.id,
                 userId: u.id,
@@ -65,7 +85,11 @@ export class AdminWorkerManagementController {
                 email: u.email,
                 phone: u.phone || '',
                 avatarUrl: (u as any).avatarUrl || (u as any).avatar_url || '',
-                status: (u.status || 'ACTIVE').toUpperCase(),
+                status: effectiveStatus,
+                accountStatus: rawAccountStatus,
+                activityStatus,
+                lastActiveAt: lastActive || null,
+                lastLogin: u.lastLogin || (u as any).last_login || null,
                 kycStatus: (w?.kycStatus || 'VERIFIED').toUpperCase(),
                 rating: Number(w?.averageRating || 0),
                 completedTasks: tasks.length || Number(w?.totalTasksCompleted || 0),
@@ -76,6 +100,39 @@ export class AdminWorkerManagementController {
                 createdAt: u.createdAt || w?.createdAt,
             };
         }));
+
+        if (statusQuery && statusQuery.toUpperCase() !== 'ALL') {
+            const sq = statusQuery.toUpperCase();
+            if (sq === 'ACTIVE') {
+                results = results.filter((w) => w.status === 'ACTIVE' || w.activityStatus === 'ACTIVE');
+            } else if (sq === 'INACTIVE') {
+                results = results.filter((w) => w.status === 'INACTIVE' || w.activityStatus === 'INACTIVE');
+            } else if (sq === 'SUSPENDED') {
+                results = results.filter((w) => w.accountStatus === 'SUSPENDED' || w.status === 'SUSPENDED');
+            } else if (sq === 'BANNED') {
+                results = results.filter((w) => w.accountStatus === 'BANNED' || w.status === 'BANNED');
+            } else if (sq === 'KYC') {
+                results = results.filter((w) => w.kycStatus === 'VERIFIED' || w.kycStatus === 'APPROVED');
+            } else {
+                results = results.filter((w) => w.status === sq || w.accountStatus === sq);
+            }
+        }
+
+        if (activityQuery) {
+            const aq = activityQuery.toUpperCase();
+            results = results.filter((w) => w.activityStatus === aq);
+        }
+
+        if (searchQuery && searchQuery.trim().length > 0) {
+            const query = searchQuery.trim().toLowerCase();
+            results = results.filter((w) =>
+                w.name.toLowerCase().includes(query) ||
+                w.email.toLowerCase().includes(query) ||
+                w.phone.toLowerCase().includes(query) ||
+                w.id.toLowerCase().includes(query) ||
+                w.userId.toLowerCase().includes(query)
+            );
+        }
 
         return {
             success: true,
@@ -111,6 +168,15 @@ export class AdminWorkerManagementController {
         const wallet = userId ? await this.walletRepo.findByUserId(userId) : null;
         const totalEarningsRecorded = earnings.reduce((a, b) => a + Number(b.amount || 0), 0);
 
+        const lastActive = worker?.lastActiveAt || user?.lastLogin || (user as any)?.last_login;
+        const cutoff48h = Date.now() - 48 * 60 * 60 * 1000;
+        const isRecentlyActive = lastActive && new Date(lastActive).getTime() > cutoff48h;
+        const rawAccountStatus = (user?.status || worker?.status || 'ACTIVE').toUpperCase();
+        let effectiveStatus = rawAccountStatus;
+        if (rawAccountStatus === 'ACTIVE') {
+            effectiveStatus = isRecentlyActive ? 'ACTIVE' : 'INACTIVE';
+        }
+
         const formattedWorker = {
             id: worker?.id || user?.id,
             userId: userId,
@@ -118,7 +184,11 @@ export class AdminWorkerManagementController {
             email: user?.email || '',
             phone: user?.phone || '',
             avatarUrl: user?.avatarUrl || (user as any)?.avatar_url || '',
-            status: (user?.status || worker?.status || 'ACTIVE').toUpperCase(),
+            status: effectiveStatus,
+            accountStatus: rawAccountStatus,
+            activityStatus: isRecentlyActive ? 'ACTIVE' : 'INACTIVE',
+            lastActiveAt: lastActive || null,
+            lastLogin: user?.lastLogin || (user as any)?.last_login || null,
             kycStatus: (worker?.kycStatus || 'VERIFIED').toUpperCase(),
             rating: Number(worker?.averageRating || 0),
             completedTasks: tasks.length || Number(worker?.totalTasksCompleted || 0),
@@ -250,13 +320,25 @@ export class AdminWorkerManagementController {
             throw new BadRequestException(`Invalid status: ${body.status}. Must be one of ${validStatuses.join(', ')}`);
         }
 
+        const workerDbStatus = targetStatus === 'ACTIVE' ? 'active' : (targetStatus === 'INACTIVE' ? 'inactive' : targetStatus.toLowerCase());
+        const lastActiveValue = targetStatus === 'ACTIVE' ? new Date() : (targetStatus === 'INACTIVE' ? new Date(0) : undefined);
+
         if (worker) {
-            await this.workerRepo.update(worker.id, { status: targetStatus });
+            await this.workerRepo.update(worker.id, {
+                status: workerDbStatus,
+                ...(lastActiveValue !== undefined ? { lastActiveAt: lastActiveValue } : {}),
+            });
         }
         if (user) {
             await this.userRepo.updateStatus(user.id, targetStatus as UserStatus);
+            if (targetStatus === 'ACTIVE') {
+                await this.userRepo.update(user.id, { lastLogin: new Date() });
+            }
         } else if (worker?.userId) {
             await this.userRepo.updateStatus(worker.userId, targetStatus as UserStatus);
+            if (targetStatus === 'ACTIVE') {
+                await this.userRepo.update(worker.userId, { lastLogin: new Date() });
+            }
         }
 
         return {

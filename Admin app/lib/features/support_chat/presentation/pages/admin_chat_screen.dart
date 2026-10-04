@@ -6,8 +6,10 @@ import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_avatar.dart';
+import '../../../workers/presentation/pages/worker_detail_screen.dart';
 import '../../data/models/support_conversation_model.dart';
 import '../../data/models/support_message_model.dart';
 import '../../data/services/support_chat_service.dart';
@@ -32,6 +34,7 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
   List<SupportMessageModel> _messages = [];
   bool _isLoading = true;
   bool _isSending = false;
+  bool _hasText = false;
 
   // Voice recording state
   bool _isRecording = false;
@@ -52,12 +55,22 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
   StreamSubscription? _msgSub;
   StreamSubscription? _delSub;
   StreamSubscription? _allDelSub;
+  StreamSubscription? _readSub;
+
+  void _onTextChanged() {
+    final hasText = _textController.text.trim().isNotEmpty;
+    if (hasText != _hasText && mounted) {
+      setState(() => _hasText = hasText);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _audioRecorder = AudioRecorder();
     _audioPlayer = AudioPlayer();
+
+    _textController.addListener(_onTextChanged);
 
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) setState(() => _playerState = state);
@@ -69,6 +82,7 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
       if (mounted) setState(() => _totalDuration = dur);
     });
 
+    _chatService.initSocket();
     _loadMessages();
 
     // Mark as read immediately
@@ -77,11 +91,31 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
     // Listen to real-time incoming messages
     _msgSub = _chatService.onNewMessage.listen((msg) {
       if (msg.conversationId == widget.conversation.id || msg.workerId == widget.conversation.workerId) {
+        if (mounted) {
+          setState(() {
+            final idx = _messages.indexWhere((m) => m.id == msg.id);
+            if (idx >= 0) {
+              _messages[idx] = msg;
+            } else {
+              _messages.add(msg);
+            }
+          });
+          _scrollToBottom();
+          _chatService.markRead(widget.conversation.id, widget.conversation.workerId);
+        }
+      }
+    });
+
+    // Listen to real-time read receipts (when worker opens chat)
+    _readSub = _chatService.onMessagesRead.listen((_) {
+      if (mounted) {
         setState(() {
-          _messages.add(msg);
+          for (int i = 0; i < _messages.length; i++) {
+            if (_messages[i].isAdmin && !_messages[i].isRead) {
+              _messages[i] = _messages[i].copyWith(isRead: true);
+            }
+          }
         });
-        _scrollToBottom();
-        _chatService.markRead(widget.conversation.id, widget.conversation.workerId);
       }
     });
 
@@ -115,9 +149,11 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
     _msgSub?.cancel();
     _delSub?.cancel();
     _allDelSub?.cancel();
+    _readSub?.cancel();
     _recordTimer?.cancel();
     _audioRecorder.dispose();
     _audioPlayer.dispose();
+    _textController.removeListener(_onTextChanged);
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -420,31 +456,177 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
     if (mounted) setState(() => _isSending = false);
   }
 
-  // ── Send Photo ─────────────────────────────────────────────────────────────
-  Future<void> _pickAndSendImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-    if (image == null) return;
+  // ── Send Photo (Camera or Gallery) ─────────────────────────────────────────
+  Future<void> _pickAndSendImage({ImageSource source = ImageSource.gallery}) async {
+    try {
+      final XFile? image = await _picker.pickImage(source: source, imageQuality: 80);
+      if (image == null) return;
 
-    setState(() => _isSending = true);
-    final file = File(image.path);
-    final mediaUrl = await _chatService.uploadMedia(file);
+      setState(() => _isSending = true);
+      final file = File(image.path);
+      final mediaUrl = await _chatService.uploadMedia(file);
 
-    if (mediaUrl != null && mounted) {
-      final sent = await _chatService.sendMessage(
-        conversationId: widget.conversation.id,
-        workerId: widget.conversation.workerId,
-        messageType: 'IMAGE',
-        content: 'Photo',
-        mediaUrl: mediaUrl,
-      );
-      if (sent != null && mounted) {
-        setState(() {
-          if (!_messages.any((m) => m.id == sent.id)) _messages.add(sent);
-        });
-        _scrollToBottom();
+      if (mediaUrl != null && mounted) {
+        final sent = await _chatService.sendMessage(
+          conversationId: widget.conversation.id,
+          workerId: widget.conversation.workerId,
+          messageType: 'IMAGE',
+          content: 'Photo',
+          mediaUrl: mediaUrl,
+        );
+        if (sent != null && mounted) {
+          setState(() {
+            if (!_messages.any((m) => m.id == sent.id)) _messages.add(sent);
+          });
+          _scrollToBottom();
+        }
       }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    } finally {
+      if (mounted) setState(() => _isSending = false);
     }
-    if (mounted) setState(() => _isSending = false);
+  }
+
+  // ── Attachment Bottom Sheet (Pin Icon Action) ──────────────────────────────
+  void _showAttachmentBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 12,
+              offset: Offset(0, -3),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag Indicator Bar
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Share Attachment',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 22),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Camera
+                  _buildAttachmentOption(
+                    icon: Icons.camera_alt_rounded,
+                    label: 'Camera',
+                    gradientColors: [const Color(0xFFEC4899), const Color(0xFFBE185D)],
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickAndSendImage(source: ImageSource.camera);
+                    },
+                  ),
+                  // Gallery
+                  _buildAttachmentOption(
+                    icon: Icons.photo_library_rounded,
+                    label: 'Gallery',
+                    gradientColors: [const Color(0xFF8B5CF6), const Color(0xFF6D28D9)],
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickAndSendImage(source: ImageSource.gallery);
+                    },
+                  ),
+                  // YouTube Video
+                  _buildAttachmentOption(
+                    icon: Icons.play_circle_fill_rounded,
+                    label: 'YouTube',
+                    gradientColors: [const Color(0xFFEF4444), const Color(0xFFB91C1C)],
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showYouTubeDialog();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAttachmentOption({
+    required IconData icon,
+    required String label,
+    required List<Color> gradientColors,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: gradientColors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: gradientColors.first.withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 28),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF334155),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Audio Recording ────────────────────────────────────────────────────────
@@ -527,6 +709,81 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
     }
   }
 
+  void _openWorkerProfile() {
+    final targetId = widget.conversation.workerActualId ?? widget.conversation.workerId;
+    if (targetId.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => WorkerDetailScreen(workerId: targetId),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Worker profile ID not available')),
+      );
+    }
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  String _formatDateSeparator(DateTime ist) {
+    final nowIst = DateTime.now().toUtc().add(const Duration(hours: 5, minutes: 30));
+    final today = DateTime(nowIst.year, nowIst.month, nowIst.day);
+    final msgDate = DateTime(ist.year, ist.month, ist.day);
+    final diffDays = today.difference(msgDate).inDays;
+
+    if (msgDate == today) {
+      return 'Today';
+    } else if (diffDays == 1) {
+      return 'Yesterday';
+    } else if (diffDays > 1 && diffDays < 7) {
+      return DateFormat('EEEE').format(msgDate); // e.g. "Sunday"
+    } else if (msgDate.year == today.year) {
+      return DateFormat('dd MMMM, EEEE').format(msgDate); // e.g. "04 October, Sunday"
+    } else {
+      return DateFormat('dd MMMM yyyy').format(msgDate); // e.g. "04 October 2026"
+    }
+  }
+
+  Widget _buildDateSeparator(DateTime ist) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE2E8F0).withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.calendar_today_rounded, size: 12, color: Color(0xFF64748B)),
+            const SizedBox(width: 6),
+            Text(
+              _formatDateSeparator(ist),
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF475569),
+                letterSpacing: 0.2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final conv = widget.conversation;
@@ -548,6 +805,18 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
                           final msg = _messages[index];
+                          final bool showDateSeparator = index == 0 ||
+                              !_isSameDay(_messages[index - 1].istTime, msg.istTime);
+
+                          if (showDateSeparator) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _buildDateSeparator(msg.istTime),
+                                _buildMessageBubble(msg),
+                              ],
+                            );
+                          }
                           return _buildMessageBubble(msg);
                         },
                       ),
@@ -566,36 +835,61 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
       titleSpacing: 0,
       backgroundColor: AppColors.primary,
       foregroundColor: Colors.white,
-      title: Row(
-        children: [
-          AppAvatar(
-            name: conv.workerName,
-            imageUrl: conv.workerAvatarUrl,
-            radius: 19,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  conv.workerName,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+      title: InkWell(
+        onTap: _openWorkerProfile,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: Row(
+            children: [
+              AppAvatar(
+                name: conv.workerName,
+                imageUrl: conv.workerAvatarUrl,
+                radius: 19,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            conv.workerName,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Colors.white70),
+                      ],
+                    ),
+                    Text(
+                      conv.workerPhone.isNotEmpty
+                          ? conv.workerPhone
+                          : (conv.workerEmail.isNotEmpty ? conv.workerEmail : 'View Profile'),
+                      style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.8)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                Text(
-                  conv.workerPhone.isNotEmpty ? conv.workerPhone : (conv.workerEmail.isNotEmpty ? conv.workerEmail : 'Worker'),
-                  style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.8)),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
       actions: [
+        // Worker Profile Shortcut Action Button
+        IconButton(
+          icon: const Icon(Icons.person_rounded, size: 22),
+          tooltip: 'Worker Profile',
+          onPressed: _openWorkerProfile,
+        ),
         Container(
-          margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.15),
@@ -616,13 +910,26 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
           onSelected: (value) {
-            if (value == 'delete_all') {
+            if (value == 'profile') {
+              _openWorkerProfile();
+            } else if (value == 'delete_all') {
               _handleDeleteAllMessages();
             } else if (value == 'select') {
               setState(() => _isSelectionMode = true);
             }
           },
           itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'profile',
+              child: Row(
+                children: [
+                  Icon(Icons.badge_rounded, size: 20, color: Color(0xFF00875A)),
+                  SizedBox(width: 8),
+                  Text('View Worker Profile', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
             const PopupMenuItem(
               value: 'select',
               child: Row(
@@ -1108,7 +1415,7 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+      padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
@@ -1116,76 +1423,120 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
       child: SafeArea(
         top: false,
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Attach YouTube Link Button
-            IconButton(
-              icon: const Icon(Icons.play_circle_fill_rounded, color: Colors.red, size: 26),
-              tooltip: 'Send YouTube Video',
-              onPressed: _showYouTubeDialog,
-            ),
-
-            // Attach Image Button
-            IconButton(
-              icon: const Icon(Icons.photo_camera_rounded, color: Color(0xFF0284C7), size: 24),
-              tooltip: 'Send Photo',
-              onPressed: _pickAndSendImage,
-            ),
-
-            // Text Input
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: TextField(
-                  controller: _textController,
-                  minLines: 1,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    hintText: 'Type a message...',
-                    hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-                    border: InputBorder.none,
+            // Pin / Attachment Button (Compact size to maximize textbox width)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2, left: 2, right: 2),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: _showAttachmentBottomSheet,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.attach_file_rounded,
+                      color: Color(0xFF64748B),
+                      size: 20, // Smaller icon size as requested
+                    ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 6),
 
-            // Send / Mic Button
-            _textController.text.trim().isNotEmpty || _isSending
-                ? Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF00875A),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: _isSending
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                      onPressed: _handleSendText,
-                    ),
-                  )
-                : Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF00875A),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.mic_rounded, color: Colors.white, size: 22),
-                      tooltip: 'Record Voice Note',
-                      onPressed: _startRecording,
-                    ),
+            // Text Input (Maximized width, fixed 2 lines height with internal vertical scrolling)
+            Expanded(
+              child: Container(
+                constraints: const BoxConstraints(
+                  minHeight: 40,
+                  maxHeight: 58, // Fixed 2-line height ceiling
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                ),
+                child: TextField(
+                  controller: _textController,
+                  keyboardType: TextInputType.multiline,
+                  minLines: 1,
+                  maxLines: 2,
+                  scrollPhysics: const ClampingScrollPhysics(),
+                  onChanged: (val) {
+                    final hasText = val.trim().isNotEmpty;
+                    if (hasText != _hasText) {
+                      setState(() => _hasText = hasText);
+                    }
+                  },
+                  onSubmitted: (_) => _handleSendText(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF0F172A),
+                    height: 1.3,
                   ),
+                  decoration: const InputDecoration(
+                    hintText: 'Type a message...',
+                    hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 13.5),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+
+            // Send / Mic Button (Compact 38x38 button to save space)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2, right: 2),
+              child: (_hasText || _textController.text.trim().isNotEmpty || _isSending)
+                  ? Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF00875A),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(19),
+                          onTap: _isSending ? null : _handleSendText,
+                          child: Center(
+                            child: _isSending
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF00875A),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(19),
+                          onTap: _startRecording,
+                          child: const Center(
+                            child: Icon(Icons.mic_rounded, color: Colors.white, size: 19),
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
           ],
         ),
       ),

@@ -5,6 +5,7 @@ import {
     Delete,
     Param,
     Body,
+    Query,
     NotFoundException,
     BadRequestException,
 } from '@nestjs/common';
@@ -31,8 +32,8 @@ export class AdminBuyerManagementController {
     ) { }
 
     @Get()
-    @ApiOperation({ summary: 'List all buyers' })
-    async listBuyers() {
+    @ApiOperation({ summary: 'List all buyers with optional status filter' })
+    async listBuyers(@Query('status') statusQuery?: string) {
         const buyers = await this.dataSource
             .getRepository(User)
             .createQueryBuilder('u')
@@ -40,7 +41,10 @@ export class AdminBuyerManagementController {
             .orWhere('u.id IN (SELECT DISTINCT o.buyer_id FROM orders o WHERE o.buyer_id IS NOT NULL)')
             .orderBy('u.createdAt', 'DESC')
             .getMany();
-        const results = await Promise.all(buyers.map(async (b) => {
+
+        const cutoff48h = Date.now() - 48 * 60 * 60 * 1000;
+
+        let results = await Promise.all(buyers.map(async (b) => {
             const orders = await this.orderRepo.findByBuyer(b.id);
             const activeOrders = orders.filter((o) => (o.status || '').toUpperCase() === 'ACTIVE');
             const totalSpend = orders.reduce(
@@ -48,19 +52,41 @@ export class AdminBuyerManagementController {
                 0,
             );
 
+            const lastActive = b.lastLogin || (b as any).last_login;
+            const isRecentlyActive = (lastActive && new Date(lastActive).getTime() > cutoff48h) || activeOrders.length > 0;
+            const rawAccountStatus = (b.status || 'ACTIVE').toUpperCase();
+            let effectiveStatus = rawAccountStatus;
+            if (rawAccountStatus === 'ACTIVE') {
+                effectiveStatus = isRecentlyActive ? 'ACTIVE' : 'INACTIVE';
+            }
+
             return {
                 id: b.id,
                 name: (b as any).fullName || (b as any).name || b.email.split('@')[0],
                 email: b.email,
                 phone: b.phone || '',
                 avatarUrl: (b as any).avatarUrl || (b as any).avatar_url || '',
-                status: (b.status || 'ACTIVE').toUpperCase(),
+                status: effectiveStatus,
+                accountStatus: rawAccountStatus,
+                activityStatus: isRecentlyActive ? 'ACTIVE' : 'INACTIVE',
+                lastLogin: lastActive || null,
                 totalOrders: orders.length,
                 activeCampaigns: activeOrders.length,
                 totalSpend,
                 createdAt: b.createdAt,
             };
         }));
+
+        if (statusQuery && statusQuery.toUpperCase() !== 'ALL') {
+            const sq = statusQuery.toUpperCase();
+            if (sq === 'ACTIVE') {
+                results = results.filter((b) => b.status === 'ACTIVE');
+            } else if (sq === 'INACTIVE') {
+                results = results.filter((b) => b.status === 'INACTIVE');
+            } else {
+                results = results.filter((b) => b.status === sq || b.accountStatus === sq);
+            }
+        }
 
         return {
             success: true,
@@ -195,6 +221,12 @@ export class AdminBuyerManagementController {
         }
 
         await this.userRepo.updateStatus(buyerId, targetStatus as UserStatus);
+        if (targetStatus === 'ACTIVE') {
+            await this.userRepo.update(buyerId, { lastLogin: new Date() });
+        } else if (targetStatus === 'INACTIVE') {
+            await this.userRepo.update(buyerId, { lastLogin: new Date(0) });
+        }
+
         return {
             success: true,
             message: `Buyer status updated to ${targetStatus}`,

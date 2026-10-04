@@ -10,6 +10,8 @@ import { WithdrawalRepository } from '../../../../shared/database/repositories/w
 import { EarningRepository } from '../../../../shared/database/repositories/earning.repository';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole } from '../../../../shared/database/entities/user.entity';
+import { Worker } from '../../../../shared/database/entities/worker.entity';
+import { DataSource } from 'typeorm';
 
 @ApiTags('Admin - Master Dashboard')
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
@@ -25,6 +27,7 @@ export class AdminDashboardController {
         private readonly kycRepo: KycRepository,
         private readonly withdrawalRepo: WithdrawalRepository,
         private readonly earningRepo: EarningRepository,
+        private readonly dataSource: DataSource,
     ) { }
 
     @Get()
@@ -32,14 +35,46 @@ export class AdminDashboardController {
     async getMasterDashboard() {
         const workers = await this.userRepo.findByRole(UserRole.WORKER);
         const buyers = await this.userRepo.findByRole(UserRole.BUYER);
+        const workerEntities = await this.dataSource.getRepository(Worker).find();
         const pendingKyc = await this.kycRepo.findPending();
         const pendingReviews = await this.submissionRepo.findPendingReviews();
         const pendingPayouts = await this.withdrawalRepo.findPending();
 
-        const activeWorkers = workers.filter((w) => w.status === 'ACTIVE').length;
-        const inactiveWorkers = workers.filter((w) => w.status !== 'ACTIVE').length;
-        const activeBuyers = buyers.filter((b) => b.status === 'ACTIVE').length;
-        const inactiveBuyers = buyers.filter((b) => b.status !== 'ACTIVE').length;
+        const workerMap = new Map<string, any>();
+        for (const w of workerEntities) {
+            workerMap.set(w.userId, w);
+        }
+
+        const cutoff48h = Date.now() - 48 * 60 * 60 * 1000;
+
+        let activeWorkers = 0;
+        let inactiveWorkers = 0;
+        for (const u of workers) {
+            const w = workerMap.get(u.id);
+            const lastActive = w?.lastActiveAt || u.lastLogin || (u as any).last_login;
+            const isRecentlyActive = lastActive && new Date(lastActive).getTime() > cutoff48h;
+            const isAcctActive = (u.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+
+            if (isAcctActive && isRecentlyActive) {
+                activeWorkers++;
+            } else {
+                inactiveWorkers++;
+            }
+        }
+
+        let activeBuyers = 0;
+        let inactiveBuyers = 0;
+        for (const b of buyers) {
+            const lastActive = b.lastLogin || (b as any).last_login;
+            const isRecentlyActive = lastActive && new Date(lastActive).getTime() > cutoff48h;
+            const isAcctActive = (b.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+
+            if (isAcctActive && isRecentlyActive) {
+                activeBuyers++;
+            } else {
+                inactiveBuyers++;
+            }
+        }
 
         return {
             success: true,
@@ -116,16 +151,43 @@ export class AdminDashboardController {
     @ApiOperation({ summary: 'Admin Dashboard - Worker tier and status metrics' })
     async getWorkersDashboard() {
         const workers = await this.userRepo.findByRole(UserRole.WORKER);
-        const workerProfiles = await this.workerRepo.findActiveWorkers();
-        const activeCount = workers.filter((w) => w.status === 'ACTIVE').length;
-        const inactiveCount = workers.filter((w) => w.status !== 'ACTIVE').length;
+        const workerEntities = await this.dataSource.getRepository(Worker).find();
+        const cutoff48h = Date.now() - 48 * 60 * 60 * 1000;
+
+        const workerMap = new Map<string, any>();
+        for (const w of workerEntities) {
+            workerMap.set(w.userId, w);
+        }
+
+        let activeCount = 0;
+        let inactiveCount = 0;
+        let kycVerifiedCount = 0;
+
+        for (const u of workers) {
+            const w = workerMap.get(u.id);
+            const lastActive = w?.lastActiveAt || u.lastLogin || (u as any).last_login;
+            const isRecentlyActive = lastActive && new Date(lastActive).getTime() > cutoff48h;
+            const isAcctActive = (u.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+
+            if (isAcctActive && isRecentlyActive) {
+                activeCount++;
+            } else {
+                inactiveCount++;
+            }
+
+            const kyc = (w?.kycStatus || '').toLowerCase();
+            if (kyc === 'approved' || kyc === 'verified') {
+                kycVerifiedCount++;
+            }
+        }
+
         return {
             success: true,
             workersSummary: {
                 totalWorkers: workers.length,
                 activeCount,
                 inactiveCount,
-                kycVerifiedCount: workerProfiles.filter((w) => w.kycStatus === 'approved' || w.kycStatus === 'verified').length,
+                kycVerifiedCount,
             },
         };
     }
@@ -134,8 +196,22 @@ export class AdminDashboardController {
     @ApiOperation({ summary: 'Admin Dashboard - Buyer activity and spend metrics' })
     async getBuyersDashboard() {
         const buyers = await this.userRepo.findByRole(UserRole.BUYER);
-        const activeCount = buyers.filter((b) => b.status === 'ACTIVE').length;
-        const inactiveCount = buyers.filter((b) => b.status !== 'ACTIVE').length;
+        const cutoff48h = Date.now() - 48 * 60 * 60 * 1000;
+
+        let activeCount = 0;
+        let inactiveCount = 0;
+        for (const b of buyers) {
+            const lastActive = b.lastLogin || (b as any).last_login;
+            const isRecentlyActive = lastActive && new Date(lastActive).getTime() > cutoff48h;
+            const isAcctActive = (b.status || 'ACTIVE').toUpperCase() === 'ACTIVE';
+
+            if (isAcctActive && isRecentlyActive) {
+                activeCount++;
+            } else {
+                inactiveCount++;
+            }
+        }
+
         return {
             success: true,
             buyersSummary: {
