@@ -117,6 +117,16 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
             },
             itemBuilder: (context) => [
               const PopupMenuItem(
+                value: 'status',
+                child: Row(
+                  children: [
+                    Icon(Icons.tune_rounded, color: Color(0xFF4F46E5), size: 20),
+                    SizedBox(width: 8),
+                    Text('Change Status'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
                 value: 'suspend',
                 child: Row(
                   children: [
@@ -233,8 +243,86 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
     );
   }
 
+  String _selectedStatus = 'ACTIVE';
+
+  void _showStatusChangeDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Change Buyer Status'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('Active'),
+                value: 'ACTIVE',
+                groupValue: _selectedStatus,
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => _selectedStatus = val);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Inactive'),
+                value: 'INACTIVE',
+                groupValue: _selectedStatus,
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => _selectedStatus = val);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Suspended'),
+                value: 'SUSPENDED',
+                groupValue: _selectedStatus,
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => _selectedStatus = val);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Blocked / Banned'),
+                value: 'BANNED',
+                groupValue: _selectedStatus,
+                onChanged: (val) {
+                  if (val != null) setDialogState(() => _selectedStatus = val);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4F46E5),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                context.read<BuyersBloc>().add(
+                  UpdateBuyerStatusEvent(buyerId: widget.buyerId, status: _selectedStatus),
+                );
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Buyer status updated to $_selectedStatus'),
+                    backgroundColor: const Color(0xFF0F172A),
+                  ),
+                );
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _handleAction(String action) {
     switch (action) {
+      case 'status':
+        _showStatusChangeDialog();
+        break;
       case 'suspend':
         _showConfirmDialog('Suspend Buyer', 'Are you sure you want to suspend this buyer?');
         break;

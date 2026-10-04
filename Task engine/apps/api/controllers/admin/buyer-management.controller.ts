@@ -178,20 +178,26 @@ export class AdminBuyerManagementController {
     }
 
     @Post(':id/status')
-    @ApiOperation({ summary: 'Update buyer status (ACTIVE, SUSPENDED, BANNED)' })
+    @ApiOperation({ summary: 'Update buyer status (ACTIVE, INACTIVE, SUSPENDED, BANNED)' })
     async updateStatus(
         @Param('id') buyerId: string,
-        @Body() body: { status: UserStatus },
+        @Body() body: { status: string },
     ) {
         const buyer = await this.userRepo.findById(buyerId);
-        if (!buyer || buyer.role !== UserRole.BUYER) {
+        if (!buyer) {
             throw new NotFoundException('Buyer not found');
         }
 
-        await this.userRepo.updateStatus(buyerId, body.status);
+        const validStatuses = ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'BANNED'];
+        const targetStatus = (body.status || 'ACTIVE').toUpperCase();
+        if (!validStatuses.includes(targetStatus)) {
+            throw new BadRequestException(`Invalid status: ${body.status}. Must be one of ${validStatuses.join(', ')}`);
+        }
+
+        await this.userRepo.updateStatus(buyerId, targetStatus as UserStatus);
         return {
             success: true,
-            message: `Buyer status updated to ${body.status}`,
+            message: `Buyer status updated to ${targetStatus}`,
         };
     }
 

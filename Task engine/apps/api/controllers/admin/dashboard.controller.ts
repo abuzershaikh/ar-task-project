@@ -36,14 +36,24 @@ export class AdminDashboardController {
         const pendingReviews = await this.submissionRepo.findPendingReviews();
         const pendingPayouts = await this.withdrawalRepo.findPending();
 
+        const activeWorkers = workers.filter((w) => w.status === 'ACTIVE').length;
+        const inactiveWorkers = workers.filter((w) => w.status !== 'ACTIVE').length;
+        const activeBuyers = buyers.filter((b) => b.status === 'ACTIVE').length;
+        const inactiveBuyers = buyers.filter((b) => b.status !== 'ACTIVE').length;
+
         return {
             success: true,
             dashboard: {
                 users: {
                     totalBuyers: buyers.length,
-                    activeBuyers: buyers.filter((b) => b.status === 'ACTIVE').length,
+                    activeBuyers,
+                    inactiveBuyers,
                     totalWorkers: workers.length,
-                    activeWorkers: workers.filter((w) => w.status === 'ACTIVE').length,
+                    activeWorkers,
+                    inactiveWorkers,
+                    totalUsers: workers.length + buyers.length,
+                    activeUsers: activeWorkers + activeBuyers,
+                    inactiveUsers: inactiveWorkers + inactiveBuyers,
                 },
                 queues: {
                     pendingKycCount: pendingKyc.length,
@@ -107,11 +117,14 @@ export class AdminDashboardController {
     async getWorkersDashboard() {
         const workers = await this.userRepo.findByRole(UserRole.WORKER);
         const workerProfiles = await this.workerRepo.findActiveWorkers();
+        const activeCount = workers.filter((w) => w.status === 'ACTIVE').length;
+        const inactiveCount = workers.filter((w) => w.status !== 'ACTIVE').length;
         return {
             success: true,
             workersSummary: {
                 totalWorkers: workers.length,
-                activeCount: workers.filter((w) => w.status === 'ACTIVE').length,
+                activeCount,
+                inactiveCount,
                 kycVerifiedCount: workerProfiles.filter((w) => w.kycStatus === 'approved' || w.kycStatus === 'verified').length,
             },
         };
@@ -121,11 +134,14 @@ export class AdminDashboardController {
     @ApiOperation({ summary: 'Admin Dashboard - Buyer activity and spend metrics' })
     async getBuyersDashboard() {
         const buyers = await this.userRepo.findByRole(UserRole.BUYER);
+        const activeCount = buyers.filter((b) => b.status === 'ACTIVE').length;
+        const inactiveCount = buyers.filter((b) => b.status !== 'ACTIVE').length;
         return {
             success: true,
             buyersSummary: {
                 totalBuyers: buyers.length,
-                activeCount: buyers.filter((b) => b.status === 'ACTIVE').length,
+                activeCount,
+                inactiveCount,
             },
         };
     }

@@ -178,7 +178,15 @@ class BuyersBloc extends Bloc<BuyersEvent, BuyersState> {
   Future<void> _onUpdateStatus(UpdateBuyerStatusEvent event, Emitter<BuyersState> emit) async {
     try {
       await repository.updateBuyerStatus(event.buyerId, event.status);
+      _cachedBuyers = _cachedBuyers.map((b) {
+        if (b.id == event.buyerId) {
+          return b.copyWith(status: event.status.toUpperCase());
+        }
+        return b;
+      }).toList();
+      emit(BuyersLoaded(_cachedBuyers));
       add(LoadBuyerDetailEvent(event.buyerId));
+      add(RefreshBuyersEvent());
     } catch (e) {
       if (_cachedBuyers.isNotEmpty) {
         emit(BuyersLoaded(_cachedBuyers));

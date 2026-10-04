@@ -5,14 +5,15 @@ import '../bloc/buyers_bloc.dart';
 import 'buyer_detail_screen.dart';
 
 class BuyerDirectoryScreen extends StatefulWidget {
-  const BuyerDirectoryScreen({super.key});
+  final String initialFilter;
+  const BuyerDirectoryScreen({super.key, this.initialFilter = 'All'});
 
   @override
   State<BuyerDirectoryScreen> createState() => _BuyerDirectoryScreenState();
 }
 
 class _BuyerDirectoryScreenState extends State<BuyerDirectoryScreen> {
-  String _selectedFilter = 'All';
+  late String _selectedFilter;
   final TextEditingController _searchController = TextEditingController();
   bool _isSelectionMode = false;
   final Set<String> _selectedIds = {};
@@ -20,6 +21,7 @@ class _BuyerDirectoryScreenState extends State<BuyerDirectoryScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedFilter = widget.initialFilter;
     context.read<BuyersBloc>().add(LoadBuyersEvent());
   }
 
@@ -173,7 +175,22 @@ class _BuyerDirectoryScreenState extends State<BuyerDirectoryScreen> {
         if (state is BuyersLoaded) {
           final query = _searchController.text.trim().toLowerCase();
           currentFiltered = state.buyers.where((b) {
-            final matchesFilter = _selectedFilter == 'All' || b.status.toUpperCase() == _selectedFilter.toUpperCase();
+            bool matchesFilter = false;
+            final s = b.status.toUpperCase();
+            if (_selectedFilter == 'All') {
+              matchesFilter = true;
+            } else if (_selectedFilter == 'ACTIVE') {
+              matchesFilter = s == 'ACTIVE';
+            } else if (_selectedFilter == 'INACTIVE') {
+              matchesFilter = s == 'INACTIVE' || s != 'ACTIVE';
+            } else if (_selectedFilter == 'SUSPENDED') {
+              matchesFilter = s == 'SUSPENDED';
+            } else if (_selectedFilter == 'BLOCKED' || _selectedFilter == 'BANNED') {
+              matchesFilter = s == 'BLOCKED' || s == 'BANNED';
+            } else {
+              matchesFilter = s == _selectedFilter.toUpperCase();
+            }
+
             final matchesQuery = query.isEmpty ||
                 b.name.toLowerCase().contains(query) ||
                 b.email.toLowerCase().contains(query) ||
@@ -442,36 +459,57 @@ class _BuyerDirectoryScreenState extends State<BuyerDirectoryScreen> {
           const SizedBox(height: 8),
 
           // ── 3. Filter Chips ──────────────────────────────────
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Row(
-              children: ['All', 'ACTIVE', 'SUSPENDED', 'BLOCKED'].map((filter) {
-                final isSelected = _selectedFilter == filter;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ChoiceChip(
-                    label: Text(
-                      filter,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? Colors.white : const Color(0xFF4338CA),
+          Builder(
+            builder: (context) {
+              final allBuyers = state is BuyersLoaded ? state.buyers : [];
+              final allCount = allBuyers.length;
+              final activeCount = allBuyers.where((b) => b.status.toUpperCase() == 'ACTIVE').length;
+              final inactiveCount = allBuyers.where((b) => b.status.toUpperCase() != 'ACTIVE').length;
+              final suspendedCount = allBuyers.where((b) => b.status.toUpperCase() == 'SUSPENDED').length;
+              final blockedCount = allBuyers.where((b) => b.status.toUpperCase() == 'BANNED' || b.status.toUpperCase() == 'BLOCKED').length;
+
+              final filterList = [
+                {'key': 'All', 'label': 'All ($allCount)'},
+                {'key': 'ACTIVE', 'label': 'Active ($activeCount)'},
+                {'key': 'INACTIVE', 'label': 'Inactive ($inactiveCount)'},
+                {'key': 'SUSPENDED', 'label': 'Suspended ($suspendedCount)'},
+                {'key': 'BLOCKED', 'label': 'Blocked ($blockedCount)'},
+              ];
+
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  children: filterList.map((f) {
+                    final key = f['key']!;
+                    final label = f['label']!;
+                    final isSelected = _selectedFilter == key;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected ? Colors.white : const Color(0xFF4338CA),
+                          ),
+                        ),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFF4F46E5),
+                        backgroundColor: Colors.white,
+                        side: BorderSide(
+                          color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFDDD6FE),
+                          width: 1,
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        onSelected: (_) => setState(() => _selectedFilter = key),
                       ),
-                    ),
-                    selected: isSelected,
-                    selectedColor: const Color(0xFF4F46E5),
-                    backgroundColor: Colors.white,
-                    side: BorderSide(
-                      color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFDDD6FE),
-                      width: 1,
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    onSelected: (_) => setState(() => _selectedFilter = filter),
-                  ),
-                );
-              }).toList(),
-            ),
+                    );
+                  }).toList(),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 8),
 

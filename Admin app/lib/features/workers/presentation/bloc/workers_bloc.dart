@@ -171,7 +171,15 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
   Future<void> _onUpdateStatus(UpdateWorkerStatusEvent event, Emitter<WorkersState> emit) async {
     try {
       await repository.updateWorkerStatus(event.workerId, event.status);
+      _cachedWorkers = _cachedWorkers.map((w) {
+        if (w.id == event.workerId || w.userId == event.workerId) {
+          return w.copyWith(status: event.status.toUpperCase());
+        }
+        return w;
+      }).toList();
+      emit(WorkersLoaded(_cachedWorkers));
       add(LoadWorkerDetailEvent(event.workerId));
+      add(RefreshWorkersEvent());
     } catch (e) {
       if (_cachedWorkers.isNotEmpty) {
         emit(WorkersLoaded(_cachedWorkers));

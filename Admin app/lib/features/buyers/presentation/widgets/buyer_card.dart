@@ -37,6 +37,8 @@ class BuyerCard extends StatelessWidget {
     switch (status.toUpperCase()) {
       case 'ACTIVE':
         return const Color(0xFF16A34A);
+      case 'INACTIVE':
+        return const Color(0xFF64748B);
       case 'SUSPENDED':
         return const Color(0xFFD97706);
       case 'BLOCKED':

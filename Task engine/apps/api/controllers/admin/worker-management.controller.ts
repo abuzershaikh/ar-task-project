@@ -228,20 +228,40 @@ export class AdminWorkerManagementController {
         @Param('id') workerId: string,
         @Body() body: { status: string },
     ) {
-        const worker = await this.workerRepo.findById(workerId);
-        if (!worker) {
+        let worker = await this.workerRepo.findById(workerId);
+        let user: any = null;
+
+        if (worker) {
+            user = await this.userRepo.findById(worker.userId);
+        } else {
+            user = await this.userRepo.findById(workerId);
+            if (user) {
+                worker = await this.workerRepo.findByUserId(user.id);
+            }
+        }
+
+        if (!worker && !user) {
             throw new NotFoundException('Worker not found');
         }
 
-        await this.workerRepo.update(workerId, { status: body.status });
+        const validStatuses = ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'BANNED'];
+        const targetStatus = (body.status || 'ACTIVE').toUpperCase();
+        if (!validStatuses.includes(targetStatus)) {
+            throw new BadRequestException(`Invalid status: ${body.status}. Must be one of ${validStatuses.join(', ')}`);
+        }
 
-        if (worker.userId && ['ACTIVE', 'SUSPENDED', 'BANNED'].includes(body.status.toUpperCase())) {
-            await this.userRepo.updateStatus(worker.userId, body.status.toUpperCase() as UserStatus);
+        if (worker) {
+            await this.workerRepo.update(worker.id, { status: targetStatus });
+        }
+        if (user) {
+            await this.userRepo.updateStatus(user.id, targetStatus as UserStatus);
+        } else if (worker?.userId) {
+            await this.userRepo.updateStatus(worker.userId, targetStatus as UserStatus);
         }
 
         return {
             success: true,
-            message: `Worker status updated to ${body.status}`,
+            message: `Worker status updated to ${targetStatus}`,
         };
     }
 

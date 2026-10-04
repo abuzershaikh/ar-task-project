@@ -79,8 +79,13 @@ class DashboardScreen extends StatelessWidget {
 
               final totalWorkers = data['users']?['totalWorkers'] ?? 0;
               final activeWorkers = data['users']?['activeWorkers'] ?? 0;
+              final inactiveWorkers = data['users']?['inactiveWorkers'] ?? (totalWorkers - activeWorkers);
               final totalBuyers = data['users']?['totalBuyers'] ?? 0;
               final activeBuyers = data['users']?['activeBuyers'] ?? 0;
+              final inactiveBuyers = data['users']?['inactiveBuyers'] ?? (totalBuyers - activeBuyers);
+              final totalUsers = data['users']?['totalUsers'] ?? (totalWorkers + totalBuyers);
+              final activeUsers = data['users']?['activeUsers'] ?? (activeWorkers + activeBuyers);
+              final inactiveUsers = data['users']?['inactiveUsers'] ?? (inactiveWorkers + inactiveBuyers);
               final pendingKycCount = data['queues']?['pendingKycCount'] ?? 0;
               final pendingReviewCount = data['queues']?['pendingReviewCount'] ?? 0;
               final pendingPayoutsCount = data['queues']?['pendingPayoutsCount'] ?? 0;
@@ -181,7 +186,171 @@ class DashboardScreen extends StatelessWidget {
                           },
                         ),
                       
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
+
+                      // ── Platform Users Activity Overview ───────────────────
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEFF6FF),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(Icons.group_rounded, size: 16, color: Color(0xFF2563EB)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Platform Users Status',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  '$totalUsers Total',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => const WorkerDirectoryScreen(initialFilter: 'ACTIVE'),
+                                        ),
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF0FDF4),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFF16A34A),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text(
+                                                  'Active Users',
+                                                  style: TextStyle(fontSize: 10, color: Color(0xFF15803D), fontWeight: FontWeight.w500),
+                                                ),
+                                                Text(
+                                                  '$activeUsers',
+                                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF15803D)),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Color(0xFF16A34A)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => const WorkerDirectoryScreen(initialFilter: 'INACTIVE'),
+                                        ),
+                                      );
+                                    },
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF8FAFC),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFF94A3B8),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text(
+                                                  'Inactive Users',
+                                                  style: TextStyle(fontSize: 10, color: Color(0xFF475569), fontWeight: FontWeight.w500),
+                                                ),
+                                                Text(
+                                                  '$inactiveUsers',
+                                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Color(0xFF94A3B8)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 20),
                       
                       // KPI Cards Grid
                       const Text(
@@ -205,7 +374,34 @@ class DashboardScreen extends StatelessWidget {
                           KpiCard(
                             title: 'Total Workers',
                             value: totalWorkers.toString(),
-                            subtitle: '$activeWorkers Active',
+                            subtitle: '$activeWorkers Active • $inactiveWorkers Inactive',
+                            customSubtitle: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '● $activeWorkers Active',
+                                    style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '● $inactiveWorkers Inactive',
+                                    style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                                  ),
+                                ),
+                              ],
+                            ),
                             icon: Icons.people,
                             color: AppColors.primary,
                             onTap: () {
@@ -218,7 +414,34 @@ class DashboardScreen extends StatelessWidget {
                           KpiCard(
                             title: 'Total Buyers',
                             value: totalBuyers.toString(),
-                            subtitle: '$activeBuyers Active',
+                            subtitle: '$activeBuyers Active • $inactiveBuyers Inactive',
+                            customSubtitle: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '● $activeBuyers Active',
+                                    style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '● $inactiveBuyers Inactive',
+                                    style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                                  ),
+                                ),
+                              ],
+                            ),
                             icon: Icons.business,
                             color: AppColors.secondary,
                             onTap: () {

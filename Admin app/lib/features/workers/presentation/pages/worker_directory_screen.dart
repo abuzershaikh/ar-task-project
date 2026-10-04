@@ -5,14 +5,15 @@ import '../bloc/workers_bloc.dart';
 import 'worker_detail_screen.dart';
 
 class WorkerDirectoryScreen extends StatefulWidget {
-  const WorkerDirectoryScreen({super.key});
+  final String initialFilter;
+  const WorkerDirectoryScreen({super.key, this.initialFilter = 'All'});
 
   @override
   State<WorkerDirectoryScreen> createState() => _WorkerDirectoryScreenState();
 }
 
 class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
-  String _selectedFilter = 'All';
+  late String _selectedFilter;
   final TextEditingController _searchController = TextEditingController();
   bool _isSelectionMode = false;
   final Set<String> _selectedIds = {};
@@ -20,6 +21,7 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedFilter = widget.initialFilter;
     context.read<WorkersBloc>().add(LoadWorkersEvent());
   }
 
@@ -174,9 +176,22 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
         if (state is WorkersLoaded) {
           final query = _searchController.text.trim().toLowerCase();
           currentFiltered = state.workers.where((w) {
-            final statusMatch = _selectedFilter == 'All' ||
-                w.status.toUpperCase() == _selectedFilter.toUpperCase() ||
-                (_selectedFilter == 'KYC' && w.kycStatus == 'VERIFIED');
+            bool statusMatch = false;
+            final s = w.status.toUpperCase();
+            if (_selectedFilter == 'All') {
+              statusMatch = true;
+            } else if (_selectedFilter == 'ACTIVE') {
+              statusMatch = s == 'ACTIVE';
+            } else if (_selectedFilter == 'INACTIVE') {
+              statusMatch = s == 'INACTIVE' || s != 'ACTIVE';
+            } else if (_selectedFilter == 'SUSPENDED') {
+              statusMatch = s == 'SUSPENDED';
+            } else if (_selectedFilter == 'KYC') {
+              statusMatch = w.kycStatus == 'VERIFIED';
+            } else {
+              statusMatch = s == _selectedFilter.toUpperCase();
+            }
+
             final queryMatch = query.isEmpty ||
                 w.name.toLowerCase().contains(query) ||
                 w.email.toLowerCase().contains(query) ||
@@ -455,36 +470,57 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
                 const SizedBox(height: 8),
 
                 // ── 3. Filter Chips ──────────────────────────────────
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Row(
-                    children: ['All', 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'KYC'].map((filter) {
-                      final isSelected = _selectedFilter == filter;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: ChoiceChip(
-                          label: Text(
-                            filter,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? Colors.white : const Color(0xFF0369A1),
+                Builder(
+                  builder: (context) {
+                    final allWorkers = state.workers;
+                    final allCount = allWorkers.length;
+                    final activeCount = allWorkers.where((w) => w.status.toUpperCase() == 'ACTIVE').length;
+                    final inactiveCount = allWorkers.where((w) => w.status.toUpperCase() != 'ACTIVE').length;
+                    final suspendedCount = allWorkers.where((w) => w.status.toUpperCase() == 'SUSPENDED').length;
+                    final kycCount = allWorkers.where((w) => w.kycStatus == 'VERIFIED').length;
+
+                    final filterList = [
+                      {'key': 'All', 'label': 'All ($allCount)'},
+                      {'key': 'ACTIVE', 'label': 'Active ($activeCount)'},
+                      {'key': 'INACTIVE', 'label': 'Inactive ($inactiveCount)'},
+                      {'key': 'SUSPENDED', 'label': 'Suspended ($suspendedCount)'},
+                      {'key': 'KYC', 'label': 'KYC ($kycCount)'},
+                    ];
+
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Row(
+                        children: filterList.map((f) {
+                          final key = f['key']!;
+                          final label = f['label']!;
+                          final isSelected = _selectedFilter == key;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ChoiceChip(
+                              label: Text(
+                                label,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color: isSelected ? Colors.white : const Color(0xFF0369A1),
+                                ),
+                              ),
+                              selected: isSelected,
+                              selectedColor: const Color(0xFF0284C7),
+                              backgroundColor: Colors.white,
+                              side: BorderSide(
+                                color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFBAE6FD),
+                                width: 1,
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              onSelected: (_) => setState(() => _selectedFilter = key),
                             ),
-                          ),
-                          selected: isSelected,
-                          selectedColor: const Color(0xFF0284C7),
-                          backgroundColor: Colors.white,
-                          side: BorderSide(
-                            color: isSelected ? const Color(0xFF0284C7) : const Color(0xFFBAE6FD),
-                            width: 1,
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          onSelected: (_) => setState(() => _selectedFilter = filter),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
 

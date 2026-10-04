@@ -5,6 +5,7 @@ class KpiCard extends StatelessWidget {
   final String title;
   final String value;
   final String subtitle;
+  final Widget? customSubtitle;
   final IconData icon;
   final Color color;
   final VoidCallback? onTap;
@@ -14,6 +15,7 @@ class KpiCard extends StatelessWidget {
     required this.title,
     required this.value,
     required this.subtitle,
+    this.customSubtitle,
     required this.icon,
     required this.color,
     this.onTap,
@@ -89,15 +91,16 @@ class KpiCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.gray500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: customSubtitle ??
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.gray500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                   ),
                   if (onTap != null)
                     Icon(
