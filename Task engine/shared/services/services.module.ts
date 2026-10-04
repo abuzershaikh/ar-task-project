@@ -43,6 +43,7 @@ import { FirebaseAdminService } from './firebase-admin.service';
 import { UserSyncService } from './user-sync.service';
 import { PlayStoreScraperService } from './playstore-scraper.service';
 import { YouTubeMetadataService } from './youtube-metadata.service';
+import { GoogleMapsMetadataService } from './google-maps-metadata.service';
 import { RedisCacheService } from './redis-cache.service';
 
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -78,6 +79,7 @@ const providers = [
     WalletService,
     PlayStoreScraperService,
     YouTubeMetadataService,
+    GoogleMapsMetadataService,
     RedisCacheService,
 ];
 

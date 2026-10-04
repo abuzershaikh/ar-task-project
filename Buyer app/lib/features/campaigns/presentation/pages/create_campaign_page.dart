@@ -70,6 +70,12 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   int _maxWords = 45;
   bool _autoApprove = false;
 
+  // Google Business / Google Maps Metadata State
+  String? _gmbBusinessName;
+  String? _gmbIcon;
+  String? _gmbFetchError;
+  bool _isFetchingGmbInfo = false;
+
   // Play Store App Metadata State
   String? _appName;
   String? _appIcon;
@@ -218,7 +224,12 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
   bool _isYouTubeService(ServiceModel? s) {
     if (s == null) return false;
-    if (_isInstagramService(s)) return false;
+    if (_isInstagramService(s) ||
+        _isGoogleBusinessService(s) ||
+        _isPlayStoreService(s) ||
+        _isAppInstallService(s)) {
+      return false;
+    }
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     final desc = s.description.toUpperCase();
@@ -232,7 +243,13 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
   bool _isYouTubeCombo(ServiceModel? s) {
     if (s == null) return false;
-    if (_isInstagramService(s) || _isInstagramCombo(s)) return false;
+    if (_isInstagramService(s) ||
+        _isInstagramCombo(s) ||
+        _isGoogleBusinessService(s) ||
+        _isPlayStoreService(s) ||
+        _isAppInstallService(s)) {
+      return false;
+    }
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
     return (code.contains('COMBO') || name.contains('COMBO')) &&
@@ -315,11 +332,11 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         trimmed.contains('instagram.com') ||
         trimmed.startsWith('@');
     final isYouTube = _isYouTubeService(_selectedService) ||
-        trimmed.contains('youtube.com') ||
-        trimmed.contains('youtu.be');
+        (!isGoogleBusiness && (trimmed.contains('youtube.com') || trimmed.contains('youtu.be')));
 
-    if (isGoogleBusiness || (!isPlayStore && !isYouTube && !isInstagram))
+    if (!isGoogleBusiness && !isPlayStore && !isYouTube && !isInstagram) {
       return;
+    }
     _urlDebounceTimer?.cancel();
 
     if (trimmed.isEmpty) {
@@ -330,6 +347,11 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         _packageId = null;
         _appFetchError = null;
         _isFetchingAppInfo = false;
+
+        _gmbBusinessName = null;
+        _gmbIcon = null;
+        _gmbFetchError = null;
+        _isFetchingGmbInfo = false;
 
         _ytTitle = null;
         _ytThumbnail = null;
@@ -346,6 +368,26 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
         _sampleComments = [];
       });
+      return;
+    }
+
+    if (isGoogleBusiness) {
+      if (_gmbFetchError != null) setState(() => _gmbFetchError = null);
+      if (trimmed.length >= 8 &&
+          (trimmed.contains('goo.gl') ||
+              trimmed.contains('maps') ||
+              trimmed.contains('google.') ||
+              trimmed.startsWith('http'))) {
+        setState(() {
+          _appIcon = null;
+          _appName = null;
+          _gmbIcon = null;
+          _gmbBusinessName = null;
+        });
+        _urlDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+          _fetchGoogleBusinessInfo(trimmed);
+        });
+      }
       return;
     }
 
@@ -373,6 +415,64 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         _urlDebounceTimer = Timer(const Duration(milliseconds: 600), () {
           _fetchYouTubeVideoInfo(trimmed);
         });
+      }
+    }
+  }
+
+  Future<void> _fetchGoogleBusinessInfo(String input) async {
+    final trimmed = input.trim();
+    if (trimmed.isEmpty || _serviceRepository.dioClient == null) return;
+    setState(() {
+      _isFetchingGmbInfo = true;
+      _gmbFetchError = null;
+    });
+
+    try {
+      final res = await _serviceRepository.dioClient!.post(
+        '/buyer/orders/google-business-info',
+        data: {'url': trimmed},
+      );
+
+      final isSuccess = (res.statusCode == 200 || res.statusCode == 201) &&
+          res.data != null &&
+          res.data['success'] == true;
+
+      if (isSuccess) {
+        final data = res.data;
+        final bName = data['businessName']?.toString();
+        final bIcon = data['businessIcon']?.toString();
+        setState(() {
+          _gmbBusinessName = bName;
+          _gmbIcon = bIcon;
+          _gmbFetchError = null;
+
+          if (bName != null && bName.isNotEmpty) {
+            _appName = bName;
+            _appNameController.text = bName;
+            if (bIcon != null && bIcon.isNotEmpty) {
+              _appIcon = bIcon;
+            }
+          }
+        });
+        // Auto-generate sample reviews if AI is enabled and none generated yet
+        if (_isCommentOrComboService(_selectedService) && _sampleComments.isEmpty) {
+          _generateSampleComments();
+        }
+      } else {
+        final err = res.data?['error']?.toString();
+        setState(() {
+          _gmbFetchError = err ?? 'Could not fetch Google Business profile.';
+        });
+      }
+    } catch (err) {
+      debugPrint('Error fetching Google Business metadata: $err');
+      setState(() {
+        _gmbFetchError =
+            'Could not fetch Google Business profile automatically. You can enter Business Name manually below.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isFetchingGmbInfo = false);
       }
     }
   }
@@ -737,6 +837,11 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       _appFetchError = null;
       _isFetchingAppInfo = false;
 
+      _gmbBusinessName = null;
+      _gmbIcon = null;
+      _gmbFetchError = null;
+      _isFetchingGmbInfo = false;
+
       _ytTitle = null;
       _ytThumbnail = null;
       _ytDurationSeconds = null;
@@ -755,7 +860,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       setState(() {
         _targetUrlController.text = data.text!.trim();
       });
-      if (_isPlayStoreService(_selectedService)) {
+      if (_isGoogleBusinessService(_selectedService)) {
+        _fetchGoogleBusinessInfo(_targetUrlController.text.trim());
+      } else if (_isPlayStoreService(_selectedService)) {
         _fetchPlayStoreAppInfo(_targetUrlController.text.trim());
       } else if (_isYouTubeService(_selectedService) ||
           _targetUrlController.text.contains('youtube.com') ||
@@ -1429,18 +1536,18 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _isInstagramCombo(s)
-                          ? 'Instagram Post / Reel or Profile Link (Target for Like, Follow & Comment)'
-                          : (_isInstagramService(s)
-                              ? (_isInstagramFollowerService(s)
-                                  ? 'Instagram Profile Link / Username'
-                                  : 'Instagram Reel or Post URL')
-                              : (_isYouTubeCombo(s)
-                                  ? 'YouTube Video Link (Target for Watch, Like, Subscribe & Comment)'
-                                  : (_isYouTubeService(s)
-                                      ? 'YouTube Video Link (Target URL)'
-                                      : (_isGoogleBusinessService(s)
-                                          ? 'Google Maps Business Listing Link'
+                      _isGoogleBusinessService(s)
+                          ? 'Google Link'
+                          : (_isInstagramCombo(s)
+                              ? 'Instagram Post / Reel or Profile Link (Target for Like, Follow & Comment)'
+                              : (_isInstagramService(s)
+                                  ? (_isInstagramFollowerService(s)
+                                      ? 'Instagram Profile Link / Username'
+                                      : 'Instagram Reel or Post URL')
+                                  : (_isYouTubeCombo(s)
+                                      ? 'YouTube Video Link (Target for Watch, Like, Subscribe & Comment)'
+                                      : (_isYouTubeService(s)
+                                          ? 'YouTube Video Link (Target URL)'
                                           : (_isAppInstallService(s)
                                               ? 'Google Play Store App URL (Target App for Install)'
                                               : (_isPlayStoreService(s)
@@ -1472,18 +1579,18 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                       },
                       style: const TextStyle(fontSize: 13),
                       decoration: InputDecoration(
-                        hintText: _isInstagramCombo(s)
-                            ? 'https://www.instagram.com/p/... or /reel/... or /your_username'
-                            : (_isInstagramService(s)
-                                ? (_isInstagramFollowerService(s)
-                                    ? 'https://instagram.com/your_username or @username'
-                                    : 'https://www.instagram.com/reel/... or /p/...')
-                                : (_isYouTubeCombo(s)
-                                    ? 'https://www.youtube.com/watch?v=... or youtu.be/...'
-                                    : (_isYouTubeService(s)
+                        hintText: _isGoogleBusinessService(s)
+                            ? 'https://maps.app.goo.gl/... or Google Maps listing link'
+                            : (_isInstagramCombo(s)
+                                ? 'https://www.instagram.com/p/... or /reel/... or /your_username'
+                                : (_isInstagramService(s)
+                                    ? (_isInstagramFollowerService(s)
+                                        ? 'https://instagram.com/your_username or @username'
+                                        : 'https://www.instagram.com/reel/... or /p/...')
+                                    : (_isYouTubeCombo(s)
                                         ? 'https://www.youtube.com/watch?v=... or youtu.be/...'
-                                        : (_isGoogleBusinessService(s)
-                                            ? 'https://maps.app.goo.gl/... or Google Maps listing link'
+                                        : (_isYouTubeService(s)
+                                            ? 'https://www.youtube.com/watch?v=... or youtu.be/...'
                                             : (_isAppInstallService(s) ||
                                                     _isPlayStoreService(s)
                                                 ? 'https://play.google.com/store/apps/details?id=com.your.app'
@@ -1516,6 +1623,37 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                         suffixIcon: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            if (_isGoogleBusinessService(_selectedService) &&
+                                _targetUrlController.text.trim().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 2),
+                                child: InkWell(
+                                  onTap: _isFetchingGmbInfo
+                                      ? null
+                                      : () => _fetchGoogleBusinessInfo(
+                                          _targetUrlController.text.trim()),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: const Color(0xFFBFDBFE)),
+                                    ),
+                                    child: _isFetchingGmbInfo
+                                        ? const SizedBox(
+                                            width: 14,
+                                            height: 14,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Color(0xFF2563EB)),
+                                          )
+                                        : const Icon(Icons.refresh_rounded,
+                                            size: 16, color: Color(0xFF2563EB)),
+                                  ),
+                                ),
+                              ),
                             if (_isPlayStoreService(_selectedService) &&
                                 _targetUrlController.text.trim().isNotEmpty)
                               Padding(
@@ -1799,6 +1937,208 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                             ),
                           ],
                         ),
+                      ),
+                    ],
+
+                    // Google Business Loading State
+                    if (_isFetchingGmbInfo) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: const Row(
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Color(0xFF2563EB)),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Fetching business details from Google Maps...',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF1E40AF),
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Google Business Profile Preview Card
+                    if (_isGoogleBusinessService(_selectedService) &&
+                        ((_gmbBusinessName != null && _gmbBusinessName!.isNotEmpty) ||
+                         (_appName != null && _appName!.isNotEmpty))) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Business Icon / Map Pin
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                        color: const Color(0xFF86EFAC)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.06),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(11),
+                                    child: ((_gmbIcon ?? _appIcon) != null &&
+                                            (_gmbIcon ?? _appIcon)!.isNotEmpty &&
+                                            (_gmbIcon ?? _appIcon)!.startsWith('http'))
+                                        ? Image.network(
+                                            (_gmbIcon ?? _appIcon)!,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                Image.asset(
+                                              'assets/icons/google-maps.png',
+                                              width: 32,
+                                              height: 32,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          )
+                                        : Image.asset(
+                                            'assets/icons/google-maps.png',
+                                            width: 32,
+                                            height: 32,
+                                            fit: BoxFit.contain,
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Title & Place info
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              _gmbBusinessName ?? _appName ?? 'Google Business',
+                                              style: const TextStyle(
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF0F172A),
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFDCFCE7),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.check_circle_rounded,
+                                                    size: 11,
+                                                    color: Color(0xFF16A34A)),
+                                                SizedBox(width: 3),
+                                                Text(
+                                                  'Detected',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF16A34A),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 3),
+                                      const Text(
+                                        'Google Maps Business Listing',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF2563EB),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border:
+                                    Border.all(color: const Color(0xFF86EFAC)),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.verified_user_rounded,
+                                      size: 12, color: Color(0xFF16A34A)),
+                                  SizedBox(width: 5),
+                                  Expanded(
+                                    child: Text(
+                                      'Workers will open this exact business on Google Maps to submit 5-star rating & review',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        color: Color(0xFF166534),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Google Business Error Hint
+                    if (_isGoogleBusinessService(s) &&
+                        _gmbFetchError != null &&
+                        (_appName == null || _appName!.isEmpty)) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        '💡 ${_gmbFetchError!}',
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFFD97706)),
                       ),
                     ],
 

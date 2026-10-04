@@ -31,6 +31,7 @@ import { WalletService } from '../../../../shared/services/wallet.service';
 import { AiGeneratorService } from '../../../../shared/ai-generator/ai-generator.service';
 import { PlayStoreScraperService } from '../../../../shared/services/playstore-scraper.service';
 import { YouTubeMetadataService } from '../../../../shared/services/youtube-metadata.service';
+import { GoogleMapsMetadataService } from '../../../../shared/services/google-maps-metadata.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { resolveShortUrl } from '../../../../shared/common/utils/task-identity.util';
 
@@ -53,6 +54,7 @@ export class BuyerOrderController {
         private readonly aiGeneratorService: AiGeneratorService,
         private readonly playStoreScraper: PlayStoreScraperService,
         private readonly ytMetadataService: YouTubeMetadataService,
+        private readonly googleMapsMetadataService: GoogleMapsMetadataService,
         private readonly eventEmitter: EventEmitter2,
         private readonly dataSource: DataSource,
     ) { }
@@ -85,6 +87,31 @@ export class BuyerOrderController {
         }
         const info = await this.ytMetadataService.getVideoMetadata(input);
         return info;
+    }
+
+    @Public()
+    @Post('google-business-info')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Fetch business metadata (name, icon/photo) from Google Maps listing URL' })
+    async getGoogleBusinessInfo(
+        @Body() body: { url?: string; link?: string },
+    ) {
+        const input = body.url || body.link || '';
+        if (!input) {
+            throw new BadRequestException('URL is required');
+        }
+        const info = await this.googleMapsMetadataService.getBusinessMetadata(input);
+        return info;
+    }
+
+    @Public()
+    @Post('google-maps-info')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Fetch business metadata (name, icon/photo) from Google Maps listing URL' })
+    async getGoogleMapsInfo(
+        @Body() body: { url?: string; link?: string },
+    ) {
+        return this.getGoogleBusinessInfo(body);
     }
 
     @Public()
