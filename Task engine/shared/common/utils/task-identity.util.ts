@@ -277,6 +277,9 @@ export async function resolveShortUrl(url: string, timeoutMs = 4000): Promise<st
         !lower.includes('maps.app.goo.gl') &&
         !lower.includes('goo.gl/maps') &&
         !lower.includes('goo.gl') &&
+        !lower.includes('share.google') &&
+        !lower.includes('g.page') &&
+        !lower.includes('g.co') &&
         !lower.includes('bit.ly') &&
         !lower.includes('tinyurl.com') &&
         !lower.includes('t.co') &&
@@ -293,7 +296,7 @@ export async function resolveShortUrl(url: string, timeoutMs = 4000): Promise<st
 
     try {
         let redirectCount = 0;
-        const maxRedirects = 5;
+        const maxRedirects = 8;
 
         while (redirectCount < maxRedirects) {
             const parsed = new URL(currentUrl);
@@ -312,12 +315,14 @@ export async function resolveShortUrl(url: string, timeoutMs = 4000): Promise<st
 
             let res: any;
             try {
+                // Use GET with Range/small payload if host is Google (Google services only return 301 on GET)
+                const method = (parsed.hostname.includes('google') || parsed.hostname === 'share.google') ? 'GET' : 'HEAD';
                 res = await fetch(currentUrl, {
-                    method: 'HEAD',
+                    method,
                     redirect: 'manual', // Strictly manual redirect following to inspect each hop
                     signal: controller.signal,
                     headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                     },
                 });
