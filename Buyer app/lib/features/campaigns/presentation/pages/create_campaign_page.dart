@@ -73,6 +73,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   // Google Business / Google Maps Metadata State
   String? _gmbBusinessName;
   String? _gmbIcon;
+  String? _gmbDescription;
+  String? _gmbCategory;
   String? _gmbFetchError;
   bool _isFetchingGmbInfo = false;
 
@@ -350,6 +352,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
         _gmbBusinessName = null;
         _gmbIcon = null;
+        _gmbDescription = null;
+        _gmbCategory = null;
         _gmbFetchError = null;
         _isFetchingGmbInfo = false;
 
@@ -383,6 +387,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
           _appName = null;
           _gmbIcon = null;
           _gmbBusinessName = null;
+          _gmbDescription = null;
+          _gmbCategory = null;
         });
         _urlDebounceTimer = Timer(const Duration(milliseconds: 600), () {
           _fetchGoogleBusinessInfo(trimmed);
@@ -441,9 +447,13 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         final data = res.data;
         final bName = data['businessName']?.toString();
         final bIcon = data['businessIcon']?.toString();
+        final bDesc = data['description']?.toString();
+        final bCat = data['category']?.toString();
         setState(() {
           _gmbBusinessName = bName;
           _gmbIcon = bIcon;
+          _gmbDescription = bDesc;
+          _gmbCategory = bCat;
           _gmbFetchError = null;
 
           if (bName != null && bName.isNotEmpty) {
@@ -453,11 +463,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               _appIcon = bIcon;
             }
           }
+          // Do NOT generate sample comments automatically!
+          // User will generate by clicking the Generate button.
+          _sampleComments = [];
         });
-        // Auto-generate sample reviews if AI is enabled and none generated yet
-        if (_isCommentOrComboService(_selectedService) && _sampleComments.isEmpty) {
-          _generateSampleComments();
-        }
       } else {
         final err = res.data?['error']?.toString();
         setState(() {
@@ -629,11 +638,18 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     setState(() => _isGeneratingPreview = true);
     final userAppName = _appNameController.text.trim().isNotEmpty
         ? _appNameController.text.trim()
-        : (_isYouTubeService(_selectedService)
-            ? (_ytTitle ?? '')
-            : (_appName ?? ''));
+        : (_isGoogleBusinessService(_selectedService)
+            ? (_gmbBusinessName ?? _appName ?? '')
+            : (_isYouTubeService(_selectedService)
+                ? (_ytTitle ?? '')
+                : (_appName ?? '')));
     final cleanBrand = userAppName.split(RegExp(r'[:\-|–—•(]'))[0].trim();
     final userPrompt = _topicController.text.trim();
+    final effectiveTopic = userPrompt.isNotEmpty
+        ? userPrompt
+        : (_isGoogleBusinessService(_selectedService)
+            ? (_gmbDescription ?? _gmbCategory ?? '')
+            : '');
 
     try {
       if (_serviceRepository.dioClient == null) {
@@ -644,8 +660,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       final res = await _serviceRepository.dioClient!.post(
         '/buyer/orders/ai-preview-comments',
         data: {
-          'topic': userPrompt,
-          'prompt': userPrompt,
+          'topic': effectiveTopic,
+          'prompt': effectiveTopic,
           'language': _selectedLanguage,
           'tone': _selectedTone,
           'count': _selectedQuantity,
@@ -653,8 +669,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
           'maxWords': _maxWords,
           'serviceCode': _selectedService?.code,
           'targetUrl': _targetUrlController.text.trim(),
-          'appName': cleanBrand,
-          'businessName': cleanBrand,
+          'appName': cleanBrand.isNotEmpty ? cleanBrand : (_gmbBusinessName ?? ''),
+          'businessName': cleanBrand.isNotEmpty ? cleanBrand : (_gmbBusinessName ?? ''),
+          'category': _gmbCategory ?? '',
+          'description': _gmbDescription ?? '',
           'videoTitle': _isYouTubeService(_selectedService)
               ? (_ytTitle?.isNotEmpty == true ? _ytTitle! : userAppName)
               : '',
@@ -839,6 +857,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
       _gmbBusinessName = null;
       _gmbIcon = null;
+      _gmbDescription = null;
+      _gmbCategory = null;
       _gmbFetchError = null;
       _isFetchingGmbInfo = false;
 
@@ -1084,6 +1104,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   _appIcon = null;
                   _appName = null;
                   _packageId = null;
+                  _gmbBusinessName = null;
+                  _gmbIcon = null;
+                  _gmbDescription = null;
+                  _gmbCategory = null;
                   _sampleComments = [];
                   _ytTitle = null;
                   _ytThumbnail = null;
@@ -2084,9 +2108,11 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                         ],
                                       ),
                                       const SizedBox(height: 3),
-                                      const Text(
-                                        'Google Maps Business Listing',
-                                        style: TextStyle(
+                                      Text(
+                                        _gmbCategory != null && _gmbCategory!.isNotEmpty
+                                            ? _gmbCategory!
+                                            : 'Google Maps Business Listing',
+                                        style: const TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w600,
                                           color: Color(0xFF2563EB),
@@ -2097,6 +2123,49 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                 ),
                               ],
                             ),
+                            if (_gmbDescription != null && _gmbDescription!.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Row(
+                                      children: [
+                                        Icon(Icons.description_outlined,
+                                            size: 13,
+                                            color: Color(0xFF2563EB)),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Business Description',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF1E40AF),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _gmbDescription!,
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        color: Color(0xFF334155),
+                                        height: 1.35,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(

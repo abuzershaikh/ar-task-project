@@ -7,8 +7,10 @@ export interface GoogleBusinessMetadata {
     success: boolean;
     businessName?: string;
     businessIcon?: string;
-    mapsUrl?: string;
+    description?: string;
+    category?: string;
     address?: string;
+    mapsUrl?: string;
     error?: string;
 }
 
@@ -63,9 +65,12 @@ export class GoogleMapsMetadataService {
     }
 
     /**
-     * Extract business / place name from URL paths or query params
+     * Extract business / place name and address from URL paths or query params
      */
-    private extractNameFromUrl(urlString: string): string {
+    private extractNameAndAddressFromUrl(urlString: string): { name: string; address: string } {
+        let name = '';
+        let address = '';
+
         try {
             const parsed = new URL(urlString);
 
@@ -75,34 +80,57 @@ export class GoogleMapsMetadataService {
                 parsed.pathname === '/share.google' ||
                 parsed.hostname.includes('goo.gl')
             ) {
-                return '';
+                return { name: '', address: '' };
             }
 
-            // 1. /maps/place/<PlaceName>
+            // 1. /maps/place/<PlaceName>,+<Address>
             const placeMatch = urlString.match(/\/maps\/place\/([^\/@?]+)/i);
             if (placeMatch && placeMatch[1]) {
-                const candidate = this.cleanBusinessName(placeMatch[1]);
-                if (!this.isInvalidBusinessName(candidate)) return candidate;
+                const decoded = decodeURIComponent(placeMatch[1]).replace(/\+/g, ' ');
+                const parts = decoded.split(',');
+                const candidate = this.cleanBusinessName(parts[0]);
+                if (!this.isInvalidBusinessName(candidate)) {
+                    name = candidate;
+                    if (parts.length > 1) {
+                        address = parts.slice(1).join(', ').trim();
+                    }
+                }
             }
 
             // 2. /maps/search/<PlaceName>
-            const searchMatch = urlString.match(/\/maps\/search\/([^\/@?]+)/i);
-            if (searchMatch && searchMatch[1]) {
-                const candidate = this.cleanBusinessName(searchMatch[1]);
-                if (!this.isInvalidBusinessName(candidate)) return candidate;
+            if (!name) {
+                const searchMatch = urlString.match(/\/maps\/search\/([^\/@?]+)/i);
+                if (searchMatch && searchMatch[1]) {
+                    const decoded = decodeURIComponent(searchMatch[1]).replace(/\+/g, ' ');
+                    const parts = decoded.split(',');
+                    const candidate = this.cleanBusinessName(parts[0]);
+                    if (!this.isInvalidBusinessName(candidate)) {
+                        name = candidate;
+                        if (parts.length > 1) {
+                            address = parts.slice(1).join(', ').trim();
+                        }
+                    }
+                }
             }
 
             // 3. ?q= or ?query= parameter (e.g. Google Search share link or Google Maps query)
-            const qParam = parsed.searchParams.get('q') || parsed.searchParams.get('query');
-            if (qParam) {
-                // Check if qParam is just lat,lng coordinates e.g. 28.123,77.456
-                if (!/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(qParam.trim())) {
-                    const candidate = this.cleanBusinessName(qParam);
-                    if (!this.isInvalidBusinessName(candidate)) return candidate;
+            if (!name) {
+                const qParam = parsed.searchParams.get('q') || parsed.searchParams.get('query');
+                if (qParam && !/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(qParam.trim())) {
+                    const decoded = decodeURIComponent(qParam).replace(/\+/g, ' ');
+                    const parts = decoded.split(',');
+                    const candidate = this.cleanBusinessName(parts[0]);
+                    if (!this.isInvalidBusinessName(candidate)) {
+                        name = candidate;
+                        if (parts.length > 1) {
+                            address = parts.slice(1).join(', ').trim();
+                        }
+                    }
                 }
             }
         } catch (_) { }
-        return '';
+
+        return { name, address };
     }
 
     /**
@@ -123,10 +151,14 @@ export class GoogleMapsMetadataService {
         try {
             let finalUrl = currentUrl;
             const candidateNames: string[] = [];
+            let detectedAddress = '';
             let finalBody = '';
 
-            const nameFromInitial = this.extractNameFromUrl(currentUrl);
-            if (nameFromInitial) candidateNames.push(nameFromInitial);
+            const initialDetails = this.extractNameAndAddressFromUrl(currentUrl);
+            if (initialDetails.name) {
+                candidateNames.push(initialDetails.name);
+                if (initialDetails.address) detectedAddress = initialDetails.address;
+            }
 
             // Follow redirects up to 8 hops using GET
             for (let hop = 0; hop < 8; hop++) {
@@ -157,17 +189,23 @@ export class GoogleMapsMetadataService {
                 finalUrl = currentUrl;
                 finalBody = res.body || '';
 
-                const extracted = this.extractNameFromUrl(currentUrl);
-                if (extracted && !candidateNames.includes(extracted)) {
-                    candidateNames.push(extracted);
+                const details = this.extractNameAndAddressFromUrl(currentUrl);
+                if (details.name && !candidateNames.includes(details.name)) {
+                    candidateNames.push(details.name);
+                }
+                if (details.address && !detectedAddress) {
+                    detectedAddress = details.address;
                 }
 
                 // Check Location header for redirect (301, 302, 303, 307, 308)
                 if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
                     const nextUrl = new URL(res.headers.location, currentUrl).toString();
-                    const extractedNext = this.extractNameFromUrl(nextUrl);
-                    if (extractedNext && !candidateNames.includes(extractedNext)) {
-                        candidateNames.push(extractedNext);
+                    const nextDetails = this.extractNameAndAddressFromUrl(nextUrl);
+                    if (nextDetails.name && !candidateNames.includes(nextDetails.name)) {
+                        candidateNames.push(nextDetails.name);
+                    }
+                    if (nextDetails.address && !detectedAddress) {
+                        detectedAddress = nextDetails.address;
                     }
                     currentUrl = nextUrl;
                     continue;
@@ -233,12 +271,40 @@ export class GoogleMapsMetadataService {
                 };
             }
 
-            this.logger.log(`✓ Detected Business Name: "${finalBusinessName}" (Icon: ${ogImage})`);
+            // 5. Inferred Category & Rich Description
+            let category = 'Local Business & Services';
+            const lowerName = finalBusinessName.toLowerCase();
+            if (lowerName.includes('cater')) category = 'Catering & Event Food Services';
+            else if (lowerName.includes('restaurant') || lowerName.includes('hotel') || lowerName.includes('cafe') || lowerName.includes('dhaba') || lowerName.includes('dining') || lowerName.includes('bhojanalaya') || lowerName.includes('kitchen') || lowerName.includes('sweets') || lowerName.includes('bakery')) category = 'Restaurant & Dining';
+            else if (lowerName.includes('salon') || lowerName.includes('parlour') || lowerName.includes('spa') || lowerName.includes('beauty')) category = 'Beauty, Spa & Wellness';
+            else if (lowerName.includes('hospital') || lowerName.includes('clinic') || lowerName.includes('doctor') || lowerName.includes('dental') || lowerName.includes('pharma') || lowerName.includes('med')) category = 'Healthcare & Medical Clinic';
+            else if (lowerName.includes('store') || lowerName.includes('shop') || lowerName.includes('mart') || lowerName.includes('supermarket') || lowerName.includes('bazaar') || lowerName.includes('jewel')) category = 'Retail Store & Shopping';
+            else if (lowerName.includes('gym') || lowerName.includes('fitness') || lowerName.includes('yoga')) category = 'Fitness, Gym & Sports';
+            else if (lowerName.includes('auto') || lowerName.includes('garage') || lowerName.includes('motors') || lowerName.includes('service center') || lowerName.includes('tyre')) category = 'Automotive & Repair Services';
+            else if (lowerName.includes('school') || lowerName.includes('coaching') || lowerName.includes('academy') || lowerName.includes('classes') || lowerName.includes('institute') || lowerName.includes('college')) category = 'Education & Coaching Institute';
+
+            let description = '';
+            const metaDescMatch = finalBody.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)["']/i) ||
+                finalBody.match(/<meta[^>]+content=["']([^"']+)["'][^>]+(?:name|property)=["'](?:description|og:description)["']/i);
+            if (metaDescMatch && metaDescMatch[1] && !metaDescMatch[1].includes('Find local businesses') && !metaDescMatch[1].includes('Google Maps')) {
+                description = this.cleanBusinessName(metaDescMatch[1]);
+            }
+
+            if (!description) {
+                description = detectedAddress
+                    ? `${category} located at ${detectedAddress}. Verified Google Maps listing.`
+                    : `${category} • Verified Google Maps business listing. Ready for authentic 5-star customer reviews & rating boost.`;
+            }
+
+            this.logger.log(`✓ Detected Business: "${finalBusinessName}" (Category: "${category}", Desc: "${description}")`);
 
             return {
                 success: true,
                 businessName: finalBusinessName,
                 businessIcon: ogImage,
+                description,
+                category,
+                address: detectedAddress,
                 mapsUrl: finalUrl,
             };
         } catch (err: any) {
