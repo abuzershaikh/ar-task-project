@@ -69,6 +69,15 @@ export async function seedAdminAndServices(dataSource: DataSource) {
       workerReward: 3.50,
     },
     {
+      code: 'YOUTUBE_COMMENT',
+      name: 'YouTube Relevant Comments',
+      description: 'Authentic contextual comments on your YouTube video to boost engagement, watch-time and algorithm reach',
+      buyerUnitPrice: 3.00,
+      marginType: MarginType.FIXED,
+      marginValue: 1.00,
+      workerReward: 2.00,
+    },
+    {
       code: 'APP_INSTALL',
       name: 'Android App Install & Open',
       description: 'Install app from Play Store and keep open for 1 minute',

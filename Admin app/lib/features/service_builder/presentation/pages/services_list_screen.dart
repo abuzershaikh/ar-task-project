@@ -250,18 +250,18 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
     );
   }
 
-  IconData _getServiceIcon(String name) {
-    final lower = name.toLowerCase();
+  IconData _getServiceIcon(String name, [String? code, String? category]) {
+    final lower = '$name ${code ?? ''} ${category ?? ''}'.toLowerCase();
     if (lower.contains('google') || lower.contains('business') || lower.contains('maps') || lower.contains('gmb')) {
       return Icons.location_on_rounded;
     }
     if (lower.contains('playstore') || lower.contains('play store') || lower.contains('play_store')) {
       return Icons.shop_two_rounded;
     }
-    if (lower.contains('youtube') || lower.contains('video') || lower.contains('watch')) {
+    if (lower.contains('youtube') || lower.contains('video') || lower.contains('watch') || lower.contains('yt')) {
       return Icons.play_circle_fill_rounded;
     }
-    if (lower.contains('insta') || lower.contains('follow') || lower.contains('like')) {
+    if (lower.contains('insta') || lower.contains('follow') || lower.contains('like') || lower.contains('reel')) {
       return Icons.camera_alt_rounded;
     }
     if (lower.contains('app') || lower.contains('install') || lower.contains('download')) {
@@ -270,15 +270,15 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
     return Icons.layers_rounded;
   }
 
-  Color _getServiceColor(String name) {
-    final lower = name.toLowerCase();
+  Color _getServiceColor(String name, [String? code, String? category]) {
+    final lower = '$name ${code ?? ''} ${category ?? ''}'.toLowerCase();
     if (lower.contains('google') || lower.contains('business') || lower.contains('maps') || lower.contains('gmb')) {
       return const Color(0xFF4285F4);
     }
     if (lower.contains('playstore') || lower.contains('play store') || lower.contains('play_store')) {
       return const Color(0xFF10B981);
     }
-    if (lower.contains('youtube') || lower.contains('video')) return const Color(0xFFEF4444);
+    if (lower.contains('youtube') || lower.contains('video') || lower.contains('yt')) return const Color(0xFFEF4444);
     if (lower.contains('insta')) return const Color(0xFFEC4899);
     if (lower.contains('app')) return const Color(0xFF10B981);
     return accentBlue;
@@ -400,14 +400,25 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                           lowerCode.contains('google_maps') ||
                           lowerCode.contains('gmb'));
                 }
-                if (_selectedFilter == 'YouTube') return matchesQuery && s.name.toLowerCase().contains('youtube');
+                if (_selectedFilter == 'YouTube') {
+                  final lowerName = s.name.toLowerCase();
+                  final lowerCode = s.code.toLowerCase();
+                  final lowerCat = s.category.toLowerCase();
+                  return matchesQuery &&
+                      (lowerName.contains('youtube') ||
+                          lowerCode.contains('youtube') ||
+                          lowerCode.contains('yt') ||
+                          lowerCat.contains('youtube'));
+                }
                 if (_selectedFilter == 'PlayStore') {
                   final lowerName = s.name.toLowerCase();
                   final lowerCode = s.code.toLowerCase();
+                  final lowerCat = s.category.toLowerCase();
                   if (lowerName.contains('google') ||
                       lowerName.contains('business') ||
                       lowerCode.contains('google_business') ||
-                      lowerCode.contains('gmb')) {
+                      lowerCode.contains('gmb') ||
+                      lowerCat.contains('google maps')) {
                     return false;
                   }
                   return matchesQuery &&
@@ -419,13 +430,20 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                           lowerName.contains('rating') ||
                           lowerName.contains('review') ||
                           lowerCode.contains('playstore') ||
-                          lowerCode.contains('app'));
+                          lowerCode.contains('app') ||
+                          lowerCat.contains('play store') ||
+                          lowerCat.contains('app install'));
                 }
                 if (_selectedFilter == 'Social') {
+                  final lowerName = s.name.toLowerCase();
+                  final lowerCode = s.code.toLowerCase();
+                  final lowerCat = s.category.toLowerCase();
                   return matchesQuery &&
-                      (s.name.toLowerCase().contains('insta') ||
-                          s.name.toLowerCase().contains('twitter') ||
-                          s.name.toLowerCase().contains('facebook'));
+                      (lowerName.contains('insta') ||
+                          lowerCode.contains('insta') ||
+                          lowerCat.contains('instagram') ||
+                          lowerName.contains('twitter') ||
+                          lowerName.contains('facebook'));
                 }
                 return matchesQuery;
               }).toList();
@@ -634,8 +652,8 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                             itemCount: filteredServices.length,
                             itemBuilder: (context, index) {
                               final service = filteredServices[index];
-                              final iconColor = _getServiceColor(service.name);
-                              final iconData = _getServiceIcon(service.name);
+                              final iconColor = _getServiceColor(service.name, service.code, service.category);
+                              final iconData = _getServiceIcon(service.name, service.code, service.category);
                               final pricing = service.pricing;
 
                               return Container(
