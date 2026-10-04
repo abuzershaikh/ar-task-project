@@ -625,10 +625,22 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
         };
       }
 
-      if (code.contains('SUB') ||
-          code.contains('LIKE') ||
-          name.contains('SUB') ||
-          name.contains('LIKE')) {
+      if (code.contains('LIKE') || name.contains('LIKE')) {
+        return {
+          'badge': '👍 LIKE VELOCITY BOOST',
+          'overview':
+              'Real viewers watch your video and give a genuine thumbs-up like. High like-to-view ratios signal quality content to the YouTube algorithm, boosting suggestions and browse features.',
+          'features': [
+            'Authentic Thumbs-Up Likes',
+            'Includes 30+ Seconds Watch Time',
+            'Signals High Content Quality',
+            '100% Real Google/YouTube Accounts',
+            'Permanent Non-Drop Guarantee',
+          ],
+        };
+      }
+
+      if (code.contains('SUB') || name.contains('SUB')) {
         return {
           'badge': '📈 CHANNEL GROWTH',
           'overview':
