@@ -218,11 +218,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF38BDF8), Color(0xFF2563EB), Color(0xFF7C3AED)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -232,8 +227,20 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      'assets/logos/buyer_app_icon.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF38BDF8), Color(0xFF2563EB)],
+                          ),
+                        ),
+                        child: const Icon(Icons.campaign_rounded, color: Colors.white, size: 20),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),

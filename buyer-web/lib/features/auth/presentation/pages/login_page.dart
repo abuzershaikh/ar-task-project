@@ -170,280 +170,519 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF080C16),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 460),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: const Color(0xFF1E293B),
-                    width: 1.5,
+      backgroundColor: const Color(0xFFF1F5F9),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Stack(
+            children: [
+              // Ambient gradient orbs
+              Positioned(
+                top: -40,
+                right: -40,
+                child: Container(
+                  width: 220,
+                  height: 220,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF4F46E5).withValues(alpha: 0.12),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      blurRadius: 30,
-                      offset: const Offset(0, 12),
-                    ),
-                    BoxShadow(
-                      color: const Color(0xFF38BDF8).withValues(alpha: 0.05),
-                      blurRadius: 40,
-                      offset: const Offset(0, -4),
-                    ),
-                  ],
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Brand Icon
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF38BDF8), Color(0xFF2563EB), Color(0xFF7C3AED)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
-                            blurRadius: 20,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.auto_awesome_rounded,
-                          size: 36,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+              ),
+              Positioned(
+                top: 140,
+                left: -40,
+                child: Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF06B6D4).withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
 
-                    // App Title
-                    Text(
-                      'ReviewsGateway',
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 6),
-
-                    // Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(0xFF38BDF8).withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        'BUYER PORTAL',
-                        style: GoogleFonts.outfit(
-                          color: const Color(0xFF38BDF8),
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    Text(
-                      'Sign in to launch campaigns, access your wallet, and track verified micro-tasks in real time.',
-                      style: GoogleFonts.outfit(
-                        color: const Color(0xFF94A3B8),
-                        fontSize: 13,
-                        height: 1.45,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 28),
-
-                    // Feature List
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF131D33),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: const Color(0xFF1E293B),
-                        ),
-                      ),
-                      child: Column(
+              // Scrollable Content
+              SafeArea(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. Top App Header Branding with Buyer App Icon
+                      Row(
                         children: [
-                          _buildFeatureRow(
-                            Icons.verified_user_rounded,
-                            '10,000+ Real Micro-Workers on Android',
-                            const Color(0xFF10B981),
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF4F46E5).withValues(alpha: 0.35),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.asset(
+                                'assets/logos/buyer_app_icon.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [Color(0xFF4338CA), Color(0xFF6366F1)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.campaign_rounded,
+                                    color: Colors.white,
+                                    size: 26,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 12),
-                          _buildFeatureRow(
-                            Icons.bolt_rounded,
-                            'Instant Campaign Setup & Geo-Targeting',
-                            const Color(0xFFF59E0B),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildFeatureRow(
-                            Icons.shield_rounded,
-                            '100% Escrow Shield & Screenshot Verification',
-                            const Color(0xFF38BDF8),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Marketing Pro',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 21,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF0F172A),
+                                    letterSpacing: -0.4,
+                                  ),
+                                ),
+                                Text(
+                                  'Campaign Management & Analytics Platform',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 28),
 
-                    // Google Sign-In Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleGoogleSignIn,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF0F172A),
-                          elevation: 3,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  color: Color(0xFF2563EB),
-                                ),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Image.network(
-                                    'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                                    width: 22,
-                                    height: 22,
-                                    errorBuilder: (_, __, ___) => const Icon(
-                                      Icons.g_mobiledata_rounded,
-                                      color: Color(0xFFEA4335),
-                                      size: 32,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Sign in with Google',
-                                    style: GoogleFonts.outfit(
-                                      color: const Color(0xFF0F172A),
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // Download Android App APK Button
-                    InkWell(
-                      onTap: () => ApkDownloader.downloadBuyerApk(),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      // 2. Catchy Typography Tagline
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
-                              Icons.android_rounded,
-                              color: Color(0xFF34D399),
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
                             Text(
-                              'Download Android App (APK) ⬇',
-                              style: GoogleFonts.outfit(
-                                color: const Color(0xFF34D399),
-                                fontSize: 13,
+                              'Grow Your',
+                              style: GoogleFonts.caveat(
+                                fontSize: 30,
                                 fontWeight: FontWeight.w700,
+                                color: const Color(0xFF4338CA),
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            Text(
+                              'Business',
+                              style: GoogleFonts.outfit(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF0F172A),
+                                height: 1.05,
+                                letterSpacing: -0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Reach more people with smart marketing campaigns.',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w400,
+                                color: const Color(0xFF64748B),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
 
-                    // Terms Note
-                    Text(
-                      'By continuing, you agree to ReviewsGateway Terms of Service & Escrow Policy.',
-                      style: GoogleFonts.outfit(
-                        color: const Color(0xFF64748B),
-                        fontSize: 11,
-                        height: 1.35,
+                      const SizedBox(height: 14),
+
+                      // 3. Realistic Marketing Hero Image (Matching Buyer App)
+                      Container(
+                        height: 200,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0F172A).withValues(alpha: 0.12),
+                              blurRadius: 22,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.asset(
+                                'assets/images/marketing_team_hero.jpg',
+                                fit: BoxFit.cover,
+                                alignment: const Alignment(0, -0.3),
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: const Color(0xFF4F46E5),
+                                  child: const Center(
+                                    child: Icon(Icons.people_alt_rounded, color: Colors.white, size: 54),
+                                  ),
+                                ),
+                              ),
+                              Positioned.fill(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withValues(alpha: 0.15),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+
+                      const SizedBox(height: 18),
+
+                      // 4. White Card Container ("Welcome Back!")
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(22),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Welcome Back!',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF0F172A),
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Login to continue and manage your campaigns, track performance and grow your business.',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12.5,
+                                  height: 1.4,
+                                  color: const Color(0xFF64748B),
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // 5. Google Sign-In Button with 4-Color Google 'G' Logo
+                              SizedBox(
+                                width: double.infinity,
+                                height: 54,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(28),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                                        blurRadius: 16,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ElevatedButton(
+                                    onPressed: _isLoading ? null : _handleGoogleSignIn,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: const Color(0xFF0F172A),
+                                      elevation: 0,
+                                      side: const BorderSide(
+                                        color: Color(0xFFE2E8F0),
+                                        width: 1.5,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(28),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    ),
+                                    child: _isLoading
+                                        ? Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2.5,
+                                                  color: Color(0xFF4F46E5),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Text(
+                                                'Connecting to Google...',
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 14.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: const Color(0xFF64748B),
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const GoogleLogoWidget(size: 24),
+                                              const SizedBox(width: 12),
+                                              Text(
+                                                'Continue with Google',
+                                                style: GoogleFonts.outfit(
+                                                  color: const Color(0xFF0F172A),
+                                                  fontSize: 15.5,
+                                                  fontWeight: FontWeight.w700,
+                                                  letterSpacing: 0.2,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              // Download Android App APK Button
+                              InkWell(
+                                onTap: () => ApkDownloader.downloadBuyerApk(),
+                                borderRadius: BorderRadius.circular(28),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(28),
+                                    border: Border.all(
+                                      color: const Color(0xFF10B981).withValues(alpha: 0.25),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.android_rounded, color: Color(0xFF059669), size: 18),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Download Android App (APK) ⬇',
+                                        style: GoogleFonts.outfit(
+                                          color: const Color(0xFF059669),
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 18),
+
+                              // 6. Value Proposition Chips / Trust Badges
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildTrustBadge(
+                                      icon: Icons.verified_user_rounded,
+                                      label: '100% Real\nWorkers',
+                                      color: const Color(0xFF10B981),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _buildTrustBadge(
+                                      icon: Icons.bolt_rounded,
+                                      label: 'Instant\nExecution',
+                                      color: const Color(0xFFF59E0B),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _buildTrustBadge(
+                                      icon: Icons.security_rounded,
+                                      label: 'Escrow\nProtected',
+                                      color: const Color(0xFF4F46E5),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // 7. Terms & Privacy Notice
+                              Center(
+                                child: Text(
+                                  'By continuing, you agree to our Terms & Privacy Policy',
+                                  style: GoogleFonts.outfit(
+                                    color: const Color(0xFF94A3B8),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildFeatureRow(IconData icon, String text, Color iconColor) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(7),
-          decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 16, color: iconColor),
+  Widget _buildTrustBadge({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+          width: 1,
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
             style: GoogleFonts.outfit(
-              color: const Color(0xFFCBD5E1),
-              fontSize: 12.5,
+              fontSize: 10.5,
               fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+              height: 1.2,
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+}
+
+/// Official 4-Color Google 'G' Logo Widget rendered crisp via CustomPainter
+class GoogleLogoWidget extends StatelessWidget {
+  final double size;
+  const GoogleLogoWidget({super.key, this.size = 24});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size, size),
+      painter: _GoogleLogoPainter(),
+    );
+  }
+}
+
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double s = size.width;
+    final double center = s / 2;
+    final double radius = s * 0.44;
+    final double stroke = s * 0.18;
+
+    final Rect outerRect = Rect.fromCircle(
+      center: Offset(center, center),
+      radius: radius,
+    );
+
+    // Blue horizontal bar
+    final Paint bluePaint = Paint()
+      ..color = const Color(0xFF4285F4)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          center - (s * 0.04),
+          center - (stroke / 2),
+          radius + (s * 0.04),
+          stroke,
+        ),
+        Radius.zero,
+      ),
+      bluePaint,
+    );
+
+    // Arc painter
+    final Paint arcPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
+
+    // Blue arc (bottom right)
+    arcPaint.color = const Color(0xFF4285F4);
+    canvas.drawArc(outerRect, 0.0, 0.85, false, arcPaint);
+
+    // Green arc (bottom)
+    arcPaint.color = const Color(0xFF34A853);
+    canvas.drawArc(outerRect, 0.85, 1.85, false, arcPaint);
+
+    // Yellow arc (left)
+    arcPaint.color = const Color(0xFFFBBC05);
+    canvas.drawArc(outerRect, 2.70, 1.30, false, arcPaint);
+
+    // Red arc (top)
+    arcPaint.color = const Color(0xFFEA4335);
+    canvas.drawArc(outerRect, 4.00, 1.45, false, arcPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
