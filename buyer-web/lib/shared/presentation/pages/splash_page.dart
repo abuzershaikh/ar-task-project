@@ -132,9 +132,9 @@ class _SplashPageState extends State<SplashPage> {
       debugPrint('[SPLASH] Auth verification exception: $e');
     }
 
-    // 5. Unauthenticated visitor -> redirect to Landing Page
+    // 5. Unauthenticated visitor -> redirect to Main App Navigation directly
     if (mounted) {
-      Navigator.pushReplacementNamed(context, AppRouter.landing);
+      Navigator.pushReplacementNamed(context, AppRouter.mainNavigation);
     }
   }
 

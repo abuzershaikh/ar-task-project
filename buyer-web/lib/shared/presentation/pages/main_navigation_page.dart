@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/utils/apk_downloader.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../core/storage/local_storage_service.dart';
 import '../../../core/di/injection.dart';
@@ -41,19 +40,12 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   @override
   void initState() {
     super.initState();
-    if (!AuthHelper.isAuthenticated()) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, AppRouter.landing);
-        }
-      });
-      return;
+    if (AuthHelper.isAuthenticated()) {
+      // Pre-fetch wallet balance so desktop top header and sidebar display live balance
+      try {
+        context.read<WalletBloc>().add(const GetBalanceEvent());
+      } catch (_) {}
     }
-
-    // Pre-fetch wallet balance so desktop top header and sidebar display live balance
-    try {
-      context.read<WalletBloc>().add(const GetBalanceEvent());
-    } catch (_) {}
   }
 
   void _handleNavigation(int index) {
@@ -100,15 +92,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (!AuthHelper.isAuthenticated()) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF080C16),
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      );
-    }
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth >= 960;
@@ -352,32 +335,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                   child: Container(height: 1, color: const Color(0xFF1E293B)),
                 ),
                 const SizedBox(height: 12),
-
-                // Public Website Link
-                InkWell(
-                  onTap: () {
-                    Navigator.pushNamed(context, AppRouter.landing);
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.language_rounded, color: Color(0xFF94A3B8), size: 18),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Public Website ↗',
-                          style: GoogleFonts.outfit(
-                            color: const Color(0xFF94A3B8),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
 
                 // Download Android App Link in Sidebar
                 InkWell(
@@ -717,55 +674,103 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           // Actions on the right
           Row(
             children: [
-              // Live Wallet Balance Chip
-              BlocBuilder<WalletBloc, WalletState>(
-                builder: (context, state) {
-                  final balance = state is WalletLoaded ? state.balance.availableBalance : 0.0;
-                  return InkWell(
-                    onTap: () => _handleNavigation(3),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF38BDF8), size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            '₹${balance.toStringAsFixed(2)}',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '+ Add',
+              // Live Wallet Balance Chip (if authenticated) OR Sign In Button (if guest)
+              if (AuthHelper.isAuthenticated())
+                BlocBuilder<WalletBloc, WalletState>(
+                  builder: (context, state) {
+                    final balance = state is WalletLoaded ? state.balance.availableBalance : 0.0;
+                    return InkWell(
+                      onTap: () => _handleNavigation(3),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF38BDF8), size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              '₹${balance.toStringAsFixed(2)}',
                               style: GoogleFonts.outfit(
-                                color: const Color(0xFF34D399),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '+ Add',
+                                style: GoogleFonts.outfit(
+                                  color: const Color(0xFF34D399),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    );
+                  },
+                )
+              else
+                InkWell(
+                  onTap: () {
+                    AuthHelper.requireAuth(
+                      context,
+                      title: 'Sign In to ReviewsGateway',
+                      message: 'Sign in with your Google account to access all features.',
+                      onAuthenticated: () {
+                        if (mounted) setState(() {});
+                      },
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF38BDF8), Color(0xFF2563EB)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.login_rounded, color: Colors.white, size: 16),
+                        const SizedBox(width: 7),
+                        Text(
+                          'Sign In with Google',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               const SizedBox(width: 14),
 
               // Download App CTA Button (Top Bar)
@@ -882,7 +887,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             onPressed: () {
               Navigator.pop(dialogContext);
               context.read<AuthBloc>().add(LogoutEvent());
-              Navigator.pushNamedAndRemoveUntil(context, AppRouter.landing, (route) => false);
+              Navigator.pushNamedAndRemoveUntil(context, AppRouter.mainNavigation, (route) => false);
             },
             child: Text('Sign Out', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w700)),
           ),

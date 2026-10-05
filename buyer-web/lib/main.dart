@@ -66,7 +66,7 @@ class MarketingProApp extends StatelessWidget {
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.light,
         onGenerateRoute: AppRouter.generateRoute,
-        initialRoute: AppRouter.splash,
+        initialRoute: AppRouter.mainNavigation,
       ),
     );
   }

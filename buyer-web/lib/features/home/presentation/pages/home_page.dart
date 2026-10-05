@@ -12,6 +12,7 @@ import '../../../wallet/presentation/bloc/wallet_bloc.dart';
 import '../../../wallet/presentation/bloc/wallet_event.dart';
 import '../../domain/entities/dashboard_data.dart';
 import '../../domain/entities/campaign_summary.dart';
+import '../../../../shared/presentation/widgets/login_dialog.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -554,56 +555,72 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         child: Row(
           children: [
             // 3D Metallic Avatar Badge
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF38BDF8),
-                    Color(0xFF4F46E5),
-                    Color(0xFF9333EA)
+            GestureDetector(
+              onTap: () {
+                if (!AuthHelper.isAuthenticated()) {
+                  AuthHelper.requireAuth(
+                    context,
+                    title: 'Sign In to ReviewsGateway',
+                    message: 'Sign in to access your business profile and wallet.',
+                    onAuthenticated: () {
+                      if (mounted) setState(() {});
+                    },
+                  );
+                } else {
+                  Navigator.pushNamed(context, AppRouter.profile);
+                }
+              },
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF38BDF8),
+                      Color(0xFF4F46E5),
+                      Color(0xFF9333EA)
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(2),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: () {
-                      final googlePhoto =
-                          FirebaseAuth.instance.currentUser?.photoURL ??
-                              getIt<LocalStorageService>().getUserPhoto();
-                      if (googlePhoto != null && googlePhoto.isNotEmpty) {
-                        return Image.network(
-                          googlePhoto,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Image.asset(
-                            'assets/images/vip_badge_3d.jpg',
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: () {
+                        final googlePhoto =
+                            FirebaseAuth.instance.currentUser?.photoURL ??
+                                getIt<LocalStorageService>().getUserPhoto();
+                        if (googlePhoto != null && googlePhoto.isNotEmpty) {
+                          return Image.network(
+                            googlePhoto,
                             fit: BoxFit.cover,
-                          ),
+                            errorBuilder: (_, __, ___) => Image.asset(
+                              'assets/images/vip_badge_3d.jpg',
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        }
+                        return Image.asset(
+                          'assets/images/vip_badge_3d.jpg',
+                          fit: BoxFit.cover,
                         );
-                      }
-                      return Image.asset(
-                        'assets/images/vip_badge_3d.jpg',
-                        fit: BoxFit.cover,
-                      );
-                    }(),
+                      }(),
+                    ),
                   ),
                 ),
               ),
@@ -637,40 +654,88 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ),
             ),
 
-            // Wallet Balance Chip
-            GestureDetector(
-              onTap: () => Navigator.pushNamed(context, AppRouter.wallet),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B).withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: const Color(0xFF38BDF8).withValues(alpha: 0.35)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      'assets/icons/wallet.png',
-                      width: 14,
-                      height: 14,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      '₹${d.walletBalance.toStringAsFixed(0)}',
-                      style: GoogleFonts.outfit(
-                        color: const Color(0xFF38BDF8),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
+            // Wallet Balance Chip (if authenticated) OR Sign In CTA (if guest)
+            if (AuthHelper.isAuthenticated())
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(context, AppRouter.wallet),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B).withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: const Color(0xFF38BDF8).withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        'assets/icons/wallet.png',
+                        width: 14,
+                        height: 14,
+                        fit: BoxFit.contain,
                       ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '₹${d.walletBalance.toStringAsFixed(0)}',
+                        style: GoogleFonts.outfit(
+                          color: const Color(0xFF38BDF8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              GestureDetector(
+                onTap: () {
+                  AuthHelper.requireAuth(
+                    context,
+                    title: 'Sign In to ReviewsGateway',
+                    message: 'Sign in to launch campaigns and grow your business.',
+                    onAuthenticated: () {
+                      if (mounted) setState(() {});
+                    },
+                  );
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF38BDF8), Color(0xFF2563EB)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ],
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.login_rounded, color: Colors.white, size: 14),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Sign In',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
             const SizedBox(width: 8),
 
             // Notification Center with Glow
