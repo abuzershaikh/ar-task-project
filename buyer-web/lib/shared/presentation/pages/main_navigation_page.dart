@@ -40,12 +40,18 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   @override
   void initState() {
     super.initState();
-    if (AuthHelper.isAuthenticated()) {
-      // Pre-fetch wallet balance so desktop top header and sidebar display live balance
-      try {
-        context.read<WalletBloc>().add(const GetBalanceEvent());
-      } catch (_) {}
+    if (!AuthHelper.isAuthenticated()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, AppRouter.login);
+        }
+      });
+      return;
     }
+    // Pre-fetch wallet balance so desktop top header and sidebar display live balance
+    try {
+      context.read<WalletBloc>().add(const GetBalanceEvent());
+    } catch (_) {}
   }
 
   void _handleNavigation(int index) {
@@ -887,7 +893,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             onPressed: () {
               Navigator.pop(dialogContext);
               context.read<AuthBloc>().add(LogoutEvent());
-              Navigator.pushNamedAndRemoveUntil(context, AppRouter.mainNavigation, (route) => false);
+              Navigator.pushNamedAndRemoveUntil(context, AppRouter.login, (route) => false);
             },
             child: Text('Sign Out', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w700)),
           ),

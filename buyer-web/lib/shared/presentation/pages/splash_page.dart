@@ -132,9 +132,9 @@ class _SplashPageState extends State<SplashPage> {
       debugPrint('[SPLASH] Auth verification exception: $e');
     }
 
-    // 5. Unauthenticated visitor -> redirect to Main App Navigation directly
+    // 5. Unauthenticated visitor -> redirect to Login Page until Google Auth is completed
     if (mounted) {
-      Navigator.pushReplacementNamed(context, AppRouter.mainNavigation);
+      Navigator.pushReplacementNamed(context, AppRouter.login);
     }
   }
 
