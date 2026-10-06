@@ -621,6 +621,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
             ),
           ),
           body: TabBarView(
+            physics: const NeverScrollableScrollPhysics(),
             controller: _tabController,
             children: [
               // Tab 1: General Information (Clean, presets hidden)
@@ -2169,9 +2170,11 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: DataTable(
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
                   headingRowColor:
                       WidgetStateProperty.all(const Color(0xFFF8FAFC)),
                   headingRowHeight: 38,
@@ -2372,6 +2375,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
               ),
             ),
           ),
+        ),
           const SizedBox(height: 12),
         ],
       ),
