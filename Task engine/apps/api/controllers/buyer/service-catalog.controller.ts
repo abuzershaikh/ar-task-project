@@ -41,14 +41,25 @@ export class BuyerServiceCatalogController {
                 // Fallback default pricing for newly created admin services
             }
 
-            let extraPricePerMinute = 0.50;
-            if (service.watchTimeOptions) {
-                let parsed = service.watchTimeOptions;
-                if (typeof parsed === 'string') {
-                    try { parsed = JSON.parse(parsed); } catch (_) {}
-                }
-                if (parsed && typeof parsed === 'object' && parsed.extraPricePerMinute !== undefined) {
-                    extraPricePerMinute = Number(parsed.extraPricePerMinute);
+            const codeUpper = (service.code || '').toUpperCase();
+            const nameUpper = (service.name || '').toUpperCase();
+            const catUpper = (service.category || '').toUpperCase();
+            const isYouTubeCombo = codeUpper === 'YOUTUBE_COMBO' ||
+                codeUpper === 'YT_COMBO' ||
+                ((codeUpper.includes('COMBO') || nameUpper.includes('COMBO')) &&
+                    (codeUpper.includes('YT') || codeUpper.includes('YOUTUBE') || catUpper.includes('YOUTUBE')));
+
+            let extraPricePerMinute = 0;
+            if (isYouTubeCombo) {
+                extraPricePerMinute = 0.50;
+                if (service.watchTimeOptions) {
+                    let parsed = service.watchTimeOptions;
+                    if (typeof parsed === 'string') {
+                        try { parsed = JSON.parse(parsed); } catch (_) {}
+                    }
+                    if (parsed && typeof parsed === 'object' && parsed.extraPricePerMinute !== undefined) {
+                        extraPricePerMinute = Number(parsed.extraPricePerMinute);
+                    }
                 }
             }
 
@@ -82,8 +93,8 @@ export class BuyerServiceCatalogController {
                 maxAcceptHours: service.maxAcceptHours || 72,
                 minCompleteHours: service.minCompleteHours || 1,
                 maxCompleteHours: service.maxCompleteHours || 168,
-                watchtimeSeconds: service.watchtimeSeconds || 0,
-                watchTimeOptions: service.watchTimeOptions || { extraPricePerMinute, baseMinutes: 5 },
+                watchtimeSeconds: isYouTubeCombo ? (service.watchtimeSeconds || 0) : 0,
+                watchTimeOptions: isYouTubeCombo ? (service.watchTimeOptions || { extraPricePerMinute, baseMinutes: 5 }) : null,
                 videoTutorialUrl: service.videoTutorialUrl,
                 audioGuideUrl: service.audioGuideUrl,
                 adminInstructions: service.adminInstructions,
@@ -134,14 +145,25 @@ export class BuyerServiceCatalogController {
             // Keep default fallback
         }
 
-        let extraPricePerMinute = 0.50;
-        if (service.watchTimeOptions) {
-            let parsed = service.watchTimeOptions;
-            if (typeof parsed === 'string') {
-                try { parsed = JSON.parse(parsed); } catch (_) {}
-            }
-            if (parsed && typeof parsed === 'object' && parsed.extraPricePerMinute !== undefined) {
-                extraPricePerMinute = Number(parsed.extraPricePerMinute);
+        const codeUpper = (service.code || '').toUpperCase();
+        const nameUpper = (service.name || '').toUpperCase();
+        const catUpper = (service.category || '').toUpperCase();
+        const isYouTubeCombo = codeUpper === 'YOUTUBE_COMBO' ||
+            codeUpper === 'YT_COMBO' ||
+            ((codeUpper.includes('COMBO') || nameUpper.includes('COMBO')) &&
+                (codeUpper.includes('YT') || codeUpper.includes('YOUTUBE') || catUpper.includes('YOUTUBE')));
+
+        let extraPricePerMinute = 0;
+        if (isYouTubeCombo) {
+            extraPricePerMinute = 0.50;
+            if (service.watchTimeOptions) {
+                let parsed = service.watchTimeOptions;
+                if (typeof parsed === 'string') {
+                    try { parsed = JSON.parse(parsed); } catch (_) {}
+                }
+                if (parsed && typeof parsed === 'object' && parsed.extraPricePerMinute !== undefined) {
+                    extraPricePerMinute = Number(parsed.extraPricePerMinute);
+                }
             }
         }
 
@@ -168,8 +190,8 @@ export class BuyerServiceCatalogController {
                     chips: [],
                     extraPricePerMinute: extraPricePerMinute,
                 },
-                watchtimeSeconds: service.watchtimeSeconds || 0,
-                watchTimeOptions: service.watchTimeOptions || { extraPricePerMinute, baseMinutes: 5 },
+                watchtimeSeconds: isYouTubeCombo ? (service.watchtimeSeconds || 0) : 0,
+                watchTimeOptions: isYouTubeCombo ? (service.watchTimeOptions || { extraPricePerMinute, baseMinutes: 5 }) : null,
                 videoTutorialUrl: service.videoTutorialUrl,
                 audioGuideUrl: service.audioGuideUrl,
                 adminInstructions: service.adminInstructions,

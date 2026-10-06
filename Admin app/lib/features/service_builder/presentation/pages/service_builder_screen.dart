@@ -233,6 +233,24 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     return code.contains('YOUTUBE') || name.contains('YOUTUBE') || cat.contains('YOUTUBE');
   }
 
+  bool get _isYouTubeCombo {
+    final code = _codeController.text.trim().toUpperCase();
+    final name = _nameController.text.trim().toUpperCase();
+    final currentCode = _currentService?.code.trim().toUpperCase() ?? '';
+    final currentName = _currentService?.name.trim().toUpperCase() ?? '';
+
+    return code == 'YOUTUBE_COMBO' ||
+        currentCode == 'YOUTUBE_COMBO' ||
+        code.contains('YT_COMBO') ||
+        currentCode.contains('YT_COMBO') ||
+        (code.contains('COMBO') && (code.contains('YT') || code.contains('YOUTUBE'))) ||
+        (currentCode.contains('COMBO') && (currentCode.contains('YT') || currentCode.contains('YOUTUBE'))) ||
+        name.contains('YOUTUBE GROWTH COMBO') ||
+        currentName.contains('YOUTUBE GROWTH COMBO') ||
+        (name.contains('YOUTUBE') && name.contains('COMBO')) ||
+        (currentName.contains('YOUTUBE') && currentName.contains('COMBO'));
+  }
+
   bool _isInstagram(String code, String name, String cat) {
     if (code.contains('INSTAGRAM') || name.contains('INSTAGRAM') || cat.contains('INSTAGRAM') || cat.contains('SOCIAL')) {
       return true;
@@ -316,8 +334,9 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
         ? (int.tryParse(_minRetentionHoursController.text.trim()) ?? 24)
         : 0;
 
-    final extraMinPrice =
-        double.tryParse(_extraMinutePriceController.text.trim()) ?? 0.50;
+    final extraMinPrice = _isYouTubeCombo
+        ? (double.tryParse(_extraMinutePriceController.text.trim()) ?? 0.50)
+        : 0.0;
 
     final pricing = PricingConfig.calculate(
       buyerPrice: buyerPrice,
@@ -385,16 +404,14 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
       maxCompleteHours: maxComp,
       minDurationSeconds: _isAppInstallService
           ? retentionHours * 3600
-          : (_watchtimeSeconds > 0
+          : (_isYouTubeCombo && _watchtimeSeconds > 0
               ? _watchtimeSeconds
-              : (currentBaseService.minDurationSeconds > 0
-                  ? currentBaseService.minDurationSeconds
-                  : 0)),
+              : 0),
       linkFieldLabel: _isLinkFieldEnabled ? _linkFieldLabelController.text.trim() : null,
       linkFieldPlaceholder: _isLinkFieldEnabled ? _linkFieldPlaceholderController.text.trim() : null,
       textFieldLabel: _isTextFieldEnabled ? _textFieldLabelController.text.trim() : null,
       textFieldPlaceholder: _isTextFieldEnabled ? _textFieldPlaceholderController.text.trim() : null,
-      watchtimeSeconds: _watchtimeSeconds,
+      watchtimeSeconds: _isYouTubeCombo ? _watchtimeSeconds : 0,
       aiGeneratorEnabled: _aiGeneratorEnabled,
       aiGeneratorConfig: {
         'language': _aiLanguage,
@@ -1156,10 +1173,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                     ),
                   ],
                 ),
-                if (_codeController.text.toUpperCase().contains('YT') ||
-                    _codeController.text.toUpperCase().contains('YOUTUBE') ||
-                    _nameController.text.toUpperCase().contains('YOUTUBE') ||
-                    (_currentService?.category.toUpperCase().contains('YOUTUBE') ?? false)) ...[
+                if (_isYouTubeCombo) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -1414,96 +1428,98 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
           ),
           const SizedBox(height: 16),
 
-          // Watch Time Requirement Card
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: surfaceWhite,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: borderSubtle),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: lightBlueBg,
-                        borderRadius: BorderRadius.circular(10),
+          // Watch Time Requirement Card (Only for YouTube Combo)
+          if (_isYouTubeCombo) ...[
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: surfaceWhite,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: borderSubtle),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: lightBlueBg,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.timer_outlined,
+                            color: accentBlue, size: 18),
                       ),
-                      child: const Icon(Icons.timer_outlined,
-                          color: accentBlue, size: 18),
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text(
-                        'Mandatory Stay / Watch Time',
-                        style: TextStyle(
-                          color: textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Mandatory Stay / Watch Time',
+                          style: TextStyle(
+                            color: textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<int>(
-                  value: _watchtimeSeconds,
-                  dropdownColor: surfaceWhite,
-                  style: const TextStyle(
-                      color: textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: backgroundLight,
-                    prefixIcon: const Icon(Icons.schedule_rounded,
-                        color: accentBlue, size: 18),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: borderSubtle),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: borderSubtle),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          const BorderSide(color: accentBlue, width: 1.5),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
+                    ],
                   ),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 0, child: Text('No Timer (Instant Action)')),
-                    DropdownMenuItem(
-                        value: 30, child: Text('30 Seconds Mandatory Stay')),
-                    DropdownMenuItem(
-                        value: 60, child: Text('60 Seconds (1 Minute)')),
-                    DropdownMenuItem(
-                        value: 120, child: Text('120 Seconds (2 Minutes)')),
-                    DropdownMenuItem(
-                        value: 300, child: Text('300 Seconds (5 Minutes)')),
-                  ],
-                  onChanged: (val) =>
-                      setState(() => _watchtimeSeconds = val ?? 0),
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<int>(
+                    value: _watchtimeSeconds,
+                    dropdownColor: surfaceWhite,
+                    style: const TextStyle(
+                        color: textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: backgroundLight,
+                      prefixIcon: const Icon(Icons.schedule_rounded,
+                          color: accentBlue, size: 18),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: borderSubtle),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: borderSubtle),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: accentBlue, width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 0, child: Text('No Timer (Instant Action)')),
+                      DropdownMenuItem(
+                          value: 30, child: Text('30 Seconds Mandatory Stay')),
+                      DropdownMenuItem(
+                          value: 60, child: Text('60 Seconds (1 Minute)')),
+                      DropdownMenuItem(
+                          value: 120, child: Text('120 Seconds (2 Minutes)')),
+                      DropdownMenuItem(
+                          value: 300, child: Text('300 Seconds (5 Minutes)')),
+                    ],
+                    onChanged: (val) =>
+                        setState(() => _watchtimeSeconds = val ?? 0),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
+          ],
 
           // AI Generator Switch Card
           Container(

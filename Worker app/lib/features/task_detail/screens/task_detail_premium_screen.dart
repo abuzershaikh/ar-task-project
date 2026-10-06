@@ -164,10 +164,36 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   }
 
   bool _isYouTubeTask() {
+    final t = widget.task;
+    if (t == null) return false;
     final p = _getPlatform();
-    if (p == 'youtube') return true;
     final target = _getTargetUrl().toLowerCase();
-    return target.contains('youtube.com') || target.contains('youtu.be');
+    final isYt = p == 'youtube' || target.contains('youtube.com') || target.contains('youtu.be');
+    if (!isYt) return false;
+
+    // Watch time requirement is STRICTLY for YouTube Combo (or if explicitly ordered watchTimeSeconds > 0)
+    final type = (t['taskType'] ?? t['task_type'] ?? t['type'] ?? t['serviceCode'] ?? t['category'] ?? '')
+        .toString()
+        .toUpperCase();
+    final name = (t['title'] ?? t['name'] ?? '').toString().toUpperCase();
+
+    final isCombo = type == 'YOUTUBE_COMBO' ||
+        type == 'YT_COMBO' ||
+        ((type.contains('COMBO') || name.contains('COMBO')) &&
+            (type.contains('YT') || type.contains('YOUTUBE') || p == 'youtube'));
+
+    if (isCombo) return true;
+
+    // Check if buyer specifically mandated watch time (> 0)
+    final rawWatch = t['requirements'] is Map
+        ? (t['requirements']['watchTimeSeconds'] ?? t['requirements']['watch_time_seconds'])
+        : null;
+    final explicitWatch = rawWatch ?? t['watchTimeSeconds'] ?? t['watch_time_seconds'];
+    final watchSec = explicitWatch is num
+        ? explicitWatch.toInt()
+        : (int.tryParse(explicitWatch?.toString() ?? '') ?? 0);
+
+    return watchSec > 0;
   }
 
   bool _isCommentRequiredTask() {

@@ -258,10 +258,13 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     }
     final code = s.code.toUpperCase();
     final name = s.name.toUpperCase();
-    return (code.contains('COMBO') || name.contains('COMBO')) &&
-        (code.contains('YT') ||
-            code.contains('YOUTUBE') ||
-            s.category.toUpperCase().contains('YOUTUBE'));
+    return code == 'YOUTUBE_COMBO' ||
+        code == 'YT_COMBO' ||
+        ((code.contains('COMBO') || name.contains('COMBO')) &&
+            (code.contains('YT') ||
+                code.contains('YOUTUBE') ||
+                name.contains('YOUTUBE') ||
+                s.category.toUpperCase().contains('YOUTUBE')));
   }
 
   void _parseInstagramUrl(String input) {
@@ -921,7 +924,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   double _getEffectiveUnitPrice() {
     if (_selectedService == null) return 0.0;
     final basePrice = _selectedService!.pricing.buyerPrice;
-    if (_isYouTubeService(_selectedService) &&
+    if (_isYouTubeCombo(_selectedService) &&
         _ytDurationSeconds != null &&
         _ytDurationSeconds! > 300) {
       final extraMinutes = math.max(0, _selectedWatchMinutes - 5);
@@ -1034,21 +1037,21 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               : '',
           'appIcon': _appIcon,
           'packageId': _packageId,
-          'watchTimeSeconds': _isInstagramService(_selectedService)
-              ? 0
-              : (_isYouTubeService(_selectedService) &&
-                      _ytDurationSeconds != null &&
-                      _ytDurationSeconds! > 300
-                  ? (_selectedWatchMinutes * 60)
-                  : (_ytRequiredWatchSeconds ??
+          'watchTimeSeconds': _isYouTubeCombo(_selectedService) &&
+                  _ytDurationSeconds != null &&
+                  _ytDurationSeconds! > 300
+              ? (_selectedWatchMinutes * 60)
+              : (_isYouTubeCombo(_selectedService)
+                  ? (_ytRequiredWatchSeconds ??
                       (_ytDurationSeconds != null
                           ? (_ytDurationSeconds! > 300 ? 300 : _ytDurationSeconds!)
-                          : (_isYouTubeService(_selectedService) ? 120 : 0)))),
-          'selectedWatchMinutes': _isYouTubeService(_selectedService) &&
+                          : 300))
+                  : 0),
+          'selectedWatchMinutes': _isYouTubeCombo(_selectedService) &&
                   _ytDurationSeconds != null &&
                   _ytDurationSeconds! > 300
               ? _selectedWatchMinutes
-              : 5,
+              : (_isYouTubeCombo(_selectedService) ? 5 : 0),
           'unitPrice': _getEffectiveUnitPrice(),
           'videoDurationSeconds': _isInstagramService(_selectedService)
               ? 0
@@ -2675,8 +2678,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                       ),
                     ],
 
-                    // YouTube Duration Slider (> 5 min)
-                    if (_isYouTubeService(s) &&
+                    // YouTube Duration Slider (> 5 min) - Strictly for YouTube Combo
+                    if (_isYouTubeCombo(s) &&
                         _ytDurationSeconds != null &&
                         _ytDurationSeconds! > 300) ...[
                       const SizedBox(height: 12),
@@ -2903,7 +2906,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                     fontSize: 14)),
                           ],
                         ),
-                        if (_isYouTubeService(s) &&
+                        if (_isYouTubeCombo(s) &&
                             _ytDurationSeconds != null &&
                             _ytDurationSeconds! > 300) ...[
                           const SizedBox(height: 8),

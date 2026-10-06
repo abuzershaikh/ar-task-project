@@ -292,13 +292,16 @@ export class BuyerOrderController {
                 }
             } catch (_) {}
         }
-        let watchTimeSeconds = reqs.watchTimeSeconds || catalog?.watchtimeSeconds || 0;
-        let videoDurationSeconds = reqs.videoDurationSeconds || 0;
+        const codeUpper = (catalog?.code || '').toUpperCase();
+        const nameUpper = (catalog?.name || '').toUpperCase();
+        const catUpper = (catalog?.category || '').toUpperCase();
+        const isYouTubeCombo = codeUpper === 'YOUTUBE_COMBO' ||
+            codeUpper === 'YT_COMBO' ||
+            ((codeUpper.includes('COMBO') || nameUpper.includes('COMBO')) &&
+                (codeUpper.includes('YT') || codeUpper.includes('YOUTUBE') || catUpper.includes('YOUTUBE')));
 
-        // Auto-extract YouTube video duration and enforce duration rule if targetUrl is YouTube
-        const isYouTubeService = (catalog?.category || '').toLowerCase().includes('youtube') ||
-            (catalog?.code || '').toLowerCase().includes('youtube') ||
-            (catalog?.code || '').toLowerCase().includes('yt');
+        let watchTimeSeconds = isYouTubeCombo ? (reqs.watchTimeSeconds || catalog?.watchtimeSeconds || 0) : 0;
+        let videoDurationSeconds = reqs.videoDurationSeconds || 0;
 
         let extraMinutes = 0;
         let extraPricePerMin = 0.50;
@@ -309,17 +312,21 @@ export class BuyerOrderController {
                 const ytInfo = await this.ytMetadataService.getVideoMetadata(targetUrl);
                 if (ytInfo && ytInfo.success) {
                     videoDurationSeconds = ytInfo.durationSeconds || 0;
-                    const reqWatchTime = Number(reqs.watchTimeSeconds || 0);
-                    if (reqWatchTime > 0) {
-                        // If buyer explicitly specified watch time via slider (> 300s):
-                        if (reqWatchTime > 300) {
-                            const maxAllowedSec = videoDurationSeconds > 0 ? videoDurationSeconds : reqWatchTime;
-                            watchTimeSeconds = Math.min(reqWatchTime, maxAllowedSec);
+                    if (isYouTubeCombo) {
+                        const reqWatchTime = Number(reqs.watchTimeSeconds || 0);
+                        if (reqWatchTime > 0) {
+                            // If buyer explicitly specified watch time via slider (> 300s):
+                            if (reqWatchTime > 300) {
+                                const maxAllowedSec = videoDurationSeconds > 0 ? videoDurationSeconds : reqWatchTime;
+                                watchTimeSeconds = Math.min(reqWatchTime, maxAllowedSec);
+                            } else {
+                                watchTimeSeconds = Math.min(reqWatchTime, videoDurationSeconds > 0 ? videoDurationSeconds : reqWatchTime);
+                            }
                         } else {
-                            watchTimeSeconds = Math.min(reqWatchTime, videoDurationSeconds > 0 ? videoDurationSeconds : reqWatchTime);
+                            watchTimeSeconds = ytInfo.requiredWatchSeconds || 0;
                         }
                     } else {
-                        watchTimeSeconds = ytInfo.requiredWatchSeconds || 0;
+                        watchTimeSeconds = 0;
                     }
                 }
             } catch (err: any) {
@@ -342,11 +349,11 @@ export class BuyerOrderController {
             }
         }
 
-        // Dynamic duration-based pricing for YouTube video services (> 5 minutes / 300s)
+        // Dynamic duration-based pricing strictly for YouTube Combo (> 5 minutes / 300s)
         let effectiveBuyerUnitPrice = Number(snapshot.buyerUnitPrice);
         let effectiveWorkerReward = Number(snapshot.workerRewardSnapshot);
 
-        if (isYouTubeService && watchTimeSeconds > 300) {
+        if (isYouTubeCombo && watchTimeSeconds > 300) {
             extraMinutes = Math.ceil((watchTimeSeconds - 300) / 60);
             let opts = catalog?.watchTimeOptions;
             if (typeof opts === 'string') {
@@ -371,10 +378,10 @@ export class BuyerOrderController {
             autoApprove: isAutoApproveRequested || finalReviewMode === 'automatic',
             targetUrl,
             customText: reqs.customText || reqs.text || reqs.comment || reqs.instructions || data.description || '',
-            watchTimeSeconds: Number(watchTimeSeconds) || 0,
-            selectedWatchMinutes: Math.round(Number(watchTimeSeconds) / 60),
-            extraMinutes,
-            extraPricePerMinute: extraPricePerMin,
+            watchTimeSeconds: isYouTubeCombo ? (Number(watchTimeSeconds) || 0) : 0,
+            selectedWatchMinutes: isYouTubeCombo ? Math.round(Number(watchTimeSeconds) / 60) : 0,
+            extraMinutes: isYouTubeCombo ? extraMinutes : 0,
+            extraPricePerMinute: isYouTubeCombo ? extraPricePerMin : 0,
             videoDurationSeconds: Number(videoDurationSeconds) || 0,
             videoTutorialUrl: catalog?.videoTutorialUrl || '',
             audioGuideUrl: catalog?.audioGuideUrl || '',

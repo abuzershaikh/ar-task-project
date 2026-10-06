@@ -703,12 +703,12 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
         return {
           'badge': '🎯 ALGORITHM ENGAGEMENT',
           'overview':
-              'Real viewers watch your YouTube video for at least 30 seconds and post contextual, human-like comments. Signals high viewer interest to YouTube recommendation algorithms to boost impressions.',
+              'Real viewers post contextual, high-retention human-like comments on your YouTube video. Signals high viewer interest to YouTube recommendation algorithms to boost impressions.',
           'features': [
-            'Minimum 30 Seconds Watch Time Included',
             'Topic-Relevant Natural Comments',
             'Triggers YouTube Suggestion & Recommended Feeds',
             'Verified Active Google/YouTube Accounts',
+            'Permanent Non-Drop Comments',
           ],
         };
       }
@@ -717,10 +717,9 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
         return {
           'badge': '👍 LIKE VELOCITY BOOST',
           'overview':
-              'Real viewers watch your video and give a genuine thumbs-up like. High like-to-view ratios signal quality content to the YouTube algorithm, boosting suggestions and browse features.',
+              'Real viewers give genuine thumbs-up likes to your video. High like-to-view ratios signal quality content to the YouTube algorithm, boosting suggestions and browse features.',
           'features': [
             'Authentic Thumbs-Up Likes',
-            'Includes 30+ Seconds Watch Time',
             'Signals High Content Quality',
             '100% Real Google/YouTube Accounts',
             'Permanent Non-Drop Guarantee',

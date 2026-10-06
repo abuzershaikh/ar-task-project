@@ -8,17 +8,19 @@ async function run() {
     password: 'G8u$RW{5m46buXgw',
   });
 
-  console.log('=== service_catalog sample ===');
-  const sc = await ssh.execCommand("mysql -u taskapp -ptaskapp_password task_platform -e 'SELECT id, code, name, category, is_active FROM service_catalog LIMIT 20;'");
-  console.log(sc.stdout);
+  console.log('=== Tables in task_platform ===');
+  const t = await ssh.execCommand("mysql -u taskapp -ptaskapp_password task_platform -e 'SHOW TABLES;'");
+  console.log(t.stdout);
 
-  console.log('=== service_pricing sample ===');
-  const sp = await ssh.execCommand("mysql -u taskapp -ptaskapp_password task_platform -e 'SELECT * FROM service_pricing LIMIT 20;'");
-  console.log(sp.stdout);
+  const count = await ssh.execCommand("mysql -u taskapp -ptaskapp_password task_platform -e 'SELECT count(*) FROM service_catalog; DESCRIBE service_catalog;'");
+  console.log(count.stdout);
+  if (count.stderr) console.error('STDERR:', count.stderr);
 
-  console.log('=== system_settings sample ===');
-  const ss = await ssh.execCommand("mysql -u taskapp -ptaskapp_password task_platform -e 'SELECT * FROM system_settings LIMIT 20;'");
-  console.log(ss.stdout);
+  const spDesc = await ssh.execCommand("mysql -u taskapp -ptaskapp_password task_platform -e 'DESCRIBE service_pricing; SELECT * FROM service_pricing;'");
+  console.log('=== service_pricing ===\n', spDesc.stdout);
+
+  const tasks = await ssh.execCommand('mysql -u taskapp -ptaskapp_password task_platform -e \'SELECT id, order_id, title, reward_amount, status, metadata FROM tasks WHERE order_id = "d1c70e26-5471-48cc-83f6-d9eeae0d2491";\'');
+  console.log('=== Tasks for d1c70e26-5471-48cc-83f6-d9eeae0d2491 ===\n', tasks.stdout);
 
   ssh.dispose();
 }
