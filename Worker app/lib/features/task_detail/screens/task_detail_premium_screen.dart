@@ -240,30 +240,48 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   int _getRequiredWatchSeconds() {
     final t = widget.task;
-    int duration = 0;
+    int customWatchSec = 0;
+    int vidDurationSec = 0;
+
     if (t is Map) {
-      if (t['videoDurationSeconds'] is int && t['videoDurationSeconds'] > 0) {
-        duration = t['videoDurationSeconds'];
-      } else if (t['requirements'] is Map &&
-          t['requirements']['videoDurationSeconds'] is int &&
-          t['requirements']['videoDurationSeconds'] > 0) {
-        duration = t['requirements']['videoDurationSeconds'];
-      } else if (t['watchTimeSeconds'] is int && t['watchTimeSeconds'] > 0) {
-        duration = t['watchTimeSeconds'];
-      } else if (t['requirements'] is Map &&
-          t['requirements']['watchTimeSeconds'] is int &&
-          t['requirements']['watchTimeSeconds'] > 0) {
-        duration = t['requirements']['watchTimeSeconds'];
-      } else if (t['watchTimeSeconds'] != null) {
-        duration = int.tryParse(t['watchTimeSeconds'].toString()) ?? 0;
+      // 1. Prioritize explicit buyer ordered watchTimeSeconds (from requirements or root)
+      final rawWatch = t['requirements'] is Map
+          ? (t['requirements']['watchTimeSeconds'] ?? t['requirements']['watch_time_seconds'])
+          : null;
+      final explicitWatch = rawWatch ?? t['watchTimeSeconds'] ?? t['watch_time_seconds'];
+      if (explicitWatch is num) {
+        customWatchSec = explicitWatch.toInt();
+      } else if (explicitWatch != null) {
+        customWatchSec = int.tryParse(explicitWatch.toString()) ?? 0;
+      }
+
+      // 2. Video duration from metadata (from requirements or root)
+      final rawVid = t['requirements'] is Map
+          ? (t['requirements']['videoDurationSeconds'] ?? t['requirements']['video_duration_seconds'])
+          : null;
+      final explicitVid = rawVid ?? t['videoDurationSeconds'] ?? t['video_duration_seconds'];
+      if (explicitVid is num) {
+        vidDurationSec = explicitVid.toInt();
+      } else if (explicitVid != null) {
+        vidDurationSec = int.tryParse(explicitVid.toString()) ?? 0;
       }
     }
 
-    // 5-Minute Cap Rule:
-    // If video > 5 minutes (300 seconds), required watch time is capped at 300 seconds (5 min).
+    // If buyer explicitly ordered custom watch duration (slider > 0):
+    // Worker MUST watch the full purchased duration (without 5-min cap).
+    if (customWatchSec > 0) {
+      if (vidDurationSec > 0 && customWatchSec > vidDurationSec) {
+        return vidDurationSec;
+      }
+      return customWatchSec;
+    }
+
+    // Default 5-Minute Cap Rule (when buyer didn't purchase custom duration):
+    // If video > 5 minutes (300 seconds), cap at 300 seconds (5 min).
     // If video <= 5 minutes (300s) and > 0, required watch time is the complete video.
-    if (duration > 300) return 300;
-    if (duration > 0) return duration;
+    if (vidDurationSec > 300) return 300;
+    if (vidDurationSec > 0) return vidDurationSec;
+
     return 120; // fallback 2 minutes (120 seconds)
   }
 
@@ -969,6 +987,13 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   String _getEstimatedTime() {
     final t = widget.task;
+    if (_isYouTubeTask()) {
+      final reqSec = _getRequiredWatchSeconds();
+      if (reqSec > 0) {
+        final min = (reqSec / 60).round();
+        return min > 0 ? '$min min' : '$reqSec sec';
+      }
+    }
     final sec =
         t['executionTimeSeconds'] ?? ((t['timeToCompleteHours'] ?? 0) * 3600);
     if (sec is int && sec > 0) {

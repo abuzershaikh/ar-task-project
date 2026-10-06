@@ -52,9 +52,18 @@ class _BuyerWorkerPreviewModalState extends State<BuyerWorkerPreviewModal> {
 
   double _getCalculatedWorkerReward() {
     final buyerPrice = _getCalculatedBuyerPrice();
-    final marginFraction = widget.service.pricing.adminMarginPercent / 100.0;
-    final reward = buyerPrice * (1.0 - marginFraction);
-    return reward < 0 ? 0 : reward;
+    final p = widget.service.pricing;
+    if (p.workerReward > 0 && (buyerPrice - p.buyerPrice).abs() < 0.001) {
+      return p.workerReward;
+    }
+    if (p.marginType.toUpperCase().contains('FIXED')) {
+      final reward = buyerPrice - p.adminMarginPercent;
+      return reward < 0 ? 0 : reward;
+    } else {
+      final marginFraction = p.adminMarginPercent / 100.0;
+      final reward = buyerPrice * (1.0 - marginFraction);
+      return reward < 0 ? 0 : reward;
+    }
   }
 
   @override

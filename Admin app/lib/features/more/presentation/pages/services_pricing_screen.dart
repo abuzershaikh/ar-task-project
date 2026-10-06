@@ -180,7 +180,12 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
                                 final isActive = service['isActive'] ?? true;
                                 final double buyerPrice = double.tryParse((activePricing['buyerUnitPrice'] ?? 2.0).toString()) ?? 2.0;
                                 final double margin = double.tryParse((activePricing['marginValue'] ?? 25.0).toString()) ?? 25.0;
+                                final String marginType = (activePricing['marginType'] ?? 'PERCENTAGE').toString().toUpperCase();
                                 final double workerReward = double.tryParse((activePricing['workerReward'] ?? (buyerPrice * 0.75)).toString()) ?? (buyerPrice * 0.75);
+                                final double realMarginPct = buyerPrice > 0
+                                    ? (marginType.contains('FIXED') ? (margin / buyerPrice * 100) : margin)
+                                    : 0.0;
+                                final double workerRewardPct = buyerPrice > 0 ? (workerReward / buyerPrice * 100) : 0.0;
                                 final iconColor = _getServiceColor(name);
                                 final iconData = _getServiceIcon(name);
 
@@ -249,8 +254,8 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
                                             _buildPricingChip('Buyer Unit', '₹${buyerPrice.toStringAsFixed(0)}', Colors.cyanAccent),
-                                            _buildPricingChip('Margin', '${margin.toStringAsFixed(0)}%', Colors.tealAccent),
-                                            _buildPricingChip('Worker Payout', '₹${workerReward.toStringAsFixed(1)}', Colors.amberAccent),
+                                            _buildPricingChip('Margin', '${realMarginPct.toStringAsFixed(0)}% (₹${(buyerPrice - workerReward).toStringAsFixed(1)})', Colors.tealAccent),
+                                            _buildPricingChip('Worker Payout', '₹${workerReward.toStringAsFixed(1)} (${workerRewardPct.toStringAsFixed(0)}%)', Colors.amberAccent),
                                             ElevatedButton(
                                               style: ElevatedButton.styleFrom(
                                                 backgroundColor: const Color(0xFF334155),

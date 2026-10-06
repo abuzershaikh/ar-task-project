@@ -187,6 +187,30 @@ class PricingConfig {
     );
   }
 
+  /// Effective platform margin in rupees per unit
+  double get effectiveMarginAmount {
+    if (marginType.toUpperCase().contains('FIXED')) {
+      return adminMarginPercent;
+    } else {
+      return buyerPrice * (adminMarginPercent / 100.0);
+    }
+  }
+
+  /// True platform margin as a real percentage (0% to 100%)
+  double get realMarginPercent {
+    if (buyerPrice <= 0) return 0.0;
+    if (marginType.toUpperCase().contains('FIXED')) {
+      return (adminMarginPercent / buyerPrice) * 100.0;
+    }
+    return adminMarginPercent;
+  }
+
+  /// True worker reward share as a real percentage (0% to 100%)
+  double get realWorkerSharePercent {
+    if (buyerPrice <= 0) return 0.0;
+    return (workerReward / buyerPrice) * 100.0;
+  }
+
   /// Validation engine rule: Margin must be valid, worker reward > 0
   bool get isValid {
     final bool marginValid = marginType == 'FIXED'

@@ -762,13 +762,13 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                                               const Color(0xFFBFDBFE),
                                             ),
                                             _buildPill(
-                                              'Margin: ${pricing.adminMarginPercent.toStringAsFixed(0)}%',
+                                              'Margin: ${pricing.realMarginPercent.toStringAsFixed(0)}% (₹${pricing.effectiveMarginAmount.toStringAsFixed(1)})',
                                               const Color(0xFFF5F3FF),
                                               const Color(0xFF7C3AED),
                                               const Color(0xFFDDD6FE),
                                             ),
                                             _buildPill(
-                                              'Worker: ₹${pricing.workerReward.toStringAsFixed(1)}',
+                                              'Worker: ₹${pricing.workerReward.toStringAsFixed(1)} (${pricing.realWorkerSharePercent.toStringAsFixed(0)}%)',
                                               const Color(0xFFECFDF5),
                                               const Color(0xFF059669),
                                               const Color(0xFFA7F3D0),

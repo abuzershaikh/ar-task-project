@@ -363,6 +363,7 @@ export class BuyerOrderController {
         const totalCost = Number((effectiveBuyerUnitPrice * quantity).toFixed(2));
         snapshot.buyerUnitPrice = effectiveBuyerUnitPrice;
         snapshot.workerRewardSnapshot = effectiveWorkerReward;
+        snapshot.marginAmount = Number((effectiveBuyerUnitPrice - effectiveWorkerReward).toFixed(2));
         snapshot.totalAmount = totalCost;
 
         const normalizedRequirements = {

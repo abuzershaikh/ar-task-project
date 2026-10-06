@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/service_builder_bloc.dart';
@@ -906,6 +907,14 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     final workerReward = _getCalculatedWorkerReward();
     final buyerPrice = double.tryParse(_buyerPriceController.text) ?? 0.0;
     final margin = double.tryParse(_marginController.text) ?? 0.0;
+    final double realMarginPct = buyerPrice > 0
+        ? (_isPercentageMargin
+            ? margin
+            : ((buyerPrice - workerReward) / buyerPrice * 100))
+        : 0.0;
+    final double realWorkerPct = buyerPrice > 0
+        ? (workerReward / buyerPrice * 100)
+        : 0.0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -974,6 +983,9 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                             ? '$margin%'
                             : '₹${margin.toStringAsFixed(2)}',
                         const Color(0xFFD97706),
+                        subtitle: _isPercentageMargin
+                            ? '₹${(buyerPrice * margin / 100).toStringAsFixed(2)}'
+                            : '${realMarginPct.toStringAsFixed(1)}%',
                       ),
                     ),
                     const Text('=',
@@ -983,9 +995,11 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                             fontWeight: FontWeight.w300)),
                     Expanded(
                       child: _buildPricingStatColumn(
-                          'Worker Reward',
-                          '₹${workerReward.toStringAsFixed(2)}',
-                          const Color(0xFF16A34A)),
+                        'Worker Reward',
+                        '₹${workerReward.toStringAsFixed(2)}',
+                        const Color(0xFF16A34A),
+                        subtitle: '${realWorkerPct.toStringAsFixed(1)}% Share',
+                      ),
                     ),
                   ],
                 ),
@@ -1233,6 +1247,9 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                             ],
                           ),
                         ),
+                        // Live Duration Calculation Table & Distribution Matrix
+                        _buildYouTubeDurationCalculationBanner(
+                            buyerPrice, workerReward),
                       ],
                     ),
                   ),
@@ -1976,7 +1993,8 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
   }
 
   // ==================== REUSABLE UI HELPERS ====================
-  Widget _buildPricingStatColumn(String title, String value, Color valueColor) {
+  Widget _buildPricingStatColumn(String title, String value, Color valueColor,
+      {String? subtitle}) {
     return Column(
       children: [
         Text(title,
@@ -1989,12 +2007,446 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
           value,
           style: TextStyle(
             color: valueColor,
-            fontSize: 17,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             letterSpacing: -0.3,
           ),
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: valueColor.withValues(alpha: 0.85),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildYouTubeDurationCalculationBanner(
+      double baseBuyerPrice, double baseWorkerReward) {
+    final extraPerMin =
+        double.tryParse(_extraMinutePriceController.text.trim()) ?? 0.50;
+
+    final durations = [5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 45, 60];
+
+    double totalWorkerPct = 0;
+    double totalMarginPct = 0;
+    int count = 0;
+    for (final d in durations.where((m) => m <= 30)) {
+      final extraMins = math.max(0, d - 5);
+      final extraCost = extraMins * extraPerMin;
+      final buyerTotal = baseBuyerPrice + extraCost;
+      final workerTotal = baseWorkerReward + (extraCost * 0.70);
+      if (buyerTotal > 0) {
+        totalWorkerPct += (workerTotal / buyerTotal) * 100.0;
+        totalMarginPct += ((buyerTotal - workerTotal) / buyerTotal) * 100.0;
+        count++;
+      }
+    }
+    final avgWorkerPct = count > 0 ? totalWorkerPct / count : 0.0;
+    final avgMarginPct = count > 0 ? totalMarginPct / count : 0.0;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      decoration: BoxDecoration(
+        color: surfaceWhite,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFCA5A5), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Banner Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFFEF2F2), Color(0xFFFEE2E2)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDC2626),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.table_chart_rounded,
+                      color: Colors.white, size: 16),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Live Watch Duration & Worker Distribution Matrix',
+                        style: TextStyle(
+                          color: Color(0xFF991B1B),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Live table: Scroll horizontally to view Buyer price, Worker reward (70% share) & Margin',
+                        style:
+                            TextStyle(color: Color(0xFFB91C1C), fontSize: 10.5),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // KPI Overview Cards (3 Cards)
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildDurationKpiCard(
+                    title: 'Base (5 Min)',
+                    val1: 'Buyer: ₹${baseBuyerPrice.toStringAsFixed(2)}',
+                    val2: 'Worker: ₹${baseWorkerReward.toStringAsFixed(2)}',
+                    badge: baseBuyerPrice > 0
+                        ? '${((baseWorkerReward / baseBuyerPrice) * 100).toStringAsFixed(0)}% Share'
+                        : '0%',
+                    badgeColor: const Color(0xFF059669),
+                    badgeBg: const Color(0xFFECFDF5),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildDurationKpiCard(
+                    title: 'Extra Rate / Min',
+                    val1: 'Buyer: +₹${extraPerMin.toStringAsFixed(2)}/m',
+                    val2:
+                        'Worker: +₹${(extraPerMin * 0.70).toStringAsFixed(2)}/m',
+                    badge: '70% Worker',
+                    badgeColor: const Color(0xFF2563EB),
+                    badgeBg: const Color(0xFFEFF6FF),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildDurationKpiCard(
+                    title: 'Avg Share (5-30m)',
+                    val1: 'Worker: ${avgWorkerPct.toStringAsFixed(1)}%',
+                    val2: 'Margin: ${avgMarginPct.toStringAsFixed(1)}%',
+                    badge: 'Avg Split',
+                    badgeColor: const Color(0xFFD97706),
+                    badgeBg: const Color(0xFFFFFBEB),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Horizontal Scrollable Data Table
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: borderSubtle),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  headingRowColor:
+                      WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+                  headingRowHeight: 38,
+                  dataRowMinHeight: 36,
+                  dataRowMaxHeight: 40,
+                  horizontalMargin: 12,
+                  columnSpacing: 18,
+                  columns: const [
+                    DataColumn(
+                      label: Text('Watch Duration',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: textPrimary)),
+                    ),
+                    DataColumn(
+                      label: Text('Buyer Pays',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1E40AF))),
+                    ),
+                    DataColumn(
+                      label: Text('Worker Earns',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF059669))),
+                    ),
+                    DataColumn(
+                      label: Text('Admin Margin',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFD97706))),
+                    ),
+                    DataColumn(
+                      label: Text('Worker %',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF059669))),
+                    ),
+                    DataColumn(
+                      label: Text('Margin %',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFD97706))),
+                    ),
+                    DataColumn(
+                      label: Text('Avg Rate/Min',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: textSecondary)),
+                    ),
+                  ],
+                  rows: durations.map((mins) {
+                    final isBase = mins == 5;
+                    final extraMins = math.max(0, mins - 5);
+                    final extraCost = extraMins * extraPerMin;
+                    final buyerTotal = baseBuyerPrice + extraCost;
+                    final workerTotal = baseWorkerReward + (extraCost * 0.70);
+                    final marginTotal = buyerTotal - workerTotal;
+                    final workerPct = buyerTotal > 0
+                        ? (workerTotal / buyerTotal) * 100.0
+                        : 0.0;
+                    final marginPct = buyerTotal > 0
+                        ? (marginTotal / buyerTotal) * 100.0
+                        : 0.0;
+                    final avgRatePerMin = mins > 0 ? (workerTotal / mins) : 0.0;
+
+                    return DataRow(
+                      color: WidgetStateProperty.resolveWith<Color?>(
+                        (states) => isBase
+                            ? const Color(0xFFEFF6FF)
+                            : (mins % 2 == 0
+                                ? Colors.white
+                                : const Color(0xFFF8FAFC)),
+                      ),
+                      cells: [
+                        DataCell(
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '$mins Min',
+                                style: TextStyle(
+                                  fontWeight: isBase
+                                      ? FontWeight.bold
+                                      : FontWeight.w600,
+                                  fontSize: 11.5,
+                                  color: isBase
+                                      ? const Color(0xFF1E40AF)
+                                      : textPrimary,
+                                ),
+                              ),
+                              if (isBase) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDBEAFE),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text('BASE',
+                                      style: TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1E40AF))),
+                                ),
+                              ] else ...[
+                                Text(
+                                  ' (+$extraMins m)',
+                                  style: const TextStyle(
+                                      fontSize: 9.5, color: textSecondary),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            '₹${buyerTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11.5,
+                                color: Color(0xFF1E40AF)),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            '₹${workerTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11.5,
+                                color: Color(0xFF059669)),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            '₹${marginTotal.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11.5,
+                                color: Color(0xFFD97706)),
+                          ),
+                        ),
+                        DataCell(
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFDF5),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${workerPct.toStringAsFixed(1)}%',
+                              style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF059669)),
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '${marginPct.toStringAsFixed(1)}%',
+                              style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFD97706)),
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            '₹${avgRatePerMin.toStringAsFixed(2)}/m',
+                            style: const TextStyle(
+                                fontSize: 10.5,
+                                color: textSecondary,
+                                fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDurationKpiCard({
+    required String title,
+    required String val1,
+    required String val2,
+    required String badge,
+    required Color badgeColor,
+    required Color badgeBg,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: backgroundLight,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: badgeBg,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  badge,
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: badgeColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            val1,
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: textPrimary,
+            ),
+          ),
+          Text(
+            val2,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: badgeColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
