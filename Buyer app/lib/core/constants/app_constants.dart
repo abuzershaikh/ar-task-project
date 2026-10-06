@@ -36,7 +36,7 @@ class AppConstants {
   static const String currency = 'INR';
   
   // App Info
-  static const String appName = 'Marketing Pro';
+  static const String appName = 'Review Gateway';
   static const String supportEmail = 'support@taskpost.com';
   static const String supportPhone = '+91-XXXXXXXXXX';
   

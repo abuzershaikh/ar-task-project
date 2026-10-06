@@ -99,7 +99,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 profile = ProfileModel(
                   id: '',
                   email: 'buyer@taskpost.com',
-                  name: 'Marketing Pro Buyer',
+                  name: 'Review Gateway Buyer',
                   phone: '',
                   companyName: '',
                   website: '',
@@ -784,7 +784,7 @@ class _ProfilePageState extends State<ProfilePage> {
           style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w800),
         ),
         content: Text(
-          'Are you sure you want to sign out of your Marketing Pro buyer session?',
+          'Are you sure you want to sign out of your Review Gateway buyer session?',
           style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13),
         ),
         actions: [

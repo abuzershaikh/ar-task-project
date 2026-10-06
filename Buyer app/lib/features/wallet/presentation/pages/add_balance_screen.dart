@@ -147,7 +147,7 @@ class _AddBalanceScreenState extends State<AddBalanceScreen> {
         final data = response.data;
         final orderId = data['orderId']?.toString();
         final keyId = data['keyId']?.toString() ?? 'rzp_live_TI2wdFKYDJdAxY';
-        final merchantName = data['companyName']?.toString() ?? 'Marketing Pro';
+        final merchantName = data['companyName']?.toString() ?? 'Review Gateway';
         final amountInPaise = data['amountInPaise'] ?? (amount * 100).toInt();
 
         if (orderId == null || orderId.isEmpty) {

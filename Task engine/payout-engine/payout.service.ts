@@ -30,8 +30,8 @@ export class PayoutEngineService {
         return this.configService.getGlobalMinWithdrawalLimit();
     }
 
-    setMinWithdrawalLimit(limit: number): void {
-        this.configService.setGlobalMinWithdrawalLimit(limit);
+    async setMinWithdrawalLimit(limit: number, updatedBy = 'admin'): Promise<void> {
+        await this.configService.setGlobalMinWithdrawalLimit(limit, updatedBy);
     }
 
     async markProcessing(withdrawalId: string) {

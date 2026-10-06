@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/routes/app_router.dart';
 
 class SupportPage extends StatefulWidget {
   const SupportPage({super.key});
@@ -148,6 +149,71 @@ class _SupportPageState extends State<SupportPage> {
             // Instant Channels Grid
             _buildSectionLabel('INSTANT DIRECT CHANNELS'),
             const SizedBox(height: 10),
+
+            // Live Admin Chat Desk
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, AppRouter.chat),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E293B), Color(0xFF312E81)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF818CF8).withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF4F46E5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.support_agent_rounded, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Support Desk',
+                                style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF10B981),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Real-time 1-on-1 messaging with operations desk',
+                            style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 11.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF818CF8), size: 16),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 _buildChannelCard(

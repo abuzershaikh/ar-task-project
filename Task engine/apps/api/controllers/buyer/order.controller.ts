@@ -295,19 +295,31 @@ export class BuyerOrderController {
         let watchTimeSeconds = reqs.watchTimeSeconds || catalog?.watchtimeSeconds || 0;
         let videoDurationSeconds = reqs.videoDurationSeconds || 0;
 
-        // Auto-extract YouTube video duration and enforce 5-minute cap rule if targetUrl is YouTube
+        // Auto-extract YouTube video duration and enforce duration rule if targetUrl is YouTube
+        const isYouTubeService = (catalog?.category || '').toLowerCase().includes('youtube') ||
+            (catalog?.code || '').toLowerCase().includes('youtube') ||
+            (catalog?.code || '').toLowerCase().includes('yt');
+
+        let extraMinutes = 0;
+        let extraPricePerMin = 0.50;
+
         const ytId = this.ytMetadataService.extractVideoId(targetUrl);
         if (ytId) {
             try {
                 const ytInfo = await this.ytMetadataService.getVideoMetadata(targetUrl);
                 if (ytInfo && ytInfo.success) {
                     videoDurationSeconds = ytInfo.durationSeconds || 0;
-                    // If watchTimeSeconds not specified or 0, use calculated requiredWatchSeconds
-                    if (!reqs.watchTimeSeconds || Number(reqs.watchTimeSeconds) <= 0) {
+                    const reqWatchTime = Number(reqs.watchTimeSeconds || 0);
+                    if (reqWatchTime > 0) {
+                        // If buyer explicitly specified watch time via slider (> 300s):
+                        if (reqWatchTime > 300) {
+                            const maxAllowedSec = videoDurationSeconds > 0 ? videoDurationSeconds : reqWatchTime;
+                            watchTimeSeconds = Math.min(reqWatchTime, maxAllowedSec);
+                        } else {
+                            watchTimeSeconds = Math.min(reqWatchTime, videoDurationSeconds > 0 ? videoDurationSeconds : reqWatchTime);
+                        }
+                    } else {
                         watchTimeSeconds = ytInfo.requiredWatchSeconds || 0;
-                    } else if (Number(reqs.watchTimeSeconds) > 300) {
-                        // Strict enforcement: Cap watch time at 300s (5 minutes) maximum
-                        watchTimeSeconds = 300;
                     }
                 }
             } catch (err: any) {
@@ -330,12 +342,38 @@ export class BuyerOrderController {
             }
         }
 
+        // Dynamic duration-based pricing for YouTube video services (> 5 minutes / 300s)
+        let effectiveBuyerUnitPrice = Number(snapshot.buyerUnitPrice);
+        let effectiveWorkerReward = Number(snapshot.workerRewardSnapshot);
+
+        if (isYouTubeService && watchTimeSeconds > 300) {
+            extraMinutes = Math.ceil((watchTimeSeconds - 300) / 60);
+            let opts = catalog?.watchTimeOptions;
+            if (typeof opts === 'string') {
+                try { opts = JSON.parse(opts); } catch (_) {}
+            }
+            if (opts && typeof opts === 'object' && opts.extraPricePerMinute !== undefined) {
+                extraPricePerMin = Number(opts.extraPricePerMinute);
+            }
+            const extraPerUnit = Number((extraMinutes * extraPricePerMin).toFixed(2));
+            effectiveBuyerUnitPrice = Number((effectiveBuyerUnitPrice + extraPerUnit).toFixed(2));
+            effectiveWorkerReward = Number((effectiveWorkerReward + (extraPerUnit * 0.70)).toFixed(2));
+        }
+
+        const totalCost = Number((effectiveBuyerUnitPrice * quantity).toFixed(2));
+        snapshot.buyerUnitPrice = effectiveBuyerUnitPrice;
+        snapshot.workerRewardSnapshot = effectiveWorkerReward;
+        snapshot.totalAmount = totalCost;
+
         const normalizedRequirements = {
             ...reqs,
             autoApprove: isAutoApproveRequested || finalReviewMode === 'automatic',
             targetUrl,
             customText: reqs.customText || reqs.text || reqs.comment || reqs.instructions || data.description || '',
             watchTimeSeconds: Number(watchTimeSeconds) || 0,
+            selectedWatchMinutes: Math.round(Number(watchTimeSeconds) / 60),
+            extraMinutes,
+            extraPricePerMinute: extraPricePerMin,
             videoDurationSeconds: Number(videoDurationSeconds) || 0,
             videoTutorialUrl: catalog?.videoTutorialUrl || '',
             audioGuideUrl: catalog?.audioGuideUrl || '',
@@ -349,7 +387,6 @@ export class BuyerOrderController {
         const timeToAccept = data.timeToAcceptHours || 24;
         const timeToComplete = data.timeToCompleteHours || 48;
         const campaignExpiryDate = data.campaignExpiryDate ? new Date(data.campaignExpiryDate) : undefined;
-        const totalCost = Number(snapshot.totalAmount);
 
         // Execute order creation and wallet deduction atomically in a single database transaction
         const { order, deductionResult } = await this.dataSource.transaction(async (manager) => {

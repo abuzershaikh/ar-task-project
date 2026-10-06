@@ -62,7 +62,7 @@ class _EnhancedHomePageState extends State<EnhancedHomePage> {
                       ),
                     ),
                     const Text(
-                      'Marketing Pro',
+                      'Review Gateway',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,

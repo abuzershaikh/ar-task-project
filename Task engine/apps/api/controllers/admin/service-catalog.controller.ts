@@ -40,6 +40,23 @@ export class AdminServiceCatalogController {
             } catch {
                 activePricing = null;
             }
+
+            let extraPricePerMinute = 0.50;
+            if (service.watchTimeOptions) {
+                let parsed = service.watchTimeOptions;
+                if (typeof parsed === 'string') {
+                    try { parsed = JSON.parse(parsed); } catch (_) {}
+                }
+                if (parsed && typeof parsed === 'object' && parsed.extraPricePerMinute !== undefined) {
+                    extraPricePerMinute = Number(parsed.extraPricePerMinute);
+                }
+            }
+
+            if (activePricing) {
+                (activePricing as any).extraPricePerMinute = extraPricePerMinute;
+            }
+            (service as any).extraPricePerMinute = extraPricePerMinute;
+
             catalogList.push({
                 service,
                 activePricing,
@@ -63,6 +80,22 @@ export class AdminServiceCatalogController {
         } catch {
             activePricing = null;
         }
+
+        let extraPricePerMinute = 0.50;
+        if (service.watchTimeOptions) {
+            let parsed = service.watchTimeOptions;
+            if (typeof parsed === 'string') {
+                try { parsed = JSON.parse(parsed); } catch (_) {}
+            }
+            if (parsed && typeof parsed === 'object' && parsed.extraPricePerMinute !== undefined) {
+                extraPricePerMinute = Number(parsed.extraPricePerMinute);
+            }
+        }
+
+        if (activePricing) {
+            (activePricing as any).extraPricePerMinute = extraPricePerMinute;
+        }
+        (service as any).extraPricePerMinute = extraPricePerMinute;
 
         return {
             success: true,
@@ -174,12 +207,25 @@ export class AdminServiceCatalogController {
             textFieldPlaceholder?: string;
             watchtimeSeconds?: number;
             watchTimeOptions?: any;
+            extraPricePerMinute?: number;
             minCompleteHours?: number;
             maxCompleteHours?: number;
             minAcceptHours?: number;
             maxAcceptHours?: number;
         },
     ) {
+        if (body.extraPricePerMinute !== undefined) {
+            let existing = body.watchTimeOptions;
+            if (existing && typeof existing === 'string') {
+                try { existing = JSON.parse(existing); } catch (_) {}
+            }
+            if (!existing || typeof existing !== 'object' || Array.isArray(existing)) {
+                existing = {};
+            }
+            existing.extraPricePerMinute = Number(body.extraPricePerMinute);
+            existing.baseMinutes = 5;
+            body.watchTimeOptions = existing;
+        }
         const service = await this.serviceCatalogService.updateService(id, body);
         return {
             success: true,

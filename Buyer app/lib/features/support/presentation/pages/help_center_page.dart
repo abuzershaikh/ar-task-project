@@ -21,7 +21,7 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
     },
     {
       'q': 'How does the 100% Escrow Money-Back guarantee work?',
-      'a': 'When you fund a campaign, budget is securely held in an automated escrow vault. If a task fails verification or is rejected for non-compliance, funds are automatically refunded back to your Marketing Pro wallet immediately.',
+      'a': 'When you fund a campaign, budget is securely held in an automated escrow vault. If a task fails verification or is rejected for non-compliance, funds are automatically refunded back to your Review Gateway wallet immediately.',
       'cat': 'Billing',
     },
     {

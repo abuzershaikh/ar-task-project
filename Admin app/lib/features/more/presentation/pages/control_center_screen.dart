@@ -15,6 +15,7 @@ import 'notifications_announcements_screen.dart';
 import 'admin_profile_screen.dart';
 import '../../../service_builder/presentation/pages/app_update_management_screen.dart';
 import '../../../support_chat/presentation/pages/admin_chat_list_screen.dart';
+import '../../../support_chat/presentation/pages/admin_buyer_chat_list_screen.dart';
 
 class ControlCenterScreen extends StatelessWidget {
   const ControlCenterScreen({super.key});
@@ -29,6 +30,18 @@ class ControlCenterScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildMenuItem(
+            context,
+            Icons.support_agent_rounded,
+            'Buyer Support Chat',
+            'Live 1-on-1 direct chat with buyers (No broadcast)',
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AdminBuyerChatListScreen()),
+              );
+            },
+          ),
           _buildMenuItem(
             context,
             Icons.chat_bubble_rounded,

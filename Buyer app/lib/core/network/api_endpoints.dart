@@ -128,6 +128,7 @@ class ApiEndpoints {
   // ============ NOTIFICATIONS ============
   static const String notifications = '$buyer/notifications';
   static String markNotificationRead(String id) => '$buyer/notifications/$id/read';
+  static const String updateDeviceToken = '$buyer/notifications/device-token';
   
   // ============ PROFILE ============
   static const String profile = '$buyer/profile';

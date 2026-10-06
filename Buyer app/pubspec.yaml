@@ -1,5 +1,5 @@
 name: marketing_pro
-description: Marketing Pro - Complete Campaign Management Platform for Buyers
+description: Review Gateway - Complete Campaign Management Platform for Buyers
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -71,6 +71,7 @@ dependencies:
   package_info_plus: ^8.3.1
   device_info_plus: ^10.1.2
   google_fonts: ^8.2.1
+  socket_io_client: 3.0.2
 
 dev_dependencies:
   flutter_test:

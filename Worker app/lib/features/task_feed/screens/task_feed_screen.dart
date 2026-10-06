@@ -616,157 +616,131 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Brand Title: Task Feed
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Task ',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 23,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.2,
-                            ),
+                    // Left: Live Chat Support Action with Animated Lottie Customer Care
+                    InkWell(
+                      onTap: () async {
+                        setState(() => _supportUnreadCount = 0);
+                        WorkerChatService.instance.clearUnreadCount();
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const WorkerSupportChatScreen(),
                           ),
-                          TextSpan(
-                            text: 'Feed',
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFF22C55E),
-                              fontSize: 23,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Right Icons: Chat Support + Notification Bell + Wallet Pill
-                    Row(
-                      children: [
-                        // Chat Support Icon (1-on-1 Admin Support) with rotating light beam, vibration shake & unread badge
-                        InkWell(
-                          onTap: () async {
-                            setState(() => _supportUnreadCount = 0);
-                            WorkerChatService.instance.clearUnreadCount();
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const WorkerSupportChatScreen(),
+                        );
+                        _loadSupportUnreadCount();
+                      },
+                      borderRadius: BorderRadius.circular(22),
+                      child: AnimatedBuilder(
+                        animation: _shakeAnimation,
+                        builder: (context, child) => Transform.rotate(
+                          angle: _supportUnreadCount > 0 ? _shakeAnimation.value : 0.0,
+                          child: child,
+                        ),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(22),
                               ),
-                            );
-                            _loadSupportUnreadCount();
-                          },
-                          borderRadius: BorderRadius.circular(22),
-                          child: AnimatedBuilder(
-                            animation: Listenable.merge([_lightRotateController, _shakeAnimation]),
-                            builder: (context, _) {
-                              final bool hasUnread = _supportUnreadCount > 0;
-
-                              return SizedBox(
-                                width: 38,
-                                height: 38,
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  alignment: Alignment.center,
-                                  children: [
-                                    // Rotating radiant neon light beam around the circular icon (spins when unread > 0)
-                                    if (hasUnread)
-                                      Transform.rotate(
-                                        angle: _lightRotateController.value * 2 * 3.141592653589793,
-                                        child: Container(
-                                          width: 44,
-                                          height: 44,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            gradient: const SweepGradient(
-                                              colors: [
-                                                Colors.transparent,
-                                                Color(0x2200E5FF),
-                                                Color(0xFF00E5FF),
-                                                Color(0xFF38BDF8),
-                                                Color(0xFFA855F7),
-                                                Colors.transparent,
-                                              ],
-                                              stops: [0.0, 0.4, 0.68, 0.85, 0.95, 1.0],
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: const Color(0xFF00E5FF).withValues(alpha: 0.55),
-                                                blurRadius: 10,
-                                                spreadRadius: 1.5,
-                                              ),
-                                            ],
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    width: 40,
+                                    height: 38,
+                                    child: OverflowBox(
+                                      maxWidth: 64,
+                                      maxHeight: 64,
+                                      alignment: Alignment.center,
+                                      child: Transform.translate(
+                                        offset: const Offset(-2, -4),
+                                        child: SizedBox(
+                                          width: 64,
+                                          height: 64,
+                                          child: Lottie.asset(
+                                            'assets/animations/customercare.json',
+                                            fit: BoxFit.contain,
+                                            repeat: true,
                                           ),
-                                        ),
-                                      ),
-
-                                    // White circular support icon with shake wobble transform
-                                    Transform.rotate(
-                                      angle: _shakeAnimation.value,
-                                      child: Container(
-                                        width: 38,
-                                        height: 38,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: hasUnread
-                                                  ? const Color(0xFF00E5FF).withValues(alpha: 0.4)
-                                                  : Colors.black.withValues(alpha: 0.1),
-                                              blurRadius: hasUnread ? 8 : 6,
-                                            ),
-                                          ],
-                                        ),
-                                        padding: const EdgeInsets.all(5.5),
-                                        child: Image.asset(
-                                          'assets/images/support_agent_icon.png',
-                                          fit: BoxFit.contain,
                                         ),
                                       ),
                                     ),
-
-                                    // Dynamic Unread Message Badge
-                                    if (hasUnread)
-                                      Positioned(
-                                        top: -3,
-                                        right: -3,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                          constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFEF4444),
-                                            shape: BoxShape.circle,
-                                            border: Border.all(color: Colors.white, width: 1.5),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: const Color(0xFFEF4444).withValues(alpha: 0.6),
-                                                blurRadius: 5,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                          ),
-                                          alignment: Alignment.center,
-                                          child: Text(
-                                            _supportUnreadCount > 99 ? '99+' : '$_supportUnreadCount',
-                                            style: GoogleFonts.poppins(
-                                              color: Colors.white,
-                                              fontSize: 8.5,
-                                              fontWeight: FontWeight.w800,
-                                              height: 1.0,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 5,
+                                            height: 5,
+                                            decoration: const BoxDecoration(
+                                              color: Color(0xFF22C55E),
+                                              shape: BoxShape.circle,
                                             ),
                                           ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            'Live',
+                                            style: GoogleFonts.poppins(
+                                              color: const Color(0xFF22C55E),
+                                              fontSize: 8.5,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      _BlinkingChatText(
+                                        text: 'Chat Support',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: -0.2,
                                         ),
                                       ),
-                                  ],
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_supportUnreadCount > 0)
+                              Positioned(
+                                top: -3,
+                                right: -3,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFEF4444),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    _supportUnreadCount > 99 ? '99+' : '$_supportUnreadCount',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.bold,
+                                      height: 1.0,
+                                    ),
+                                  ),
                                 ),
-                              );
-                            },
-                          ),
+                              ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
+                      ),
+                    ),
 
+                    // Right Icons: Notification Bell + Wallet Pill
+                    Row(
+                      children: [
                         // Notification Bell with dynamic unread badge
                         InkWell(
                           onTap: () async {
@@ -1800,3 +1774,55 @@ class _SparkleBackgroundPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLINKING CHAT SUPPORT TEXT WIDGET
+// ─────────────────────────────────────────────────────────────────────────────
+class _BlinkingChatText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+
+  const _BlinkingChatText({
+    required this.text,
+    required this.style,
+  });
+
+  @override
+  State<_BlinkingChatText> createState() => _BlinkingChatTextState();
+}
+
+class _BlinkingChatTextState extends State<_BlinkingChatText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    )..repeat(reverse: true);
+    _opacity = Tween<double>(begin: 1.0, end: 0.15).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: Text(
+        widget.text,
+        style: widget.style,
+      ),
+    );
+  }
+}
+

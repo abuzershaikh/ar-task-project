@@ -219,7 +219,7 @@ class _LoginPageState extends State<LoginPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Marketing Pro',
+                                'Review Gateway',
                                 style: GoogleFonts.outfit(
                                   fontSize: 21,
                                   fontWeight: FontWeight.w800,

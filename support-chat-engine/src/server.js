@@ -9,6 +9,9 @@ require('dotenv').config();
 
 const { initTables } = require('./config/db');
 const chatController = require('./controllers/chat.controller');
+const buyerChatController = require('./buyer/buyer-chat.controller');
+const buyerChatService = require('./buyer/buyer-chat.service');
+const currencyService = require('./services/currency.service');
 const { setupSocketIO } = require('./sockets/chat.socket');
 
 const app = express();
@@ -57,12 +60,13 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
     service: 'support-chat-engine',
-    version: '1.0.0',
+    version: '1.1.0',
+    features: ['worker-support', 'buyer-support'],
     timestamp: new Date().toISOString(),
   });
 });
 
-// ── REST Routes ──────────────────────────────────────────────────────────────
+// ── Worker Support REST Routes ───────────────────────────────────────────────
 app.get('/api/support/conversations', (req, res) => chatController.getConversations(req, res));
 app.get('/api/support/conversations/:conversationId/messages', (req, res) => chatController.getMessages(req, res));
 app.get('/api/support/worker/:workerId', (req, res) => chatController.getWorkerChat(req, res));
@@ -76,16 +80,61 @@ app.delete('/api/support/conversations/:conversationId/messages', (req, res) => 
 app.post('/api/support/conversations/delete-bulk', (req, res) => chatController.deleteConversationsBulk(req, res));
 app.post('/api/support/conversations/delete-all', (req, res) => chatController.deleteAllWorkersChats(req, res));
 
+// ── Buyer Support REST Routes (Extension Module) ─────────────────────────────
+app.get('/api/support/buyer/conversations', (req, res) => buyerChatController.getConversations(req, res));
+app.get('/api/support/buyer/conversations/:conversationId/messages', (req, res) => buyerChatController.getMessages(req, res));
+app.get('/api/support/buyer/:buyerId', (req, res) => buyerChatController.getBuyerChat(req, res));
+app.get('/api/support/buyer/:buyerId/unread', (req, res) => buyerChatController.getUnreadCount(req, res));
+app.post('/api/support/buyer/token', (req, res) => buyerChatController.updateToken(req, res));
+app.post('/api/support/buyer/messages/send', (req, res) => buyerChatController.sendMessage(req, res));
+app.post('/api/support/buyer/conversations/:conversationId/read', (req, res) => buyerChatController.markRead(req, res));
+app.post('/api/support/buyer/messages/delete', (req, res) => buyerChatController.deleteMessages(req, res));
+app.delete('/api/support/buyer/conversations/:conversationId/messages', (req, res) => buyerChatController.deleteAllConversationMessages(req, res));
+app.post('/api/support/buyer/conversations/delete', (req, res) => buyerChatController.deleteConversations(req, res));
+app.post('/api/support/buyer/conversations/delete-bulk', (req, res) => buyerChatController.deleteConversations(req, res));
+
+// ── Global Currency Settings (INR ⇄ USD) ──────────────────────────────────
+app.get('/api/support/currency-settings', async (req, res) => {
+  try {
+    const settings = await currencyService.getSettings();
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/support/admin/currency-settings', async (req, res) => {
+  try {
+    const { defaultCurrency, usdExchangeRate, allowBuyerSwitch } = req.body;
+    const result = await currencyService.updateSettings({
+      defaultCurrency,
+      usdExchangeRate,
+      allowBuyerSwitch,
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('currency_settings_updated', result);
+    }
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3005;
 
 async function startServer() {
   try {
     await initTables();
+    await buyerChatService.initTables();
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`=================================================`);
       console.log(`🚀 Support Chat Engine running on port ${PORT}`);
-      console.log(`   Health check: http://localhost:${PORT}/health`);
-      console.log(`   Socket.IO path: ws://localhost:${PORT}`);
+      console.log(`   Worker Support: /api/support/conversations`);
+      console.log(`   Buyer Support:  /api/support/buyer/conversations`);
+      console.log(`   Socket.IO:      ws://localhost:${PORT}`);
       console.log(`=================================================`);
     });
   } catch (err) {

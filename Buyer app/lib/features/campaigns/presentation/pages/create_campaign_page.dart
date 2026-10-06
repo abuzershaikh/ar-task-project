@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,8 @@ import '../../../services/data/repositories/service_repository_impl.dart';
 import '../../../services/presentation/widgets/category_accordion_card.dart';
 import '../../../services/presentation/widgets/ai_comment_config_widget.dart';
 import '../../../../core/utils/service_unit_helper.dart';
+import '../../../../core/services/currency_service.dart';
+import '../../../../shared/presentation/widgets/currency_toggle_switch.dart';
 import '../../../wallet/presentation/pages/add_balance_screen.dart';
 
 class CreateCampaignPage extends StatefulWidget {
@@ -96,6 +99,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   bool _ytIsCappedAt5Min = false;
   bool _isFetchingYtInfo = false;
   String? _ytFetchError;
+  int _selectedWatchMinutes = 5;
 
   // Instagram Target Metadata State
   String? _instaTargetType;
@@ -366,6 +370,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         _ytIsCappedAt5Min = false;
         _ytFetchError = null;
         _isFetchingYtInfo = false;
+        _selectedWatchMinutes = 5;
 
         _instaTargetType = null;
         _instaIdentifier = null;
@@ -520,6 +525,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               data['requiredWatchFormatted']?.toString();
           _ytIsCappedAt5Min = data['isCappedAt5Min'] == true;
           _ytFetchError = null;
+          _selectedWatchMinutes = 5;
 
           if (_ytTitle != null && _ytTitle!.isNotEmpty) {
             _appName = _ytTitle;
@@ -871,6 +877,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       _ytIsCappedAt5Min = false;
       _ytFetchError = null;
       _isFetchingYtInfo = false;
+      _selectedWatchMinutes = 5;
     });
   }
 
@@ -911,9 +918,25 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     }
   }
 
+  double _getEffectiveUnitPrice() {
+    if (_selectedService == null) return 0.0;
+    final basePrice = _selectedService!.pricing.buyerPrice;
+    if (_isYouTubeService(_selectedService) &&
+        _ytDurationSeconds != null &&
+        _ytDurationSeconds! > 300) {
+      final extraMinutes = math.max(0, _selectedWatchMinutes - 5);
+      final extraPerMin = _selectedService!.pricing.extraPricePerMinute > 0
+          ? _selectedService!.pricing.extraPricePerMinute
+          : 0.50;
+      return double.parse((basePrice + (extraMinutes * extraPerMin)).toStringAsFixed(2));
+    }
+    return basePrice;
+  }
+
   double _calculateTotalCost() {
     if (_selectedService == null) return 0.0;
-    return _selectedQuantity * _selectedService!.pricing.buyerPrice;
+    final unitPrice = _getEffectiveUnitPrice();
+    return double.parse((_selectedQuantity * unitPrice).toStringAsFixed(2));
   }
 
   void _submitCampaign() async {
@@ -1013,10 +1036,20 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
           'packageId': _packageId,
           'watchTimeSeconds': _isInstagramService(_selectedService)
               ? 0
-              : (_ytRequiredWatchSeconds ??
-                  (_ytDurationSeconds != null
-                      ? (_ytDurationSeconds! > 300 ? 300 : _ytDurationSeconds!)
-                      : (_isYouTubeService(_selectedService) ? 120 : 0))),
+              : (_isYouTubeService(_selectedService) &&
+                      _ytDurationSeconds != null &&
+                      _ytDurationSeconds! > 300
+                  ? (_selectedWatchMinutes * 60)
+                  : (_ytRequiredWatchSeconds ??
+                      (_ytDurationSeconds != null
+                          ? (_ytDurationSeconds! > 300 ? 300 : _ytDurationSeconds!)
+                          : (_isYouTubeService(_selectedService) ? 120 : 0)))),
+          'selectedWatchMinutes': _isYouTubeService(_selectedService) &&
+                  _ytDurationSeconds != null &&
+                  _ytDurationSeconds! > 300
+              ? _selectedWatchMinutes
+              : 5,
+          'unitPrice': _getEffectiveUnitPrice(),
           'videoDurationSeconds': _isInstagramService(_selectedService)
               ? 0
               : (_ytDurationSeconds ??
@@ -1334,29 +1367,38 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
           ],
         ),
         actions: [
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF1F2),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFFECDD3)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.account_balance_wallet_rounded,
-                    size: 16, color: Color(0xFFE11D48)),
-                const SizedBox(width: 6),
-                Text(
-                  '₹${_walletBalance.toStringAsFixed(2)}',
-                  style: GoogleFonts.outfit(
-                    color: const Color(0xFFE11D48),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                  ),
+          const Padding(
+            padding: EdgeInsets.only(right: 6),
+            child: CurrencyToggleSwitch(compact: true),
+          ),
+          ValueListenableBuilder<String>(
+            valueListenable: CurrencyService.instance.currencyNotifier,
+            builder: (context, _, __) {
+              return Container(
+                margin: const EdgeInsets.only(right: 14, top: 10, bottom: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF1F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFECDD3)),
                 ),
-              ],
-            ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.account_balance_wallet_rounded,
+                        size: 16, color: Color(0xFFE11D48)),
+                    const SizedBox(width: 6),
+                    Text(
+                      CurrencyService.instance.formatPrice(_walletBalance),
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFFE11D48),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -1507,19 +1549,30 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  Text(
-                    ServiceUnitHelper.getRateLabel(s.name, s.pricing.buyerPrice,
-                        serviceCode: s.code),
-                    style: const TextStyle(
-                        color: Color(0xFF2563EB),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600),
+                  ValueListenableBuilder<String>(
+                    valueListenable: CurrencyService.instance.currencyNotifier,
+                    builder: (context, _, __) {
+                      return Text(
+                        ServiceUnitHelper.getRateLabel(s.name, s.pricing.buyerPrice,
+                            serviceCode: s.code),
+                        style: const TextStyle(
+                            color: Color(0xFF2563EB),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600),
+                      );
+                    },
                   ),
                 ],
               ),
             ),
           ],
         ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: CurrencyToggleSwitch(compact: true),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -2594,7 +2647,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                 border:
                                     Border.all(color: const Color(0xFFFECACA)),
                               ),
-                              child: const Row(
+                              child: Row(
                                 children: [
                                   Icon(
                                     Icons.check_circle_outline_rounded,
@@ -2604,8 +2657,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                   SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      'Worker must watch complete video before submit unlocks',
-                                      style: TextStyle(
+                                      (_ytDurationSeconds != null && _ytDurationSeconds! > 300)
+                                          ? 'Worker must watch selected $_selectedWatchMinutes minutes before submit unlocks'
+                                          : 'Worker must watch complete video before submit unlocks',
+                                      style: const TextStyle(
                                         fontSize: 10.5,
                                         fontWeight: FontWeight.w600,
                                         color: Color(0xFF166534),
@@ -2618,6 +2673,14 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                           ],
                         ),
                       ),
+                    ],
+
+                    // YouTube Duration Slider (> 5 min)
+                    if (_isYouTubeService(s) &&
+                        _ytDurationSeconds != null &&
+                        _ytDurationSeconds! > 300) ...[
+                      const SizedBox(height: 12),
+                      _buildYouTubeDurationSlider(s),
                     ],
 
                     // YouTube Error Hint
@@ -2812,64 +2875,105 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               const SizedBox(height: 20),
 
               // Total & Checkout Summary Card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              ValueListenableBuilder<String>(
+                valueListenable: CurrencyService.instance.currencyNotifier,
+                builder: (context, _, __) {
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
                       children: [
-                        const Text('Quantity:',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 13)),
-                        Text(
-                            ServiceUnitHelper.getUnitName(s.name,
-                                serviceCode: s.code,
-                                count: _selectedQuantity,
-                                includeCount: true),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Quantity:',
+                                style:
+                                    TextStyle(color: Colors.white70, fontSize: 13)),
+                            Text(
+                                ServiceUnitHelper.getUnitName(s.name,
+                                    serviceCode: s.code,
+                                    count: _selectedQuantity,
+                                    includeCount: true),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14)),
+                          ],
+                        ),
+                        if (_isYouTubeService(s) &&
+                            _ytDurationSeconds != null &&
+                            _ytDurationSeconds! > 300) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Base Rate (up to 5 min):',
+                                  style: TextStyle(
+                                      color: Colors.white60, fontSize: 13)),
+                              Text(CurrencyService.instance.formatPrice(s.pricing.buyerPrice),
+                                  style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 13)),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('Watch Duration: ${_selectedWatchMinutes} mins',
+                                  style: const TextStyle(
+                                      color: Color(0xFFFCA5A5), fontSize: 13)),
+                              Text(
+                                  _selectedWatchMinutes > 5
+                                      ? '+${CurrencyService.instance.formatPrice((_selectedWatchMinutes - 5) * (s.pricing.extraPricePerMinute > 0 ? s.pricing.extraPricePerMinute : 0.50))} / unit'
+                                      : 'Included',
+                                  style: TextStyle(
+                                      color: _selectedWatchMinutes > 5
+                                          ? const Color(0xFFFCA5A5)
+                                          : Colors.white54,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                                'Rate per ${ServiceUnitHelper.getUnitName(s.name, serviceCode: s.code, count: 1)}:',
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 13)),
+                            Text(CurrencyService.instance.formatPrice(_getEffectiveUnitPrice()),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14)),
+                          ],
+                        ),
+                        const Divider(color: Colors.white24, height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Total Budget:',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15)),
+                            Text(CurrencyService.instance.formatPrice(totalCost),
+                                style: const TextStyle(
+                                    color: Colors.greenAccent,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 20)),
+                          ],
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                            'Rate per ${ServiceUnitHelper.getUnitName(s.name, serviceCode: s.code, count: 1)}:',
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 13)),
-                        Text('₹${s.pricing.buyerPrice.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14)),
-                      ],
-                    ),
-                    const Divider(color: Colors.white24, height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Total Budget:',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15)),
-                        Text('₹${totalCost.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                                color: Colors.greenAccent,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 20)),
-                      ],
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 16),
 
@@ -3540,6 +3644,328 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── YouTube Watch Duration Slider (> 5 min video) ──
+  Widget _buildYouTubeDurationSlider(ServiceModel s) {
+    final videoDurationMin = (_ytDurationSeconds! / 60).ceil();
+    final maxAllowedMin = math.max(6, math.min(videoDurationMin, 60));
+    final extraPerMin = s.pricing.extraPricePerMinute > 0
+        ? s.pricing.extraPricePerMinute
+        : 0.50;
+    final currentExtraTotal =
+        math.max(0, _selectedWatchMinutes - 5) * extraPerMin;
+    final effectiveUnit = _getEffectiveUnitPrice();
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFF7ED), Color(0xFFFFF1F2)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFFDBA74),
+          width: 1.2,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEA580C).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.timer_outlined,
+                  size: 20,
+                  color: Color(0xFFEA580C),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'Watch Duration',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF9A3412),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEA580C),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            '> 5 Min Video',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Video total duration: ${_ytDurationFormatted ?? '$videoDurationMin min'}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF7C2D12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Price & Minutes Display Pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFED7AA)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Worker Watch Requirement',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          '$_selectedWatchMinutes',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFEA580C),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Minutes',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'Unit Price',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    ValueListenableBuilder<String>(
+                      valueListenable: CurrencyService.instance.currencyNotifier,
+                      builder: (context, _, __) {
+                        return Text(
+                          CurrencyService.instance.formatPrice(effectiveUnit),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF0F172A),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Slider
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: const Color(0xFFEA580C),
+              inactiveTrackColor: const Color(0xFFFED7AA),
+              thumbColor: const Color(0xFFEA580C),
+              overlayColor: const Color(0x29EA580C),
+              trackHeight: 6,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+              valueIndicatorShape: const PaddleSliderValueIndicatorShape(),
+              valueIndicatorColor: const Color(0xFFEA580C),
+              valueIndicatorTextStyle: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+            child: Slider(
+              value: _selectedWatchMinutes
+                  .toDouble()
+                  .clamp(5.0, maxAllowedMin.toDouble()),
+              min: 5.0,
+              max: maxAllowedMin.toDouble(),
+              divisions: (maxAllowedMin - 5) > 0 ? (maxAllowedMin - 5) : 1,
+              label: '$_selectedWatchMinutes min',
+              onChanged: (double val) {
+                setState(() {
+                  _selectedWatchMinutes = val.round();
+                });
+              },
+            ),
+          ),
+
+          // Slider Range Labels
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '5 min (Base)',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+                Text(
+                  'Max: $maxAllowedMin min',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Quick selection chips
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _buildDurationChip(
+                  5, '5 Min (Base ${CurrencyService.instance.formatPrice(s.pricing.buyerPrice)})'),
+              if (maxAllowedMin >= 10) _buildDurationChip(10, '10 Min'),
+              if (maxAllowedMin >= 15) _buildDurationChip(15, '15 Min'),
+              if (maxAllowedMin >= 20) _buildDurationChip(20, '20 Min'),
+              if (maxAllowedMin >= 30) _buildDurationChip(30, '30 Min'),
+              if (![5, 10, 15, 20, 30].contains(maxAllowedMin))
+                _buildDurationChip(maxAllowedMin, '$maxAllowedMin Min (Full)'),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Rate description
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 14,
+                  color: Color(0xFFB45309),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _selectedWatchMinutes > 5
+                        ? '+${CurrencyService.instance.formatPrice(extraPerMin)}/min for each minute above 5 mins (+${CurrencyService.instance.formatPrice(currentExtraTotal)}/unit).'
+                        : 'Base rate includes up to 5 minutes of mandatory watch time. Slide right to increase.',
+                    style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF92400E),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDurationChip(int minutes, String label) {
+    final isSelected = _selectedWatchMinutes == minutes;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedWatchMinutes = minutes;
+        });
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFEA580C) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color:
+                isSelected ? const Color(0xFFEA580C) : const Color(0xFFFED7AA),
+            width: 1.2,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF9A3412),
+          ),
+        ),
       ),
     );
   }

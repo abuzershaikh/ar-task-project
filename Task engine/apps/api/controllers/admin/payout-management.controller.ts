@@ -14,7 +14,8 @@ import { UserRepository } from '../../../../shared/database/repositories/user.re
 import { PayoutEngineService } from '../../../../payout-engine/payout.service';
 import { WithdrawalStatus } from '../../../../shared/database/entities/withdrawal.entity';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
-import { UserRole } from '../../../../shared/database/entities/user.entity';
+import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
+import { UserRole, User } from '../../../../shared/database/entities/user.entity';
 
 @ApiTags('Admin - Payout Management')
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
@@ -39,12 +40,15 @@ export class AdminPayoutManagementController {
 
     @Post('config')
     @ApiOperation({ summary: 'Update global minimum withdrawal threshold limit' })
-    async updatePayoutConfig(@Body() body: { minWithdrawalLimit: number }) {
+    async updatePayoutConfig(
+        @Body() body: { minWithdrawalLimit: number },
+        @CurrentUser() user?: User,
+    ) {
         if (typeof body.minWithdrawalLimit !== 'number' || body.minWithdrawalLimit < 0) {
             throw new BadRequestException('minWithdrawalLimit must be a positive number');
         }
 
-        this.payoutEngine.setMinWithdrawalLimit(body.minWithdrawalLimit);
+        await this.payoutEngine.setMinWithdrawalLimit(body.minWithdrawalLimit, user?.id || 'admin');
         return {
             success: true,
             minWithdrawalLimit: this.payoutEngine.getMinWithdrawalLimit(),

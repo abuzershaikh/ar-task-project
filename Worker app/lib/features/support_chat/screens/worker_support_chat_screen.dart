@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart' hide PlayerState;
+import 'package:lottie/lottie.dart';
 import '../models/worker_support_message.dart';
 import '../services/worker_chat_service.dart';
 import '../services/support_media_cache.dart';
@@ -361,22 +363,17 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
             onPressed: () => Navigator.pop(context),
           ),
 
-          // 3D Cute Robot Avatar (Clean WhatsApp Style, No Outline)
+          // 3D Animated Customer Care Avatar (Without outline, larger size)
           Stack(
             alignment: Alignment.center,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFF2A3942),
-                ),
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/support_robot_avatar.png',
-                    fit: BoxFit.cover,
-                  ),
+              SizedBox(
+                width: 52,
+                height: 52,
+                child: Lottie.asset(
+                  'assets/animations/customercare.json',
+                  fit: BoxFit.contain,
+                  repeat: true,
                 ),
               ),
               Positioned(
@@ -1018,8 +1015,9 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
       margin: const EdgeInsets.fromLTRB(14, 0, 14, 6),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2C34),
+        color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.3),
@@ -1045,29 +1043,24 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
     );
   }
 
-  // ── WhatsApp Dark Bottom Composer Dock ─────────────────────────────────────
+  // ── Clean Single-Background Bottom Composer Dock (No Double Outline) ────────
   Widget _buildFloatingComposer() {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: const BoxDecoration(
+        color: Color(0xFF0F172A),
+        border: Border(top: BorderSide(color: Color(0xFF1E293B))),
+      ),
+      child: SafeArea(
+        top: false,
         child: Row(
           children: [
-            // Main WhatsApp Dark Pill Bar (No Outline Stroke)
             Expanded(
               child: Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1F2C34), // WhatsApp Dark Input Bar
+                  color: const Color(0xFF1E293B),
                   borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Row(
                   children: [
@@ -1075,8 +1068,8 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
                     IconButton(
                       icon: Icon(
                         _showEmojiRow ? Icons.keyboard_rounded : Icons.sentiment_satisfied_alt_rounded,
-                        color: const Color(0xFF8696A0),
-                        size: 24,
+                        color: const Color(0xFF94A3B8),
+                        size: 22,
                       ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -1086,62 +1079,53 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
                     ),
                     const SizedBox(width: 8),
 
-                    // Text Field
+                    // Clean Text Field without theme borders leaking
                     Expanded(
                       child: TextField(
                         controller: _textController,
-                        style: const TextStyle(color: Colors.white, fontSize: 15),
-                        decoration: const InputDecoration(
-                          hintText: 'Type a message...',
-                          hintStyle: TextStyle(color: Color(0xFF8696A0), fontSize: 14.5),
+                        minLines: 1,
+                        maxLines: 4,
+                        cursorColor: const Color(0xFF38BDF8),
+                        style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Ask EarnPost Support desk...',
+                          hintStyle: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 14),
+                          filled: false,
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
-                          fillColor: Colors.transparent,
-                          filled: false,
+                          errorBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
                           isDense: true,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
                         ),
                         onSubmitted: (_) => _handleSendMessage(),
                       ),
                     ),
-                    const SizedBox(width: 4),
                   ],
                 ),
               ),
             ),
             const SizedBox(width: 8),
 
-            // WhatsApp Teal Green Circular Send Button
+            // Gradient Circular Send Button
             Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: const Color(0xFF00A884), // Official WhatsApp Send Button
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF00A884).withValues(alpha: 0.35),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(24),
-                  onTap: _isSending ? null : _handleSendMessage,
-                  child: Center(
-                    child: _isSending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                  ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF38BDF8), Color(0xFF6366F1)],
                 ),
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                icon: _isSending
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                onPressed: _isSending ? null : _handleSendMessage,
               ),
             ),
           ],

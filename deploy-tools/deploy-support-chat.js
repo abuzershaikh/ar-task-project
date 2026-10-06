@@ -18,7 +18,7 @@ async function deploySupportChat() {
 
     // 1. Create remote directories
     console.log('Creating remote directories...');
-    await ssh.execCommand(`mkdir -p ${remoteBase}/src/config ${remoteBase}/src/controllers ${remoteBase}/src/services ${remoteBase}/src/sockets ${remoteBase}/uploads`);
+    await ssh.execCommand(`mkdir -p ${remoteBase}/src/config ${remoteBase}/src/controllers ${remoteBase}/src/services ${remoteBase}/src/sockets ${remoteBase}/src/buyer ${remoteBase}/uploads`);
 
     // 2. Upload files
     const filesToUpload = [
@@ -29,8 +29,11 @@ async function deploySupportChat() {
       'src/config/firebase.js',
       'src/services/fcm.service.js',
       'src/services/chat.service.js',
+      'src/services/currency.service.js',
       'src/controllers/chat.controller.js',
       'src/sockets/chat.socket.js',
+      'src/buyer/buyer-chat.service.js',
+      'src/buyer/buyer-chat.controller.js',
     ];
 
     for (const rel of filesToUpload) {

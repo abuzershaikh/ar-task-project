@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import '../services/currency_service.dart';
 
 class CurrencyFormatter {
   static final _inrFormatter = NumberFormat.currency(
@@ -12,6 +13,11 @@ class CurrencyFormatter {
     symbol: '₹',
     decimalDigits: 2,
   );
+
+  /// Format amount dynamically using CurrencyService (INR or USD)
+  static String format(double amountInINR, {bool showDecimals = false}) {
+    return CurrencyService.instance.formatPrice(amountInINR, showDecimals: showDecimals);
+  }
 
   /// Format amount in INR with symbol
   /// Example: formatINR(1000) => ₹1,000

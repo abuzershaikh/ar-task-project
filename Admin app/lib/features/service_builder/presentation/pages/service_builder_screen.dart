@@ -55,6 +55,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
   late TextEditingController _videoUrlController;
   late TextEditingController _audioUrlController;
   late TextEditingController _minRetentionHoursController;
+  late TextEditingController _extraMinutePriceController;
 
   // State flags
   bool _isLinkFieldEnabled = true;
@@ -117,6 +118,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     _videoUrlController = TextEditingController();
     _audioUrlController = TextEditingController();
     _minRetentionHoursController = TextEditingController(text: '24');
+    _extraMinutePriceController = TextEditingController(text: '0.50');
 
     _codeController.addListener(() {
       if (mounted) setState(() {});
@@ -167,6 +169,7 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     _videoUrlController.dispose();
     _audioUrlController.dispose();
     _minRetentionHoursController.dispose();
+    _extraMinutePriceController.dispose();
     super.dispose();
   }
 
@@ -188,6 +191,9 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
     _minRetentionHoursController.text = service.minDurationSeconds > 0
         ? (service.minDurationSeconds ~/ 3600).toString()
         : '24';
+    _extraMinutePriceController.text = service.pricing.extraPricePerMinute > 0
+        ? service.pricing.extraPricePerMinute.toStringAsFixed(2)
+        : '0.50';
     _linkFieldLabelController.text =
         service.linkFieldLabel ?? 'Target Link / URL';
     _linkFieldPlaceholderController.text =
@@ -309,12 +315,16 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
         ? (int.tryParse(_minRetentionHoursController.text.trim()) ?? 24)
         : 0;
 
+    final extraMinPrice =
+        double.tryParse(_extraMinutePriceController.text.trim()) ?? 0.50;
+
     final pricing = PricingConfig.calculate(
       buyerPrice: buyerPrice,
       unitPrice: buyerPrice,
       adminMarginPercent: margin,
       marginType: _isPercentageMargin ? 'PERCENTAGE' : 'FIXED',
       workerReward: workerReward,
+      extraPricePerMinute: extraMinPrice,
       minQuantity: minQty,
       maxQuantity: maxQty,
     );
@@ -1131,6 +1141,102 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                     ),
                   ],
                 ),
+                if (_codeController.text.toUpperCase().contains('YT') ||
+                    _codeController.text.toUpperCase().contains('YOUTUBE') ||
+                    _nameController.text.toUpperCase().contains('YOUTUBE') ||
+                    (_currentService?.category.toUpperCase().contains('YOUTUBE') ?? false)) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: const Color(0xFFFECACA), width: 1.2),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDC2626),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.play_circle_fill,
+                                  color: Colors.white, size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'YouTube Watch Duration Pricing (> 5 Mins)',
+                                    style: TextStyle(
+                                      color: Color(0xFF991B1B),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13.5,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Dynamic per-minute rate when video length exceeds 5 minutes',
+                                    style: TextStyle(
+                                      color: Color(0xFFB91C1C),
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _buildTextField(
+                          controller: _extraMinutePriceController,
+                          label: 'Price Per Extra Minute (> 5 mins) (₹)',
+                          hint: 'e.g. 0.50',
+                          icon: Icons.timer_outlined,
+                          keyboardType:
+                              const TextInputType.numberWithOptions(decimal: true),
+                          onChanged: (val) => setState(() {}),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: const Color(0xFFFCA5A5)
+                                    .withValues(alpha: 0.5)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline,
+                                  size: 14, color: Color(0xFFDC2626)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'In Buyer App, when video > 5 min, a slider will appear. For each minute selected beyond 5 min, ₹${(double.tryParse(_extraMinutePriceController.text.trim()) ?? 0.0).toStringAsFixed(2)} will be added to the per-unit price.',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF7F1D1D),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

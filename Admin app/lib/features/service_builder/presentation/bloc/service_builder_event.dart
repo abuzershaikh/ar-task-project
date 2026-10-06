@@ -100,6 +100,7 @@ class UpdatePricingEvent extends ServiceBuilderEvent {
   final double? adminMarginPercent;
   final String? marginType;
   final double? workerReward;
+  final double? extraPricePerMinute;
   final int? workerLimit;
   final List<int>? workerLimitOptions;
   final List<PriceChipModel>? chips;
@@ -113,6 +114,7 @@ class UpdatePricingEvent extends ServiceBuilderEvent {
     this.adminMarginPercent,
     this.marginType,
     this.workerReward,
+    this.extraPricePerMinute,
     this.workerLimit,
     this.workerLimitOptions,
     this.chips,
@@ -128,6 +130,7 @@ class UpdatePricingEvent extends ServiceBuilderEvent {
         adminMarginPercent,
         marginType,
         workerReward,
+        extraPricePerMinute,
         workerLimit,
         workerLimitOptions,
         chips,

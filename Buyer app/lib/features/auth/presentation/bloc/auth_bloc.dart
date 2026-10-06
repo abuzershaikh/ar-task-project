@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../../../core/storage/local_storage_service.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/logout_usecase.dart';
@@ -93,6 +94,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final token = await secureStorage.getAccessToken() ??
         getIt<LocalStorageService>().getAccessToken();
     if (token != null && token.isNotEmpty) {
+      final userId = getIt<LocalStorageService>().getUserId();
+      NotificationService.instance.syncUserToken(userId);
       emit(AuthSuccess(token));
     } else {
       emit(Unauthenticated());
@@ -110,6 +113,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     result.fold(
       (failure) => emit(AuthError(failure.message)),
       (authData) {
+        NotificationService.instance.syncUserToken(authData.userId);
         emit(AuthSuccess(authData.accessToken));
       },
     );
@@ -131,6 +135,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       },
       (authData) {
         debugPrint('[AUTH BLOC] Google login succeeded for userId=${authData.userId}');
+        NotificationService.instance.syncUserToken(authData.userId);
         emit(AuthSuccess(authData.accessToken));
       },
     );

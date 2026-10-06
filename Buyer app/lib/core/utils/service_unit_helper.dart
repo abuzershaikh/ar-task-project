@@ -1,3 +1,5 @@
+import '../services/currency_service.dart';
+
 /// Centralized helper to convert technical service types/codes into clean,
 /// human-friendly generic unit names (e.g. Subscribers, Likes, Comments, Views, Reviews, Ratings)
 class ServiceUnitHelper {
@@ -77,10 +79,10 @@ class ServiceUnitHelper {
   }
 
   /// Returns rate display per single unit.
-  /// Example: '₹10.00 / review' or '₹5.00 / rating' or '₹2.00 / subscriber'
+  /// Example: '₹10.00 / review' or '$0.12 / review'
   static String getRateLabel(String? serviceCodeOrName, double rate, {String? serviceCode}) {
     final singular = getUnitName(serviceCodeOrName, serviceCode: serviceCode, count: 1);
-    return '₹${rate.toStringAsFixed(2)} / ${singular.toLowerCase()}';
+    return CurrencyService.instance.formatRateWithUnit(rate, singular);
   }
 
   /// Returns header title for order quantity selector.

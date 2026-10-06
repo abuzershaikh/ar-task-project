@@ -91,6 +91,7 @@ class PricingConfig {
   final double adminMarginPercent;
   final String marginType;
   final double workerReward;
+  final double extraPricePerMinute;
   final List<PriceChipModel> chips;
 
   const PricingConfig({
@@ -102,6 +103,7 @@ class PricingConfig {
     required this.adminMarginPercent,
     this.marginType = 'PERCENTAGE',
     required this.workerReward,
+    this.extraPricePerMinute = 0.50,
     this.chips = const [],
   });
 
@@ -115,6 +117,7 @@ class PricingConfig {
     required double adminMarginPercent,
     double? workerReward,
     String marginType = 'PERCENTAGE',
+    double extraPricePerMinute = 0.50,
     List<PriceChipModel> chips = const [],
   }) {
     final String cleanMarginType =
@@ -153,6 +156,7 @@ class PricingConfig {
       adminMarginPercent: double.parse(adminMarginPercent.toStringAsFixed(2)),
       marginType: cleanMarginType,
       workerReward: sanitizedReward,
+      extraPricePerMinute: double.parse(extraPricePerMinute.toStringAsFixed(2)),
       chips: chips,
     );
   }
@@ -166,6 +170,7 @@ class PricingConfig {
     double? adminMarginPercent,
     String? marginType,
     double? workerReward,
+    double? extraPricePerMinute,
     List<PriceChipModel>? chips,
   }) {
     return PricingConfig(
@@ -177,6 +182,7 @@ class PricingConfig {
       adminMarginPercent: adminMarginPercent ?? this.adminMarginPercent,
       marginType: marginType ?? this.marginType,
       workerReward: workerReward ?? this.workerReward,
+      extraPricePerMinute: extraPricePerMinute ?? this.extraPricePerMinute,
       chips: chips ?? this.chips,
     );
   }
@@ -218,6 +224,7 @@ class PricingConfig {
       'adminMarginPercent': adminMarginPercent,
       'marginType': marginType,
       'workerReward': workerReward,
+      'extraPricePerMinute': extraPricePerMinute,
       'chips': chips.map((c) => c.toJson()).toList(),
     };
   }
@@ -259,6 +266,7 @@ class PricingConfig {
       adminMarginPercent: parseD(json['adminMarginPercent'] ?? json['marginValue'], 20.0),
       marginType: json['marginType']?.toString() ?? 'PERCENTAGE',
       workerReward: parseD(json['workerReward'], 0.0),
+      extraPricePerMinute: parseD(json['extraPricePerMinute'] ?? json['extra_price_per_minute'] ?? json['youtubeExtraPricePerMinute'], 0.50),
       chips: parsedChips,
     );
   }

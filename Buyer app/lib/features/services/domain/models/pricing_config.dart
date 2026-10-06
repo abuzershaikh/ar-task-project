@@ -74,6 +74,7 @@ class PricingConfig {
   final int maxQuantity;
   final double adminMarginPercent;
   final double workerReward;
+  final double extraPricePerMinute;
   final List<PriceChipModel> chips;
 
   const PricingConfig({
@@ -84,6 +85,7 @@ class PricingConfig {
     this.maxQuantity = 10000,
     required this.adminMarginPercent,
     required this.workerReward,
+    this.extraPricePerMinute = 0.50,
     this.chips = const [],
   });
   factory PricingConfig.calculate({
@@ -93,6 +95,7 @@ class PricingConfig {
     int minQuantity = 1,
     int maxQuantity = 10000,
     required double adminMarginPercent,
+    double extraPricePerMinute = 0.50,
     List<PriceChipModel> chips = const [],
   }) {
     final marginFraction = adminMarginPercent / 100.0;
@@ -109,6 +112,7 @@ class PricingConfig {
       maxQuantity: maxQuantity,
       adminMarginPercent: adminMarginPercent,
       workerReward: calculatedReward < 0 ? 0 : calculatedReward,
+      extraPricePerMinute: extraPricePerMinute,
       chips: chips,
     );
   }
@@ -122,6 +126,7 @@ class PricingConfig {
       'maxQuantity': maxQuantity,
       'adminMarginPercent': adminMarginPercent,
       'workerReward': workerReward,
+      'extraPricePerMinute': extraPricePerMinute,
       'chips': chips.map((c) => c.toJson()).toList(),
     };
   }
@@ -162,6 +167,7 @@ class PricingConfig {
       maxQuantity: parseI(json['maxQuantity'], 10000),
       adminMarginPercent: parseD(json['adminMarginPercent'] ?? json['marginValue'], 20.0),
       workerReward: parseD(json['workerReward'] ?? json['workerRewardPerUnit'], 0.0),
+      extraPricePerMinute: parseD(json['extraPricePerMinute'] ?? json['extra_price_per_minute'] ?? json['youtubeExtraPricePerMinute'], 0.50),
       chips: parsedChips,
     );
   }

@@ -24,11 +24,47 @@ import '../../features/profile/presentation/pages/business_profile_page.dart';
 import '../../features/profile/presentation/pages/edit_profile_page.dart';
 import '../../features/support/presentation/pages/support_page.dart';
 import '../../features/support/presentation/pages/help_center_page.dart';
+import '../../features/support/presentation/pages/buyer_chat_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../shared/presentation/pages/splash_page.dart';
 import '../../shared/presentation/pages/main_navigation_page.dart';
 
 class AppRouter {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+  static Future<void> openChat() async {
+    NavigatorState? nav = navigatorKey.currentState;
+    int attempts = 0;
+    while (nav == null && attempts < 20) {
+      await Future.delayed(const Duration(milliseconds: 250));
+      nav = navigatorKey.currentState;
+      attempts++;
+    }
+    if (nav != null) {
+      nav.pushNamed(chat);
+    }
+  }
+
+  static Future<void> openNotifications() async {
+    NavigatorState? nav = navigatorKey.currentState;
+    int attempts = 0;
+    while (nav == null && attempts < 20) {
+      await Future.delayed(const Duration(milliseconds: 250));
+      nav = navigatorKey.currentState;
+      attempts++;
+    }
+    if (nav != null) {
+      nav.pushNamed(notifications);
+    }
+  }
+
+  static Future<void> openWallet() async {
+    final nav = navigatorKey.currentState;
+    if (nav != null) {
+      nav.pushNamed(wallet);
+    }
+  }
+
   // Route Names
   static const String splash = '/';
   static const String login = '/login';
@@ -75,6 +111,7 @@ class AppRouter {
   // Support
   static const String support = '/support';
   static const String helpCenter = '/help-center';
+  static const String chat = '/chat';
   
   // Settings
   static const String settings = '/settings';
@@ -194,6 +231,9 @@ class AppRouter {
       
       case helpCenter:
         return MaterialPageRoute(builder: (_) => const HelpCenterPage());
+      
+      case chat:
+        return MaterialPageRoute(builder: (_) => const BuyerChatPage());
       
       // Settings
       case settings:

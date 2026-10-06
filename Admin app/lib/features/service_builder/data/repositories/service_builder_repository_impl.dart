@@ -59,6 +59,21 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
                 : 0.0;
             final String marginType = pricingMap?['marginType']?.toString() ?? 'PERCENTAGE';
 
+            double extraMinPrice = 0.50;
+            dynamic wOpts = s['watchTimeOptions'] ?? s['watch_time_options'];
+            if (wOpts is String) {
+              try {
+                wOpts = jsonDecode(wOpts);
+              } catch (_) {}
+            }
+            if (wOpts is Map && wOpts['extraPricePerMinute'] != null) {
+              extraMinPrice = _toDouble(wOpts['extraPricePerMinute'], 0.50);
+            } else if (pricingMap != null && pricingMap['extraPricePerMinute'] != null) {
+              extraMinPrice = _toDouble(pricingMap['extraPricePerMinute'], 0.50);
+            } else if (s['extraPricePerMinute'] != null) {
+              extraMinPrice = _toDouble(s['extraPricePerMinute'], 0.50);
+            }
+
             List<TemplateElement> parsedElements = [];
             dynamic rawElements = s['elements'];
             if (rawElements != null) {
@@ -100,6 +115,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
                 unitPrice: buyerPrice,
                 adminMarginPercent: marginVal,
                 marginType: marginType,
+                extraPricePerMinute: extraMinPrice,
               ),
               elements: parsedElements,
               reviewMode: (s['reviewMode'] ?? 'MANUAL').toString().toUpperCase(),
@@ -154,6 +170,21 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
               : 0.0;
           final String marginType = pricingMap?['marginType']?.toString() ?? 'PERCENTAGE';
 
+          double extraMinPrice = 0.50;
+          dynamic wOpts = s['watchTimeOptions'] ?? s['watch_time_options'];
+          if (wOpts is String) {
+            try {
+              wOpts = jsonDecode(wOpts);
+            } catch (_) {}
+          }
+          if (wOpts is Map && wOpts['extraPricePerMinute'] != null) {
+            extraMinPrice = _toDouble(wOpts['extraPricePerMinute'], 0.50);
+          } else if (pricingMap != null && pricingMap['extraPricePerMinute'] != null) {
+            extraMinPrice = _toDouble(pricingMap['extraPricePerMinute'], 0.50);
+          } else if (s['extraPricePerMinute'] != null) {
+            extraMinPrice = _toDouble(s['extraPricePerMinute'], 0.50);
+          }
+
           List<TemplateElement> parsedElements = [];
           dynamic rawElements = s['elements'];
           if (rawElements != null) {
@@ -189,6 +220,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
               unitPrice: buyerPrice,
               adminMarginPercent: marginVal,
               marginType: marginType,
+              extraPricePerMinute: extraMinPrice,
             ),
             elements: parsedElements,
             reviewMode: (s['reviewMode'] ?? 'MANUAL').toString().toUpperCase(),
@@ -285,6 +317,11 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
         'textFieldLabel': service.textFieldLabel,
         'textFieldPlaceholder': service.textFieldPlaceholder,
         'watchtimeSeconds': service.watchtimeSeconds,
+        'extraPricePerMinute': service.pricing.extraPricePerMinute,
+        'watchTimeOptions': {
+          'extraPricePerMinute': service.pricing.extraPricePerMinute,
+          'baseMinutes': 5,
+        },
       };
 
       // Determine if this is an existing server service (has UUID format) or a new local draft
@@ -317,6 +354,11 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
           'textFieldLabel': service.textFieldLabel,
           'textFieldPlaceholder': service.textFieldPlaceholder,
           'watchtimeSeconds': service.watchtimeSeconds,
+          'extraPricePerMinute': service.pricing.extraPricePerMinute,
+          'watchTimeOptions': {
+            'extraPricePerMinute': service.pricing.extraPricePerMinute,
+            'baseMinutes': 5,
+          },
         });
 
         if (cleanBuyerUnitPrice > 0) {
@@ -324,6 +366,7 @@ class ServiceBuilderRepositoryImpl implements ServiceBuilderRepository {
             'buyerUnitPrice': cleanBuyerUnitPrice,
             'marginType': cleanMarginType,
             'marginValue': cleanMarginValue,
+            'extraPricePerMinute': service.pricing.extraPricePerMinute,
           };
           if (finalWorkerReward > 0) {
             pricingPayload['workerReward'] = finalWorkerReward;

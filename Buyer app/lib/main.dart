@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,6 +12,8 @@ import 'features/wallet/presentation/bloc/wallet_bloc.dart';
 import 'features/profile/presentation/bloc/profile_bloc.dart';
 
 import 'core/services/crashlytics_service.dart';
+import 'core/services/currency_service.dart';
+import 'core/services/notification_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -25,6 +28,9 @@ void main() async {
     }
     // Initialize Firebase Crashlytics & Global Error Reporting
     await CrashlyticsService.initialize();
+
+    // Register Background FCM Handler
+    FirebaseMessaging.onBackgroundMessage(buyerFirebaseMessagingBackgroundHandler);
   } catch (e) {
     debugPrint('⚠️ [FIREBASE] Core initialization warning: $e');
   }
@@ -35,6 +41,20 @@ void main() async {
   } catch (e) {
     debugPrint('⚠️ [DI] Dependencies initialization warning: $e');
   }
+
+  // Initialize Global Pricing Currency Service (INR / USD switch engine)
+  try {
+    await CurrencyService.instance.init();
+  } catch (e) {
+    debugPrint('⚠️ [CURRENCY SERVICE] Init warning: $e');
+  }
+
+  // Initialize Buyer Notification Engine & Push Services
+  try {
+    await NotificationService.instance.initialize();
+  } catch (e) {
+    debugPrint('⚠️ [NOTIFICATION SERVICE] Init warning: $e');
+  }
   
   // Set system UI
   SystemChrome.setSystemUIOverlayStyle(
@@ -44,11 +64,11 @@ void main() async {
     ),
   );
   
-  runApp(const MarketingProApp());
+  runApp(const ReviewGatewayApp());
 }
 
-class MarketingProApp extends StatelessWidget {
-  const MarketingProApp({super.key});
+class ReviewGatewayApp extends StatelessWidget {
+  const ReviewGatewayApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -60,8 +80,9 @@ class MarketingProApp extends StatelessWidget {
         BlocProvider(create: (_) => getIt<ProfileBloc>()..add(LoadProfileEvent())),
       ],
       child: MaterialApp(
-        title: 'Marketing Pro',
+        title: 'Review Gateway',
         debugShowCheckedModeBanner: false,
+        navigatorKey: AppRouter.navigatorKey,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.light,
@@ -71,3 +92,4 @@ class MarketingProApp extends StatelessWidget {
     );
   }
 }
+

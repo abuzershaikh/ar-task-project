@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/routes/app_router.dart';
 import '../../../../core/storage/local_storage_service.dart';
@@ -11,6 +12,8 @@ import '../../../wallet/presentation/bloc/wallet_bloc.dart';
 import '../../../wallet/presentation/bloc/wallet_event.dart';
 import '../../domain/entities/dashboard_data.dart';
 import '../../domain/entities/campaign_summary.dart';
+import '../../../../core/services/currency_service.dart';
+import '../../../../shared/presentation/widgets/currency_toggle_switch.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -363,12 +366,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  String _greeting() {
-    final h = DateTime.now().hour;
-    if (h < 12) return 'Good Morning';
-    if (h < 17) return 'Good Afternoon';
-    return 'Good Evening';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -598,64 +595,82 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const Spacer(),
 
-            // Greeting & Business Tagline
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${_greeting()} 👋',
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Grow your Apps, Channels & Brand',
-                    style: GoogleFonts.outfit(
-                      color: const Color(0xFF94A3B8),
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Currency Switch Pill (₹ INR / $ USD)
+            const CurrencyToggleSwitch(compact: true),
+            const SizedBox(width: 8),
 
-            // Wallet Balance Chip
+            // Live Support Chat Action with Animated Lottie Customer Care (No outline, increased size, with 'Chat Support' text)
             GestureDetector(
-              onTap: () => Navigator.pushNamed(context, AppRouter.wallet),
+              onTap: () => Navigator.pushNamed(context, AppRouter.chat),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B).withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: const Color(0xFF38BDF8).withValues(alpha: 0.35)),
+                  color: const Color(0xFF1E293B).withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(22),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/icons/wallet.png',
-                      width: 14,
-                      height: 14,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      '₹${d.walletBalance.toStringAsFixed(0)}',
-                      style: GoogleFonts.outfit(
-                        color: const Color(0xFF38BDF8),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
+                    SizedBox(
+                      width: 40,
+                      height: 38,
+                      child: OverflowBox(
+                        maxWidth: 64,
+                        maxHeight: 64,
+                        alignment: Alignment.center,
+                        child: Transform.translate(
+                          offset: const Offset(-2, -4),
+                          child: SizedBox(
+                            width: 64,
+                            height: 64,
+                            child: Lottie.asset(
+                              'assets/animations/customercare.json',
+                              fit: BoxFit.contain,
+                              repeat: true,
+                            ),
+                          ),
+                        ),
                       ),
+                    ),
+                    const SizedBox(width: 6),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF10B981),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Live',
+                              style: GoogleFonts.outfit(
+                                color: const Color(0xFF10B981),
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        _BlinkingChatText(
+                          text: 'Chat Support',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1214,14 +1229,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '₹${d.totalSpend.toStringAsFixed(0)}',
-                              style: GoogleFonts.outfit(
-                                color: Colors.white,
-                                fontSize: 30,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5,
-                              ),
+                            ValueListenableBuilder<String>(
+                              valueListenable: CurrencyService.instance.currencyNotifier,
+                              builder: (context, _, __) {
+                                return Text(
+                                  CurrencyService.instance.formatPrice(d.totalSpend.toDouble(), showDecimals: CurrencyService.instance.isUSD),
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white,
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.5,
+                                  ),
+                                );
+                              },
                             ),
                             const SizedBox(height: 2),
                             Text(
@@ -1734,13 +1754,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                   color: Colors.white.withValues(alpha: 0.08),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Text(
-                                  s['price'],
-                                  style: GoogleFonts.outfit(
-                                    color: const Color(0xFF34D399),
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 10.5,
-                                  ),
+                                child: ValueListenableBuilder<String>(
+                                  valueListenable: CurrencyService.instance.currencyNotifier,
+                                  builder: (context, _, __) {
+                                    String formattedPrice = s['price'];
+                                    final match = RegExp(r'₹([0-9.]+)\s*/\s*([a-zA-Z_]+)').firstMatch(s['price']);
+                                    if (match != null) {
+                                      final amount = double.tryParse(match.group(1)!) ?? 0.0;
+                                      final u = match.group(2)!;
+                                      formattedPrice = 'From ${CurrencyService.instance.formatRateWithUnit(amount, u)}';
+                                    }
+                                    return Text(
+                                      formattedPrice,
+                                      style: GoogleFonts.outfit(
+                                        color: const Color(0xFF34D399),
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 10.5,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ],
@@ -2326,4 +2358,55 @@ class _TechGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLINKING CHAT SUPPORT TEXT WIDGET
+// ─────────────────────────────────────────────────────────────────────────────
+class _BlinkingChatText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+
+  const _BlinkingChatText({
+    required this.text,
+    required this.style,
+  });
+
+  @override
+  State<_BlinkingChatText> createState() => _BlinkingChatTextState();
+}
+
+class _BlinkingChatTextState extends State<_BlinkingChatText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    )..repeat(reverse: true);
+    _opacity = Tween<double>(begin: 1.0, end: 0.15).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _opacity,
+      child: Text(
+        widget.text,
+        style: widget.style,
+      ),
+    );
+  }
 }

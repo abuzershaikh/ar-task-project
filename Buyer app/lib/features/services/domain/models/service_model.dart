@@ -231,7 +231,11 @@ class ServiceModel {
       currentVersion: parseI(json['currentVersion'] ?? json['version'], 1),
       pricing: json['pricing'] != null
           ? PricingConfig.fromJson(Map<String, dynamic>.from(json['pricing'] as Map))
-          : PricingConfig.calculate(buyerPrice: buyerUnitPrice, adminMarginPercent: 20),
+          : PricingConfig.calculate(
+              buyerPrice: buyerUnitPrice,
+              adminMarginPercent: 20,
+              extraPricePerMinute: parseD(json['extraPricePerMinute'] ?? json['extra_price_per_minute'], 0.50),
+            ),
       elements: parsedElements,
       minAcceptHours: parseI(json['minAcceptHours'] ?? json['min_accept_hours'], 1),
       maxAcceptHours: parseI(json['maxAcceptHours'] ?? json['max_accept_hours'], 72),

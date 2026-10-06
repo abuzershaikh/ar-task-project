@@ -20,15 +20,15 @@ async function testAdminBuyers() {
   });
   console.log('/admin/buyers status:', buyersRes.status);
   const buyersJson = await buyersRes.json();
-  console.log('/admin/buyers response:', JSON.stringify(buyersJson, null, 2));
+  console.log('/admin/buyers count:', buyersJson.buyers?.length);
 
-  // Call /admin/orders
-  const ordersRes = await fetch(`${BASE_URL}/admin/orders?page=1&limit=50`, {
+  // Call /admin/wallet/buyers
+  const walletRes = await fetch(`${BASE_URL}/admin/wallet/buyers`, {
     headers: { 'Authorization': `Bearer ${token}` }
   });
-  console.log('/admin/orders status:', ordersRes.status);
-  const ordersJson = await ordersRes.json();
-  console.log('/admin/orders response:', JSON.stringify(ordersJson, null, 2));
+  console.log('/admin/wallet/buyers status:', walletRes.status);
+  const walletJson = await walletRes.json();
+  console.log('/admin/wallet/buyers response:', JSON.stringify(walletJson, null, 2));
 }
 
 testAdminBuyers();

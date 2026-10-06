@@ -6,6 +6,7 @@ import { DeadlineMonitorService } from '../../../../shared/engines/reallocation-
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
+import { PayoutEngineService } from '../../../../payout-engine/payout.service';
 
 @ApiTags('Admin - System Settings')
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
@@ -18,6 +19,7 @@ export class AdminSystemSettingsController {
         private readonly settingsRepo: SystemSettingsRepository,
         private readonly auditLogService: AuditLogService,
         private readonly deadlineMonitor: DeadlineMonitorService,
+        private readonly payoutEngine: PayoutEngineService,
     ) { }
 
     @Get('task-expiry')
@@ -548,8 +550,29 @@ export class AdminSystemSettingsController {
     @ApiOperation({ summary: 'Get all database-backed system settings' })
     async getSettings() {
         const settings = await this.settingsRepo.findAll();
+        const settingsMap: Record<string, any> = {};
+        for (const s of settings) {
+            settingsMap[s.key] = s.value;
+        }
+
+        const minWithdrawal = settingsMap['minimum_withdrawal'] !== undefined
+            ? Number(settingsMap['minimum_withdrawal'])
+            : this.payoutEngine.getMinWithdrawalLimit();
+
+        const parseBool = (val: any, defaultVal = false): boolean => {
+            if (val === null || val === undefined) return defaultVal;
+            if (typeof val === 'boolean') return val;
+            const s = String(val).trim().toLowerCase();
+            if (s === 'false' || s === '0' || s === 'no') return false;
+            if (s === 'true' || s === '1' || s === 'yes') return true;
+            return defaultVal;
+        };
+
+        const maintenanceMode = parseBool(settingsMap['maintenance_mode'], false);
+        const platformMargin = settingsMap['platform_margin'] !== undefined ? Number(settingsMap['platform_margin']) : 20.0;
+
         const defaultSettings = [
-            { key: 'minimum_withdrawal', value: 50.0, description: 'Minimum withdrawal threshold limit in INR' },
+            { key: 'minimum_withdrawal', value: minWithdrawal, description: 'Minimum withdrawal threshold limit in INR' },
             { key: 'max_concurrent_tasks', value: 5, description: 'Maximum active concurrent tasks allowed per worker' },
             { key: 'worker_execution_timeout_hours', value: 2.0, description: 'Worker execution timeout in hours' },
             { key: 'unaccepted_task_expiry_hours', value: 24.0, description: 'Unaccepted task pool expiry in hours' },
@@ -565,6 +588,60 @@ export class AdminSystemSettingsController {
         return {
             success: true,
             settings: settings.length > 0 ? settings : defaultSettings,
+            minWithdrawalAmount: minWithdrawal,
+            minWithdrawalLimit: minWithdrawal,
+            minimum_withdrawal: minWithdrawal,
+            maintenanceMode,
+            platformMargin,
+        };
+    }
+
+    @Post()
+    @ApiOperation({ summary: 'Update system settings (minimum withdrawal, maintenance mode, platform margin)' })
+    async saveSettings(
+        @Body() body: {
+            minWithdrawalAmount?: number;
+            minWithdrawalLimit?: number;
+            minimum_withdrawal?: number;
+            maintenanceMode?: boolean;
+            platformMargin?: number;
+        },
+        @CurrentUser() user: User,
+    ) {
+        const userId = user ? user.id : 'admin';
+
+        const rawMin = body.minWithdrawalAmount ?? body.minWithdrawalLimit ?? body.minimum_withdrawal;
+        if (rawMin !== undefined && !isNaN(Number(rawMin)) && Number(rawMin) >= 0) {
+            const minVal = Number(rawMin);
+            await this.payoutEngine.setMinWithdrawalLimit(minVal, userId);
+            await this.settingsRepo.set('minimum_withdrawal', minVal, userId, 'Minimum worker withdrawal threshold in INR');
+            this.logger.log(`Admin ${userId} updated minimum_withdrawal to ₹${minVal}`);
+        }
+
+        if (body.maintenanceMode !== undefined) {
+            await this.settingsRepo.set('maintenance_mode', Boolean(body.maintenanceMode), userId, 'Platform maintenance mode');
+        }
+
+        if (body.platformMargin !== undefined) {
+            await this.settingsRepo.set('platform_margin', Number(body.platformMargin), userId, 'Platform commission margin percentage');
+        }
+
+        await this.auditLogService.logAction({
+            userId,
+            action: 'UPDATE_SYSTEM_SETTINGS',
+            targetType: 'SYSTEM_SETTINGS',
+            targetId: 'GENERAL',
+            newValue: body,
+        });
+
+        const activeMin = this.payoutEngine.getMinWithdrawalLimit();
+        return {
+            success: true,
+            message: `System settings saved successfully. Minimum withdrawal set to ₹${activeMin}`,
+            minWithdrawalAmount: activeMin,
+            minWithdrawalLimit: activeMin,
+            maintenanceMode: body.maintenanceMode,
+            platformMargin: body.platformMargin,
         };
     }
 
@@ -677,10 +754,19 @@ export class AdminSystemSettingsController {
             throw new NotFoundException('Value is required to update setting');
         }
 
-        const setting = await this.settingsRepo.set(key, body.value, user ? user.id : 'admin', body.description);
+        const userId = user ? user.id : 'admin';
+        const setting = await this.settingsRepo.set(key, body.value, userId, body.description);
+
+        if (key === 'minimum_withdrawal') {
+            const numVal = Number(body.value);
+            if (!isNaN(numVal) && numVal >= 0) {
+                await this.payoutEngine.setMinWithdrawalLimit(numVal, userId);
+                this.logger.log(`PATCH /admin/settings/${key} updated payoutEngine minimum withdrawal to ₹${numVal}`);
+            }
+        }
 
         await this.auditLogService.logAction({
-            userId: user ? user.id : 'admin',
+            userId,
             action: 'UPDATE_SYSTEM_SETTING',
             targetType: 'SETTING',
             targetId: key,

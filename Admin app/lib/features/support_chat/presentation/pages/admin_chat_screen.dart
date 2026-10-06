@@ -1385,7 +1385,10 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
 
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        color: Colors.white,
+        decoration: const BoxDecoration(
+          color: Color(0xFF0F172A),
+          border: Border(top: BorderSide(color: Color(0xFF1E293B))),
+        ),
         child: SafeArea(
           top: false,
           child: Row(
@@ -1399,12 +1402,19 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
               const Spacer(),
               TextButton(
                 onPressed: _cancelRecording,
-                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
               ),
               IconButton(
-                icon: const CircleAvatar(
-                  backgroundColor: Color(0xFF00875A),
-                  child: Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF38BDF8), Color(0xFF6366F1)],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
                 ),
                 onPressed: _stopAndSendRecording,
               ),
@@ -1415,19 +1425,19 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+        color: Color(0xFF0F172A),
+        border: Border(top: BorderSide(color: Color(0xFF1E293B))),
       ),
       child: SafeArea(
         top: false,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Pin / Attachment Button (Compact size to maximize textbox width)
+            // Pin / Attachment Button
             Padding(
-              padding: const EdgeInsets.only(bottom: 2, left: 2, right: 2),
+              padding: const EdgeInsets.only(bottom: 2, left: 2, right: 4),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
@@ -1439,33 +1449,28 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
                     alignment: Alignment.center,
                     child: const Icon(
                       Icons.attach_file_rounded,
-                      color: Color(0xFF64748B),
-                      size: 20, // Smaller icon size as requested
+                      color: Color(0xFF94A3B8),
+                      size: 22,
                     ),
                   ),
                 ),
               ),
             ),
 
-            // Text Input (Maximized width, fixed 2 lines height with internal vertical scrolling)
+            // Text Input (Single pill, no double outline, theme overridden)
             Expanded(
               child: Container(
-                constraints: const BoxConstraints(
-                  minHeight: 40,
-                  maxHeight: 58, // Fixed 2-line height ceiling
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: TextField(
                   controller: _textController,
                   keyboardType: TextInputType.multiline,
                   minLines: 1,
-                  maxLines: 2,
-                  scrollPhysics: const ClampingScrollPhysics(),
+                  maxLines: 4,
+                  cursorColor: const Color(0xFF38BDF8),
                   onChanged: (val) {
                     final hasText = val.trim().isNotEmpty;
                     if (hasText != _hasText) {
@@ -1475,63 +1480,73 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
                   onSubmitted: (_) => _handleSendText(),
                   style: const TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF0F172A),
+                    color: Colors.white,
                     height: 1.3,
                   ),
                   decoration: const InputDecoration(
                     hintText: 'Type a message...',
-                    hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 13.5),
+                    hintStyle: TextStyle(color: Color(0xFF64748B), fontSize: 14),
+                    filled: false,
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(vertical: 10),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 8),
 
-            // Send / Mic Button (Compact 38x38 button to save space)
+            // Send / Mic Button (Gradient circular button matching Buyer & Worker style)
             Padding(
               padding: const EdgeInsets.only(bottom: 2, right: 2),
               child: (_hasText || _textController.text.trim().isNotEmpty || _isSending)
                   ? Container(
-                      width: 38,
-                      height: 38,
+                      width: 40,
+                      height: 40,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF00875A),
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF38BDF8), Color(0xFF6366F1)],
+                        ),
                         shape: BoxShape.circle,
                       ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(19),
+                          borderRadius: BorderRadius.circular(20),
                           onTap: _isSending ? null : _handleSendText,
                           child: Center(
                             child: _isSending
                                 ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
+                                    width: 18,
+                                    height: 18,
                                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                   )
-                                : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                                : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
                           ),
                         ),
                       ),
                     )
                   : Container(
-                      width: 38,
-                      height: 38,
+                      width: 40,
+                      height: 40,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF00875A),
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF38BDF8), Color(0xFF6366F1)],
+                        ),
                         shape: BoxShape.circle,
                       ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(19),
+                          borderRadius: BorderRadius.circular(20),
                           onTap: _startRecording,
                           child: const Center(
-                            child: Icon(Icons.mic_rounded, color: Colors.white, size: 19),
+                            child: Icon(Icons.mic_rounded, color: Colors.white, size: 20),
                           ),
                         ),
                       ),

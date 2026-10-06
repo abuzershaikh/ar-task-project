@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../domain/models/service_model.dart';
 import '../../../../core/utils/service_unit_helper.dart';
+import '../../../../core/services/currency_service.dart';
 
 /// Visual color theme configuration for each category card.
 class CategoryCardPalette {
@@ -929,13 +930,18 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    Text(
-                      ServiceUnitHelper.getRateLabel(service.name, price),
-                      style: GoogleFonts.outfit(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w900,
-                        color: _palette.primaryDeep,
-                      ),
+                    ValueListenableBuilder<String>(
+                      valueListenable: CurrencyService.instance.currencyNotifier,
+                      builder: (context, _, __) {
+                        return Text(
+                          ServiceUnitHelper.getRateLabel(service.name, price),
+                          style: GoogleFonts.outfit(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w900,
+                            color: _palette.primaryDeep,
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -1414,17 +1420,22 @@ class _CategoryAccordionCardState extends State<CategoryAccordionCard>
                     width: 0.8,
                   ),
                 ),
-                child: Text(
-                  ServiceUnitHelper.getRateLabel(service.name, service.pricing.buyerPrice),
-                  style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: isInstagram
-                        ? const Color(0xFFDB2777)
-                        : ((service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO'))
-                            ? const Color(0xFF1D4ED8)
-                            : _palette.primaryDeep),
-                  ),
+                child: ValueListenableBuilder<String>(
+                  valueListenable: CurrencyService.instance.currencyNotifier,
+                  builder: (context, _, __) {
+                    return Text(
+                      ServiceUnitHelper.getRateLabel(service.name, service.pricing.buyerPrice),
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: isInstagram
+                            ? const Color(0xFFDB2777)
+                            : ((service.code.toUpperCase().contains('COMBO') || service.name.toUpperCase().contains('COMBO'))
+                                ? const Color(0xFF1D4ED8)
+                                : _palette.primaryDeep),
+                      ),
+                    );
+                  },
                 ),
               ),
               GestureDetector(

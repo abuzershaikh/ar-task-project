@@ -166,7 +166,7 @@ class _SplashPageState extends State<SplashPage> {
               const SizedBox(height: 32),
               
               Text(
-                'Marketing Pro',
+                'Review Gateway',
                 style: AppTextStyles.heading1.copyWith(
                   color: Colors.white,
                   fontSize: 36,

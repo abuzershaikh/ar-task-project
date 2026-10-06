@@ -1,6 +1,7 @@
 const { pool } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 const { sendWorkerChatNotification, sendBulkWorkerChatNotifications } = require('./fcm.service');
+const admin = require('../config/firebase');
 
 // Helper to extract YouTube video ID from URL
 function extractYouTubeId(url) {
@@ -14,7 +15,7 @@ class ChatService {
    * Get or create conversation for a worker
    */
   async getOrCreateConversation(workerId, workerDetails = {}) {
-    // Lookup user & worker info from DB
+    // 1. Lookup user & worker info from DB
     const [userRows] = await pool.query(
       `SELECT u.id, u.email, u.full_name as user_full_name, u.avatar_url, 
               w.id as worker_actual_id, w.full_name as worker_full_name, w.phone as worker_phone, u.phone as user_phone
@@ -25,10 +26,44 @@ class ChatService {
     );
 
     const userInfo = userRows[0] || {};
-    const avatar = workerDetails.avatarUrl || workerDetails.photoUrl || userInfo.avatar_url || '';
-    const resolvedName = workerDetails.name || userInfo.user_full_name || userInfo.worker_full_name || userInfo.email?.split('@')[0] || 'Worker';
-    const email = workerDetails.email || userInfo.email || '';
-    const phone = workerDetails.phone || userInfo.user_phone || userInfo.worker_phone || '';
+    let resolvedName = workerDetails.name || userInfo.user_full_name || userInfo.worker_full_name || '';
+    let email = workerDetails.email || userInfo.email || '';
+    let phone = workerDetails.phone || userInfo.user_phone || userInfo.worker_phone || '';
+    let avatar = workerDetails.avatarUrl || workerDetails.photoUrl || userInfo.avatar_url || '';
+
+    // 2. If name or email still missing/generic, resolve from Firebase Auth
+    if ((!resolvedName || resolvedName === 'Worker') || !email) {
+      try {
+        const fbUser = await admin.auth().getUser(workerId);
+        if (fbUser) {
+          if (!resolvedName || resolvedName === 'Worker') resolvedName = fbUser.displayName || '';
+          if (!email) email = fbUser.email || '';
+          if (!phone) phone = fbUser.phoneNumber || '';
+          if (!avatar) avatar = fbUser.photoURL || '';
+
+          // Check users table again with discovered email
+          if (email && (!resolvedName || resolvedName === 'Worker')) {
+            const [byEmail] = await pool.query(
+              "SELECT full_name, avatar_url, phone FROM users WHERE email = ? LIMIT 1",
+              [email]
+            );
+            if (byEmail.length > 0) {
+              if (byEmail[0].full_name) resolvedName = byEmail[0].full_name;
+              if (byEmail[0].avatar_url && !avatar) avatar = byEmail[0].avatar_url;
+              if (byEmail[0].phone && !phone) phone = byEmail[0].phone;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (!resolvedName || resolvedName === 'Worker') {
+      if (email) {
+        resolvedName = email.split('@')[0];
+      } else {
+        resolvedName = 'Worker';
+      }
+    }
 
     const [existing] = await pool.query(
       'SELECT * FROM support_conversations WHERE worker_id = ? LIMIT 1',
@@ -122,6 +157,49 @@ class ChatService {
     params.push(parseInt(limit, 10) || 100, parseInt(offset, 10) || 0);
 
     const [rows] = await pool.query(query, params);
+
+    // Auto-resolve any generic 'Worker' names or missing emails via Firebase Auth
+    for (const r of rows) {
+      if ((r.worker_name === 'Worker' || !r.worker_name || !r.worker_email) && r.worker_id) {
+        try {
+          const fbUser = await admin.auth().getUser(r.worker_id);
+          if (fbUser) {
+            let realName = fbUser.displayName;
+            let realEmail = fbUser.email || '';
+            let realPhone = fbUser.phoneNumber || '';
+            let realAvatar = fbUser.photoURL || '';
+
+            if (realEmail && (!realName || realName === 'Worker')) {
+              const [byEmail] = await pool.query(
+                "SELECT full_name, avatar_url, phone FROM users WHERE email = ? LIMIT 1",
+                [realEmail]
+              );
+              if (byEmail.length > 0 && byEmail[0].full_name) {
+                realName = byEmail[0].full_name;
+                if (!realAvatar && byEmail[0].avatar_url) realAvatar = byEmail[0].avatar_url;
+                if (!realPhone && byEmail[0].phone) realPhone = byEmail[0].phone;
+              }
+            }
+
+            if (!realName || realName === 'Worker') {
+              realName = realEmail ? realEmail.split('@')[0] : 'Worker';
+            }
+
+            if (realName && realName !== 'Worker') {
+              r.worker_name = realName;
+            }
+            if (realEmail) r.worker_email = realEmail;
+            if (realPhone && !r.worker_phone) r.worker_phone = realPhone;
+            if (realAvatar && !r.worker_avatar_url) r.worker_avatar_url = realAvatar;
+
+            await pool.query(
+              "UPDATE support_conversations SET worker_name = ?, worker_email = ?, worker_phone = COALESCE(NULLIF(worker_phone, ''), ?), worker_avatar_url = COALESCE(NULLIF(worker_avatar_url, ''), ?) WHERE id = ?",
+              [r.worker_name, r.worker_email, realPhone, realAvatar, r.id]
+            );
+          }
+        } catch (_) {}
+      }
+    }
 
     // Total unread count for admin badge
     const [countRows] = await pool.query(

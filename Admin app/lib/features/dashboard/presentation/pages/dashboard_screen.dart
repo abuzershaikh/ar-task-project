@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../../../../core/di/injection.dart';
 import '../../../support_chat/presentation/pages/admin_chat_list_screen.dart';
+import '../../../support_chat/presentation/pages/admin_buyer_chat_list_screen.dart';
 import '../../../more/presentation/pages/task_reviews_queue_screen.dart';
 import '../../../more/presentation/pages/kyc_queue_screen.dart';
 import '../../../more/presentation/pages/payouts_queue_screen.dart';
@@ -28,8 +29,16 @@ class DashboardScreen extends StatelessWidget {
           backgroundColor: AppColors.primary,
           actions: [
             IconButton(
+              icon: const Icon(Icons.support_agent_rounded),
+              tooltip: 'Buyer Support Chat',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AdminBuyerChatListScreen()),
+              ),
+            ),
+            IconButton(
               icon: const Icon(Icons.chat_bubble_rounded),
-              tooltip: 'Support Chats',
+              tooltip: 'Worker Support & Broadcast',
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const AdminChatListScreen()),

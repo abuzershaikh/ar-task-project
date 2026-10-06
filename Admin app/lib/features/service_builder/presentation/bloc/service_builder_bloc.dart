@@ -346,6 +346,7 @@ class ServiceBuilderBloc extends Bloc<ServiceBuilderEvent, ServiceBuilderState> 
         adminMarginPercent: event.adminMarginPercent ?? currentP.adminMarginPercent,
         marginType: event.marginType ?? currentP.marginType,
         workerReward: event.workerReward ?? currentP.workerReward,
+        extraPricePerMinute: event.extraPricePerMinute ?? currentP.extraPricePerMinute,
         chips: event.chips ?? currentP.chips,
       );
 

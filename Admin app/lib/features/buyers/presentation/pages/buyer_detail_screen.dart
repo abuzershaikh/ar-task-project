@@ -12,6 +12,7 @@ import '../widgets/buyer_detail_tabs/reviews_tab.dart';
 import '../widgets/buyer_detail_tabs/analytics_tab.dart';
 import '../widgets/buyer_detail_tabs/activity_tab.dart';
 import '../widgets/buyer_detail_tabs/risk_tab.dart';
+import '../../../support_chat/presentation/pages/admin_buyer_chat_screen.dart';
 
 class BuyerDetailScreen extends StatefulWidget {
   final String buyerId;
@@ -110,12 +111,27 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
         ),
         backgroundColor: Colors.transparent,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
+            tooltip: 'Live Chat with Buyer',
+            onPressed: () => _openChat(context),
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
               _handleAction(value);
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'chat',
+                child: Row(
+                  children: [
+                    Icon(Icons.chat_rounded, color: Color(0xFF4F46E5), size: 20),
+                    SizedBox(width: 8),
+                    Text('Chat with Buyer'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'status',
                 child: Row(
@@ -318,8 +334,26 @@ class _BuyerDetailScreenState extends State<BuyerDetailScreen>
     );
   }
 
+  void _openChat(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminBuyerChatScreen(
+          buyerId: widget.buyerId,
+          buyerName: widget.initialBuyer?.name,
+          buyerEmail: widget.initialBuyer?.email,
+          buyerPhone: widget.initialBuyer?.phone,
+          buyerAvatarUrl: widget.initialBuyer?.avatarUrl,
+        ),
+      ),
+    );
+  }
+
   void _handleAction(String action) {
     switch (action) {
+      case 'chat':
+        _openChat(context);
+        break;
       case 'status':
         _showStatusChangeDialog();
         break;

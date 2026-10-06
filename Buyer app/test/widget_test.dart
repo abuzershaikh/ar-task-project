@@ -13,7 +13,7 @@ import 'package:marketing_pro/main.dart';
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MarketingProApp());
+    await tester.pumpWidget(const ReviewGatewayApp());
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);

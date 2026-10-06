@@ -4,7 +4,7 @@ async function testGet(path, headers = {}) {
   return new Promise((resolve) => {
     const req = http.request({
       hostname: '65.20.77.112',
-      port: 3001,
+      port: 3000,
       path: path,
       method: 'GET',
       headers: {

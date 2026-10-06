@@ -41,6 +41,17 @@ export class BuyerServiceCatalogController {
                 // Fallback default pricing for newly created admin services
             }
 
+            let extraPricePerMinute = 0.50;
+            if (service.watchTimeOptions) {
+                let parsed = service.watchTimeOptions;
+                if (typeof parsed === 'string') {
+                    try { parsed = JSON.parse(parsed); } catch (_) {}
+                }
+                if (parsed && typeof parsed === 'object' && parsed.extraPricePerMinute !== undefined) {
+                    extraPricePerMinute = Number(parsed.extraPricePerMinute);
+                }
+            }
+
             catalogList.push({
                 id: service.id,
                 code: service.code,
@@ -54,6 +65,7 @@ export class BuyerServiceCatalogController {
                 elements: service.elements,
                 buyerUnitPrice: unitPrice,
                 currency: currency,
+                extraPricePerMinute: extraPricePerMinute,
                 pricing: {
                     modelType: 'fixed',
                     buyerPrice: unitPrice,
@@ -64,13 +76,14 @@ export class BuyerServiceCatalogController {
                     minQuantity: 1,
                     maxQuantity: 10000,
                     chips: [],
+                    extraPricePerMinute: extraPricePerMinute,
                 },
                 minAcceptHours: service.minAcceptHours || 1,
                 maxAcceptHours: service.maxAcceptHours || 72,
                 minCompleteHours: service.minCompleteHours || 1,
                 maxCompleteHours: service.maxCompleteHours || 168,
                 watchtimeSeconds: service.watchtimeSeconds || 0,
-                watchTimeOptions: service.watchTimeOptions || [0, 60, 120, 300],
+                watchTimeOptions: service.watchTimeOptions || { extraPricePerMinute, baseMinutes: 5 },
                 videoTutorialUrl: service.videoTutorialUrl,
                 audioGuideUrl: service.audioGuideUrl,
                 adminInstructions: service.adminInstructions,
@@ -121,6 +134,17 @@ export class BuyerServiceCatalogController {
             // Keep default fallback
         }
 
+        let extraPricePerMinute = 0.50;
+        if (service.watchTimeOptions) {
+            let parsed = service.watchTimeOptions;
+            if (typeof parsed === 'string') {
+                try { parsed = JSON.parse(parsed); } catch (_) {}
+            }
+            if (parsed && typeof parsed === 'object' && parsed.extraPricePerMinute !== undefined) {
+                extraPricePerMinute = Number(parsed.extraPricePerMinute);
+            }
+        }
+
         return {
             success: true,
             service: {
@@ -131,6 +155,7 @@ export class BuyerServiceCatalogController {
                 elements: service.elements,
                 buyerUnitPrice: unitPrice,
                 currency: currency,
+                extraPricePerMinute: extraPricePerMinute,
                 pricing: {
                     modelType: 'fixed',
                     buyerPrice: unitPrice,
@@ -141,9 +166,10 @@ export class BuyerServiceCatalogController {
                     minQuantity: 1,
                     maxQuantity: 10000,
                     chips: [],
+                    extraPricePerMinute: extraPricePerMinute,
                 },
                 watchtimeSeconds: service.watchtimeSeconds || 0,
-                watchTimeOptions: service.watchTimeOptions || [0, 60, 120, 300],
+                watchTimeOptions: service.watchTimeOptions || { extraPricePerMinute, baseMinutes: 5 },
                 videoTutorialUrl: service.videoTutorialUrl,
                 audioGuideUrl: service.audioGuideUrl,
                 adminInstructions: service.adminInstructions,

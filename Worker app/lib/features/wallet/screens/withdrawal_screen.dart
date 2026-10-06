@@ -14,10 +14,12 @@ import 'transactions_history_screen.dart';
 /// - Zero dark-theme artifacts: full light-theme encapsulation.
 class WithdrawalScreen extends StatefulWidget {
   final double availableBalance;
+  final double? minWithdrawalLimit;
 
   const WithdrawalScreen({
     super.key,
     required this.availableBalance,
+    this.minWithdrawalLimit,
   });
 
   @override
@@ -29,7 +31,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
   late final TextEditingController _upiController;
   late final TextEditingController _paypalController;
   bool _isLoading = false;
-  double _minLimit = 100.0;
+  double _minLimit = 10.0;
   String _selectedMethod = 'UPI'; // 'UPI' | 'BANK' | 'PAYPAL'
 
   // ── Color Tokens ────────────────────────────────────────────────────────────
@@ -61,9 +63,31 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
     final wallet = context.read<TaskProvider>().walletData;
     final bankDetails = profileProvider.bankDetails;
 
-    _minLimit = double.tryParse(wallet['minWithdrawalLimit']?.toString() ?? '') ?? 100.0;
-    final defaultAmt = widget.availableBalance >= _minLimit ? _minLimit.toInt().toString() : '100';
+    _minLimit = widget.minWithdrawalLimit ??
+        double.tryParse(wallet['minWithdrawalLimit']?.toString() ?? '') ?? 10.0;
+    final defaultAmt = _minLimit.toInt().toString();
     _amountController = TextEditingController(text: defaultAmt);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await context.read<TaskProvider>().fetchWalletData();
+        if (mounted) {
+          final w = context.read<TaskProvider>().walletData;
+          final updatedLimit = double.tryParse(w['minWithdrawalLimit']?.toString() ?? '');
+          if (updatedLimit != null && updatedLimit != _minLimit) {
+            final oldDefaultAmt = _minLimit.toInt().toString();
+            setState(() {
+              _minLimit = updatedLimit;
+              if (_amountController.text == oldDefaultAmt ||
+                  _amountController.text == '100' ||
+                  _amountController.text.isEmpty) {
+                _amountController.text = _minLimit.toInt().toString();
+              }
+            });
+          }
+        }
+      } catch (_) {}
+    });
 
     // Live saved UPI
     final realUpi = bankDetails['upiId'] ?? 
@@ -316,13 +340,15 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
     final ifsc = bankDetails['ifscCode']?.toString().trim() ?? '';
     final paypal = bankDetails['paypalId']?.toString().trim() ?? '';
 
-    // Dynamic quick chips
+    // Dynamic quick chips starting from _minLimit
     final List<int> quickChips = [];
-    if (_minLimit.toInt() > 0) quickChips.add(_minLimit.toInt());
-    if (!quickChips.contains(250) && widget.availableBalance >= 250) quickChips.add(250);
-    if (!quickChips.contains(500) && widget.availableBalance >= 500) quickChips.add(500);
-    if (!quickChips.contains(1000) && widget.availableBalance >= 1000) quickChips.add(1000);
-    if (quickChips.isEmpty) quickChips.addAll([100, 200, 500, 1000]);
+    final minInt = _minLimit.toInt() > 0 ? _minLimit.toInt() : 10;
+    quickChips.add(minInt);
+    for (final step in [25, 50, 100, 200, 500, 1000]) {
+      if (step > minInt && !quickChips.contains(step) && (widget.availableBalance >= step || quickChips.length < 4)) {
+        quickChips.add(step);
+      }
+    }
 
     return Theme(
       data: ThemeData.light().copyWith(
@@ -404,7 +430,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: _bluePrimary.withOpacity(0.3),
+                        color: _bluePrimary.withValues(alpha: 0.3),
                         blurRadius: 14,
                         offset: const Offset(0, 5),
                       ),
@@ -450,7 +476,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                     border: Border.all(color: const Color(0xFFE2E8F0)),
                     boxShadow: [
                       BoxShadow(
-                        color: _blueNavy.withOpacity(0.04),
+                        color: _blueNavy.withValues(alpha: 0.04),
                         blurRadius: 14,
                         offset: const Offset(0, 4),
                       ),
@@ -459,13 +485,34 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Enter Withdrawal Amount',
-                        style: GoogleFonts.poppins(
-                          color: _textNavy,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14.5,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Enter Withdrawal Amount',
+                            style: GoogleFonts.poppins(
+                              color: _textNavy,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14.5,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _blueIce,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: _blueBorder),
+                            ),
+                            child: Text(
+                              'Min ₹${_minLimit.toStringAsFixed(0)}',
+                              style: GoogleFonts.poppins(
+                                color: _bluePrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11.5,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 10),
 
@@ -475,7 +522,7 @@ class _WithdrawalScreenState extends State<WithdrawalScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: _bluePrimary.withOpacity(0.4), width: 1.5),
+                          border: Border.all(color: _bluePrimary.withValues(alpha: 0.4), width: 1.5),
                         ),
                         child: Row(
                           children: [

@@ -56,6 +56,8 @@ async function initTables() {
         INDEX idx_msg_worker (worker_id),
         INDEX idx_msg_created (created_at ASC)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     // Safe column migrations for existing deployments
     try {
       await connection.query(`ALTER TABLE support_conversations ADD COLUMN IF NOT EXISTS worker_avatar_url VARCHAR(500) NULL AFTER worker_email`);

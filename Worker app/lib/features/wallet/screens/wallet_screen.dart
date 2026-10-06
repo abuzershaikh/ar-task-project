@@ -100,6 +100,8 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
     final wallet = taskProvider.walletData;
     final double walletBalance =
         (wallet['balance'] ?? wallet['availableBalance'] ?? 0.0).toDouble();
+    final double minWithdrawalLimit =
+        double.tryParse(wallet['minWithdrawalLimit']?.toString() ?? '') ?? 10.0;
 
     final topPadding = MediaQuery.of(context).padding.top;
 
@@ -185,7 +187,23 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                     // ── 2. Withdrawal Milestone Progress Card ──────────────
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _buildJungleWithdrawalInfoCard(walletBalance),
+                      child: GestureDetector(
+                        onTap: () async {
+                          _audioPlayer?.pause();
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => WithdrawalScreen(
+                                availableBalance: walletBalance,
+                                minWithdrawalLimit: minWithdrawalLimit,
+                              ),
+                            ),
+                          );
+                          if (mounted && widget.isCurrentTab && !_isMuted) {
+                            _audioPlayer?.resume();
+                          }
+                        },
+                        child: _buildJungleWithdrawalInfoCard(walletBalance, minWithdrawalLimit),
+                      ),
                     ),
                     const SizedBox(height: 22),
 
@@ -242,6 +260,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                             MaterialPageRoute(
                               builder: (_) => WithdrawalScreen(
                                 availableBalance: walletBalance,
+                                minWithdrawalLimit: minWithdrawalLimit,
                               ),
                             ),
                           );
@@ -644,9 +663,10 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
   }
 
   // ── Gamified Withdrawal Milestone Progress Card ─────────────────────────────
-  Widget _buildJungleWithdrawalInfoCard(double walletBalance) {
-    final bool isEligible = walletBalance >= 100;
-    final double progress = (walletBalance / 100.0).clamp(0.0, 1.0);
+  Widget _buildJungleWithdrawalInfoCard(double walletBalance, double minLimit) {
+    final double targetThreshold = minLimit > 0 ? minLimit : 10.0;
+    final bool isEligible = walletBalance >= targetThreshold;
+    final double progress = (walletBalance / targetThreshold).clamp(0.0, 1.0);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -718,7 +738,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                     Text(
                       isEligible
                           ? '🎉 Instant Cashout Unlocked!'
-                          : 'Payout Milestone (Min. ₹100)',
+                          : 'Payout Milestone (Min. ₹${targetThreshold.toStringAsFixed(0)})',
                       style: GoogleFonts.poppins(
                         color: isEligible ? const Color(0xFF4ADE80) : const Color(0xFFFDE047),
                         fontWeight: FontWeight.w800,
@@ -729,7 +749,7 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                     Text(
                       isEligible
                           ? 'Zero fees • Direct to UPI / Bank transfer'
-                          : 'Earn ₹${(100 - walletBalance).clamp(0, 100).toStringAsFixed(0)} more to cashout immediately',
+                          : 'Earn ₹${(targetThreshold - walletBalance).clamp(0.0, targetThreshold).toStringAsFixed(0)} more to cashout immediately',
                       style: GoogleFonts.poppins(
                         color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 11,
@@ -809,7 +829,9 @@ class _WalletScreenState extends State<WalletScreen> with WidgetsBindingObserver
                 ),
               ),
               Text(
-                isEligible ? '₹100 (Threshold Reached)' : '₹100 Target',
+                isEligible
+                    ? '₹${targetThreshold.toStringAsFixed(0)} (Threshold Reached)'
+                    : '₹${targetThreshold.toStringAsFixed(0)} Target',
                 style: GoogleFonts.poppins(
                   color: isEligible ? const Color(0xFF86EFAC) : const Color(0xFFFDE047),
                   fontSize: 10,

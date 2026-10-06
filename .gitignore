@@ -63,3 +63,7 @@ Admin app/*.png
 Admin app/*.xml
 Admin app/*.db
 Worker app/*.png
+
+# App binaries
+*review-gateway.apk
+**/review-gateway.apk

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/services/currency_service.dart';
+import '../../../../shared/presentation/widgets/currency_toggle_switch.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -90,31 +92,34 @@ class _SettingsPageState extends State<SettingsPage> {
               onChanged: (v) => setState(() => _haptics = v),
             ),
             _buildDivider(),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF38BDF8).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.currency_rupee_rounded, color: Color(0xFF38BDF8), size: 18),
-              ),
-              title: Text(
-                'Default Currency',
-                style: GoogleFonts.outfit(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                'INR (₹ Indian Rupee)',
-                style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 11),
-              ),
-              trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text('₹ INR', style: GoogleFonts.outfit(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-              ),
+            ValueListenableBuilder<String>(
+              valueListenable: CurrencyService.instance.currencyNotifier,
+              builder: (context, activeCurrency, _) {
+                final isUSD = activeCurrency == 'USD';
+                return ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: (isUSD ? const Color(0xFF38BDF8) : const Color(0xFF6366F1)).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      isUSD ? Icons.attach_money_rounded : Icons.currency_rupee_rounded,
+                      color: isUSD ? const Color(0xFF38BDF8) : const Color(0xFF6366F1),
+                      size: 18,
+                    ),
+                  ),
+                  title: Text(
+                    'Pricing Currency',
+                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    isUSD ? 'USD (\$ US Dollar) • Rate: ₹${CurrencyService.instance.usdExchangeRate.toStringAsFixed(0)}' : 'INR (₹ Indian Rupee)',
+                    style: GoogleFonts.outfit(color: const Color(0xFF64748B), fontSize: 11),
+                  ),
+                  trailing: const CurrencyToggleSwitch(compact: true),
+                );
+              },
             ),
             _buildDivider(),
             ListTile(
