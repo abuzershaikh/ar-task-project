@@ -3,6 +3,7 @@ import { RewardCalculator } from '../engines/pricing-engine/reward-calculator';
 import { PriceCalculator } from '../engines/pricing-engine/price-calculator';
 import { MarginPolicy } from '../engines/pricing-engine/policies/margin-policy';
 import { MarginType } from '../modules/service-catalog/enums/margin-type.enum';
+import { calculateYouTubeDurationPricing } from '../engines/pricing-engine/youtube-duration-pricing';
 
 describe('Pricing Engine & Service Catalog Calculations', () => {
     let marginCalculator: MarginCalculator;
@@ -55,10 +56,63 @@ describe('Pricing Engine & Service Catalog Calculations', () => {
             }).toThrow();
         });
 
+        it('should reject a 100% margin because the worker must receive a positive reward', () => {
+            expect(() => {
+                MarginPolicy.validateMargin(20, MarginType.PERCENTAGE, 100);
+            }).toThrow();
+        });
+
         it('should throw BadRequestException if buyer price is zero or negative', () => {
             expect(() => {
                 MarginPolicy.validateMargin(0, MarginType.FIXED, 5);
             }).toThrow();
+        });
+    });
+
+    describe('YouTube duration pricing', () => {
+        it('keeps the configured percentage worker share for extra watch time', () => {
+            const result = calculateYouTubeDurationPricing({
+                baseBuyerUnitPrice: 2.00,
+                baseWorkerReward: 1.50,
+                marginType: MarginType.PERCENTAGE,
+                watchTimeSeconds: 8 * 60,
+                extraPricePerMinute: 0.50,
+            });
+
+            expect(result).toEqual({
+                extraMinutes: 3,
+                extraPerUnit: 1.50,
+                buyerUnitPrice: 3.50,
+                workerReward: 2.63,
+                platformMargin: 0.87,
+            });
+        });
+
+        it('keeps a fixed platform fee fixed for extra watch time', () => {
+            const result = calculateYouTubeDurationPricing({
+                baseBuyerUnitPrice: 2.00,
+                baseWorkerReward: 1.50,
+                marginType: MarginType.FIXED,
+                watchTimeSeconds: 8 * 60,
+                extraPricePerMinute: 0.50,
+            });
+
+            expect(result.workerReward).toBe(3.00);
+            expect(result.platformMargin).toBe(0.50);
+        });
+
+        it('does not add a charge at or below the included five minutes', () => {
+            const result = calculateYouTubeDurationPricing({
+                baseBuyerUnitPrice: 2.00,
+                baseWorkerReward: 1.50,
+                marginType: MarginType.PERCENTAGE,
+                watchTimeSeconds: 300,
+                extraPricePerMinute: 0.50,
+            });
+
+            expect(result.extraMinutes).toBe(0);
+            expect(result.buyerUnitPrice).toBe(2.00);
+            expect(result.workerReward).toBe(1.50);
         });
     });
 });

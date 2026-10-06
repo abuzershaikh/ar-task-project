@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+// ignore: library_prefixes
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class BuyerChatMessage {
@@ -12,6 +13,7 @@ class BuyerChatMessage {
   final String content;
   final String? mediaUrl;
   final String? youtubeId;
+  final int durationSeconds;
   final bool isRead;
   final DateTime createdAt;
 
@@ -24,18 +26,56 @@ class BuyerChatMessage {
     required this.content,
     this.mediaUrl,
     this.youtubeId,
+    this.durationSeconds = 0,
     required this.isRead,
     required this.createdAt,
   });
 
   bool get isAdmin => senderType == 'ADMIN';
   bool get isBuyer => senderType == 'BUYER';
-  bool get isYoutube => messageType == 'YOUTUBE' || (youtubeId != null && youtubeId!.isNotEmpty);
-  bool get isImage => messageType == 'IMAGE';
+
+  static String? extractYoutubeId(String text) {
+    if (text.isEmpty) return null;
+    final regExp = RegExp(
+      r'(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})',
+      caseSensitive: false,
+    );
+    final match = regExp.firstMatch(text);
+    return match?.group(1);
+  }
+
+  String? get effectiveYoutubeId {
+    if (youtubeId != null && youtubeId!.isNotEmpty) return youtubeId;
+    return extractYoutubeId(content);
+  }
+
+  bool get isYoutube =>
+      messageType == 'YOUTUBE' ||
+      (youtubeId != null && youtubeId!.isNotEmpty) ||
+      effectiveYoutubeId != null;
+
+  bool get isAudio =>
+      messageType == 'AUDIO' ||
+      (mediaUrl != null &&
+          (mediaUrl!.toLowerCase().endsWith('.m4a') ||
+              mediaUrl!.toLowerCase().endsWith('.mp3') ||
+              mediaUrl!.toLowerCase().endsWith('.aac') ||
+              mediaUrl!.toLowerCase().endsWith('.wav') ||
+              mediaUrl!.toLowerCase().endsWith('.ogg')));
+
+  bool get isImage =>
+      messageType == 'IMAGE' ||
+      (mediaUrl != null &&
+          !isAudio &&
+          (mediaUrl!.toLowerCase().endsWith('.jpg') ||
+              mediaUrl!.toLowerCase().endsWith('.jpeg') ||
+              mediaUrl!.toLowerCase().endsWith('.png') ||
+              mediaUrl!.toLowerCase().endsWith('.webp')));
 
   String? get youtubeThumbnailUrl {
-    if (youtubeId != null && youtubeId!.isNotEmpty) {
-      return 'https://img.youtube.com/vi/$youtubeId/hqdefault.jpg';
+    final yId = effectiveYoutubeId;
+    if (yId != null && yId.isNotEmpty) {
+      return 'https://img.youtube.com/vi/$yId/hqdefault.jpg';
     }
     return null;
   }
@@ -58,21 +98,32 @@ class BuyerChatMessage {
       return parsed?.toUtc() ?? DateTime.now().toUtc();
     }
 
+    final rawContent = json['content']?.toString() ?? '';
+    final rawYt = (json['youtube_id'] ?? json['youtubeId'])?.toString();
+    final finalYt = (rawYt != null && rawYt.isNotEmpty) ? rawYt : BuyerChatMessage.extractYoutubeId(rawContent);
+
     return BuyerChatMessage(
       id: json['id']?.toString() ?? '',
       conversationId: json['conversation_id']?.toString() ?? json['conversationId']?.toString() ?? '',
       buyerId: json['buyer_id']?.toString() ?? json['buyerId']?.toString() ?? '',
       senderType: json['sender_type']?.toString().toUpperCase() ?? json['senderType']?.toString().toUpperCase() ?? 'BUYER',
       messageType: json['message_type']?.toString().toUpperCase() ?? json['messageType']?.toString().toUpperCase() ?? 'TEXT',
-      content: json['content']?.toString() ?? '',
+      content: rawContent,
       mediaUrl: json['media_url']?.toString() ?? json['mediaUrl']?.toString(),
-      youtubeId: json['youtube_id']?.toString() ?? json['youtubeId']?.toString(),
+      youtubeId: finalYt,
+      durationSeconds: int.tryParse((json['duration_seconds'] ?? json['durationSeconds'])?.toString() ?? '0') ?? 0,
       isRead: json['is_read'] == 1 || json['is_read'] == true || json['isRead'] == 1 || json['isRead'] == true,
       createdAt: parseDate(json['created_at'] ?? json['createdAt']),
     );
   }
 
-  BuyerChatMessage copyWith({bool? isRead, String? content}) {
+  BuyerChatMessage copyWith({
+    bool? isRead,
+    String? content,
+    String? mediaUrl,
+    String? youtubeId,
+    int? durationSeconds,
+  }) {
     return BuyerChatMessage(
       id: id,
       conversationId: conversationId,
@@ -80,8 +131,9 @@ class BuyerChatMessage {
       senderType: senderType,
       messageType: messageType,
       content: content ?? this.content,
-      mediaUrl: mediaUrl,
-      youtubeId: youtubeId,
+      mediaUrl: mediaUrl ?? this.mediaUrl,
+      youtubeId: youtubeId ?? this.youtubeId,
+      durationSeconds: durationSeconds ?? this.durationSeconds,
       isRead: isRead ?? this.isRead,
       createdAt: createdAt,
     );

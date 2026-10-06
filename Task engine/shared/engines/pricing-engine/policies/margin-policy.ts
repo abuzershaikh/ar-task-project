@@ -3,11 +3,11 @@ import { MarginType } from '../../../modules/service-catalog/enums/margin-type.e
 
 export class MarginPolicy {
     static validateMargin(buyerUnitPrice: number, marginType: MarginType, marginValue: number): void {
-        if (buyerUnitPrice <= 0) {
+        if (!Number.isFinite(buyerUnitPrice) || buyerUnitPrice <= 0) {
             throw new BadRequestException('buyerUnitPrice must be greater than 0');
         }
 
-        if (marginValue < 0) {
+        if (!Number.isFinite(marginValue) || marginValue < 0) {
             throw new BadRequestException('marginValue cannot be negative');
         }
 
@@ -21,15 +21,15 @@ export class MarginPolicy {
             throw new BadRequestException(`Unsupported marginType '${marginType}'`);
         }
 
-        if (marginAmount > buyerUnitPrice) {
+        if (marginAmount >= buyerUnitPrice) {
             throw new BadRequestException(
                 `Calculated margin (₹${marginAmount.toFixed(2)}) exceeds buyer unit price (₹${buyerUnitPrice.toFixed(2)})`,
             );
         }
 
         const workerReward = buyerUnitPrice - marginAmount;
-        if (workerReward < 0) {
-            throw new BadRequestException('Worker reward cannot become negative');
+        if (workerReward <= 0) {
+            throw new BadRequestException('Worker reward must be greater than zero');
         }
     }
 }

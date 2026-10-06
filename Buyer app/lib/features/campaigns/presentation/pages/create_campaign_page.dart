@@ -341,7 +341,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
         trimmed.contains('instagram.com') ||
         trimmed.startsWith('@');
     final isYouTube = _isYouTubeService(_selectedService) ||
-        (!isGoogleBusiness && (trimmed.contains('youtube.com') || trimmed.contains('youtu.be')));
+        (!isGoogleBusiness &&
+            (trimmed.contains('youtube.com') || trimmed.contains('youtu.be')));
 
     if (!isGoogleBusiness && !isPlayStore && !isYouTube && !isInstagram) {
       return;
@@ -678,8 +679,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
           'maxWords': _maxWords,
           'serviceCode': _selectedService?.code,
           'targetUrl': _targetUrlController.text.trim(),
-          'appName': cleanBrand.isNotEmpty ? cleanBrand : (_gmbBusinessName ?? ''),
-          'businessName': cleanBrand.isNotEmpty ? cleanBrand : (_gmbBusinessName ?? ''),
+          'appName':
+              cleanBrand.isNotEmpty ? cleanBrand : (_gmbBusinessName ?? ''),
+          'businessName':
+              cleanBrand.isNotEmpty ? cleanBrand : (_gmbBusinessName ?? ''),
           'category': _gmbCategory ?? '',
           'description': _gmbDescription ?? '',
           'videoTitle': _isYouTubeService(_selectedService)
@@ -931,7 +934,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       final extraPerMin = _selectedService!.pricing.extraPricePerMinute > 0
           ? _selectedService!.pricing.extraPricePerMinute
           : 0.50;
-      return double.parse((basePrice + (extraMinutes * extraPerMin)).toStringAsFixed(2));
+      return double.parse(
+          (basePrice + (extraMinutes * extraPerMin)).toStringAsFixed(2));
     }
     return basePrice;
   }
@@ -1044,7 +1048,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               : (_isYouTubeCombo(_selectedService)
                   ? (_ytRequiredWatchSeconds ??
                       (_ytDurationSeconds != null
-                          ? (_ytDurationSeconds! > 300 ? 300 : _ytDurationSeconds!)
+                          ? (_ytDurationSeconds! > 300
+                              ? 300
+                              : _ytDurationSeconds!)
                           : 300))
                   : 0),
           'selectedWatchMinutes': _isYouTubeCombo(_selectedService) &&
@@ -1379,7 +1385,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
             builder: (context, _, __) {
               return Container(
                 margin: const EdgeInsets.only(right: 14, top: 10, bottom: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF1F2),
                   borderRadius: BorderRadius.circular(10),
@@ -1556,7 +1563,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     valueListenable: CurrencyService.instance.currencyNotifier,
                     builder: (context, _, __) {
                       return Text(
-                        ServiceUnitHelper.getRateLabel(s.name, s.pricing.buyerPrice,
+                        ServiceUnitHelper.getRateLabel(
+                            s.name, s.pricing.buyerPrice,
                             serviceCode: s.code),
                         style: const TextStyle(
                             color: Color(0xFF2563EB),
@@ -2054,8 +2062,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
                     // Google Business Profile Preview Card
                     if (_isGoogleBusinessService(_selectedService) &&
-                        ((_gmbBusinessName != null && _gmbBusinessName!.isNotEmpty) ||
-                         (_appName != null && _appName!.isNotEmpty))) ...[
+                        ((_gmbBusinessName != null &&
+                                _gmbBusinessName!.isNotEmpty) ||
+                            (_appName != null && _appName!.isNotEmpty))) ...[
                       const SizedBox(height: 14),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -2091,8 +2100,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(11),
                                     child: ((_gmbIcon ?? _appIcon) != null &&
-                                            (_gmbIcon ?? _appIcon)!.isNotEmpty &&
-                                            (_gmbIcon ?? _appIcon)!.startsWith('http'))
+                                            (_gmbIcon ?? _appIcon)!
+                                                .isNotEmpty &&
+                                            (_gmbIcon ?? _appIcon)!
+                                                .startsWith('http'))
                                         ? Image.network(
                                             (_gmbIcon ?? _appIcon)!,
                                             fit: BoxFit.cover,
@@ -2123,7 +2134,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                         children: [
                                           Expanded(
                                             child: Text(
-                                              _gmbBusinessName ?? _appName ?? 'Google Business',
+                                              _gmbBusinessName ??
+                                                  _appName ??
+                                                  'Google Business',
                                               style: const TextStyle(
                                                 fontSize: 13.5,
                                                 fontWeight: FontWeight.bold,
@@ -2163,7 +2176,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                       ),
                                       const SizedBox(height: 3),
                                       Text(
-                                        _gmbCategory != null && _gmbCategory!.isNotEmpty
+                                        _gmbCategory != null &&
+                                                _gmbCategory!.isNotEmpty
                                             ? _gmbCategory!
                                             : 'Google Maps Business Listing',
                                         style: const TextStyle(
@@ -2177,7 +2191,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                 ),
                               ],
                             ),
-                            if (_gmbDescription != null && _gmbDescription!.isNotEmpty) ...[
+                            if (_gmbDescription != null &&
+                                _gmbDescription!.isNotEmpty) ...[
                               const SizedBox(height: 10),
                               Container(
                                 width: double.infinity,
@@ -2186,7 +2201,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  border: Border.all(
+                                      color: const Color(0xFFBFDBFE)),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2194,8 +2210,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                     const Row(
                                       children: [
                                         Icon(Icons.description_outlined,
-                                            size: 13,
-                                            color: Color(0xFF2563EB)),
+                                            size: 13, color: Color(0xFF2563EB)),
                                         SizedBox(width: 4),
                                         Text(
                                           'Business Description',
@@ -2660,7 +2675,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                   SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      (_ytDurationSeconds != null && _ytDurationSeconds! > 300)
+                                      (_ytDurationSeconds != null &&
+                                              _ytDurationSeconds! > 300)
                                           ? 'Worker must watch selected $_selectedWatchMinutes minutes before submit unlocks'
                                           : 'Worker must watch complete video before submit unlocks',
                                       style: const TextStyle(
@@ -2893,8 +2909,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Quantity:',
-                                style:
-                                    TextStyle(color: Colors.white70, fontSize: 13)),
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 13)),
                             Text(
                                 ServiceUnitHelper.getUnitName(s.name,
                                     serviceCode: s.code,
@@ -2916,17 +2932,19 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                               const Text('Base Rate (up to 5 min):',
                                   style: TextStyle(
                                       color: Colors.white60, fontSize: 13)),
-                              Text(CurrencyService.instance.formatPrice(s.pricing.buyerPrice),
+                              Text(
+                                  CurrencyService.instance
+                                      .formatPrice(s.pricing.buyerPrice),
                                   style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 13)),
+                                      color: Colors.white70, fontSize: 13)),
                             ],
                           ),
                           const SizedBox(height: 6),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Watch Duration: ${_selectedWatchMinutes} mins',
+                              Text(
+                                  'Watch Duration: ${_selectedWatchMinutes} mins',
                                   style: const TextStyle(
                                       color: Color(0xFFFCA5A5), fontSize: 13)),
                               Text(
@@ -2950,7 +2968,9 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                 'Rate per ${ServiceUnitHelper.getUnitName(s.name, serviceCode: s.code, count: 1)}:',
                                 style: const TextStyle(
                                     color: Colors.white70, fontSize: 13)),
-                            Text(CurrencyService.instance.formatPrice(_getEffectiveUnitPrice()),
+                            Text(
+                                CurrencyService.instance
+                                    .formatPrice(_getEffectiveUnitPrice()),
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -2966,7 +2986,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15)),
-                            Text(CurrencyService.instance.formatPrice(totalCost),
+                            Text(
+                                CurrencyService.instance.formatPrice(totalCost),
                                 style: const TextStyle(
                                     color: Colors.greenAccent,
                                     fontWeight: FontWeight.w900,
@@ -2983,9 +3004,7 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               // Auto-Approve Proofs Toggle Card
               Container(
                 decoration: BoxDecoration(
-                  color: _autoApprove
-                      ? const Color(0xFFF0FDF4)
-                      : Colors.white,
+                  color: _autoApprove ? const Color(0xFFF0FDF4) : Colors.white,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: _autoApprove
@@ -3808,7 +3827,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                     ),
                     const SizedBox(height: 2),
                     ValueListenableBuilder<String>(
-                      valueListenable: CurrencyService.instance.currencyNotifier,
+                      valueListenable:
+                          CurrencyService.instance.currencyNotifier,
                       builder: (context, _, __) {
                         return Text(
                           CurrencyService.instance.formatPrice(effectiveUnit),
@@ -3892,8 +3912,8 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
             spacing: 8,
             runSpacing: 6,
             children: [
-              _buildDurationChip(
-                  5, '5 Min (Base ${CurrencyService.instance.formatPrice(s.pricing.buyerPrice)})'),
+              _buildDurationChip(5,
+                  '5 Min (Base ${CurrencyService.instance.formatPrice(s.pricing.buyerPrice)})'),
               if (maxAllowedMin >= 10) _buildDurationChip(10, '10 Min'),
               if (maxAllowedMin >= 15) _buildDurationChip(15, '15 Min'),
               if (maxAllowedMin >= 20) _buildDurationChip(20, '20 Min'),

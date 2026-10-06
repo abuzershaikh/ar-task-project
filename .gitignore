@@ -67,3 +67,4 @@ Worker app/*.png
 # App binaries
 *review-gateway.apk
 **/review-gateway.apk
+Admin app/*.apk

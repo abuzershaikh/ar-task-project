@@ -34,6 +34,7 @@ import { YouTubeMetadataService } from '../../../../shared/services/youtube-meta
 import { GoogleMapsMetadataService } from '../../../../shared/services/google-maps-metadata.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { resolveShortUrl } from '../../../../shared/common/utils/task-identity.util';
+import { calculateYouTubeDurationPricing, roundCurrency } from '../../../../shared/engines/pricing-engine/youtube-duration-pricing';
 
 @ApiTags('Buyer - Orders')
 @Roles(UserRole.BUYER)
@@ -318,7 +319,7 @@ export class BuyerOrderController {
                             // If buyer explicitly specified watch time via slider (> 300s):
                             if (reqWatchTime > 300) {
                                 const maxAllowedSec = videoDurationSeconds > 0 ? videoDurationSeconds : reqWatchTime;
-                                watchTimeSeconds = Math.min(reqWatchTime, maxAllowedSec);
+                                watchTimeSeconds = Math.min(reqWatchTime, maxAllowedSec, 60 * 60);
                             } else {
                                 watchTimeSeconds = Math.min(reqWatchTime, videoDurationSeconds > 0 ? videoDurationSeconds : reqWatchTime);
                             }
@@ -332,6 +333,13 @@ export class BuyerOrderController {
             } catch (err: any) {
                 this.logger.warn(`Failed to auto-fetch YouTube metadata for ${targetUrl}: ${err?.message || err}`);
             }
+        }
+
+        // The buyer UI offers whole-minute selections from 5 to 60 minutes.
+        // Enforce the same upper bound on the API so a modified request cannot
+        // create an unbounded duration/reward.
+        if (isYouTubeCombo) {
+            watchTimeSeconds = Math.max(0, Math.min(Number(watchTimeSeconds) || 0, 60 * 60));
         }
 
         // Auto-extract Google Play Store app icon & name if targetUrl is a Play Store link or package ID
@@ -352,6 +360,7 @@ export class BuyerOrderController {
         // Dynamic duration-based pricing strictly for YouTube Combo (> 5 minutes / 300s)
         let effectiveBuyerUnitPrice = Number(snapshot.buyerUnitPrice);
         let effectiveWorkerReward = Number(snapshot.workerRewardSnapshot);
+        let effectivePlatformMargin = Number(snapshot.marginAmount);
 
         if (isYouTubeCombo && watchTimeSeconds > 300) {
             extraMinutes = Math.ceil((watchTimeSeconds - 300) / 60);
@@ -362,15 +371,33 @@ export class BuyerOrderController {
             if (opts && typeof opts === 'object' && opts.extraPricePerMinute !== undefined) {
                 extraPricePerMin = Number(opts.extraPricePerMinute);
             }
-            const extraPerUnit = Number((extraMinutes * extraPricePerMin).toFixed(2));
-            effectiveBuyerUnitPrice = Number((effectiveBuyerUnitPrice + extraPerUnit).toFixed(2));
-            effectiveWorkerReward = Number((effectiveWorkerReward + (extraPerUnit * 0.70)).toFixed(2));
+            // Keep the configured service share for additional watch time.
+            // The worker payout is calculated only from the server snapshot;
+            // buyer-provided unitPrice is deliberately ignored.
+            if (!Number.isFinite(extraPricePerMin) || extraPricePerMin <= 0) {
+                extraPricePerMin = 0.50;
+            }
+            try {
+                const durationPricing = calculateYouTubeDurationPricing({
+                    baseBuyerUnitPrice: effectiveBuyerUnitPrice,
+                    baseWorkerReward: effectiveWorkerReward,
+                    marginType: snapshot.marginType,
+                    watchTimeSeconds,
+                    extraPricePerMinute: extraPricePerMin,
+                });
+                extraMinutes = durationPricing.extraMinutes;
+                effectiveBuyerUnitPrice = durationPricing.buyerUnitPrice;
+                effectiveWorkerReward = durationPricing.workerReward;
+                effectivePlatformMargin = durationPricing.platformMargin;
+            } catch (error: any) {
+                throw new BadRequestException(`Cannot calculate YouTube duration pricing: ${error.message}`);
+            }
         }
 
-        const totalCost = Number((effectiveBuyerUnitPrice * quantity).toFixed(2));
+        const totalCost = roundCurrency(effectiveBuyerUnitPrice * quantity);
         snapshot.buyerUnitPrice = effectiveBuyerUnitPrice;
         snapshot.workerRewardSnapshot = effectiveWorkerReward;
-        snapshot.marginAmount = Number((effectiveBuyerUnitPrice - effectiveWorkerReward).toFixed(2));
+        snapshot.marginAmount = effectivePlatformMargin;
         snapshot.totalAmount = totalCost;
 
         const normalizedRequirements = {

@@ -449,18 +449,35 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Platform Financial Rules', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 16),
-                          Text('Platform Commission Margin: ${_platformMargin.toStringAsFixed(1)}%'),
-                          Slider(
-                            value: _platformMargin,
-                            min: 5.0,
-                            max: 50.0,
-                            divisions: 45,
-                            activeColor: AppColors.primary,
-                            label: '${_platformMargin.toStringAsFixed(1)}%',
-                            onChanged: (val) => setState(() => _platformMargin = val),
+                          Row(
+                            children: [
+                              const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primary, size: 20),
+                              const SizedBox(width: 8),
+                              const Text('Platform Financial Rules', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ],
                           ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F172A),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.white10),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF38BDF8)),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Platform profit margins are managed per-service under "Services & Pricing".',
+                                    style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
