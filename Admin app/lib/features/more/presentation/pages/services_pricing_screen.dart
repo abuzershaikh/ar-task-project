@@ -370,14 +370,21 @@ class _ServicesPricingScreenState extends State<ServicesPricingScreen> {
             onPressed: () async {
               Navigator.pop(dialogContext);
               try {
+                final double buyerPrice = double.tryParse(_priceController.text.trim()) ?? 2.0;
+                final double marginVal = double.tryParse(_marginController.text.trim()) ?? 25.0;
+                final double marginAmount = (buyerPrice * marginVal) / 100.0;
+                final double workerReward = double.parse(math.max(0.01, buyerPrice - marginAmount).toStringAsFixed(2));
+
                 final dio = getIt<DioClient>();
                 await dio.post(
                   ApiEndpoints.services,
                   data: {
                     'code': _codeController.text.trim(),
                     'name': _nameController.text.trim(),
-                    'buyerUnitPrice': double.tryParse(_priceController.text.trim()) ?? 2.0,
-                    'marginValue': double.tryParse(_marginController.text.trim()) ?? 25.0,
+                    'buyerUnitPrice': double.parse(buyerPrice.toStringAsFixed(2)),
+                    'marginType': 'PERCENTAGE',
+                    'marginValue': double.parse(marginVal.toStringAsFixed(2)),
+                    if (workerReward > 0) 'workerReward': workerReward,
                   },
                 );
                 _fetchServices();

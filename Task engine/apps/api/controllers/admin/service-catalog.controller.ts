@@ -166,9 +166,13 @@ export class AdminServiceCatalogController {
 
         let initialPricing = null;
         if (body.buyerUnitPrice && body.marginValue !== undefined) {
+            const cleanMarginType = (body.marginType && String(body.marginType).toUpperCase().includes('FIXED'))
+                ? MarginType.FIXED
+                : MarginType.PERCENTAGE;
+
             initialPricing = await this.servicePricingService.createNewPricingVersion(service.id, {
                 buyerUnitPrice: body.buyerUnitPrice,
-                marginType: body.marginType || MarginType.FIXED,
+                marginType: cleanMarginType,
                 marginValue: body.marginValue,
                 workerReward: body.workerReward,
             });
@@ -241,13 +245,20 @@ export class AdminServiceCatalogController {
         @Body()
         body: {
             buyerUnitPrice: number;
-            marginType: MarginType;
+            marginType?: MarginType;
             marginValue: number;
             workerReward?: number;
             currency?: string;
         },
     ) {
-        const pricing = await this.servicePricingService.createNewPricingVersion(serviceId, body);
+        const cleanMarginType = (body.marginType && String(body.marginType).toUpperCase().includes('FIXED'))
+            ? MarginType.FIXED
+            : MarginType.PERCENTAGE;
+
+        const pricing = await this.servicePricingService.createNewPricingVersion(serviceId, {
+            ...body,
+            marginType: cleanMarginType,
+        });
         return {
             success: true,
             pricing,

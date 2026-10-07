@@ -4,6 +4,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { TaskEngineService } from '../../../task-engine/task-engine.service';
 import { RewardEngineService } from '../../../reward-engine/reward.service';
 import { TaskGenerationJobRepository } from '../../../shared/database/repositories/task-generation-job.repository';
+import { OrderRepository } from '../../../shared/database/repositories/order.repository';
 import { TaskGenerationJobStatus } from '../../../shared/database/entities/task-generation-job.entity';
 import { DeadlineMonitorService } from '../../../shared/engines/reallocation-engine/services/deadline-monitor.service';
 
@@ -20,6 +21,7 @@ export class TaskQueueProcessor {
         private readonly taskEngine: TaskEngineService,
         private readonly rewardEngine: RewardEngineService,
         private readonly jobRepo: TaskGenerationJobRepository,
+        private readonly orderRepo: OrderRepository,
         private readonly deadlineMonitor: DeadlineMonitorService,
         @InjectQueue('matching') private readonly matchingQueue: Queue,
     ) { }
@@ -41,8 +43,18 @@ export class TaskQueueProcessor {
                 }
             }
 
+            let effectiveReward = Number(rewardAmount);
+            if (!effectiveReward || effectiveReward <= 0 || isNaN(effectiveReward)) {
+                const order = await this.orderRepo.findById(orderId);
+                effectiveReward = Number(order?.workerRewardSnapshot || order?.rewardPerTask || 0);
+            }
+
+            if (!Number.isFinite(effectiveReward) || effectiveReward <= 0) {
+                throw new Error(`Cannot create tasks for order '${orderId}': a positive worker reward snapshot is required`);
+            }
+
             const remainingCount = count - currentGenerated;
-            this.logger.log(`Creating ${remainingCount} tasks (already generated: ${currentGenerated}) for Order '${orderId}'`);
+            this.logger.log(`Creating ${remainingCount} tasks (already generated: ${currentGenerated}) for Order '${orderId}' with reward ₹${effectiveReward}`);
 
             const createdTasks = [];
             for (let i = currentGenerated; i < count; i++) {
@@ -57,7 +69,7 @@ export class TaskQueueProcessor {
                     campaignId: orderId,
                     taskType: taskType || 'DEFAULT',
                     requirements: taskReqs,
-                    rewardAmount: rewardAmount || 5,
+                    rewardAmount: effectiveReward,
                 });
                 createdTasks.push(task);
 

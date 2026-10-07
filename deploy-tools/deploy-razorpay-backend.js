@@ -23,7 +23,7 @@ async function deployRazorpayBackend() {
     const rzpConfigs = [
       { key: 'RAZORPAY_KEY_ID', val: 'rzp_live_TI2wdFKYDJdAxY' },
       { key: 'RAZORPAY_KEY_SECRET', val: '0pNQOQBRWxmtdE8mPVLlvYfi' },
-      { key: 'RAZORPAY_COMPANY_NAME', val: 'Ishyan Technologies' },
+      { key: 'RAZORPAY_COMPANY_NAME', val: 'Reviews Gateway' },
     ];
 
     let envUpdated = false;

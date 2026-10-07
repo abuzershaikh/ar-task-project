@@ -13,6 +13,10 @@ export interface GenerationOptions {
     apiKey?: string;
     minWords?: number;
     maxWords?: number;
+    /** Existing accepted comments that regenerated content must not resemble. */
+    avoidComments?: string[];
+    /** Included in the AI prompt when only duplicate slots are being replaced. */
+    regenerationAttempt?: number;
 }
 
 export interface IContentGenerator {

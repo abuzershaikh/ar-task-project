@@ -5,11 +5,13 @@ import { PlayStoreReviewGenerator } from './generators/playstore-review.generato
 import { GoogleBusinessReviewGenerator } from './generators/google-business-review.generator';
 import { GenerationOptions, IContentGenerator } from './generators/generator.interface';
 import { sanitizeReviewText } from './review-sanitizer';
+import { findDuplicateCommentMatches } from './comment-duplicate-detector';
 
 @Injectable()
 export class AiGeneratorService {
     private readonly logger = new Logger(AiGeneratorService.name);
     private readonly generators = new Map<string, IContentGenerator>();
+    private static readonly maxDuplicateRegenerationAttempts = 4;
 
     constructor(
         private readonly deepSeekGen: DeepSeekCommentGenerator,
@@ -59,5 +61,58 @@ export class AiGeneratorService {
             .map((text) => sanitizeReviewText(text))
             .filter((text) => text.length > 3)
             .slice(0, count);
+    }
+
+    /**
+     * Keeps accepted comments in place and regenerates only duplicate or empty
+     * slots. It never pads a campaign by reusing a previous comment.
+     */
+    async ensureUniqueComments(
+        candidates: string[],
+        targetCount: number,
+        generatorType: string,
+        options?: GenerationOptions,
+    ): Promise<string[]> {
+        const requiredCount = Math.max(0, Math.floor(Number(targetCount) || 0));
+        const comments = candidates
+            .slice(0, requiredCount)
+            .map((comment) => sanitizeReviewText(String(comment || '')).trim());
+
+        while (comments.length < requiredCount) {
+            comments.push('');
+        }
+
+        for (let attempt = 0; attempt <= AiGeneratorService.maxDuplicateRegenerationAttempts; attempt += 1) {
+            const duplicates = findDuplicateCommentMatches(comments);
+            if (duplicates.length === 0) {
+                return comments;
+            }
+
+            if (attempt === AiGeneratorService.maxDuplicateRegenerationAttempts) {
+                throw new Error(
+                    `AI could not create ${duplicates.length} sufficiently distinct comments after ${AiGeneratorService.maxDuplicateRegenerationAttempts} regeneration attempts`,
+                );
+            }
+
+            const duplicateIndexes = duplicates.map((item) => item.duplicateIndex);
+            const duplicateIndexSet = new Set(duplicateIndexes);
+            const acceptedComments = comments.filter((comment, index) => !duplicateIndexSet.has(index) && comment.length > 0);
+            this.logger.warn(
+                `Detected ${duplicateIndexes.length} duplicate/empty comments at ${Math.round(Math.min(...duplicates.map((item) => item.similarity.similarity)) * 100)}%-100% similarity; regenerating only those slots (attempt ${attempt + 1}).`,
+            );
+
+            const replacements = await this.generateContentBatch(generatorType, duplicateIndexes.length, {
+                ...options,
+                uniqueness: true,
+                avoidComments: acceptedComments.slice(-40),
+                regenerationAttempt: attempt + 1,
+            });
+
+            duplicateIndexes.forEach((commentIndex, replacementIndex) => {
+                comments[commentIndex] = sanitizeReviewText(String(replacements[replacementIndex] || '')).trim();
+            });
+        }
+
+        return comments;
     }
 }

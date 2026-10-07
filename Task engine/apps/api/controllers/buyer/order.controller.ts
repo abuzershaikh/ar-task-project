@@ -169,9 +169,10 @@ export class BuyerOrderController {
 
         let sampleComments: string[] = [];
         try {
-            sampleComments = await this.aiGeneratorService.generateContentBatch(
-                generatorType,
+            sampleComments = await this.aiGeneratorService.ensureUniqueComments(
+                [],
                 previewCount,
+                generatorType,
                 {
                     topic,
                     language,

@@ -31,13 +31,16 @@ export class ServicePricingService {
 
         const buyerUnitPrice = Number(data.buyerUnitPrice);
         const marginValue = Number(data.marginValue);
+        const cleanMarginType = (data.marginType && String(data.marginType).toUpperCase().includes('FIXED'))
+            ? MarginType.FIXED
+            : MarginType.PERCENTAGE;
 
         // Enforce strict MarginPolicy validation rules
-        MarginPolicy.validateMargin(buyerUnitPrice, data.marginType, marginValue);
+        MarginPolicy.validateMargin(buyerUnitPrice, cleanMarginType, marginValue);
 
         const marginAmount = this.marginCalculator.calculateMarginAmount(
             buyerUnitPrice,
-            data.marginType,
+            cleanMarginType,
             marginValue,
         );
         const maxWorkerReward = Math.max(0, buyerUnitPrice - marginAmount);
@@ -64,7 +67,7 @@ export class ServicePricingService {
         const newPricing = await this.servicePricingRepo.create({
             serviceId,
             buyerUnitPrice,
-            marginType: data.marginType,
+            marginType: cleanMarginType,
             marginValue,
             workerReward,
             currency: data.currency || 'INR',

@@ -8,6 +8,7 @@ import { PriceSnapshotService } from './price-snapshot.service';
 import { PricingPolicy } from './policies/pricing-policy';
 import { BuyerPriceInformation, InternalFinancialCalculation } from './types/price-calculation';
 import { PriceSnapshot } from './types/price-snapshot';
+import { roundCurrency } from './youtube-duration-pricing';
 
 @Injectable()
 export class PricingEngine {
@@ -61,10 +62,14 @@ export class PricingEngine {
             activePricing.marginValue,
         );
 
-        const workerReward = Number(activePricing.workerReward);
+        const maxWorkerReward = Math.max(0, buyerUnitPrice - marginAmount);
+        const storedWorkerReward = Number(activePricing.workerReward);
+        const workerReward = Number.isFinite(storedWorkerReward) && storedWorkerReward > 0
+            ? Math.min(storedWorkerReward, maxWorkerReward)
+            : maxWorkerReward;
         const totalBuyerAmount = this.priceCalculator.calculateBuyerTotal(buyerUnitPrice, quantity);
-        const totalWorkerPayout = workerReward * quantity;
-        const totalPlatformRevenue = marginAmount * quantity;
+        const totalWorkerPayout = roundCurrency(workerReward * quantity);
+        const totalPlatformRevenue = roundCurrency((buyerUnitPrice - workerReward) * quantity);
 
         return {
             serviceId: service.id,
@@ -73,8 +78,8 @@ export class PricingEngine {
             buyerUnitPrice,
             marginType: activePricing.marginType,
             marginValue: Number(activePricing.marginValue),
-            marginAmount,
-            workerReward,
+            marginAmount: roundCurrency(buyerUnitPrice - workerReward),
+            workerReward: roundCurrency(workerReward),
             currency: activePricing.currency || 'INR',
             pricingVersion: activePricing.version,
             quantity,

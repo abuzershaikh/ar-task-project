@@ -114,5 +114,47 @@ describe('Pricing Engine & Service Catalog Calculations', () => {
             expect(result.buyerUnitPrice).toBe(2.00);
             expect(result.workerReward).toBe(1.50);
         });
+
+        it('handles case-insensitive and partial marginType strings gracefully without crashing', () => {
+            const resultPercentage = calculateYouTubeDurationPricing({
+                baseBuyerUnitPrice: 2.00,
+                baseWorkerReward: 1.50,
+                marginType: 'percent',
+                watchTimeSeconds: 480,
+                extraPricePerMinute: 0.50,
+            });
+            expect(resultPercentage.workerReward).toBe(2.63);
+            expect(resultPercentage.platformMargin).toBe(0.87);
+
+            const resultFixed = calculateYouTubeDurationPricing({
+                baseBuyerUnitPrice: 2.00,
+                baseWorkerReward: 1.50,
+                marginType: 'fixed_fee',
+                watchTimeSeconds: 480,
+                extraPricePerMinute: 0.50,
+            });
+            expect(resultFixed.workerReward).toBe(3.00);
+            expect(resultFixed.platformMargin).toBe(0.50);
+        });
+
+        it('correctly calculates 60-minute maximum watch duration without rounding drift', () => {
+            const result = calculateYouTubeDurationPricing({
+                baseBuyerUnitPrice: 2.00,
+                baseWorkerReward: 1.50,
+                marginType: MarginType.PERCENTAGE,
+                watchTimeSeconds: 60 * 60, // 60 minutes (55 extra minutes)
+                extraPricePerMinute: 0.50,
+            });
+
+            expect(result.extraMinutes).toBe(55);
+            expect(result.extraPerUnit).toBe(27.50);
+            expect(result.buyerUnitPrice).toBe(29.50);
+            // Worker receives 75% of total: 29.50 * 0.75 = 22.125 -> 22.13
+            expect(result.workerReward).toBe(22.13);
+            // Platform receives 29.50 - 22.13 = 7.37
+            expect(result.platformMargin).toBe(7.37);
+            // Total worker + platform equals buyer unit price exactly
+            expect(result.workerReward + result.platformMargin).toBe(result.buyerUnitPrice);
+        });
     });
 });

@@ -44,6 +44,13 @@ export class DeepSeekCommentGenerator implements IContentGenerator {
         const language = options?.language || 'English';
         const tone = options?.tone || 'natural';
         const videoTitle = options?.videoTitle || '';
+        const excludedExamples = (options?.avoidComments || [])
+            .map((comment) => sanitizeReviewText(String(comment || '')).trim())
+            .filter(Boolean)
+            .slice(-12);
+        const regenerationInstruction = options?.regenerationAttempt
+            ? `\nDUPLICATE REPLACEMENT MODE (attempt ${options.regenerationAttempt}): Generate a genuinely different style, vocabulary, sentence structure, and viewpoint. Do not reuse or closely paraphrase any protected comments below. Each new comment must share fewer than 80% of its normalized words with every protected comment.\nProtected comments:\n${excludedExamples.map((comment, index) => `${index + 1}. ${JSON.stringify(comment)}`).join('\n') || '(none)'}`
+            : '';
 
         const isGoogleBusiness = (options as any)?.isGoogleBusiness || (options as any)?.generatorType?.includes('google_business') || (options as any)?.generatorType?.includes('google_maps') || (options as any)?.generatorType?.includes('gmb');
         const isAppReview = !isGoogleBusiness && ((options as any)?.isAppReview || (options as any)?.generatorType?.includes('review') || (options as any)?.generatorType?.includes('play'));
@@ -154,6 +161,7 @@ CRITICAL RULES:
 3. Comments must sound like genuine human community members and active viewers, NOT robotic bots.
 4. ABSOLUTELY NO star symbols or rating symbols.
 5. DO NOT copy-paste the prompt text into the comments. Follow its instructions naturally!
+${regenerationInstruction}
 6. Return ONLY a valid JSON array of ${count} strings without any markdown code blocks, backticks, or extra explanation.
 Example format:
 ["First unique natural comment here", "Second unique natural comment here"]`));

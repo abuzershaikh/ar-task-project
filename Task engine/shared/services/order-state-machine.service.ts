@@ -49,10 +49,13 @@ export class OrderStateMachineService {
                 return order;
             }
 
+            const workerRewardSnapshot = Number(order.workerRewardSnapshot || order.rewardPerTask);
+            if (!Number.isFinite(workerRewardSnapshot) || workerRewardSnapshot <= 0) {
+                throw new BadRequestException(`Order '${orderId}' cannot be activated without a positive worker reward snapshot`);
+            }
+
             order.status = OrderStatus.ACTIVE;
             const updated = await manager.save(order);
-
-            const workerRewardSnapshot = Number(order.workerRewardSnapshot || order.rewardPerTask);
 
             // Protection Pillar 3: Durable Outbox TaskGenerationJob record
             let job = await this.jobRepo.findByOrderId(orderId);

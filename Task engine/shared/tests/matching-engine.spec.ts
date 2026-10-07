@@ -94,7 +94,14 @@ describe('Matching Engine Hardened Tests', () => {
         let rankingCalculator: RankingCalculator;
 
         beforeEach(() => {
-            rankingCalculator = new RankingCalculator({} as any);
+            rankingCalculator = new RankingCalculator(
+                {} as any,
+                {
+                    findByIds: jest.fn().mockResolvedValue([]),
+                    getActivityStatus: jest.fn().mockReturnValue('ACTIVE'),
+                } as any,
+                {} as any,
+            );
         });
 
         it('should sort by score DESC, and use workerId ASC as a deterministic tie-breaker when scores are equal', async () => {
@@ -117,7 +124,20 @@ describe('Matching Engine Hardened Tests', () => {
         let eligibilityEngine: EligibilityEngineService;
 
         beforeEach(() => {
-            eligibilityEngine = new EligibilityEngineService();
+            eligibilityEngine = new EligibilityEngineService(
+                {
+                    findById: jest.fn().mockResolvedValue({ status: 'active' }),
+                    isActivityEligible: jest.fn().mockReturnValue(true),
+                    getActivityStatus: jest.fn().mockReturnValue('ACTIVE'),
+                    isOnCooldown: jest.fn().mockReturnValue(false),
+                } as any,
+                {
+                    findById: jest.fn().mockResolvedValue({ status: 'active' }),
+                } as any,
+                {
+                    findByWorkerId: jest.fn().mockResolvedValue(null),
+                } as any,
+            );
         });
 
         it('should return isEligible: false for invalid worker IDs or throwing errors', async () => {

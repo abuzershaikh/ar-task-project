@@ -31,11 +31,17 @@ export class BuyerServiceCatalogController {
             try {
                 const activePricing = await this.servicePricingService.getActivePricing(service.id);
                 if (activePricing) {
-                    unitPrice = Number(activePricing.buyerUnitPrice) || 50.0;
-                    workerReward = Number(activePricing.workerReward) || 4.0;
+                    unitPrice = Number(activePricing.buyerUnitPrice) > 0 ? Number(activePricing.buyerUnitPrice) : 50.0;
                     marginType = activePricing.marginType || 'PERCENTAGE';
-                    marginValue = Number(activePricing.marginValue) || 20.0;
+                    marginValue = Number(activePricing.marginValue) >= 0 ? Number(activePricing.marginValue) : 20.0;
                     currency = activePricing.currency || 'INR';
+
+                    const calculatedMarginAmount = String(marginType).toUpperCase().includes('FIX')
+                        ? Math.min(unitPrice, marginValue)
+                        : Math.min(unitPrice, (unitPrice * marginValue) / 100);
+                    const maxReward = Math.max(0, unitPrice - calculatedMarginAmount);
+                    const storedReward = Number(activePricing.workerReward);
+                    workerReward = Number.isFinite(storedReward) && storedReward > 0 ? Math.min(storedReward, maxReward) : maxReward;
                 }
             } catch (err) {
                 // Fallback default pricing for newly created admin services
@@ -135,11 +141,17 @@ export class BuyerServiceCatalogController {
         try {
             const activePricing = await this.servicePricingService.getActivePricing(service.id);
             if (activePricing) {
-                unitPrice = Number(activePricing.buyerUnitPrice) || 50.0;
-                workerReward = Number(activePricing.workerReward) || 4.0;
+                unitPrice = Number(activePricing.buyerUnitPrice) > 0 ? Number(activePricing.buyerUnitPrice) : 50.0;
                 marginType = activePricing.marginType || 'PERCENTAGE';
-                marginValue = Number(activePricing.marginValue) || 20.0;
+                marginValue = Number(activePricing.marginValue) >= 0 ? Number(activePricing.marginValue) : 20.0;
                 currency = activePricing.currency || 'INR';
+
+                const calculatedMarginAmount = String(marginType).toUpperCase().includes('FIX')
+                    ? Math.min(unitPrice, marginValue)
+                    : Math.min(unitPrice, (unitPrice * marginValue) / 100);
+                const maxReward = Math.max(0, unitPrice - calculatedMarginAmount);
+                const storedReward = Number(activePricing.workerReward);
+                workerReward = Number.isFinite(storedReward) && storedReward > 0 ? Math.min(storedReward, maxReward) : maxReward;
             }
         } catch {
             // Keep default fallback

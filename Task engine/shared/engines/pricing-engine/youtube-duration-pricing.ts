@@ -37,7 +37,8 @@ export function calculateYouTubeDurationPricing(
     const baseWorkerReward = Number(input.baseWorkerReward);
     const extraPricePerMinute = Number(input.extraPricePerMinute);
     const watchTimeSeconds = Number(input.watchTimeSeconds);
-    const marginType = String(input.marginType || '').toUpperCase();
+    const rawMarginType = String(input.marginType || '').toUpperCase().trim();
+    const cleanMarginType = rawMarginType.includes('FIX') ? 'FIXED' : 'PERCENTAGE';
 
     if (!Number.isFinite(baseBuyerUnitPrice) || baseBuyerUnitPrice <= 0) {
         throw new Error('Base buyer unit price must be greater than zero');
@@ -51,9 +52,6 @@ export function calculateYouTubeDurationPricing(
     if (!Number.isFinite(watchTimeSeconds) || watchTimeSeconds < 0) {
         throw new Error('Watch time must be a non-negative number');
     }
-    if (marginType !== 'PERCENTAGE' && marginType !== 'FIXED') {
-        throw new Error(`Unsupported margin type '${input.marginType}'`);
-    }
 
     const extraMinutes = Math.max(0, Math.ceil((watchTimeSeconds - INCLUDED_WATCH_SECONDS) / 60));
     const extraPerUnit = roundCurrency(extraMinutes * extraPricePerMinute);
@@ -62,7 +60,7 @@ export function calculateYouTubeDurationPricing(
     // Percentage pricing retains the exact configured worker share. For a
     // fixed platform fee, the fee remains fixed and the worker receives the
     // full extra-duration amount.
-    const workerExtra = marginType === 'PERCENTAGE'
+    const workerExtra = cleanMarginType === 'PERCENTAGE'
         ? extraPerUnit * (baseWorkerReward / baseBuyerUnitPrice)
         : extraPerUnit;
     const workerReward = roundCurrency(baseWorkerReward + workerExtra);

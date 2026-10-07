@@ -165,7 +165,7 @@ export class BuyerWalletController {
             const saved = await paymentRepo.save(payment);
 
             const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_live_TI2wdFKYDJdAxY';
-            const companyName = process.env.RAZORPAY_COMPANY_NAME || 'Ishyan Technologies';
+            const companyName = process.env.RAZORPAY_COMPANY_NAME || 'Reviews Gateway';
 
             return {
                 success: true,

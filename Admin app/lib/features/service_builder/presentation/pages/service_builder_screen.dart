@@ -2051,14 +2051,18 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
 
     final durations = [5, 6, 7, 8, 9, 10, 12, 15, 20, 25, 30, 45, 60];
 
+    final double workerRatio = baseBuyerPrice > 0 ? (baseWorkerReward / baseBuyerPrice) : 0.75;
+    final double extraWorkerRatePerMin = _isPercentageMargin ? (extraPerMin * workerRatio) : extraPerMin;
+
     double totalWorkerPct = 0;
     double totalMarginPct = 0;
     int count = 0;
     for (final d in durations.where((m) => m <= 30)) {
       final extraMins = math.max(0, d - 5);
       final extraCost = extraMins * extraPerMin;
-      final buyerTotal = baseBuyerPrice + extraCost;
-      final workerTotal = baseWorkerReward + (extraCost * 0.70);
+      final buyerTotal = double.parse((baseBuyerPrice + extraCost).toStringAsFixed(2));
+      final double workerExtra = _isPercentageMargin ? (extraCost * workerRatio) : extraCost;
+      final workerTotal = double.parse((baseWorkerReward + workerExtra).toStringAsFixed(2));
       if (buyerTotal > 0) {
         totalWorkerPct += (workerTotal / buyerTotal) * 100.0;
         totalMarginPct += ((buyerTotal - workerTotal) / buyerTotal) * 100.0;
@@ -2108,11 +2112,11 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                       color: Colors.white, size: 16),
                 ),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Live Watch Duration & Worker Distribution Matrix',
                         style: TextStyle(
                           color: Color(0xFF991B1B),
@@ -2120,11 +2124,11 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                           fontSize: 13,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
-                        'Live table: Scroll horizontally to view Buyer price, Worker reward (70% share) & Margin',
+                        'Live table: Scroll horizontally to view Buyer price, Worker reward (${_isPercentageMargin ? '${(workerRatio * 100).toStringAsFixed(0)}% share' : '100% extra'}) & Margin',
                         style:
-                            TextStyle(color: Color(0xFFB91C1C), fontSize: 10.5),
+                            const TextStyle(color: Color(0xFFB91C1C), fontSize: 10.5),
                       ),
                     ],
                   ),
@@ -2156,8 +2160,10 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                     title: 'Extra Rate / Min',
                     val1: 'Buyer: +₹${extraPerMin.toStringAsFixed(2)}/m',
                     val2:
-                        'Worker: +₹${(extraPerMin * 0.70).toStringAsFixed(2)}/m',
-                    badge: '70% Worker',
+                        'Worker: +₹${extraWorkerRatePerMin.toStringAsFixed(2)}/m',
+                    badge: _isPercentageMargin
+                        ? '${(workerRatio * 100).toStringAsFixed(0)}% Worker'
+                        : '100% Worker',
                     badgeColor: const Color(0xFF2563EB),
                     badgeBg: const Color(0xFFEFF6FF),
                   ),
@@ -2253,9 +2259,10 @@ class _ServiceBuilderScreenState extends State<ServiceBuilderScreen>
                     final isBase = mins == 5;
                     final extraMins = math.max(0, mins - 5);
                     final extraCost = extraMins * extraPerMin;
-                    final buyerTotal = baseBuyerPrice + extraCost;
-                    final workerTotal = baseWorkerReward + (extraCost * 0.70);
-                    final marginTotal = buyerTotal - workerTotal;
+                    final buyerTotal = double.parse((baseBuyerPrice + extraCost).toStringAsFixed(2));
+                    final double workerExtra = _isPercentageMargin ? (extraCost * workerRatio) : extraCost;
+                    final workerTotal = double.parse((baseWorkerReward + workerExtra).toStringAsFixed(2));
+                    final marginTotal = double.parse((buyerTotal - workerTotal).toStringAsFixed(2));
                     final workerPct = buyerTotal > 0
                         ? (workerTotal / buyerTotal) * 100.0
                         : 0.0;
