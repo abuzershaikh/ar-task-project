@@ -1,0 +1,17 @@
+<svg width="400" height="220" viewBox="0 0 400 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Giant Watermark Quotes -->
+  <path d="M40 70C40 45 55 30 75 30C90 30 100 42 100 58C100 78 85 92 72 98C82 110 95 125 90 145C82 165 55 160 48 140C40 120 40 95 40 70Z" fill="white" fill-opacity="0.09"/>
+  <path d="M110 70C110 45 125 30 145 30C160 30 170 42 170 58C170 78 155 92 142 98C152 110 165 125 160 145C152 165 125 160 118 140C110 120 110 95 110 70Z" fill="white" fill-opacity="0.09"/>
+  
+  <!-- Right side decorative speech bubble watermark -->
+  <g opacity="0.08" transform="translate(280, 20)">
+    <path d="M90 45C90 70 70 90 45 90C36 90 28 87 21 82L0 90L8 69C3 62 0 54 0 45C0 20 20 0 45 0C70 0 90 20 90 45Z" fill="white"/>
+  </g>
+
+  <!-- Sparkles & Ambient Accents -->
+  <path d="M340 120L343 130L353 133L343 136L340 146L337 136L327 133L337 130L340 120Z" fill="white" fill-opacity="0.18"/>
+  <path d="M260 160L262 166L268 168L262 170L260 176L258 170L252 168L258 166L260 160Z" fill="white" fill-opacity="0.18"/>
+  <circle cx="360" cy="50" r="3.5" fill="white" fill-opacity="0.25"/>
+  <circle cx="30" cy="180" r="3" fill="white" fill-opacity="0.18"/>
+  <circle cx="310" cy="90" r="2" fill="white" fill-opacity="0.2"/>
+</svg>

@@ -65,15 +65,43 @@ class ChatService {
       }
     }
 
+    // Comprehensive search for existing conversation:
+    // Match by worker_id, or by worker_email, or by userInfo.id, or by userInfo.worker_actual_id
+    const possibleIds = [workerId];
+    if (userInfo.id && userInfo.id !== workerId) possibleIds.push(userInfo.id);
+    if (userInfo.worker_actual_id && userInfo.worker_actual_id !== workerId) possibleIds.push(userInfo.worker_actual_id);
+
+    const idPlaceholders = possibleIds.map(() => '?').join(',');
+    const queryParams = [...possibleIds];
+    let whereClause = `worker_id IN (${idPlaceholders})`;
+    if (email) {
+      whereClause += ` OR (worker_email != '' AND worker_email IS NOT NULL AND worker_email = ?)`;
+      queryParams.push(email);
+    }
+
     const [existing] = await pool.query(
-      'SELECT * FROM support_conversations WHERE worker_id = ? LIMIT 1',
-      [workerId]
+      `SELECT * FROM support_conversations 
+       WHERE ${whereClause} 
+       ORDER BY CASE WHEN worker_id = ? THEN 1 ELSE 2 END, last_message_at DESC 
+       LIMIT 1`,
+      [...queryParams, workerId]
     );
 
     if (existing.length > 0) {
       let needsUpdate = false;
       const updates = [];
       const updateParams = [];
+
+      // If worker is connecting with a newer/active workerId (e.g. Firebase UID), sync it:
+      if (workerId && existing[0].worker_id !== workerId) {
+        updates.push('worker_id = ?');
+        updateParams.push(workerId);
+        const oldWorkerId = existing[0].worker_id;
+        existing[0].worker_id = workerId;
+        needsUpdate = true;
+        // Also update existing messages to point to this workerId
+        pool.query('UPDATE support_messages SET worker_id = ? WHERE conversation_id = ?', [workerId, existing[0].id]).catch(() => {});
+      }
 
       if (avatar && (!existing[0].worker_avatar_url || existing[0].worker_avatar_url === '')) {
         updates.push('worker_avatar_url = ?');
@@ -290,9 +318,13 @@ class ChatService {
 
     // Update conversation snippet & counters
     let previewText = content;
-    if (messageType === 'YOUTUBE') previewText = '📹 Video Link';
-    else if (messageType === 'AUDIO') previewText = '🎙️ Voice Note';
-    else if (messageType === 'IMAGE') previewText = '📷 Photo';
+    if (messageType === 'YOUTUBE') {
+      previewText = content && content.trim() ? `📹 ${content.trim()}` : '📹 Video Link';
+    } else if (messageType === 'AUDIO') {
+      previewText = (content && content.trim() && content.trim() !== 'Voice Note') ? `🎙️ ${content.trim()}` : '🎙️ Voice Note';
+    } else if (messageType === 'IMAGE') {
+      previewText = (content && content.trim() && content.trim() !== 'Photo') ? `📷 ${content.trim()}` : '📷 Photo';
+    }
 
     if (senderType === 'ADMIN') {
       await pool.query(
@@ -306,7 +338,9 @@ class ChatService {
       sendWorkerChatNotification(workerId, {
         id: messageId,
         conversation_id: conversationId,
-        content,
+        content: messageType === 'AUDIO'
+          ? ((content && content.trim() && content.trim() !== 'Voice Note') ? `🎙️ ${content.trim()}` : 'Sent you a voice note')
+          : (messageType === 'IMAGE' ? ((content && content.trim() && content.trim() !== 'Photo') ? content.trim() : 'Sent you a photo') : (content || 'New message')),
         message_type: messageType,
       }).catch(() => {});
     } else {
@@ -366,31 +400,49 @@ class ChatService {
     if (segment === 'CUSTOM' && Array.isArray(customWorkerIds) && customWorkerIds.length > 0) {
       targetWorkerIds = customWorkerIds;
     } else if (segment === 'NEW') {
-      // Workers joined in the last 7 days
+      // Workers joined in the last 7 days: map to active conversation worker_id
       const [rows] = await pool.query(
-        `SELECT id FROM users 
-         WHERE role = 'WORKER' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`
+        `SELECT DISTINCT COALESCE(c.worker_id, u.id) as id 
+         FROM users u
+         LEFT JOIN workers w ON w.user_id = u.id
+         LEFT JOIN support_conversations c ON (c.worker_id = u.id OR (c.worker_email != '' AND c.worker_email = u.email) OR (w.id IS NOT NULL AND c.worker_id = w.id))
+         WHERE UPPER(u.role) = 'WORKER' AND u.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`
       );
       targetWorkerIds = rows.map((r) => r.id);
     } else if (segment === 'ACTIVE') {
-      // Workers with at least 1 completed task or active in last 7 days
+      // Workers with at least 1 completed task or active in last 7 days: map to active conversation worker_id
       const [rows] = await pool.query(
-        `SELECT u.id 
+        `SELECT DISTINCT COALESCE(c.worker_id, u.id) as id 
          FROM users u
          JOIN workers w ON w.user_id = u.id
-         WHERE u.role = 'WORKER' AND (w.total_tasks_completed > 0 OR w.last_active_at >= DATE_SUB(NOW(), INTERVAL 7 DAY))`
+         LEFT JOIN support_conversations c ON (c.worker_id = u.id OR (c.worker_email != '' AND c.worker_email = u.email) OR (w.id IS NOT NULL AND c.worker_id = w.id))
+         WHERE UPPER(u.role) = 'WORKER' AND (w.total_tasks_completed > 0 OR w.last_active_at >= DATE_SUB(NOW(), INTERVAL 7 DAY))`
       );
       targetWorkerIds = rows.map((r) => r.id);
     } else {
-      // ALL Workers
+      // ALL Workers: map every registered worker to their canonical active conversation worker_id
       const [rows] = await pool.query(
-        `SELECT id FROM users WHERE role = 'WORKER'`
+        `SELECT DISTINCT COALESCE(c.worker_id, u.id) as id 
+         FROM users u
+         LEFT JOIN workers w ON w.user_id = u.id
+         LEFT JOIN support_conversations c ON (c.worker_id = u.id OR (c.worker_email != '' AND c.worker_email = u.email) OR (w.id IS NOT NULL AND c.worker_id = w.id))
+         WHERE UPPER(u.role) = 'WORKER'`
       );
-      targetWorkerIds = rows.map((r) => r.id);
+      const userTargetIds = rows.map((r) => r.id);
+
+      // Also ensure any orphan support_conversations are included
+      const [convRows] = await pool.query(
+        `SELECT DISTINCT worker_id as id FROM support_conversations WHERE worker_id IS NOT NULL AND worker_id != ''`
+      );
+      const allSet = new Set(userTargetIds);
+      for (const cr of convRows) {
+        if (cr.id) allSet.add(cr.id);
+      }
+      targetWorkerIds = Array.from(allSet);
     }
 
     if (targetWorkerIds.length === 0) {
-      return { success: false, message: 'No target workers found for segment ' + segment, count: 0 };
+      return { success: false, message: 'No target workers found for segment ' + segment, count: 0, messages: [] };
     }
 
     // Auto-detect YouTube ID if present
@@ -406,6 +458,9 @@ class ChatService {
 
     console.log(`[ChatService] Broadcasting bulk message to ${targetWorkerIds.length} workers (Segment: ${segment})...`);
 
+    const createdMessages = [];
+    const affectedConversations = new Map();
+
     // Process in batches for high throughput
     const batchSize = 25;
     for (let i = 0; i < targetWorkerIds.length; i += batchSize) {
@@ -414,7 +469,7 @@ class ChatService {
         batch.map(async (workerId) => {
           try {
             const conv = await this.getOrCreateConversation(workerId);
-            await this.createMessage({
+            const msg = await this.createMessage({
               conversationId: conv.id,
               workerId,
               senderType: 'ADMIN',
@@ -424,6 +479,10 @@ class ChatService {
               youtubeId,
               durationSeconds,
             });
+            if (msg) {
+              createdMessages.push(msg);
+              affectedConversations.set(conv.id, conv);
+            }
           } catch (e) {
             console.warn(`[ChatService] Failed to send bulk message to worker ${workerId}:`, e.message);
           }
@@ -435,6 +494,8 @@ class ChatService {
       success: true,
       count: targetWorkerIds.length,
       segment,
+      messages: createdMessages,
+      conversations: Array.from(affectedConversations.values()),
     };
   }
 

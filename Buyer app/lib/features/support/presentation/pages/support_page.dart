@@ -44,7 +44,7 @@ class _SupportPageState extends State<SupportPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'VIP Dedicated Support',
+          'Customer Support',
           style: GoogleFonts.outfit(
             color: Colors.white,
             fontWeight: FontWeight.w700,
@@ -96,7 +96,7 @@ class _SupportPageState extends State<SupportPage> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'LIVE VIP DESK ACTIVE',
+                            'LIVE SUPPORT ACTIVE',
                             style: GoogleFonts.outfit(
                               color: const Color(0xFF34D399),
                               fontSize: 11,
@@ -125,7 +125,7 @@ class _SupportPageState extends State<SupportPage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Direct Dedicated Buyer Support',
+                    'Direct Buyer Support Desk',
                     style: GoogleFonts.outfit(
                       color: Colors.white,
                       fontSize: 16,
@@ -134,7 +134,7 @@ class _SupportPageState extends State<SupportPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Connect directly with our senior account managers for instant campaign adjustments or bulk volume discounts.',
+                    'Connect directly with our support desk for instant campaign adjustments or assistance.',
                     style: GoogleFonts.outfit(
                       color: const Color(0xFF94A3B8),
                       fontSize: 11.5,
@@ -213,34 +213,7 @@ class _SupportPageState extends State<SupportPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildChannelCard(
-                  title: 'WhatsApp VIP',
-                  detail: '+91 98765 43210',
-                  icon: Icons.chat_rounded,
-                  color: const Color(0xFF22C55E),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Opening WhatsApp VIP Desk: +91 98765 43210')),
-                    );
-                  },
-                ),
-                const SizedBox(width: 12),
-                _buildChannelCard(
-                  title: 'Email Support',
-                  detail: 'support@earnpost.com',
-                  icon: Icons.alternate_email_rounded,
-                  color: const Color(0xFF6366F1),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Contact Email: support@earnpost.com')),
-                    );
-                  },
-                ),
-              ],
-            ),
+
             const SizedBox(height: 28),
 
             // Submit Ticket Section
@@ -395,50 +368,7 @@ class _SupportPageState extends State<SupportPage> {
     );
   }
 
-  Widget _buildChannelCard({
-    required String title,
-    required String detail,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: GoogleFonts.outfit(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                detail,
-                style: GoogleFonts.outfit(color: color, fontSize: 11, fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   void _submitTicket() async {
     if (_formKey.currentState?.validate() ?? false) {
@@ -460,7 +390,7 @@ class _SupportPageState extends State<SupportPage> {
             ],
           ),
           content: Text(
-            'Your priority ticket has been registered. Our dedicated support team will respond to your email within 5 minutes.',
+            'Your priority ticket has been registered. Our support team will review and resolve it promptly.',
             style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13),
           ),
           actions: [

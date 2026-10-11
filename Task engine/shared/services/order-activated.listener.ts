@@ -173,9 +173,10 @@ export class OrderActivatedListener {
             const topic = order?.requirements?.topic || order?.requirements?.customText || order?.requirements?.comment || '';
             const language = order?.requirements?.language || 'English';
             const tone = order?.requirements?.tone || 'natural';
-            let appName = order?.requirements?.appName || order?.requirements?.businessName || '';
-            let appIcon = order?.requirements?.appIcon || '';
-            let packageId = order?.requirements?.packageId || '';
+            const isYouTube = payload.serviceCode.toLowerCase().includes('youtube') || payload.serviceCode.toLowerCase().includes('yt');
+            let appName = !isYouTube ? (order?.requirements?.appName || order?.requirements?.businessName || '') : '';
+            let appIcon = !isYouTube ? (order?.requirements?.appIcon || '') : '';
+            let packageId = !isYouTube ? (order?.requirements?.packageId || '') : '';
 
             // Auto-extract Google Play Store app icon & name for the specific targetUrl
             if (targetUrl && (isPlayStore || targetUrl.includes('play.google.com') || targetUrl.includes('id='))) {
@@ -272,6 +273,12 @@ export class OrderActivatedListener {
                     ? 'playstore'
                     : (isInstagram ? 'instagram' : (serviceIdentifier.includes('FACEBOOK') || serviceIdentifier.includes('FB') ? 'facebook' : (serviceIdentifier.includes('TELEGRAM') ? 'telegram' : 'youtube'))));
 
+            const isYtPlatform = detectedPlatform === 'youtube' || serviceIdentifier.includes('YT') || serviceIdentifier.includes('YOUTUBE');
+            let resolvedWatchTime = Number(order?.requirements?.watchTimeSeconds || serviceCatalog?.watchtimeSeconds || 0);
+            if (isYtPlatform && !isYouTubeCombo && resolvedWatchTime <= 0) {
+                resolvedWatchTime = 120;
+            }
+
             const combinedRequirements = {
                 ...(order?.requirements || {}),
                 platform: detectedPlatform,
@@ -281,7 +288,7 @@ export class OrderActivatedListener {
                 audioGuideUrl: serviceCatalog?.audioGuideUrl || order?.requirements?.audioGuideUrl || '',
                 adminInstructions: serviceCatalog?.adminInstructions || serviceCatalog?.description || order?.requirements?.instructions || '',
                 targetUrl,
-                watchTimeSeconds: Number(order?.requirements?.watchTimeSeconds || serviceCatalog?.watchtimeSeconds || 0),
+                watchTimeSeconds: resolvedWatchTime,
                 videoDurationSeconds: Number(order?.requirements?.videoDurationSeconds || 0),
                 proofType: order?.requirements?.proofType || 'SCREENSHOT',
                 actions: {
@@ -344,9 +351,9 @@ export class OrderActivatedListener {
                         customText: finalComment,
                         sequenceIndex: generatedCount + i,
                         orderIdSequence: `${payload.orderId}_task_${generatedCount + i + 1}`,
-                        appIcon: appIcon || combinedRequirements?.appIcon,
-                        appName: appName || combinedRequirements?.appName,
-                        packageId: packageId || combinedRequirements?.packageId,
+                        appIcon: !isYouTube ? (appIcon || combinedRequirements?.appIcon || null) : null,
+                        appName: !isYouTube ? (appName || combinedRequirements?.appName || null) : null,
+                        packageId: !isYouTube ? (packageId || combinedRequirements?.packageId || null) : null,
                     };
 
                     await this.taskEngine.createTask({
@@ -356,9 +363,9 @@ export class OrderActivatedListener {
                         taskType,
                         requirements: taskReqs,
                         metadata: {
-                            appIcon: appIcon || combinedRequirements?.appIcon,
-                            appName: appName || combinedRequirements?.appName,
-                            packageId: packageId || combinedRequirements?.packageId,
+                            appIcon: !isYouTube ? (appIcon || combinedRequirements?.appIcon || null) : null,
+                            appName: !isYouTube ? (appName || combinedRequirements?.appName || null) : null,
+                            packageId: !isYouTube ? (packageId || combinedRequirements?.packageId || null) : null,
                             rewardSnapshot: {
                                 totalReward: rewardAmount,
                                 baseReward: rewardAmount,

@@ -17,6 +17,7 @@ import '../../support_chat/services/worker_chat_service.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/providers/profile_provider.dart';
 import '../widgets/task_feed_card.dart';
+import '../../tutorials/screens/worker_tutorials_screen.dart';
 
 /// Task Feed Screen with Multi-Slide Top Hero Banner:
 /// - Top Dark Forest Emerald Gradient Hero Banner with edge-to-edge status bar
@@ -236,7 +237,6 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
 
     final type = (task['taskType'] ?? task['task_type'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toUpperCase();
     final serviceCode = (task['serviceCode'] ?? task['service_code'] ?? '').toString().toUpperCase();
-    final title = (task['title'] ?? task['serviceTitle'] ?? task['serviceName'] ?? '').toString().toLowerCase();
 
     Map<String, dynamic> req = {};
     if (task['requirements'] is Map) {
@@ -247,31 +247,28 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     final reqPlatform = (req['platform'] ?? '').toString().toLowerCase();
     final targetUrl = (req['targetUrl'] ?? req['url'] ?? '').toString().toLowerCase();
 
-    // 1. App Install (Highest Precedence - NEVER match with YouTube)
-    if (type == 'APP_INSTALL' ||
-        serviceCode.contains('APP_INSTALL') ||
-        title.contains('install & open') ||
-        title.contains('app install') ||
-        title.contains('install app') ||
-        reqServiceName.contains('install & open') ||
-        reqServiceName.contains('app install') ||
-        reqCategory.contains('app install')) {
-      return 'app_install';
+    // 0. YouTube (Checked first to prevent video titles containing words like "install" from hijacking it)
+    if (type.contains('YOUTUBE') ||
+        type.contains('YT_') ||
+        serviceCode.contains('YOUTUBE') ||
+        serviceCode.contains('YT_') ||
+        reqPlatform == 'youtube' ||
+        targetUrl.contains('youtube.com') ||
+        targetUrl.contains('youtu.be') ||
+        reqServiceName.contains('youtube') ||
+        reqCategory.contains('youtube')) {
+      return 'youtube';
     }
 
-    // 2. Google Maps / Local Reviews / Business - Checked before generic URL matches
+    // 1. Google Maps / Local Reviews / Business
     if (type.contains('GOOGLE_BUSINESS') ||
         serviceCode.contains('GOOGLE_BUSINESS') ||
         type.contains('GOOGLE_MAPS') ||
         serviceCode.contains('GOOGLE_MAPS') ||
         type.contains('MAP') ||
         serviceCode.contains('MAP') ||
-        title.contains('google maps') ||
-        title.contains('google review') ||
-        title.contains('google business') ||
-        reqServiceName.contains('google maps') ||
-        reqServiceName.contains('google review') ||
-        reqServiceName.contains('google business') ||
+        reqPlatform == 'google_maps' ||
+        reqPlatform == 'google_business' ||
         reqCategory.contains('google business') ||
         reqCategory.contains('google maps') ||
         reqCategory.contains('google') ||
@@ -282,45 +279,40 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
       return 'google_maps';
     }
 
-    // 3. Play Store Review & Rating
-    if (type.contains('PLAYSTORE') ||
-        serviceCode.contains('PLAYSTORE') ||
-        title.contains('play store') ||
-        reqServiceName.contains('play store') ||
-        reqCategory.contains('play store') ||
-        reqPlatform == 'playstore' ||
-        targetUrl.contains('play.google.com')) {
-      return 'playstore';
-    }
-
-    // 4. YouTube (Only if NOT an App Install!)
-    if (type.startsWith('YOUTUBE') ||
-        serviceCode.startsWith('YOUTUBE') ||
-        serviceCode.startsWith('YT_') ||
-        title.contains('youtube') ||
-        reqServiceName.contains('youtube') ||
-        reqCategory.contains('youtube') ||
-        targetUrl.contains('youtube.com') ||
-        targetUrl.contains('youtu.be')) {
-      return 'youtube';
-    }
-
-    // 5. Instagram
+    // 2. Instagram
     if (type.startsWith('INSTAGRAM') ||
         serviceCode.startsWith('INSTAGRAM') ||
         serviceCode.startsWith('IG_') ||
-        title.contains('instagram') ||
+        reqPlatform == 'instagram' ||
         reqServiceName.contains('instagram') ||
         reqCategory.contains('instagram') ||
         targetUrl.contains('instagram.com')) {
       return 'instagram';
     }
 
+    // 3. App Install
+    if (type == 'APP_INSTALL' ||
+        serviceCode.contains('APP_INSTALL') ||
+        (type.contains('INSTALL') && !type.contains('INSTAGRAM')) ||
+        reqServiceName.contains('install & open') ||
+        reqServiceName.contains('app install') ||
+        reqCategory.contains('app install')) {
+      return 'app_install';
+    }
+
+    // 4. Play Store Review & Rating
+    if (type.contains('PLAYSTORE') ||
+        serviceCode.contains('PLAYSTORE') ||
+        reqPlatform == 'playstore' ||
+        targetUrl.contains('play.google.com')) {
+      return 'playstore';
+    }
+
     // Fallback: check raw platform tag safely
     final rawPlatform = (task['platform'] ?? reqPlatform).toString().toLowerCase().trim();
     if (rawPlatform == 'playstore') return 'playstore';
-    if (rawPlatform == 'youtube' && !title.contains('install') && type != 'APP_INSTALL') return 'youtube';
-    if (rawPlatform == 'instagram' && !title.contains('install') && type != 'APP_INSTALL') return 'instagram';
+    if (rawPlatform == 'youtube') return 'youtube';
+    if (rawPlatform == 'instagram') return 'instagram';
     if (rawPlatform == 'google' || rawPlatform == 'google_business' || rawPlatform == 'google_maps' || rawPlatform.contains('map')) return 'google_maps';
 
     return 'other';
@@ -738,9 +730,41 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
                       ),
                     ),
 
-                    // Right Icons: Notification Bell + Wallet Pill
+                    // Right Icons: Tutorials + Notification Bell + Wallet Pill
                     Row(
                       children: [
+                        // Tutorials Button
+                        InkWell(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const WorkerTutorialsScreen(),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.smart_display_rounded,
+                              color: Color(0xFF22C55E),
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
                         // Notification Bell with dynamic unread badge
                         InkWell(
                           onTap: () async {

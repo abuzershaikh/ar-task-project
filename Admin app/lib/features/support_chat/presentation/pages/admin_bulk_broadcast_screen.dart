@@ -2,6 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/services/support_chat_service.dart';
 
@@ -18,6 +22,20 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
   final TextEditingController _ytController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+
+  late AudioRecorder _audioRecorder;
+  late AudioPlayer _audioPlayer;
+
+  // Audio recording & playback state
+  bool _isRecording = false;
+  int _recordDuration = 0;
+  Timer? _recordTimer;
+
+  File? _attachedAudioFile;
+  int _audioDurationSeconds = 0;
+  bool _isPlayingAudio = false;
+  Duration _audioCurrentPosition = Duration.zero;
+  Duration _audioTotalDuration = Duration.zero;
 
   String _selectedSegment = 'ALL'; // 'ALL' | 'NEW' | 'ACTIVE' | 'CUSTOM'
   bool _isLoadingWorkers = true;
@@ -38,12 +56,45 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
   @override
   void initState() {
     super.initState();
+    _audioRecorder = AudioRecorder();
+    _audioPlayer = AudioPlayer();
+
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (mounted) {
+        setState(() => _isPlayingAudio = state == PlayerState.playing);
+      }
+    });
+    _audioPlayer.onPositionChanged.listen((pos) {
+      if (mounted) setState(() => _audioCurrentPosition = pos);
+    });
+    _audioPlayer.onDurationChanged.listen((dur) {
+      if (mounted) {
+        setState(() {
+          _audioTotalDuration = dur;
+          if (_audioDurationSeconds <= 0 && dur.inSeconds > 0) {
+            _audioDurationSeconds = dur.inSeconds;
+          }
+        });
+      }
+    });
+    _audioPlayer.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _isPlayingAudio = false;
+          _audioCurrentPosition = Duration.zero;
+        });
+      }
+    });
+
     _fetchWorkers();
   }
 
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _recordTimer?.cancel();
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
     _textController.dispose();
     _ytController.dispose();
     _searchController.dispose();
@@ -103,14 +154,137 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
     final match = RegExp(r'(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})').firstMatch(url);
     setState(() {
       _youtubePreviewId = match?.group(1);
+      if (_youtubePreviewId != null) {
+        _attachedImage = null;
+        _uploadedImageUrl = null;
+        _attachedAudioFile = null;
+        _isPlayingAudio = false;
+      }
     });
   }
 
   Future<void> _pickImage() async {
     final XFile? img = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (img != null) {
-      setState(() => _attachedImage = File(img.path));
+      await _audioPlayer.stop();
+      setState(() {
+        _attachedImage = File(img.path);
+        _uploadedImageUrl = null;
+        _attachedAudioFile = null;
+        _isPlayingAudio = false;
+        _audioDurationSeconds = 0;
+        _youtubePreviewId = null;
+      });
     }
+  }
+
+  Future<void> _startAudioRecording() async {
+    try {
+      if (await _audioRecorder.hasPermission()) {
+        final dir = await getTemporaryDirectory();
+        final path = '${dir.path}/broadcast_audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        await _audioRecorder.start(const RecordConfig(), path: path);
+
+        await _audioPlayer.stop();
+
+        setState(() {
+          _isRecording = true;
+          _recordDuration = 0;
+          _isPlayingAudio = false;
+          _attachedAudioFile = null;
+          _attachedImage = null;
+          _uploadedImageUrl = null;
+          _youtubePreviewId = null;
+        });
+
+        _recordTimer?.cancel();
+        _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+          if (mounted) setState(() => _recordDuration++);
+        });
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Microphone permission is required to record voice')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[BroadcastScreen] Error starting recording: $e');
+    }
+  }
+
+  Future<void> _stopAudioRecording() async {
+    try {
+      _recordTimer?.cancel();
+      final path = await _audioRecorder.stop();
+      setState(() => _isRecording = false);
+
+      if (path != null && File(path).existsSync()) {
+        setState(() {
+          _attachedAudioFile = File(path);
+          _audioDurationSeconds = _recordDuration;
+          _audioCurrentPosition = Duration.zero;
+          _isPlayingAudio = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[BroadcastScreen] Error stopping recording: $e');
+    }
+  }
+
+  Future<void> _cancelAudioRecording() async {
+    try {
+      _recordTimer?.cancel();
+      await _audioRecorder.stop();
+      setState(() {
+        _isRecording = false;
+        _recordDuration = 0;
+      });
+    } catch (e) {
+      debugPrint('[BroadcastScreen] Error cancelling recording: $e');
+    }
+  }
+
+  Future<void> _pickAudioFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+      );
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+        await _audioPlayer.stop();
+        setState(() {
+          _attachedAudioFile = file;
+          _audioDurationSeconds = 0;
+          _isPlayingAudio = false;
+          _audioCurrentPosition = Duration.zero;
+          _attachedImage = null;
+          _uploadedImageUrl = null;
+          _youtubePreviewId = null;
+        });
+      }
+    } catch (e) {
+      debugPrint('[BroadcastScreen] Error picking audio file: $e');
+    }
+  }
+
+  Future<void> _toggleAudioPlay() async {
+    if (_attachedAudioFile == null) return;
+
+    if (_isPlayingAudio) {
+      await _audioPlayer.pause();
+      setState(() => _isPlayingAudio = false);
+    } else {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(DeviceFileSource(_attachedAudioFile!.path));
+      setState(() => _isPlayingAudio = true);
+    }
+  }
+
+  String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   int get _targetRecipientCount {
@@ -127,9 +301,9 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
 
   Future<void> _handleSendBroadcast() async {
     final text = _textController.text.trim();
-    if (text.isEmpty && _youtubePreviewId == null && _attachedImage == null) {
+    if (text.isEmpty && _youtubePreviewId == null && _attachedImage == null && _attachedAudioFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a message or attach media')),
+        const SnackBar(content: Text('Please enter a message, record voice, or attach media')),
       );
       return;
     }
@@ -140,6 +314,14 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
       );
       return;
     }
+
+    // Stop audio playback if previewing
+    if (_isPlayingAudio) {
+      await _audioPlayer.stop();
+      if (mounted) setState(() => _isPlayingAudio = false);
+    }
+
+    if (!mounted) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -171,25 +353,58 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
 
     setState(() => _isSending = true);
 
-    // Upload image if attached
-    if (_attachedImage != null && _uploadedImageUrl == null) {
-      _uploadedImageUrl = await _chatService.uploadMedia(_attachedImage!);
-    }
-
     String messageType = 'TEXT';
-    if (_youtubePreviewId != null) {
-      messageType = 'YOUTUBE';
-    } else if (_uploadedImageUrl != null) {
+    String? mediaUrl;
+    int durationSec = 0;
+
+    // 1. Audio Voice Note
+    if (_attachedAudioFile != null) {
+      final uploadedUrl = await _chatService.uploadMedia(_attachedAudioFile!);
+      if (uploadedUrl == null) {
+        if (mounted) {
+          setState(() => _isSending = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(backgroundColor: Colors.red, content: Text('Failed to upload audio file.')),
+          );
+        }
+        return;
+      }
+      messageType = 'AUDIO';
+      mediaUrl = uploadedUrl;
+      durationSec = _audioDurationSeconds > 0 ? _audioDurationSeconds : _audioTotalDuration.inSeconds;
+    }
+    // 2. Image
+    else if (_attachedImage != null) {
+      _uploadedImageUrl ??= await _chatService.uploadMedia(_attachedImage!);
+      if (_uploadedImageUrl == null) {
+        if (mounted) {
+          setState(() => _isSending = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(backgroundColor: Colors.red, content: Text('Failed to upload image.')),
+          );
+        }
+        return;
+      }
       messageType = 'IMAGE';
+      mediaUrl = _uploadedImageUrl;
+    }
+    // 3. YouTube
+    else if (_youtubePreviewId != null) {
+      messageType = 'YOUTUBE';
     }
 
     final result = await _chatService.sendBulkMessage(
       segment: _selectedSegment,
       customWorkerIds: _selectedSegment == 'CUSTOM' ? _selectedWorkerIds.toList() : null,
       messageType: messageType,
-      content: _youtubePreviewId != null ? _ytController.text.trim() : text,
-      mediaUrl: _uploadedImageUrl,
+      content: _youtubePreviewId != null
+          ? _ytController.text.trim()
+          : (messageType == 'AUDIO' && text.isEmpty
+              ? 'Voice Note'
+              : (messageType == 'IMAGE' && text.isEmpty ? 'Photo' : text)),
+      mediaUrl: mediaUrl,
       youtubeId: _youtubePreviewId,
+      durationSeconds: durationSec,
     );
 
     if (mounted) {
@@ -396,23 +611,88 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // Attach Media Buttons: YouTube Video & Photo
-                  Row(
+                  // Live Recording Indicator Bar (if currently recording)
+                  if (_isRecording) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Recording Audio...',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 13),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _formatDuration(_recordDuration),
+                            style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF991B1B), fontSize: 13),
+                          ),
+                          const Spacer(),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Colors.grey, size: 22),
+                            tooltip: 'Cancel',
+                            onPressed: _cancelAudioRecording,
+                          ),
+                          const SizedBox(width: 4),
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF00875A),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.check_rounded, size: 18),
+                            label: const Text('Attach', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            onPressed: _stopAudioRecording,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Attach Media Buttons: Voice Note, Audio File, Photo, YouTube
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      // YouTube Button
+                      // Voice Record Button
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
+                          foregroundColor: const Color(0xFF00875A),
+                          side: const BorderSide(color: Color(0xFF00875A)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        icon: const Icon(Icons.play_circle_fill_rounded, size: 18),
-                        label: const Text('Add YouTube Video', style: TextStyle(fontSize: 12)),
-                        onPressed: () {
-                          _showYouTubeInputDialog();
-                        },
+                        icon: const Icon(Icons.mic_rounded, size: 18),
+                        label: const Text('Record Voice', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        onPressed: _isRecording ? _stopAudioRecording : _startAudioRecording,
                       ),
-                      const SizedBox(width: 10),
+
+                      // Pick Audio File
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF0D9488),
+                          side: const BorderSide(color: Color(0xFF0D9488)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.audio_file_rounded, size: 18),
+                        label: const Text('Audio File', style: TextStyle(fontSize: 12)),
+                        onPressed: _pickAudioFile,
+                      ),
 
                       // Photo Button
                       OutlinedButton.icon(
@@ -425,8 +705,128 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
                         label: const Text('Add Photo', style: TextStyle(fontSize: 12)),
                         onPressed: _pickImage,
                       ),
+
+                      // YouTube Button
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.play_circle_fill_rounded, size: 18),
+                        label: const Text('YouTube Video', style: TextStyle(fontSize: 12)),
+                        onPressed: _showYouTubeInputDialog,
+                      ),
                     ],
                   ),
+
+                  // Attached Voice Note Preview Card
+                  if (_attachedAudioFile != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: _toggleAudioPlay,
+                                child: Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF00875A),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    _isPlayingAudio ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                    size: 26,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.mic_rounded, size: 15, color: Color(0xFF00875A)),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Audio Attached (${_audioDurationSeconds > 0 ? "${_audioDurationSeconds}s" : _formatDuration(_audioTotalDuration.inSeconds)})',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF00875A),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _attachedAudioFile!.path.split(Platform.pathSeparator).last,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 22),
+                                tooltip: 'Remove audio',
+                                onPressed: () async {
+                                  await _audioPlayer.stop();
+                                  setState(() {
+                                    _attachedAudioFile = null;
+                                    _audioDurationSeconds = 0;
+                                    _isPlayingAudio = false;
+                                    _audioCurrentPosition = Duration.zero;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          if (_isPlayingAudio || _audioCurrentPosition > Duration.zero) ...[
+                            const SizedBox(height: 10),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(2),
+                              child: LinearProgressIndicator(
+                                value: _audioTotalDuration.inMilliseconds > 0
+                                    ? (_audioCurrentPosition.inMilliseconds / _audioTotalDuration.inMilliseconds).clamp(0.0, 1.0)
+                                    : 0,
+                                backgroundColor: const Color(0xFFDCFCE7),
+                                color: const Color(0xFF00875A),
+                                minHeight: 4,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _formatDuration(_audioCurrentPosition.inSeconds),
+                                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                                ),
+                                Text(
+                                  _formatDuration(_audioDurationSeconds > 0 ? _audioDurationSeconds : _audioTotalDuration.inSeconds),
+                                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
 
                   // YouTube Preview Card
                   if (_youtubePreviewId != null) ...[

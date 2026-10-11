@@ -146,7 +146,7 @@ class SupportChatService {
   }
 
   /// Fetch WhatsApp-like conversations list
-  Future<Map<String, dynamic>> getConversations({String search = '', int limit = 50}) async {
+  Future<Map<String, dynamic>> getConversations({String search = '', int limit = 200}) async {
     try {
       final uri = Uri.parse('$_apiBase/conversations?search=${Uri.encodeComponent(search)}&limit=$limit');
       final res = await http.get(uri).timeout(const Duration(seconds: 8));

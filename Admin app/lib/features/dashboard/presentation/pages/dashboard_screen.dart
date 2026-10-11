@@ -384,7 +384,9 @@ class DashboardScreen extends StatelessWidget {
                             title: 'Total Workers',
                             value: totalWorkers.toString(),
                             subtitle: '$activeWorkers Active • $inactiveWorkers Inactive',
-                            customSubtitle: Row(
+                            customSubtitle: Wrap(
+                              spacing: 4,
+                              runSpacing: 2,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
@@ -424,7 +426,9 @@ class DashboardScreen extends StatelessWidget {
                             title: 'Total Buyers',
                             value: totalBuyers.toString(),
                             subtitle: '$activeBuyers Active • $inactiveBuyers Inactive',
-                            customSubtitle: Row(
+                            customSubtitle: Wrap(
+                              spacing: 4,
+                              runSpacing: 2,
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),

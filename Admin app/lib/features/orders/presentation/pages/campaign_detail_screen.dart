@@ -61,12 +61,15 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              _formatId(fullId),
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF047857),
+            Flexible(
+              child: Text(
+                _formatId(fullId),
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF047857),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 4),
@@ -333,85 +336,116 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: const Color(0xFFA7F3D0), width: 1),
                         ),
-                        child: ListTile(
-                          leading: AppAvatar(
-                            name: workerName.toString(),
-                            imageUrl: workerAvatarUrl?.toString(),
-                            userId: workerId,
-                            radius: 19,
-                            fontSize: 13,
-                          ),
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  workerName.toString(),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF064E3B)),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              _buildCopySnippet(context, 'Task ID', taskId),
-                            ],
-                          ),
-                          subtitle: Text(
-                            workerEmail.isNotEmpty ? workerEmail : 'Worker ID: ${_formatId(workerId)}',
-                            style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                                decoration: BoxDecoration(
-                                  color: _getStatusBg(status),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: _getStatusColor(status).withOpacity(0.3)),
-                                ),
-                                child: Text(
-                                  status,
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    color: _getStatusColor(status),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF059669)),
-                            ],
-                          ),
-                          onTap: () {
-                            final submissionId = item['submissionId']?.toString() ?? item['id']?.toString() ?? '';
-                            String proofUrl = (item['proofUrl'] ?? item['proofScreenshotUrl'] ?? '').toString();
-                            if (proofUrl.isEmpty && item['proofs'] is List && (item['proofs'] as List).isNotEmpty) {
-                              final p0 = (item['proofs'] as List).first;
-                              if (p0 is Map) proofUrl = (p0['url'] ?? p0['path'] ?? '').toString();
-                              else if (p0 is String) proofUrl = p0;
-                            }
-                            if (proofUrl.isEmpty && item['data'] is Map) {
-                              proofUrl = (item['data']['proofUrl'] ?? item['data']['screenshotUrl'] ?? '').toString();
-                            }
-                            String proofText = (item['proofText'] ?? item['notes'] ?? '').toString();
-                            if (proofText.isEmpty && item['data'] is Map) {
-                              proofText = (item['data']['textProof'] ?? item['data']['proofText'] ?? item['data']['notes'] ?? '').toString();
-                            }
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {
+                              final submissionId = item['submissionId']?.toString() ?? item['id']?.toString() ?? '';
+                              String proofUrl = (item['proofUrl'] ?? item['proofScreenshotUrl'] ?? '').toString();
+                                if (proofUrl.isEmpty && item['proofs'] is List && (item['proofs'] as List).isNotEmpty) {
+                                  final p0 = (item['proofs'] as List).first;
+                                  if (p0 is Map) {
+                                    proofUrl = (p0['url'] ?? p0['path'] ?? '').toString();
+                                  } else if (p0 is String) {
+                                    proofUrl = p0;
+                                  }
+                                }
+                              if (proofUrl.isEmpty && item['data'] is Map) {
+                                proofUrl = (item['data']['proofUrl'] ?? item['data']['screenshotUrl'] ?? '').toString();
+                              }
+                              String proofText = (item['proofText'] ?? item['notes'] ?? '').toString();
+                              if (proofText.isEmpty && item['data'] is Map) {
+                                proofText = (item['data']['textProof'] ?? item['data']['proofText'] ?? item['data']['notes'] ?? '').toString();
+                              }
 
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              builder: (context) => TaskReviewInspectorModal(
-                                submissionId: submissionId,
-                                taskId: taskId,
-                                workerId: workerId,
-                                workerName: workerName.toString(),
-                                workerEmail: workerEmail.toString(),
-                                workerAvatarUrl: workerAvatarUrl?.toString(),
-                                proofUrl: proofUrl.isNotEmpty ? proofUrl : null,
-                                proofText: proofText.isNotEmpty ? proofText : null,
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                builder: (context) => TaskReviewInspectorModal(
+                                  submissionId: submissionId,
+                                  taskId: taskId,
+                                  workerId: workerId,
+                                  workerName: workerName.toString(),
+                                  workerEmail: workerEmail.toString(),
+                                  workerAvatarUrl: workerAvatarUrl?.toString(),
+                                  proofUrl: proofUrl.isNotEmpty ? proofUrl : null,
+                                  proofText: proofText.isNotEmpty ? proofText : null,
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      AppAvatar(
+                                        name: workerName.toString(),
+                                        imageUrl: workerAvatarUrl?.toString(),
+                                        userId: workerId,
+                                        radius: 19,
+                                        fontSize: 13,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              workerName.toString(),
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF064E3B)),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              workerEmail.isNotEmpty ? workerEmail : 'Worker ID: ${_formatId(workerId)}',
+                                              style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                        decoration: BoxDecoration(
+                                          color: _getStatusBg(status),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: _getStatusColor(status).withOpacity(0.3)),
+                                        ),
+                                        child: Text(
+                                          status,
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            color: _getStatusColor(status),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF059669)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        'Task ID: ',
+                                        style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                      ),
+                                      Flexible(
+                                        child: _buildCopySnippet(context, 'Task ID', taskId),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                            );
-                          },
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -444,7 +478,8 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 12.5, fontWeight: FontWeight.w500)),
-          rightWidget,
+          const SizedBox(width: 8),
+          Flexible(child: rightWidget),
         ],
       ),
     );

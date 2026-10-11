@@ -70,4 +70,31 @@ class AdminWalletRepository {
     }
     return [];
   }
+
+  /// Fetch all buyer top-up and purchase history with overall stats
+  Future<Map<String, dynamic>> getBuyerTopupHistory({
+    String? filter,
+    String? search,
+    int? limit,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (filter != null && filter != 'ALL') queryParams['filter'] = filter;
+      if (search != null && search.trim().isNotEmpty) queryParams['search'] = search.trim();
+      if (limit != null) queryParams['limit'] = limit;
+
+      final response = await _dioClient.get(
+        '/admin/wallet/topups',
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+    } catch (e) {
+      // ignore
+    }
+    return {};
+  }
 }
+

@@ -1042,7 +1042,9 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
                       snippetIcon,
                       Expanded(
                         child: Text(
-                          conv.lastMessageText.isNotEmpty ? conv.lastMessageText : 'No messages yet',
+                          (conv.lastMessageType == 'IMAGE' && conv.lastMessageText.startsWith('📷 '))
+                              ? conv.lastMessageText.substring(2).trim()
+                              : (conv.lastMessageText.isNotEmpty ? conv.lastMessageText : 'No messages yet'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

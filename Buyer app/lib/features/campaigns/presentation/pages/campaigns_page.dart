@@ -201,6 +201,8 @@ class _CampaignsViewState extends State<_CampaignsView> {
                               fontWeight: FontWeight.bold,
                               letterSpacing: -0.3,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
@@ -210,6 +212,8 @@ class _CampaignsViewState extends State<_CampaignsView> {
                               fontSize: 12.5,
                               fontWeight: FontWeight.w400,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -512,48 +516,53 @@ class _CampaignsViewState extends State<_CampaignsView> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 7),
-                          // Date & Time Row
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today_rounded,
-                                size: 12.5,
-                                color: Color(0xFF64748B),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                formattedDate,
-                                style: const TextStyle(
-                                  fontSize: 11,
+                          // Date & Time Row (Scales down gracefully without overflow)
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 12.5,
                                   color: Color(0xFF64748B),
-                                  fontWeight: FontWeight.w500,
                                 ),
-                              ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 7),
-                                child: Text(
-                                  '|',
-                                  style: TextStyle(
-                                    color: Color(0xFFCBD5E1),
+                                const SizedBox(width: 4),
+                                Text(
+                                  formattedDate,
+                                  style: const TextStyle(
                                     fontSize: 11,
+                                    color: Color(0xFF64748B),
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                              ),
-                              const Icon(
-                                Icons.access_time_rounded,
-                                size: 13,
-                                color: Color(0xFF64748B),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                formattedTime,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF64748B),
-                                  fontWeight: FontWeight.w500,
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 7),
+                                  child: Text(
+                                    '|',
+                                    style: TextStyle(
+                                      color: Color(0xFFCBD5E1),
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ],
+                                const Icon(
+                                  Icons.access_time_rounded,
+                                  size: 13,
+                                  color: Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  formattedTime,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF64748B),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -568,117 +577,140 @@ class _CampaignsViewState extends State<_CampaignsView> {
 
                 const SizedBox(height: 12),
 
-                // Bottom Stats Bar Container (Light Mint / Soft Tint)
+                // Bottom Stats Bar Container (Responsive on any screen size)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF0FDF4).withOpacity(0.55),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // 1. Completed Tasks / Progress (Left)
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.group_rounded,
-                            color: Color(0xFF059669),
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${campaign.completedTasks}/${campaign.totalTasks}',
-                                style: const TextStyle(
-                                  color: Color(0xFF059669),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                      Expanded(
+                        flex: 3,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.group_rounded,
+                              color: Color(0xFF059669),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '${campaign.completedTasks}/${campaign.totalTasks}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF059669),
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '($percent%)',
+                                    style: TextStyle(
+                                      color: const Color(0xFF059669).withOpacity(0.85),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
-                              Text(
-                                '($percent%)',
-                                style: TextStyle(
-                                  color: const Color(0xFF059669).withOpacity(0.85),
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 4),
 
                       // 2. Price Per Task (Middle)
-                      Row(
-                        children: [
-                          Container(
-                            width: 20,
-                            height: 20,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF059669),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Center(
-                              child: Text(
-                                '₹',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.bold,
+                      Expanded(
+                        flex: 4,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 18,
+                              height: 18,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF059669),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  '₹',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '₹$unitPrice',
-                                style: const TextStyle(
-                                  color: Color(0xFF0F172A),
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '₹$unitPrice',
+                                    style: const TextStyle(
+                                      color: Color(0xFF0F172A),
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    'Per ${ServiceUnitHelper.getUnitName(campaign.serviceName.isNotEmpty ? campaign.serviceName : campaign.name, count: 1)}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF64748B),
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
-                              Text(
-                                'Per ${ServiceUnitHelper.getUnitName(campaign.serviceName.isNotEmpty ? campaign.serviceName : campaign.name, count: 1)}',
-                                style: const TextStyle(
-                                  color: Color(0xFF64748B),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 4),
 
                       // 3. View Details Button (Right)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'View Details',
+                              'Details',
                               style: TextStyle(
                                 color: Color(0xFF2563EB),
-                                fontSize: 11.5,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
-                            SizedBox(width: 4),
+                            SizedBox(width: 2),
                             Icon(
                               Icons.chevron_right_rounded,
-                              size: 15,
+                              size: 14,
                               color: Color(0xFF2563EB),
                             ),
                           ],

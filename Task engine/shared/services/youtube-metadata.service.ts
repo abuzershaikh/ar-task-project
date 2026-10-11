@@ -11,6 +11,9 @@ export interface YouTubeVideoInfo {
     requiredWatchSeconds?: number;
     requiredWatchFormatted?: string;
     isCappedAt5Min?: boolean;
+    isCappedAt2Min?: boolean;
+    isCapped?: boolean;
+    maxCapSeconds?: number;
     error?: string;
 }
 
@@ -57,17 +60,19 @@ export class YouTubeMetadataService {
      * Fetch video duration and metadata directly.
      * Uses YouTube Innertube Player API as primary (bypasses datacenter bot-checks),
      * and oEmbed + HTML parsing as fallback.
-     * Enforces the 5-Minute Cap Rule:
-     * - If video duration > 300s (5 min), required watch time is 300s (5 minutes).
-     * - If video duration <= 300s, required watch time is the full video duration.
+     * Enforces the Cap Rule based on maxCapSeconds:
+     * - Combo service: 300s (5 min cap)
+     * - Like / Subscribe / Comment services: 120s (Mandatory 2 min max cap)
+     * - If video duration <= maxCapSeconds, required watch time is the full video duration.
+     * - If video duration > maxCapSeconds, required watch time is capped at maxCapSeconds.
      */
-    async getVideoMetadata(input: string): Promise<YouTubeVideoInfo> {
+    async getVideoMetadata(input: string, maxCapSeconds: number = 120): Promise<YouTubeVideoInfo> {
         const videoId = this.extractVideoId(input);
         if (!videoId) {
             return { success: false, error: 'Invalid YouTube link or video ID' };
         }
 
-        this.logger.log(`Fetching YouTube video metadata for videoId: ${videoId}`);
+        this.logger.log(`Fetching YouTube video metadata for videoId: ${videoId} (maxCap: ${maxCapSeconds}s)`);
 
         // 1. Primary: YouTube Innertube API (ANDROID_TESTSUITE) - fast & reliably returns lengthSeconds
         let innertubeData = await this.fetchInnertube(videoId, 'ANDROID_TESTSUITE', '1.9');
@@ -97,19 +102,24 @@ export class YouTubeMetadataService {
 
         if (!title) title = 'YouTube Video';
 
-        // 5. 5-Minute Cap Rule Logic
+        // 5. Cap Rule Logic:
+        // - Non-Combo (Like, Subscribe, Comment): maxCapSeconds = 120 (2 mins)
+        // - Combo: maxCapSeconds = 300 (5 mins)
         let requiredWatchSeconds = durationSeconds;
-        let isCappedAt5Min = false;
+        let isCapped = false;
 
-        if (durationSeconds > 300) {
-            requiredWatchSeconds = 300;
-            isCappedAt5Min = true;
+        if (durationSeconds > maxCapSeconds) {
+            requiredWatchSeconds = maxCapSeconds;
+            isCapped = true;
         } else if (durationSeconds <= 0) {
-            durationSeconds = 120; // fallback to 2 minutes (120s) if duration undetectable
-            requiredWatchSeconds = 120;
+            durationSeconds = maxCapSeconds;
+            requiredWatchSeconds = maxCapSeconds;
         }
 
-        this.logger.log(`Metadata for ${videoId}: duration=${durationSeconds}s, requiredWatch=${requiredWatchSeconds}s, capped=${isCappedAt5Min}, title="${title}"`);
+        const isCappedAt5Min = maxCapSeconds === 300 && isCapped;
+        const isCappedAt2Min = maxCapSeconds === 120 && isCapped;
+
+        this.logger.log(`Metadata for ${videoId}: duration=${durationSeconds}s, requiredWatch=${requiredWatchSeconds}s, capped=${isCapped} (max=${maxCapSeconds}s), title="${title}"`);
 
         return {
             success: true,
@@ -121,6 +131,9 @@ export class YouTubeMetadataService {
             requiredWatchSeconds,
             requiredWatchFormatted: this.formatDuration(requiredWatchSeconds),
             isCappedAt5Min,
+            isCappedAt2Min,
+            isCapped,
+            maxCapSeconds,
         };
     }
 

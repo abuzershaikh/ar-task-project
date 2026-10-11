@@ -267,6 +267,27 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                 s.category.toUpperCase().contains('YOUTUBE')));
   }
 
+  bool _isYouTubeLike(ServiceModel? s) {
+    if (s == null || !_isYouTubeService(s) || _isYouTubeCombo(s)) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    return code.contains('LIKE') || name.contains('LIKE');
+  }
+
+  bool _isYouTubeSubscribe(ServiceModel? s) {
+    if (s == null || !_isYouTubeService(s) || _isYouTubeCombo(s)) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    return code.contains('SUB') || name.contains('SUB') || code.contains('CHANNEL') || name.contains('CHANNEL');
+  }
+
+  bool _isYouTubeComment(ServiceModel? s) {
+    if (s == null || !_isYouTubeService(s) || _isYouTubeCombo(s)) return false;
+    final code = s.code.toUpperCase();
+    final name = s.name.toUpperCase();
+    return code.contains('COMMENT') || name.contains('COMMENT');
+  }
+
   void _parseInstagramUrl(String input) {
     final trimmed = input.trim();
     if (trimmed.isEmpty) {
@@ -506,7 +527,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     try {
       final res = await _serviceRepository.dioClient!.post(
         '/buyer/orders/youtube-video-info',
-        data: {'url': trimmed},
+        data: {
+          'url': trimmed,
+          'serviceCode': _selectedService?.code ?? '',
+        },
       );
 
       final isSuccess = (res.statusCode == 200 || res.statusCode == 201) &&
@@ -1041,23 +1065,25 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
               : '',
           'appIcon': _appIcon,
           'packageId': _packageId,
-          'watchTimeSeconds': _isYouTubeCombo(_selectedService) &&
-                  _ytDurationSeconds != null &&
-                  _ytDurationSeconds! > 300
-              ? (_selectedWatchMinutes * 60)
-              : (_isYouTubeCombo(_selectedService)
-                  ? (_ytRequiredWatchSeconds ??
+          'watchTimeSeconds': _isYouTubeCombo(_selectedService)
+              ? (_ytDurationSeconds != null && _ytDurationSeconds! > 300
+                  ? (_selectedWatchMinutes * 60)
+                  : (_ytRequiredWatchSeconds ??
                       (_ytDurationSeconds != null
                           ? (_ytDurationSeconds! > 300
                               ? 300
                               : _ytDurationSeconds!)
-                          : 300))
+                          : 300)))
+              : (_isYouTubeService(_selectedService)
+                  ? (_ytDurationSeconds != null && _ytDurationSeconds! > 0
+                      ? (_ytDurationSeconds! > 120 ? 120 : _ytDurationSeconds!)
+                      : 120)
                   : 0),
-          'selectedWatchMinutes': _isYouTubeCombo(_selectedService) &&
-                  _ytDurationSeconds != null &&
-                  _ytDurationSeconds! > 300
-              ? _selectedWatchMinutes
-              : (_isYouTubeCombo(_selectedService) ? 5 : 0),
+          'selectedWatchMinutes': _isYouTubeCombo(_selectedService)
+              ? (_ytDurationSeconds != null && _ytDurationSeconds! > 300
+                  ? _selectedWatchMinutes
+                  : 5)
+              : (_isYouTubeService(_selectedService) ? 2 : 0),
           'unitPrice': _getEffectiveUnitPrice(),
           'videoDurationSeconds': _isInstagramService(_selectedService)
               ? 0
@@ -1598,6 +1624,12 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                 const SizedBox(height: 16),
               ],
 
+              // ── SPECIAL YOUTUBE SINGLE ACTION INCLUSIONS CARD ──
+              if (_isYouTubeService(s) && !_isYouTubeCombo(s)) ...[
+                _buildYouTubeSingleActionInclusionsCard(s),
+                const SizedBox(height: 16),
+              ],
+
               // ── SPECIAL APP INSTALL INCLUSIONS CARD ──
               if (_isAppInstallService(s)) ...[
                 _buildAppInstallInclusionsCard(s),
@@ -1633,7 +1665,13 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                   : (_isYouTubeCombo(s)
                                       ? 'YouTube Video Link (Target for Watch, Like, Subscribe & Comment)'
                                       : (_isYouTubeService(s)
-                                          ? 'YouTube Video Link (Target URL)'
+                                          ? (_isYouTubeLike(s)
+                                              ? 'YouTube Video Link (Target for Watch & Like)'
+                                              : (_isYouTubeSubscribe(s)
+                                                  ? 'YouTube Video Link (Target for Watch & Subscribe)'
+                                                  : (_isYouTubeComment(s)
+                                                      ? 'YouTube Video Link (Target for Watch & Comment)'
+                                                      : 'YouTube Video Link (Target for Watch & Engage)')))
                                           : (_isAppInstallService(s)
                                               ? 'Google Play Store App URL (Target App for Install)'
                                               : (_isPlayStoreService(s)
@@ -2625,28 +2663,38 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                             ),
                                           ),
                                           const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: _ytIsCappedAt5Min
-                                                  ? const Color(0xFFFEF3C7)
-                                                  : const Color(0xFFDCFCE7),
-                                              borderRadius:
-                                                  BorderRadius.circular(5),
-                                            ),
-                                            child: Text(
-                                              _ytIsCappedAt5Min
-                                                  ? 'Capped at 5m'
-                                                  : 'Full Video',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: _ytIsCappedAt5Min
-                                                    ? const Color(0xFFB45309)
-                                                    : const Color(0xFF15803D),
-                                              ),
-                                            ),
+                                          Builder(
+                                            builder: (context) {
+                                              final isCombo = _isYouTubeCombo(s);
+                                              final isCapped = isCombo
+                                                  ? (_ytIsCappedAt5Min || (_ytDurationSeconds != null && _ytDurationSeconds! > 300))
+                                                  : (_ytDurationSeconds != null && _ytDurationSeconds! > 120);
+                                              final capLabel = isCombo
+                                                  ? (_ytRequiredWatchFormatted != null ? 'Capped at $_ytRequiredWatchFormatted' : 'Capped at 5m')
+                                                  : 'Capped at 2m';
+
+                                              return Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: isCapped
+                                                      ? const Color(0xFFFEF3C7)
+                                                      : const Color(0xFFDCFCE7),
+                                                  borderRadius:
+                                                      BorderRadius.circular(5),
+                                                ),
+                                                child: Text(
+                                                  isCapped ? capLabel : 'Full Video',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isCapped
+                                                        ? const Color(0xFFB45309)
+                                                        : const Color(0xFF15803D),
+                                                  ),
+                                                ),
+                                              );
+                                            },
                                           ),
                                         ],
                                       ),
@@ -2675,10 +2723,19 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                                   SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      (_ytDurationSeconds != null &&
-                                              _ytDurationSeconds! > 300)
-                                          ? 'Worker must watch selected $_selectedWatchMinutes minutes before submit unlocks'
-                                          : 'Worker must watch complete video before submit unlocks',
+                                      _isYouTubeCombo(s)
+                                          ? ((_ytDurationSeconds != null && _ytDurationSeconds! > 300)
+                                              ? 'Worker must watch selected $_selectedWatchMinutes minutes before submit unlocks'
+                                              : 'Worker must watch complete video before submit unlocks')
+                                          : ((_ytDurationSeconds != null && _ytDurationSeconds! > 120)
+                                              ? (_isYouTubeLike(s)
+                                                  ? 'Worker must watch 2 minutes before Like proof unlocks (Mandatory view)'
+                                                  : (_isYouTubeSubscribe(s)
+                                                      ? 'Worker must watch 2 minutes before Subscribe proof unlocks (Mandatory view)'
+                                                      : (_isYouTubeComment(s)
+                                                          ? 'Worker must watch 2 minutes before Comment proof unlocks (Mandatory view)'
+                                                          : 'Worker must watch 2 minutes before submit unlocks (Mandatory view)')))
+                                              : 'Worker must watch complete video before submit unlocks'),
                                       style: const TextStyle(
                                         fontSize: 10.5,
                                         fontWeight: FontWeight.w600,
@@ -3130,8 +3187,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
                 padding:
@@ -3249,6 +3308,191 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
     );
   }
 
+  // ── YouTube Single Action Perks & Inclusions Card (Explains WatchTime + Like / Sub / Comment) ──
+  Widget _buildYouTubeSingleActionInclusionsCard(ServiceModel s) {
+    final bool isLike = _isYouTubeLike(s);
+    final bool isSub = _isYouTubeSubscribe(s);
+    final bool isComment = _isYouTubeComment(s);
+
+    final String badgeTitle = isLike
+        ? 'WATCH & LIKE VIDEO BUNDLE'
+        : (isSub
+            ? 'WATCH & SUBSCRIBE BUNDLE'
+            : (isComment ? 'WATCH & COMMENT BUNDLE' : 'HIGH-RETENTION YOUTUBE BUNDLE'));
+
+    final String perUnitLabel = isLike
+        ? 'Per 1 Video Like'
+        : (isSub ? 'Per 1 Channel Subscriber' : (isComment ? 'Per 1 Video Comment' : 'Per 1 Unit'));
+
+    final String actionTitle = isLike
+        ? 'Authentic Video Like'
+        : (isSub
+            ? 'Permanent Channel Subscriber'
+            : (isComment ? 'Topic-Relevant Positive Comment' : 'Genuine YouTube Engagement'));
+
+    final String actionDesc = isLike
+        ? 'Permanent thumbs-up like from verified real Indian active YouTube user'
+        : (isSub
+            ? 'Non-drop active subscriber with bell notification. Prior watch time ensures zero drops'
+            : (isComment
+                ? 'High-quality relevant comment posted after watching to stay visible at the top'
+                : 'Real organic engagement from genuine active users'));
+
+    final IconData actionIcon = isLike
+        ? Icons.thumb_up_alt_rounded
+        : (isSub
+            ? Icons.notifications_active_rounded
+            : (isComment ? Icons.mode_comment_rounded : Icons.star_rounded));
+
+    final Color actionColor = isLike
+        ? const Color(0xFFEA580C)
+        : (isSub
+            ? const Color(0xFF7C3AED)
+            : (isComment ? const Color(0xFF2563EB) : const Color(0xFFDC2626)));
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFEF2F2), Color(0xFFFFF7ED)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFFFECACA),
+          width: 1.2,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFDC2626), Color(0xFFEA580C)],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.play_circle_fill_rounded,
+                      size: 13,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      badgeTitle,
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFFFECACA),
+                  ),
+                ),
+                child: Text(
+                  perUnitLabel,
+                  style: GoogleFonts.outfit(
+                    color: const Color(0xFFB91C1C),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Every 1 Worker executes on their personal physical Android smartphone:',
+            style: GoogleFonts.outfit(
+              color: const Color(0xFF0F172A),
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildActionPerkTile(
+            icon: Icons.timer_outlined,
+            iconColor: const Color(0xFFDC2626),
+            title: 'Mandatory Watch Time (up to 2 Min Included)',
+            desc:
+                'Worker must watch up to 2 mins before engagement. Mandatory watch prevents YouTube spam bot deletion',
+          ),
+          const SizedBox(height: 6),
+          _buildActionPerkTile(
+            icon: actionIcon,
+            iconColor: actionColor,
+            title: actionTitle,
+            desc: actionDesc,
+          ),
+          const SizedBox(height: 6),
+          _buildActionPerkTile(
+            icon: Icons.trending_up_rounded,
+            iconColor: const Color(0xFF10B981),
+            title: 'AVD & YouTube Algorithm Boost',
+            desc:
+                'Increases Average View Duration & sends strong signals to YouTube Suggested & Browse algorithms',
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEE2E2).withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.verified_rounded,
+                  size: 15,
+                  color: Color(0xFFB91C1C),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    '100% Real Physical Android Phones • Safe for YouTube Partner Program & Monetization',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF991B1B),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Combo Perks & Inclusions Widget (Explains WatchTime + Like + Sub + Comment) ──
   Widget _buildComboInclusionsCard(ServiceModel s) {
     final isYt = _isYouTubeCombo(s);
@@ -3278,8 +3522,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
                 padding:
@@ -3313,7 +3559,6 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -3537,8 +3782,10 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
                 padding:
@@ -3572,7 +3819,6 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(

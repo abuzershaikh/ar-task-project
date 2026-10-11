@@ -28,6 +28,7 @@ import { TaskAssignment } from './entities/task-assignment.entity';
 import { Wallet } from './entities/wallet.entity';
 import { WalletTransaction } from './entities/wallet-transaction.entity';
 import { WorkerCompletedIdentity } from './entities/worker-completed-identity.entity';
+import { Tutorial } from './entities/tutorial.entity';
 
 // Repositories
 import { UserRepository } from './repositories/user.repository';
@@ -54,6 +55,7 @@ import { CampaignWorkerParticipationRepository } from './repositories/campaign-w
 import { TaskAssignmentRepository } from './repositories/task-assignment.repository';
 import { WalletRepository } from './repositories/wallet.repository';
 import { WalletTransactionRepository } from './repositories/wallet-transaction.repository';
+import { TutorialRepository } from './repositories/tutorial.repository';
 
 const entities = [
     User,
@@ -81,6 +83,7 @@ const entities = [
     Wallet,
     WalletTransaction,
     WorkerCompletedIdentity,
+    Tutorial,
 ];
 
 const repositories = [
@@ -108,6 +111,7 @@ const repositories = [
     TaskAssignmentRepository,
     WalletRepository,
     WalletTransactionRepository,
+    TutorialRepository,
 ];
 
 @Module({

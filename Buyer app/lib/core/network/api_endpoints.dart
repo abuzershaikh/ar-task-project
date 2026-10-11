@@ -159,4 +159,8 @@ class ApiEndpoints {
   
   /// Get app settings
   static const String appSettings = '$buyer/settings';
+
+  // ============ TUTORIALS ============
+  static const String buyerTutorials = '$buyer/tutorials';
+  static const String buyerTutorialCategories = '$buyer/tutorials/categories';
 }

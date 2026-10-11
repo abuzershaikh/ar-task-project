@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/platform_logo.dart';
 import '../../../shared/widgets/marquee_text.dart';
@@ -13,6 +14,19 @@ class MyTaskCard extends StatelessWidget {
 
   const MyTaskCard({super.key, required this.task, required this.onTap});
 
+  Map<String, dynamic>? _extractRequirements(dynamic task) {
+    if (task == null) return null;
+    final req = task['requirements'];
+    if (req is Map) return Map<String, dynamic>.from(req);
+    if (req is String && req.trim().startsWith('{')) {
+      try {
+        final decoded = jsonDecode(req);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+    }
+    return null;
+  }
+
   String _formatTitle(dynamic task) {
     if (task == null) return 'Task';
     if (task['title'] != null && task['title'].toString().trim().isNotEmpty) {
@@ -22,28 +36,38 @@ class MyTaskCard extends StatelessWidget {
         task['serviceTitle'].toString().trim().isNotEmpty) {
       return task['serviceTitle'].toString().trim();
     }
+    final reqMap = _extractRequirements(task);
+    final plat = _getPlatform(task);
+    final isYouTube = plat == 'youtube';
     final type = (task['taskType'] ?? task['type'] ?? task['serviceCode'] ?? '').toString().toLowerCase();
-    final isInstall = type.contains('install');
+    final isInstall = !isYouTube && type.contains('install');
 
-    if (task['requirements'] != null && task['requirements'] is Map) {
-      final req = task['requirements'] as Map;
-      if (req['appName'] != null &&
-          req['appName'].toString().trim().isNotEmpty) {
-        final name = req['appName'].toString().trim();
+    if (isYouTube) {
+      if (type.contains('combo')) return 'Watch, Like, Sub & Comment on YouTube';
+      if (type.contains('sub') || type.contains('channel')) return 'Watch & Subscribe on YouTube';
+      if (type.contains('like')) return 'Watch & Like YouTube Video';
+      if (type.contains('comment')) return 'Watch & Comment on YouTube';
+      return 'Watch & Engage on YouTube';
+    }
+
+    if (reqMap != null) {
+      if (reqMap['appName'] != null &&
+          reqMap['appName'].toString().trim().isNotEmpty) {
+        final name = reqMap['appName'].toString().trim();
         return isInstall ? 'Install & Open: $name' : 'Rate & Review: $name';
       }
-      if (req['serviceName'] != null &&
-          req['serviceName'].toString().trim().isNotEmpty) {
-        return req['serviceName'].toString().trim();
+      if (reqMap['serviceName'] != null &&
+          reqMap['serviceName'].toString().trim().isNotEmpty) {
+        return reqMap['serviceName'].toString().trim();
       }
-      if (req['title'] != null && req['title'].toString().trim().isNotEmpty) {
-        return req['title'].toString().trim();
+      if (reqMap['title'] != null && reqMap['title'].toString().trim().isNotEmpty) {
+        return reqMap['title'].toString().trim();
       }
-      if (req['serviceTitle'] != null &&
-          req['serviceTitle'].toString().trim().isNotEmpty) {
-        return req['serviceTitle'].toString().trim();
+      if (reqMap['serviceTitle'] != null &&
+          reqMap['serviceTitle'].toString().trim().isNotEmpty) {
+        return reqMap['serviceTitle'].toString().trim();
       }
-      for (final entry in req.entries) {
+      for (final entry in reqMap.entries) {
         final k = entry.key.toString().toLowerCase();
         final v = entry.value.toString().trim();
         if ((k.contains('heading') ||
@@ -53,7 +77,7 @@ class MyTaskCard extends StatelessWidget {
           return v;
         }
       }
-      for (final entry in req.entries) {
+      for (final entry in reqMap.entries) {
         final k = entry.key.toString().toLowerCase();
         final v = entry.value.toString().trim();
         if ((k.contains('textfield') ||
@@ -83,7 +107,6 @@ class MyTaskCard extends StatelessWidget {
     final rawType = (task['taskType'] ?? task['type'] ?? 'Task').toString();
     if (rawType.toUpperCase().startsWith('SERVICE_') ||
         rawType.toUpperCase().startsWith('SRV_')) {
-      final plat = _getPlatform(task);
       return '${plat[0].toUpperCase()}${plat.substring(1)} Promotion Task';
     }
     return rawType
@@ -98,56 +121,143 @@ class MyTaskCard extends StatelessWidget {
   }
 
   String _getPlatform(dynamic task) {
-    if (task == null) return 'google';
-    if (task['platform'] != null &&
-        task['platform'].toString().trim().isNotEmpty) {
-      return task['platform'].toString().toLowerCase().trim();
-    }
-    final type = (task['taskType'] ?? task['type'] ?? task['serviceCode'] ?? '')
+    if (task == null) return 'google_maps';
+    final reqMap = _extractRequirements(task);
+
+    final type = (task['taskType'] ?? task['task_type'] ?? task['type'] ?? task['serviceCode'] ?? '')
         .toString()
         .toLowerCase();
-    String reqStr = '';
-    if (task['requirements'] is Map) {
-      reqStr = task['requirements'].toString().toLowerCase();
-    }
+    final urlStr = (task['targetUrl'] ??
+            task['url'] ??
+            (reqMap != null ? (reqMap['targetUrl'] ?? reqMap['url'] ?? reqMap['link']) : null) ??
+            '')
+        .toString()
+        .toLowerCase();
+    final rawPlat = (task['platform'] ??
+            (reqMap != null ? reqMap['platform'] : null) ??
+            '')
+        .toString()
+        .toLowerCase()
+        .trim();
+    final serviceName = (task['serviceTitle'] ??
+            task['serviceName'] ??
+            (reqMap != null ? (reqMap['serviceName'] ?? reqMap['serviceTitle']) : null) ??
+            '')
+        .toString()
+        .toLowerCase();
+    final titleStr = (task['title'] ?? '')
+        .toString()
+        .toLowerCase();
+    final reqStr = (reqMap != null ? reqMap.toString() : (task['requirements'] ?? '')).toString().toLowerCase();
     final metaStr = (task['metadata'] != null)
         ? task['metadata'].toString().toLowerCase()
         : '';
-    final titleStr = (task['title'] ?? task['serviceTitle'] ?? '')
-        .toString()
-        .toLowerCase();
+    final combined = '$type $reqStr $metaStr $titleStr $serviceName $urlStr';
 
-    final combined = '$type $reqStr $metaStr $titleStr';
-    if (combined.contains('google_business') ||
+    // 0. EXPLICIT YOUTUBE CHECK FIRST (Highest Priority)
+    if (rawPlat == 'youtube' ||
+        type.contains('youtube') ||
+        type.contains('yt_') ||
+        type == 'yt' ||
+        urlStr.contains('youtu.be') ||
+        urlStr.contains('youtube.com') ||
+        serviceName.contains('youtube') ||
+        titleStr.contains('youtube') ||
+        metaStr.contains('youtube') ||
+        reqStr.contains('youtube') ||
+        reqStr.contains('youtu.be') ||
+        combined.contains('youtube') ||
+        combined.contains('youtu.be')) {
+      return 'youtube';
+    }
+
+    // 1. Google Business / Maps
+    if (type.contains('google_business') ||
+        type.contains('google_maps') ||
+        type.contains('gmb') ||
+        rawPlat == 'google_maps' ||
+        rawPlat == 'google_business' ||
+        rawPlat == 'maps' ||
+        urlStr.contains('maps.google') ||
+        urlStr.contains('goo.gl/maps') ||
+        urlStr.contains('maps.app.goo.gl') ||
+        urlStr.contains('share.google') ||
+        serviceName.contains('google maps') ||
+        serviceName.contains('google review') ||
+        titleStr.contains('google maps') ||
+        titleStr.contains('google business') ||
+        combined.contains('google_business') ||
         combined.contains('google_maps') ||
-        combined.contains('gmb') ||
         combined.contains('share.google') ||
-        combined.contains('maps.google') ||
-        combined.contains('goo.gl/maps') ||
-        combined.contains('maps') ||
-        combined.contains('map')) {
+        combined.contains('maps.app.goo.gl')) {
       return 'google_maps';
     }
-    if (combined.contains('playstore') ||
-        combined.contains('app_review') ||
+
+    // 2. Play Store & App Install (Strict checks, NEVER generic 'play' word)
+    if (type.contains('app_install') ||
+        type.contains('playstore') ||
+        type.contains('google_play') ||
+        type.contains('play_store') ||
+        type.contains('app_review') ||
+        urlStr.contains('play.google.com') ||
+        urlStr.contains('market://') ||
+        rawPlat == 'playstore' ||
+        rawPlat == 'google_play' ||
+        rawPlat == 'play_store' ||
+        serviceName.contains('play store') ||
+        serviceName.contains('playstore') ||
+        serviceName.contains('app install') ||
+        titleStr.contains('play store') ||
+        titleStr.contains('app review') ||
+        (type.contains('install') && !type.contains('instagram')) ||
+        combined.contains('playstore') ||
         combined.contains('google_play') ||
-        (combined.contains('play') && !combined.contains('display'))) {
+        combined.contains('play_store')) {
       return 'playstore';
     }
-    if (combined.contains('youtube') || combined.contains('yt_'))
-      return 'youtube';
-    if (combined.contains('instagram') || combined.contains('insta'))
+
+    // 3. Instagram (Strict check: ensure not 'install')
+    if (type.contains('instagram') ||
+        type.contains('ig_') ||
+        urlStr.contains('instagram.com') ||
+        rawPlat == 'instagram' ||
+        serviceName.contains('instagram') ||
+        titleStr.contains('instagram') ||
+        combined.contains('instagram') ||
+        (combined.contains('insta') && !combined.contains('install'))) {
       return 'instagram';
-    if (combined.contains('facebook') || combined.contains('fb'))
+    }
+
+    // 4. Facebook
+    if (type.contains('facebook') ||
+        rawPlat == 'facebook' ||
+        urlStr.contains('facebook.com') ||
+        combined.contains('facebook') ||
+        combined.contains('fb')) {
       return 'facebook';
-    if (combined.contains('google') ||
-        combined.contains('g_map'))
-      return 'google_maps';
-    if (combined.contains('twitter') ||
+    }
+
+    // 5. Twitter / X
+    if (type.contains('twitter') ||
+        rawPlat == 'x' ||
+        rawPlat == 'twitter' ||
+        urlStr.contains('twitter.com') ||
+        urlStr.contains('x.com') ||
+        combined.contains('twitter') ||
         combined.contains(' x ') ||
-        combined.contains('x.com'))
+        combined.contains('x.com')) {
       return 'x';
-    if (combined.contains('telegram')) return 'telegram';
+    }
+
+    // 6. Telegram
+    if (type.contains('telegram') || rawPlat == 'telegram' || combined.contains('telegram')) {
+      return 'telegram';
+    }
+
+    if (rawPlat.isNotEmpty && rawPlat != 'general') {
+      return rawPlat;
+    }
+
     return 'google_maps';
   }
 
@@ -210,18 +320,22 @@ class MyTaskCard extends StatelessWidget {
 
   String? _getAppIcon(dynamic task) {
     if (task == null) return null;
+    final plat = _getPlatform(task);
+    if (plat == 'youtube') {
+      return null;
+    }
     if (task['appIcon'] != null &&
         task['appIcon'].toString().trim().isNotEmpty) {
       return task['appIcon'].toString().trim();
     }
-    if (task['requirements'] is Map) {
-      final req = task['requirements'] as Map;
-      if (req['appIcon'] != null &&
-          req['appIcon'].toString().trim().isNotEmpty) {
-        return req['appIcon'].toString().trim();
+    final reqMap = _extractRequirements(task);
+    if (reqMap != null) {
+      if (reqMap['appIcon'] != null &&
+          reqMap['appIcon'].toString().trim().isNotEmpty) {
+        return reqMap['appIcon'].toString().trim();
       }
-      if (req['icon'] != null && req['icon'].toString().trim().isNotEmpty) {
-        return req['icon'].toString().trim();
+      if (reqMap['icon'] != null && reqMap['icon'].toString().trim().isNotEmpty) {
+        return reqMap['icon'].toString().trim();
       }
     }
     if (task['metadata'] is Map) {
@@ -245,6 +359,7 @@ class MyTaskCard extends StatelessWidget {
     final status = (task['status'] ?? 'Active').toString();
     final dateStr = _formatDate(task);
     final appIcon = _getAppIcon(task);
+    final isYouTube = platform == 'youtube';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -254,7 +369,7 @@ class MyTaskCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -273,12 +388,14 @@ class MyTaskCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: isYouTube ? const Color(0xFFFEF2F2) : const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFEDF2F7)),
+                  border: Border.all(
+                    color: isYouTube ? const Color(0xFFFEE2E2) : const Color(0xFFEDF2F7),
+                  ),
                 ),
                 child: Center(
-                  child: (appIcon != null && appIcon.isNotEmpty)
+                  child: (!isYouTube && appIcon != null && appIcon.isNotEmpty)
                       ? ClipRRect(
                           borderRadius: BorderRadius.circular(10),
                           child: Image.network(
@@ -286,7 +403,7 @@ class MyTaskCard extends StatelessWidget {
                             width: 38,
                             height: 38,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
+                            errorBuilder: (c, e, s) =>
                                 PlatformLogo(platform: platform, size: 26),
                           ),
                         )

@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../bloc/more_bloc.dart';
 import '../../../orders/presentation/widgets/task_review_inspector_modal.dart';
+import '../../../review_auto_approve/presentation/pages/review_auto_approve_screen.dart';
 
 class TaskReviewsQueueScreen extends StatefulWidget {
   const TaskReviewsQueueScreen({super.key});
@@ -27,7 +28,18 @@ class _TaskReviewsQueueScreenState extends State<TaskReviewsQueueScreen> {
         backgroundColor: AppColors.primary,
         actions: [
           IconButton(
+            icon: const Icon(Icons.auto_mode_rounded),
+            tooltip: 'Auto-Approve Review Settings',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReviewAutoApproveScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
             onPressed: () => context.read<MoreBloc>().add(LoadReviewsQueueEvent()),
           ),
         ],

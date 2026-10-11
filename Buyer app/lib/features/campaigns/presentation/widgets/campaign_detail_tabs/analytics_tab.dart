@@ -187,16 +187,23 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.donut_large_rounded, size: 16, color: Color(0xFF7C3AED)),
-                          SizedBox(width: 6),
-                          Text(
-                            'Task Pipeline Distribution',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                          ),
-                        ],
+                      const Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.donut_large_rounded, size: 16, color: Color(0xFF7C3AED)),
+                            SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Task Pipeline Distribution',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         '$total Total Tasks',
                         style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
@@ -263,16 +270,23 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.bar_chart_rounded, size: 16, color: Color(0xFF059669)),
-                          SizedBox(width: 6),
-                          Text(
-                            'Worker Completion Velocity',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                          ),
-                        ],
+                      const Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.bar_chart_rounded, size: 16, color: Color(0xFF059669)),
+                            SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Worker Completion Velocity',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(

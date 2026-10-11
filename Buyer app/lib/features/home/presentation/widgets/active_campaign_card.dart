@@ -97,20 +97,29 @@ class ActiveCampaignCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      '${campaign.completed} / ${campaign.total} Tasks',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF334155),
+                    Expanded(
+                      child: Text(
+                        '${campaign.completed} / ${campaign.total} Tasks',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF334155),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Text(
-                      'Ends in ${campaign.remainingTime}',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFFD97706),
-                        fontWeight: FontWeight.w500,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Ends in ${campaign.remainingTime}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Color(0xFFD97706),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

@@ -16,6 +16,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../../keyboard/keyboard.dart';
 import '../widgets/in_app_youtube_player_modal.dart';
+import '../widgets/rider_swipe_to_accept_button.dart';
+import '../widgets/task_execution_dotted_section.dart';
+import '../widgets/attention_copy_button.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// Premium 3D Realistic Task Detail & Execution Screen
 /// - Exact visual layout matching reference UI image
@@ -41,8 +45,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   bool _isSubmitting = false;
   bool _isTaskAccepted = false;
   bool _isSubmitted = false;
-  bool _isSaved = false;
   bool _isAccepting = false;
+  bool _isCommentCopied = false;
+  Timer? _commentCopyTimer;
 
   // Countdown timer state
   Timer? _countdownTimer;
@@ -110,6 +115,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     WidgetsBinding.instance.removeObserver(this);
     _inAppWatchTimer?.cancel();
     _countdownTimer?.cancel();
+    _commentCopyTimer?.cancel();
     _proofTextController.dispose();
     _audioPlayer?.stop();
     _audioPlayer?.dispose();
@@ -171,29 +177,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final isYt = p == 'youtube' || target.contains('youtube.com') || target.contains('youtu.be');
     if (!isYt) return false;
 
-    // Watch time requirement is STRICTLY for YouTube Combo (or if explicitly ordered watchTimeSeconds > 0)
-    final type = (t['taskType'] ?? t['task_type'] ?? t['type'] ?? t['serviceCode'] ?? t['category'] ?? '')
-        .toString()
-        .toUpperCase();
-    final name = (t['title'] ?? t['name'] ?? '').toString().toUpperCase();
-
-    final isCombo = type == 'YOUTUBE_COMBO' ||
-        type == 'YT_COMBO' ||
-        ((type.contains('COMBO') || name.contains('COMBO')) &&
-            (type.contains('YT') || type.contains('YOUTUBE') || p == 'youtube'));
-
-    if (isCombo) return true;
-
-    // Check if buyer specifically mandated watch time (> 0)
-    final rawWatch = t['requirements'] is Map
-        ? (t['requirements']['watchTimeSeconds'] ?? t['requirements']['watch_time_seconds'])
-        : null;
-    final explicitWatch = rawWatch ?? t['watchTimeSeconds'] ?? t['watch_time_seconds'];
-    final watchSec = explicitWatch is num
-        ? explicitWatch.toInt()
-        : (int.tryParse(explicitWatch?.toString() ?? '') ?? 0);
-
-    return watchSec > 0;
+    // All YouTube tasks require watch time:
+    // Combo: 5 min base or slider time
+    // Non-combo (Like, Subscribe, Comment): Mandatory 2-minute max cap
+    return true;
   }
 
   bool _isCommentRequiredTask() {
@@ -293,20 +280,39 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       }
     }
 
-    // If buyer explicitly ordered custom watch duration (slider > 0):
-    // Worker MUST watch the full purchased duration (without 5-min cap).
-    if (customWatchSec > 0) {
-      if (vidDurationSec > 0 && customWatchSec > vidDurationSec) {
-        return vidDurationSec;
+    final p = _getPlatform();
+    final type = (t is Map ? (t['taskType'] ?? t['task_type'] ?? t['type'] ?? t['serviceCode'] ?? t['category'] ?? '') : '')
+        .toString()
+        .toUpperCase();
+    final name = (t is Map ? (t['title'] ?? t['name'] ?? '') : '').toString().toUpperCase();
+
+    final isCombo = type == 'YOUTUBE_COMBO' ||
+        type == 'YT_COMBO' ||
+        ((type.contains('COMBO') || name.contains('COMBO')) &&
+            (type.contains('YT') || type.contains('YOUTUBE') || p == 'youtube'));
+
+    if (isCombo) {
+      // COMBO WALA KO TOUCH MATH KARNA - keep existing logic untouched!
+      if (customWatchSec > 0) {
+        if (vidDurationSec > 0 && customWatchSec > vidDurationSec) {
+          return vidDurationSec;
+        }
+        return customWatchSec;
       }
-      return customWatchSec;
+      if (vidDurationSec > 300) return 300;
+      if (vidDurationSec > 0) return vidDurationSec;
+      return 300;
     }
 
-    // Default 5-Minute Cap Rule (when buyer didn't purchase custom duration):
-    // If video > 5 minutes (300 seconds), cap at 300 seconds (5 min).
-    // If video <= 5 minutes (300s) and > 0, required watch time is the complete video.
-    if (vidDurationSec > 300) return 300;
-    if (vidDurationSec > 0) return vidDurationSec;
+    // NON-COMBO (Likes, Subscribers, Comments):
+    // Mandatory 2-minute max cap! (120s max).
+    // If video is shorter than 120s, full video duration; otherwise capped at 120s.
+    if (vidDurationSec > 0) {
+      return vidDurationSec > 120 ? 120 : vidDurationSec;
+    }
+    if (customWatchSec > 0) {
+      return customWatchSec > 120 ? 120 : customWatchSec;
+    }
 
     return 120; // fallback 2 minutes (120 seconds)
   }
@@ -341,6 +347,32 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   }
 
   void _startWatchingYouTubeVideo() {
+    if (!_isTaskAccepted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.lock_outline_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Accept task first to open',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     final targetUrl = _getTargetUrl();
     _watchStartTime = DateTime.now();
     _isWatchingOnYouTube = true;
@@ -573,14 +605,17 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   // ── Helper Extractors ──────────────────────────────────────────────────────
   void _fetchPlayStoreIconIfNeeded() async {
     final p = _getPlatform();
-    if (p == 'google_business' || p == 'google_maps' || p == 'google') return;
+    if (p == 'youtube' || _isYouTubeTask()) return;
+    if (p == 'google_business' || p == 'google_maps' || p == 'google' || p == 'instagram' || p == 'facebook') return;
     final direct = _getAppIcon();
     if (direct.isNotEmpty && !direct.contains('/assets/icons/')) return;
     final url = _getTargetUrl();
     if (url.contains('share.google') ||
         url.contains('maps.google') ||
         url.contains('goo.gl/maps') ||
-        url.contains('maps.app.goo.gl')) {
+        url.contains('maps.app.goo.gl') ||
+        url.contains('youtube.com') ||
+        url.contains('youtu.be')) {
       return;
     }
     if (url.contains('play.google.com') ||
@@ -615,11 +650,20 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final t = widget.task;
     if (t == null) return 'google_maps';
 
+    dynamic reqObj = t['requirements'];
+    if (reqObj is String && reqObj.trim().startsWith('{')) {
+      try {
+        reqObj = jsonDecode(reqObj);
+      } catch (_) {}
+    }
+
     final type = (t['taskType'] ?? t['task_type'] ?? t['type'] ?? t['serviceCode'] ?? '')
         .toString()
         .toLowerCase();
     String reqStr = '';
-    if (t['requirements'] is Map) {
+    if (reqObj is Map) {
+      reqStr = reqObj.toString().toLowerCase();
+    } else if (t['requirements'] != null) {
       reqStr = t['requirements'].toString().toLowerCase();
     }
     final metaStr = (t['metadata'] != null)
@@ -628,7 +672,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final titleStr = (t['title'] ??
             t['serviceName'] ??
             t['serviceTitle'] ??
-            (t['requirements'] is Map ? (t['requirements']['serviceName'] ?? t['requirements']['title']) : null) ??
+            (reqObj is Map ? (reqObj['serviceName'] ?? reqObj['title']) : null) ??
             '')
         .toString()
         .toLowerCase();
@@ -638,45 +682,71 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final targetUrl = _getTargetUrl().toLowerCase();
     final combined = '$type $reqStr $metaStr $titleStr $descStr $targetUrl';
 
-    // 0. Google Business / Maps MUST take priority before Play Store
+    final reqPlat = (reqObj is Map ? reqObj['platform'] : null)?.toString().toLowerCase().trim() ?? '';
+    final rawPlat = (t['platform'] ?? '')?.toString().toLowerCase().trim() ?? '';
+
+    // 0. EXPLICIT YOUTUBE CHECK FIRST (Absolute Priority #0)
+    if (rawPlat == 'youtube' ||
+        reqPlat == 'youtube' ||
+        type.contains('youtube') ||
+        type.contains('yt_') ||
+        type == 'yt' ||
+        targetUrl.contains('youtu.be') ||
+        targetUrl.contains('youtube.com') ||
+        titleStr.contains('youtube') ||
+        descStr.contains('youtube') ||
+        reqStr.contains('youtube') ||
+        reqStr.contains('youtu.be') ||
+        combined.contains('youtube') ||
+        combined.contains('youtu.be')) {
+      return 'youtube';
+    }
+
+    // 1. Google Business / Maps
     if (type.contains('google_business') ||
         type.contains('google_maps') ||
         type.contains('gmb') ||
-        type.contains('map') ||
+        rawPlat == 'google_maps' ||
+        rawPlat == 'google_business' ||
+        rawPlat == 'maps' ||
+        rawPlat == 'google' ||
+        reqPlat == 'google_maps' ||
+        reqPlat == 'google_business' ||
+        reqPlat == 'google' ||
+        targetUrl.contains('maps.google') ||
+        targetUrl.contains('goo.gl/maps') ||
+        targetUrl.contains('maps.app.goo.gl') ||
+        targetUrl.contains('share.google') ||
+        targetUrl.contains('search.google.com/local') ||
         titleStr.contains('google business') ||
         titleStr.contains('google maps') ||
         titleStr.contains('business review') ||
-        titleStr.contains('map') ||
-        targetUrl.contains('maps.google') ||
-        targetUrl.contains('goo.gl/maps') ||
-        targetUrl.contains('share.google') ||
-        targetUrl.contains('maps.app.goo.gl') ||
-        targetUrl.contains('search.google.com/local') ||
         combined.contains('google_business') ||
         combined.contains('google_maps') ||
         combined.contains('share.google') ||
         combined.contains('maps.app.goo.gl') ||
-        combined.contains('gmb_') ||
-        (t['platform'] != null &&
-            (t['platform'].toString().toLowerCase().contains('business') ||
-                t['platform'].toString().toLowerCase().contains('maps') ||
-                t['platform'].toString().toLowerCase() == 'google')) ||
-        (t['requirements'] is Map &&
-            t['requirements']['platform'] != null &&
-            (t['requirements']['platform'].toString().toLowerCase().contains('business') ||
-                t['requirements']['platform'].toString().toLowerCase().contains('maps') ||
-                t['requirements']['platform'].toString().toLowerCase() == 'google'))) {
+        combined.contains('gmb_')) {
       return 'google_maps';
     }
 
-    // 1. Play Store & App Install MUST ALWAYS take priority over raw platform tag
+    // 2. Play Store & App Install (Strict checks, NEVER generic 'play' word)
     if (type.contains('app_install') ||
-        (type.contains('install') && !type.contains('instagram')) ||
-        titleStr.contains('install & open') ||
-        titleStr.contains('play store') ||
-        titleStr.contains('app review') ||
+        type.contains('playstore') ||
+        type.contains('google_play') ||
+        type.contains('play_store') ||
+        type.contains('app_review') ||
+        rawPlat == 'playstore' ||
+        rawPlat == 'google_play' ||
+        rawPlat == 'play_store' ||
+        reqPlat == 'playstore' ||
+        reqPlat == 'google_play' ||
+        reqPlat == 'play_store' ||
         targetUrl.contains('play.google.com') ||
         targetUrl.contains('market://') ||
+        titleStr.contains('play store') ||
+        titleStr.contains('app review') ||
+        (titleStr.contains('install & open') && !titleStr.contains('instagram')) ||
+        (type.contains('install') && !type.contains('instagram')) ||
         combined.contains('playstore') ||
         combined.contains('google_play') ||
         combined.contains('play_store') ||
@@ -684,53 +754,56 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       return 'playstore';
     }
 
-    if (t['platform'] != null && t['platform'].toString().trim().isNotEmpty) {
-      final p = t['platform'].toString().toLowerCase().trim();
-      if (p.contains('play') || p.contains('google_play') || p.contains('install'))
-        return 'playstore';
-      if (p.contains('maps') || p.contains('business') || p == 'google')
-        return 'google_maps';
-      if (p.contains('instagram') ||
-          (p.contains('insta') && !p.contains('install')))
-        return 'instagram';
-      return p;
+    // 3. Instagram (Strict check: ensure not 'install')
+    if (type.contains('instagram') ||
+        type.contains('ig_') ||
+        rawPlat == 'instagram' ||
+        reqPlat == 'instagram' ||
+        targetUrl.contains('instagram.com') ||
+        titleStr.contains('instagram') ||
+        combined.contains('instagram') ||
+        (combined.contains('insta') && !combined.contains('install'))) {
+      return 'instagram';
     }
 
-    // 2. YouTube
-    if (combined.contains('youtube') ||
-        combined.contains('yt_') ||
-        type.contains('yt'))
-      return 'youtube';
-
-    // 3. Instagram (Strict check: ensure word does not contain 'install')
-    if (combined.contains('instagram') ||
-        (combined.contains('insta') && !combined.contains('install')))
-      return 'instagram';
-
     // 4. Facebook
-    if (combined.contains('facebook') || combined.contains('fb'))
+    if (type.contains('facebook') ||
+        rawPlat == 'facebook' ||
+        reqPlat == 'facebook' ||
+        targetUrl.contains('facebook.com') ||
+        combined.contains('facebook') ||
+        combined.contains('fb')) {
       return 'facebook';
+    }
 
-    // 5. Google Maps / Local
-    if (combined.contains('maps') ||
-        combined.contains('map') ||
-        combined.contains('google') ||
-        combined.contains('share.google'))
-      return 'google_maps';
-
-    // 6. X
-    if (combined.contains('twitter') ||
+    // 5. X / Twitter
+    if (type.contains('twitter') ||
+        rawPlat == 'x' ||
+        rawPlat == 'twitter' ||
+        targetUrl.contains('twitter.com') ||
+        targetUrl.contains('x.com') ||
+        combined.contains('twitter') ||
         combined.contains(' x ') ||
-        combined.contains('x.com'))
+        combined.contains('x.com')) {
       return 'x';
+    }
 
-    // 7. Telegram
-    if (combined.contains('telegram')) return 'telegram';
+    // 6. Telegram
+    if (type.contains('telegram') || rawPlat == 'telegram' || combined.contains('telegram')) {
+      return 'telegram';
+    }
+
+    if (rawPlat.isNotEmpty && rawPlat != 'general') {
+      return rawPlat;
+    }
 
     return 'google_maps';
   }
 
   String _getAppIcon() {
+    if (_isYouTubeTask() || _getPlatform() == 'youtube') {
+      return '';
+    }
     if (_fetchedAppIcon != null && _fetchedAppIcon!.isNotEmpty) {
       return _fetchedAppIcon!;
     }
@@ -800,10 +873,21 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   String _formatTitle() {
     final t = widget.task;
     if (t == null) return 'Task Details';
-    final appName = _getAppName();
+    final p = _getPlatform();
     final type = (t['taskType'] ?? t['type'] ?? t['serviceCode'] ?? '')
         .toString()
         .toUpperCase();
+
+    // 0. YouTube Tasks: Strictly clean action title (never include fetched video title)
+    if (p == 'youtube') {
+      if (type.contains('COMBO')) return 'Watch, Like, Subscribe & Comment';
+      if (type.contains('SUB') || type.contains('SUBSCRIBE')) return 'Watch & Subscribe Channel';
+      if (type.contains('LIKE')) return 'Watch & Like Video';
+      if (type.contains('COMMENT')) return 'Watch & Comment on Video';
+      return 'Watch & Engage on YouTube';
+    }
+
+    final appName = _getAppName();
     final isInstall =
         type.contains('INSTALL') ||
         (t['requirements'] is Map &&
@@ -816,12 +900,8 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       if (isInstall) {
         return 'Install & Open: $appName 📱';
       }
-      final p = _getPlatform();
       if (p == 'google_business' || p == 'google_maps' || p == 'google') {
         return 'Rate & Review: $appName ⭐⭐⭐⭐⭐';
-      }
-      if (p == 'youtube') {
-        return 'Watch & Engage: $appName ▶️';
       }
       if (p == 'instagram') {
         return 'Engage: $appName 📸';
@@ -855,7 +935,6 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
         }
       }
     }
-    final p = _getPlatform();
     if (p == 'google_business' || p == 'google_maps' || p == 'google') {
       final tUpper =
           (widget.task['taskType'] ??
@@ -911,11 +990,12 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                   '')
               .toString()
               .toUpperCase();
-      if (tUpper.contains('COMBO'))
+      if (tUpper.contains('COMBO')) {
         return 'YouTube Combo: Watch, Like, Sub & Comment 🎬';
-      if (tUpper.contains('COMMENT')) return 'Comment on YouTube Video 💬';
-      if (tUpper.contains('SUB')) return 'Subscribe to YouTube Channel 🔔';
-      if (tUpper.contains('LIKE')) return 'Like YouTube Video 👍';
+      }
+      if (tUpper.contains('SUB')) return 'Watch & Subscribe on YouTube 🔔';
+      if (tUpper.contains('LIKE')) return 'Watch & Like on YouTube 👍';
+      if (tUpper.contains('COMMENT')) return 'Watch & Comment on YouTube 💬';
       return 'Watch & Engage on YouTube 🎬';
     }
     return 'Complete ${p[0].toUpperCase()}${p.substring(1)} Task';
@@ -952,11 +1032,15 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       }
       return 'PLAY STORE REVIEW';
     }
+    if (p == 'youtube' || type.contains('YT') || type.contains('YOUTUBE')) {
+      if (type.contains('COMBO')) return 'GROWTH COMBO';
+      if (type.contains('SUBSCRIBE') || type.contains('SUB')) return 'WATCH & SUBSCRIBE';
+      if (type.contains('LIKE')) return 'WATCH & LIKE';
+      if (type.contains('COMMENT')) return 'WATCH & COMMENT';
+      return 'WATCH & ENGAGE';
+    }
     if (type.contains('INSTA') && type.contains('COMBO'))
       return 'LIKE + FOLLOW';
-    if ((type.contains('YT') || type.contains('YOUTUBE')) &&
-        type.contains('COMBO'))
-      return 'LIKE + SUB + COMMENT';
     if (type.contains('COMBO')) return '$p COMBO'.toUpperCase();
     if (type.contains('COMMENT')) return '$p COMMENT'.toUpperCase();
     if (type.contains('LIKE')) return '$p LIKE'.toUpperCase();
@@ -1080,7 +1164,74 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     if (p == 'playstore') {
       return 'Open the App on Google Play Store, give 5-star rating ⭐⭐⭐⭐⭐ and submit genuine review text.';
     }
-    return 'Watch the video on ${p[0].toUpperCase()}${p.substring(1)} and post a genuine comment using the text provided.';
+    if (p == 'youtube') {
+      final tUpper = (widget.task['taskType'] ?? widget.task['type'] ?? widget.task['serviceCode'] ?? '').toString().toUpperCase();
+      if (tUpper.contains('COMBO')) {
+        return 'Watch the video completely on YouTube, hit Like, Subscribe to the channel, and post the assigned comment.';
+      }
+      if (tUpper.contains('SUB')) {
+        return 'Watch the video for the required duration and Subscribe to the YouTube channel.';
+      }
+      if (tUpper.contains('LIKE')) {
+        return 'Watch the video for the required duration and hit the Like (👍) button on YouTube.';
+      }
+      if (tUpper.contains('COMMENT')) {
+        return 'Watch the video for the required duration and post a thoughtful, genuine comment on YouTube using the text provided.';
+      }
+      return 'Watch the video on YouTube and complete the engagement action.';
+    }
+    return 'Complete the requested task on ${p[0].toUpperCase()}${p.substring(1)} following the instructions carefully.';
+  }
+
+  String _getHeroSubtitle() {
+    final p = _getPlatform();
+    final type = (widget.task['taskType'] ??
+            widget.task['type'] ??
+            widget.task['serviceCode'] ??
+            '')
+        .toString()
+        .toUpperCase();
+
+    if (p == 'youtube') {
+      if (type.contains('COMBO')) {
+        return 'Watch video completely, like, subscribe & post comment.';
+      }
+      if (type.contains('SUB') || type.contains('SUBSCRIBE')) {
+        return 'Watch video for 2 minutes and subscribe to channel.';
+      }
+      if (type.contains('LIKE')) {
+        return 'Watch video for 2 minutes and hit the Like button.';
+      }
+      if (type.contains('COMMENT')) {
+        return 'Watch video for 2 minutes and post your comment.';
+      }
+      return 'Watch video on YouTube and complete engagement.';
+    }
+
+    if (p == 'google_business' || p == 'google_maps' || p == 'google') {
+      if (type.contains('REVIEW')) {
+        return 'Open Google Maps listing, rate 5 stars and post review.';
+      }
+      return 'Open Google Maps listing and rate 5 stars.';
+    }
+
+    if (p == 'playstore') {
+      if (type.contains('INSTALL')) {
+        return 'Install and open the app from Google Play Store.';
+      }
+      return 'Rate 5 stars and write a review on Play Store.';
+    }
+
+    if (p == 'instagram') {
+      if (type.contains('COMBO')) {
+        return 'Follow profile, like the post & leave a comment.';
+      }
+      if (type.contains('LIKE')) return 'Like the post/reel on Instagram.';
+      if (type.contains('COMMENT')) return 'Post a genuine comment on Instagram.';
+      return 'Follow account and complete engagement.';
+    }
+
+    return 'Follow the task guidelines below to earn rewards.';
   }
 
   String _getCustomText() {
@@ -1202,6 +1353,12 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   String _getTargetUrl() {
     final t = widget.task;
     String rawUrl = '';
+    dynamic req = t['requirements'];
+    if (req is String && req.trim().startsWith('{')) {
+      try {
+        req = jsonDecode(req);
+      } catch (_) {}
+    }
     if (t['targetUrl'] != null && t['targetUrl'].toString().trim().isNotEmpty) {
       rawUrl = t['targetUrl'].toString().trim();
     } else if (t['url'] != null && t['url'].toString().trim().isNotEmpty) {
@@ -1209,22 +1366,22 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     } else if (t['packageId'] != null &&
         t['packageId'].toString().trim().isNotEmpty) {
       rawUrl = t['packageId'].toString().trim();
-    } else if (t['requirements'] is Map) {
-      final req = t['requirements'] as Map;
-      if (req['targetUrl'] != null &&
-          req['targetUrl'].toString().trim().isNotEmpty) {
-        rawUrl = req['targetUrl'].toString().trim();
-      } else if (req['packageId'] != null &&
-          req['packageId'].toString().trim().isNotEmpty) {
-        rawUrl = req['packageId'].toString().trim();
-      } else if (req['packageName'] != null &&
-          req['packageName'].toString().trim().isNotEmpty) {
-        rawUrl = req['packageName'].toString().trim();
-      } else if (req['buttonUrl'] != null &&
-          req['buttonUrl'].toString().trim().isNotEmpty) {
-        rawUrl = req['buttonUrl'].toString().trim();
+    } else if (req is Map) {
+      final reqMap = req as Map;
+      if (reqMap['targetUrl'] != null &&
+          reqMap['targetUrl'].toString().trim().isNotEmpty) {
+        rawUrl = reqMap['targetUrl'].toString().trim();
+      } else if (reqMap['packageId'] != null &&
+          reqMap['packageId'].toString().trim().isNotEmpty) {
+        rawUrl = reqMap['packageId'].toString().trim();
+      } else if (reqMap['packageName'] != null &&
+          reqMap['packageName'].toString().trim().isNotEmpty) {
+        rawUrl = reqMap['packageName'].toString().trim();
+      } else if (reqMap['buttonUrl'] != null &&
+          reqMap['buttonUrl'].toString().trim().isNotEmpty) {
+        rawUrl = reqMap['buttonUrl'].toString().trim();
       } else {
-        for (final entry in req.entries) {
+        for (final entry in reqMap.entries) {
           final k = entry.key.toString().toLowerCase();
           final v = entry.value.toString().trim();
           if ((k.contains('actionbutton') ||
@@ -2074,6 +2231,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   }
 
   String _getPlatformDisplayName() {
+    if (_isYouTubeTask()) return 'YouTube';
     final p = _getPlatform();
     switch (p) {
       case 'google_business':
@@ -2133,99 +2291,114 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
+            padding: const EdgeInsets.only(top: 8, bottom: 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Status Banner (For all non-available tasks: Accepted, Submitted, Review, Approved, Rejected) ──
-                if (status != 'AVAILABLE') ...[
-                  _buildStatusHeaderCard(status),
-                  const SizedBox(height: 14),
-                ],
+                // ── UPPER SECTION: Informational & Tutorial Area ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Status Banner (For all non-available tasks: Accepted, Submitted, Review, Approved, Rejected) ──
+                      if (status != 'AVAILABLE') ...[
+                        _buildStatusHeaderCard(status),
+                        const SizedBox(height: 14),
+                      ],
 
-                // ── Live Execution Timer Banner (if task accepted and not yet submitted) ──
-                if (_isTaskAccepted &&
-                    !isUnderReviewOrSubmitted &&
-                    !isApprovedOrCompleted &&
-                    !isRejected) ...[
-                  _buildLiveTimerBanner(),
-                  const SizedBox(height: 14),
-                ],
+                      // ── Live Execution Timer Banner (if task accepted and not yet submitted) ──
+                      if (_isTaskAccepted &&
+                          !isUnderReviewOrSubmitted &&
+                          !isApprovedOrCompleted &&
+                          !isRejected) ...[
+                        _buildLiveTimerBanner(),
+                        const SizedBox(height: 14),
+                      ],
 
-                // ── 1. Hero Card (3D Character + Title + Trophy + Stage Pill) ───
-                _buildHeroCard(title, description, badge, status),
-                const SizedBox(height: 14),
+                      // ── 1. Hero Card (Platform Icon + Title + Stage Pill) ───
+                      _buildHeroCard(title, _getHeroSubtitle(), badge, status),
+                      const SizedBox(height: 14),
 
-                // ── 2. 4-Item Quick Stats Row ──────────────────────────────
-                _buildStatsRow(reward, timeEst, taskId, successRate),
-                const SizedBox(height: 16),
+                      // ── 2. 4-Item Quick Stats Row ──────────────────────────────
+                      _buildStatsRow(reward, timeEst, taskId, successRate),
+                      const SizedBox(height: 16),
 
-                // ── 2.5 Admin Voice Guide Audio Player ──────────────────────
-                if (audioGuideUrl.isNotEmpty) ...[
-                  _buildAdminVoiceGuideSection(audioGuideUrl),
-                  const SizedBox(height: 16),
-                ],
+                      // ── 2.5 Admin Voice Guide Audio Player ──────────────────────
+                      if (audioGuideUrl.isNotEmpty) ...[
+                        _buildAdminVoiceGuideSection(audioGuideUrl),
+                        const SizedBox(height: 16),
+                      ],
 
-                // ── 3. Video Tutorial & Instruction Cards ──────────────────
-                _buildVideoCardsSection(videoTutorialUrl),
-                const SizedBox(height: 16),
-
-                // ── 4. Task Instructions List with 3D Notepad ──────────────
-                _buildTaskInstructionsSection(platformName),
-                const SizedBox(height: 16),
-
-                // ── 5. Comment Text (Copy & Paste) Box (Only when task requires comment) ─
-                if (_isCommentRequiredTask()) ...[
-                  _buildCommentCopySection(customText),
-                  const SizedBox(height: 16),
-                ],
-
-                // ── 6. Where to Perform / Comment & Open Platform ──────────
-                _buildWhereToCommentSection(platformName, targetUrl),
-                const SizedBox(height: 16),
-
-                // ── 7. Submit Proof / Status Section ───────────────────────
-                if (_isTaskAccepted &&
-                    !isUnderReviewOrSubmitted &&
-                    !isApprovedOrCompleted &&
-                    !isRejected) ...[
-                  if (_isYouTubeTask() && !_isWatchCompleted) ...[
-                    _buildYouTubeWatchCard(targetUrl),
-                    const SizedBox(height: 16),
-                    // Semi-transparent locked proof card (user sees what proof to submit, but locked until watched)
-                    _buildLockedProofSubmissionCard(),
-                    const SizedBox(height: 16),
-                  ] else ...[
-                    if (_isYouTubeTask()) ...[
-                      _buildYouTubeWatchCompletedBanner(),
-                      const SizedBox(height: 12),
+                      // ── 3. Video Tutorial & Instruction Cards ──────────────────
+                      _buildVideoCardsSection(videoTutorialUrl),
                     ],
-                    _buildProofSubmissionCard(),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // ── LOWER SECTION: Dotted Canvas Task Execution Area ──
+                TaskExecutionDottedSection(
+                  children: [
+                    // ── 4. Task Instructions List with 3D Notepad ──────────────
+                    _buildTaskInstructionsSection(platformName),
                     const SizedBox(height: 16),
+
+                    // ── 5. Comment Text (Copy & Paste) Box (Only when task requires comment) ─
+                    if (_isCommentRequiredTask()) ...[
+                      _buildCommentCopySection(customText),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // ── 6. Where to Perform / Comment & Open Platform ──────────
+                    _buildWhereToCommentSection(platformName, targetUrl),
+                    const SizedBox(height: 16),
+
+                    // ── 7. Submit Proof / Status Section ───────────────────────
+                    if (_isTaskAccepted &&
+                        !isUnderReviewOrSubmitted &&
+                        !isApprovedOrCompleted &&
+                        !isRejected) ...[
+                      if (_isYouTubeTask() && !_isWatchCompleted) ...[
+                        _buildYouTubeWatchCard(targetUrl),
+                        const SizedBox(height: 16),
+                        // Semi-transparent locked proof card (user sees what proof to submit, but locked until watched)
+                        _buildLockedProofSubmissionCard(),
+                        const SizedBox(height: 16),
+                      ] else ...[
+                        if (_isYouTubeTask()) ...[
+                          _buildYouTubeWatchCompletedBanner(),
+                          const SizedBox(height: 12),
+                        ],
+                        _buildProofSubmissionCard(),
+                        const SizedBox(height: 16),
+                      ],
+                    ] else if (isApprovedOrCompleted) ...[
+                      _buildApprovedSection(reward),
+                      const SizedBox(height: 16),
+                    ] else if (isRejected) ...[
+                      _buildRejectedSection(),
+                      const SizedBox(height: 16),
+                    ] else if (isUnderReviewOrSubmitted) ...[
+                      _buildUnderReviewSection(reward),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // ── App Install Retention Warning Banner ───
+                    if (!isMapsTask &&
+                        widget.task is Map &&
+                        PackageTrackerService.isAppInstallTask(
+                          Map<String, dynamic>.from(widget.task),
+                        )) ...[
+                      _buildRetentionNoticeBanner(),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // ── 8. Remember / Guidelines Box ───────────────────────────
+                    _buildRememberSection(),
+                    const SizedBox(height: 140),
                   ],
-                ] else if (isApprovedOrCompleted) ...[
-                  _buildApprovedSection(reward),
-                  const SizedBox(height: 16),
-                ] else if (isRejected) ...[
-                  _buildRejectedSection(),
-                  const SizedBox(height: 16),
-                ] else if (isUnderReviewOrSubmitted) ...[
-                  _buildUnderReviewSection(reward),
-                  const SizedBox(height: 16),
-                ],
-
-                // ── App Install Retention Warning Banner ───
-                if (!isMapsTask &&
-                    widget.task is Map &&
-                    PackageTrackerService.isAppInstallTask(
-                      Map<String, dynamic>.from(widget.task),
-                    )) ...[
-                  _buildRetentionNoticeBanner(),
-                ],
-
-                // ── 8. Remember / Guidelines Box ───────────────────────────
-                _buildRememberSection(),
-                const SizedBox(height: 140),
+                ),
               ],
             ),
           ),
@@ -2636,7 +2809,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   // ── 1. Hero Card ───────────────────────────────────────────────────────────
   Widget _buildHeroCard(
     String title,
-    String description,
+    String subtitle,
     String badge,
     String status,
   ) {
@@ -2644,7 +2817,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
@@ -2657,41 +2830,39 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 3D Avatar + Platform Icon Box
-          _build3DPlatformAvatar(platform),
-          const SizedBox(width: 12),
-
-          // Title & Description
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Badge Pill Wrap (Category + Stage)
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
+          // Top Row: 3D Platform Avatar on Left + Badges (Category + Stage)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _build3DPlatformAvatar(platform),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
+                        horizontal: 10,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2E8F0), width: 0.8),
                       ),
                       child: Text(
                         badge,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Color(0xFF475569),
+                          color: Color(0xFF334155),
                           fontWeight: FontWeight.w800,
-                          fontSize: 9.5,
+                          fontSize: 10,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -2699,44 +2870,61 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                     _buildStagePill(status),
                   ],
                 ),
-                const SizedBox(height: 6),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
-                // Title
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Color(0xFF0F172A),
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w900,
-                    height: 1.25,
-                  ),
-                ),
-                const SizedBox(height: 4),
-
-                // Description
-                Text(
-                  description,
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 11.5,
-                    height: 1.35,
-                  ),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          // Title below the YouTube / Platform icon:
+          Text(
+            title,
+            style: const TextStyle(
+              color: Color(0xFF0F172A),
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              height: 1.3,
             ),
           ),
-          const SizedBox(width: 8),
-
-          // 3D Golden Trophy Badge
-          _build3DTrophyBadge(),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w400,
+                height: 1.38,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
   Widget _build3DPlatformAvatar(String platform) {
+    if (platform == 'youtube' || _isYouTubeTask()) {
+      return Container(
+        width: 64,
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.35), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF0000).withOpacity(0.18),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: PlatformLogo(platform: 'youtube', size: 42),
+        ),
+      );
+    }
+
     final isMaps = platform == 'google_maps' ||
         platform == 'google_business' ||
         platform == 'google';
@@ -2830,68 +3018,6 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       child: Center(
         child: PlatformLogo(platform: platform, size: 40),
       ),
-    );
-  }
-
-  Widget _build3DTrophyBadge() {
-    return Column(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFEF3C7), Color(0xFFFDE68A)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFF59E0B).withOpacity(0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.workspace_premium_rounded,
-              size: 26,
-              color: Color(0xFFD97706),
-            ),
-          ),
-        ),
-        const SizedBox(height: 5),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-          decoration: BoxDecoration(
-            color: const Color(0xFFECFDF5),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: const Color(0xFFA7F3D0)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.signal_cellular_alt_rounded,
-                size: 9,
-                color: Color(0xFF059669),
-              ),
-              SizedBox(width: 2),
-              Text(
-                'Easy Task',
-                style: TextStyle(
-                  color: Color(0xFF059669),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 8,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
@@ -3547,6 +3673,39 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           'Take a clear screenshot showing your Like, Subscribe, and Comment.',
           'Return to this app and upload the screenshot proof to receive your instant reward.',
         ]);
+      } else if (_getPlatform() == 'youtube') {
+        if (type.contains('SUB')) {
+          steps.addAll([
+            'Click on the "Watch & Subscribe on YouTube" button below.',
+            'Watch the video until the timer finishes (mandatory watch prevents YouTube from removing your subscription).',
+            'Click the Subscribe (🔔) button on the YouTube channel.',
+            'Take a clear screenshot showing the channel subscribed (Subscribed status / Bell icon visible).',
+            'Return to this app and upload the screenshot proof to receive your instant reward.',
+          ]);
+        } else if (type.contains('LIKE')) {
+          steps.addAll([
+            'Click on the "Watch & Like on YouTube" button below.',
+            'Watch the video until the timer finishes (mandatory watch ensures your Like is permanently counted).',
+            'Click the Like (👍) thumbs-up button on the YouTube video.',
+            'Take a clear screenshot showing the video playing with the Like button highlighted.',
+            'Return to this app and upload the screenshot proof to receive your instant reward.',
+          ]);
+        } else if (type.contains('COMMENT')) {
+          steps.addAll([
+            'Click on the "Watch & Comment on YouTube" button below.',
+            'Watch the video until the timer finishes so YouTube ranks your comment organically.',
+            'Copy the assigned comment text above (or write your own relevant comment).',
+            'Post the comment in the YouTube comments section.',
+            'Take a clear screenshot showing your posted comment on the video, return to this app and upload proof.',
+          ]);
+        } else {
+          steps.addAll([
+            'Click on the "Watch on YouTube" button below.',
+            'Watch the video for the required duration (watch timer will unlock proof submission).',
+            'Complete the requested engagement on YouTube.',
+            'Take a clear screenshot of completed task and submit proof to claim your reward.',
+          ]);
+        }
       } else if (isPlayStore) {
         steps.addAll([
           'Click on the "Open Play Store" button below.',
@@ -3787,253 +3946,565 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     );
   }
 
+  void _copyCommentText(String text) {
+    if (text.trim().isEmpty) return;
+    final bool isKeyboardTask = _isKeyboardEligibleTask() ||
+        ReviewKeyboardService.instance.isEligiblePlatform(_getPlatform());
+    if (isKeyboardTask) {
+      debugPrint('⛔ [CopyBlocked] Copying is disabled for keyboard review tasks.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          backgroundColor: const Color(0xFF1E293B),
+          content: const Row(
+            children: [
+              Icon(Icons.keyboard_alt_rounded, color: Color(0xFF60A5FA), size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Copying is disabled for Play Store & Maps. Please use Task Keyboard.',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+    HapticFeedback.mediumImpact();
+    Clipboard.setData(ClipboardData(text: text));
+    _commentCopyTimer?.cancel();
+    setState(() {
+      _isCommentCopied = true;
+    });
+    _commentCopyTimer = Timer(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        setState(() {
+          _isCommentCopied = false;
+        });
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: const Color(0xFF4F46E5),
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Color(0xFF4ADE80), size: 20),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '✓ Comment text copied! Ready to paste.',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   // ── 5. Comment Text (Copy & Paste) ─────────────────────────────────────────
   Widget _buildCommentCopySection(String customText) {
-    final bool isGoogleBusiness = _getPlatform() == 'google_business' ||
-        _getPlatform() == 'google_maps' ||
-        _getPlatform() == 'google';
-    final bool isPlayStore = _getPlatform() == 'playstore';
-    final bool isReview = isPlayStore || isGoogleBusiness;
+    final bool isReview = _isKeyboardEligibleTask() ||
+        ReviewKeyboardService.instance.isEligiblePlatform(_getPlatform());
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    isReview
-                        ? Icons.star_rate_rounded
-                        : Icons.chat_bubble_rounded,
-                    color: isReview
-                        ? const Color(0xFF2563EB)
-                        : (isPlayStore
-                            ? const Color(0xFFF59E0B)
-                            : const Color(0xFF7C3AED)),
-                    size: isReview ? 20 : 18,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 📁 File Manager Folder Tab Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // The Folder Tab protruding at the top
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7.5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF09090B), // Black Header
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(14),
+                  topRight: Radius.circular(14),
+                ),
+                border: Border(
+                  top: BorderSide(color: Colors.white.withOpacity(0.18), width: 1.2),
+                  left: BorderSide(color: Colors.white.withOpacity(0.18), width: 1.2),
+                  right: BorderSide(color: Colors.white.withOpacity(0.18), width: 1.2),
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 4,
+                    offset: Offset(0, -2),
                   ),
-                  const SizedBox(width: 8),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(3.5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isReview ? Icons.star_rounded : Icons.format_quote_rounded,
+                      color: const Color(0xFFFDE047),
+                      size: 13,
+                    ),
+                  ),
+                  const SizedBox(width: 7),
                   Text(
-                    isReview ? '5-Star Review Text' : 'Comment Text',
+                    isReview ? '5-STAR REVIEW TEXT' : 'ASSIGNED COMMENT',
                     style: const TextStyle(
-                      color: Color(0xFF0F172A),
-                      fontSize: 14.5,
+                      color: Colors.white,
+                      fontSize: 10.5, // Reduced font size as requested!
                       fontWeight: FontWeight.w900,
+                      letterSpacing: 0.6,
                     ),
                   ),
                 ],
               ),
-              Text(
-                isReview ? '⭐' : '💬',
-                style: const TextStyle(fontSize: 16),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
+            ),
 
-          // Dedicated Blue Heading: Use Task Keyboard to Write (Clickable to open Keyboard Settings)
-          InkWell(
-            onTap: isReview
-                ? () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const KeyboardSettingsScreen(),
-                      ),
-                    );
-                    if (mounted) {
-                      _checkKeyboardReadiness();
-                      _syncReviewToKeyboard();
-                      setState(() {});
-                    }
-                  }
-                : null,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-              child: Row(
-                children: [
-                  Icon(
-                    isReview ? Icons.keyboard_alt_rounded : Icons.copy_all_rounded,
-                    size: 16,
-                    color: const Color(0xFF2563EB),
+            // Badge (COPY REQUIRED / KEYBOARD TYPING) on the right shoulder
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6, right: 2),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: isReview
+                        ? const [Color(0xFF2563EB), Color(0xFF1D4ED8)]
+                        : const [Color(0xFFF59E0B), Color(0xFFD97706)],
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      isReview
-                          ? 'Use Task Keyboard to Write'
-                          : 'Copy & Paste',
-                      style: const TextStyle(
-                        color: Color(0xFF2563EB),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.1,
-                      ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isReview
+                              ? const Color(0xFF2563EB)
+                              : const Color(0xFFF59E0B))
+                          .withOpacity(0.4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
-                  ),
-                  if (isReview) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.settings_suggest_rounded,
-                            size: 12,
-                            color: Color(0xFF1D4ED8),
-                          ),
-                          SizedBox(width: 3),
-                          Text(
-                            'Settings',
-                            style: TextStyle(
-                              color: Color(0xFF1D4ED8),
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          SizedBox(width: 2),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 9,
-                            color: Color(0xFF1D4ED8),
-                          ),
-                        ],
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isReview
+                          ? Icons.keyboard_alt_rounded
+                          : Icons.touch_app_rounded,
+                      color: Colors.white,
+                      size: 11,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isReview ? 'KEYBOARD TYPING' : 'COPY REQUIRED',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.4,
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
+          ],
+        ),
 
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+        // 🗂️ Main Folder Card Body (Black theme, curves from top right)
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color(0xFF09090B), // Sleek Black Folder body
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(20),
+              bottomLeft: Radius.circular(22),
+              bottomRight: Radius.circular(22),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    customText,
-                    style: const TextStyle(
-                      color: Color(0xFF0F172A),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      height: 1.35,
-                    ),
-                  ),
-                ),
-                if (!isReview) ...[
-                  const SizedBox(width: 10),
-                  InkWell(
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(text: customText));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('✓ Comment text copied to clipboard!'),
-                          backgroundColor: Color(0xFF7C3AED),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: const Color(0xFF7C3AED).withOpacity(0.3),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF7C3AED).withOpacity(0.08),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.copy_rounded,
-                            color: Color(0xFF7C3AED),
-                            size: 16,
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Copy',
-                            style: TextStyle(
-                              color: Color(0xFF7C3AED),
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+            border: Border.all(
+              color: Colors.white.withOpacity(0.18),
+              width: 1.2,
             ),
-          ),
-          const SizedBox(height: 8),
-
-          Row(
-            children: [
-              const Icon(
-                Icons.info_outline_rounded,
-                size: 13,
-                color: Color(0xFF3B82F6),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  isReview
-                      ? "Give 5-Star rating ⭐⭐⭐⭐⭐ and write authentic review."
-                      : "Don't change the text. Paste as it is.",
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 11,
-                  ),
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.35),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
-        ],
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(19),
+              bottomLeft: Radius.circular(21),
+              bottomRight: Radius.circular(21),
+            ),
+            child: Stack(
+              children: [
+                // SVG Watermark Background
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: 0.12,
+                    child: SvgPicture.asset(
+                      'assets/svg/comment_speech_watermark.svg',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+
+                // Content inside
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+
+                  // Dedicated Keyboard Settings Shortcut (if Review task)
+                  if (isReview) ...[
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const KeyboardSettingsScreen(),
+                          ),
+                        );
+                        if (mounted) {
+                          _checkKeyboardReadiness();
+                          _syncReviewToKeyboard();
+                          setState(() {});
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.25),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.keyboard_alt_rounded,
+                              size: 15,
+                              color: Color(0xFF93C5FD),
+                            ),
+                            const SizedBox(width: 6),
+                            const Expanded(
+                              child: Text(
+                                'Use Task Keyboard to Write',
+                                style: TextStyle(
+                                  color: Color(0xFFE0E7FF),
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.settings_rounded,
+                                    size: 10,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'Settings',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 12),
+
+                  // The Main Speech Bubble Card (White, High Contrast, 100% Readable)
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: isReview ? null : () => _copyCommentText(customText),
+                      onLongPress: isReview ? null : () => _copyCommentText(customText),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFFE0E7FF),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Top Bar inside speech card
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEEF2FF),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: const Color(0xFFC7D2FE),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isReview
+                                        ? '“ 5-STAR REVIEW TEXT ”'
+                                        : '“ EXACT TEXT TO PASTE ”',
+                                    style: const TextStyle(
+                                      color: Color(0xFF4F46E5),
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  isReview
+                                      ? 'Type via Keyboard • Copying Disabled'
+                                      : 'Tap card to copy',
+                                  style: TextStyle(
+                                    color: isReview
+                                        ? const Color(0xFF2563EB)
+                                        : const Color(0xFF94A3B8),
+                                    fontSize: 10,
+                                    fontWeight: isReview
+                                        ? FontWeight.w700
+                                        : FontWeight.normal,
+                                    fontStyle: isReview
+                                        ? FontStyle.normal
+                                        : FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Comment text itself (Disabled for keyboard tasks to block clipboard copy)
+                            if (isReview)
+                              SelectionContainer.disabled(
+                                child: Text(
+                                  customText,
+                                  style: const TextStyle(
+                                    color: Color(0xFF0F172A),
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.45,
+                                    letterSpacing: 0.1,
+                                  ),
+                                ),
+                              )
+                            else
+                              SelectableText(
+                                customText,
+                                style: const TextStyle(
+                                  color: Color(0xFF0F172A),
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.45,
+                                  letterSpacing: 0.1,
+                                ),
+                              ),
+                            const SizedBox(height: 12),
+
+                            // Bottom row with Action Button (Copy on YouTube/Insta, Keyboard on PlayStore/GMB)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                if (isReview) ...[
+                                  // Play Store & GMB: No copy button! Show Keyboard Setup / Status button
+                                  InkWell(
+                                    onTap: () async {
+                                      await Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const KeyboardSettingsScreen(),
+                                        ),
+                                      );
+                                      if (mounted) {
+                                        _checkKeyboardReadiness();
+                                        _syncReviewToKeyboard();
+                                        setState(() {});
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 7,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFF2563EB),
+                                            Color(0xFF1D4ED8),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFF2563EB)
+                                                .withOpacity(0.35),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 3),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            _isKeyboardReady
+                                                ? Icons.check_circle_rounded
+                                                : Icons.keyboard_alt_rounded,
+                                            color: _isKeyboardReady
+                                                ? const Color(0xFF86EFAC)
+                                                : Colors.white,
+                                            size: 14,
+                                          ),
+                                          const SizedBox(width: 5),
+                                          Text(
+                                            _isKeyboardReady
+                                                ? 'KEYBOARD READY ›'
+                                                : 'KEYBOARD SETUP ›',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10.5,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 0.4,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ] else ...[
+                                  // YouTube, Instagram, etc.: Eye-catching Wiggle & Pulse Pop Copy Button
+                                  AttentionCopyButton(
+                                    isCopied: _isCommentCopied,
+                                    onTap: () => _copyCommentText(customText),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Bottom Guidance Tip in frosted pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.18),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isReview
+                              ? Icons.shield_rounded
+                              : Icons.info_outline_rounded,
+                          size: 14,
+                          color: const Color(0xFFFDE047),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            isReview
+                                ? "Do NOT copy-paste. Use Task Keyboard to auto-type and prevent review removal."
+                                : "Don't change the text. Paste as it is without modifying.",
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.92),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    );
+    ),
+  ],
+);
   }
 
   // ── 6. Where to Perform Action & Open Platform (Overflow-Proof Layout) ─────
@@ -4042,6 +4513,8 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
         _getPlatform() == 'google_maps' ||
         _getPlatform() == 'google';
     final bool isPlayStore = _getPlatform() == 'playstore';
+    final bool isYouTube = _isYouTubeTask();
+    final bool isInstagram = _getPlatform() == 'instagram';
     final bool isCommentReq = _isCommentRequiredTask();
     final type =
         (widget.task['taskType'] ??
@@ -4050,49 +4523,71 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                 '')
             .toString()
             .toUpperCase();
-    final bool isInstaCombo = type.contains('INSTA') && type.contains('COMBO');
+    final bool isCombo = type.contains('COMBO') || type.contains('GROWTH');
+    final bool isInstaCombo = isInstagram && isCombo;
 
     String headerText = 'Where to Perform Task';
     String subText = 'On $platformName';
-    String iconEmoji = '🔗';
     Color iconBg = const Color(0xFFEFF6FF);
 
-    if (isGoogleBusiness) {
+    if (isYouTube) {
+      if (isCombo) {
+        headerText = 'Watch, Like, Sub & Comment';
+        subText = 'Open video on YouTube & complete all steps';
+      } else if (type.contains('COMMENT')) {
+        headerText = 'Watch & Comment on YouTube';
+        subText = 'Open video on YouTube & post comment';
+      } else if (type.contains('SUBSCRIBE')) {
+        headerText = 'Subscribe on YouTube';
+        subText = 'Open channel on YouTube & subscribe';
+      } else if (type.contains('LIKE')) {
+        headerText = 'Like on YouTube';
+        subText = 'Open video on YouTube & like';
+      } else if (type.contains('WATCH')) {
+        headerText = 'Watch on YouTube';
+        subText = 'Watch full video on YouTube';
+      } else {
+        headerText = 'Perform on YouTube';
+        subText = 'Open official YouTube video';
+      }
+      iconBg = const Color(0xFFFEF2F2);
+    } else if (isGoogleBusiness) {
       headerText = isCommentReq
           ? 'Where to Rate & Review'
           : 'Where to Rate Business';
       subText = 'On Google Maps Business Profile';
-      iconEmoji = '📍';
       iconBg = const Color(0xFFE0F2FE);
     } else if (isPlayStore) {
       headerText = isCommentReq
           ? 'Where to Rate & Review'
           : 'Where to Rate App';
       subText = 'On Google Play Store App Page';
-      iconEmoji = '⭐';
       iconBg = const Color(0xFFD1FAE5);
     } else if (isInstaCombo) {
-      headerText = 'Where to Like & Follow';
-      subText = 'On Instagram Profile & Recent Post/Reel';
-      iconEmoji = '📸';
+      headerText = 'Like, Follow & Comment';
+      subText = 'On Instagram Profile & Recent Post';
       iconBg = const Color(0xFFFCE7F3);
     } else if (isCommentReq) {
       headerText = 'Where to Comment';
-      subText = 'On $platformName – Video/Post Section';
-      iconEmoji = '💬';
+      subText = 'On $platformName Post Section';
       iconBg = const Color(0xFFFEF3C7);
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isYouTube ? const Color(0xFFFFF7F7) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(
+          color: isYouTube ? const Color(0xFFFECACA) : const Color(0xFFE2E8F0),
+          width: isYouTube ? 1.5 : 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
+            color: isYouTube
+                ? const Color(0xFFEF4444).withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
             offset: const Offset(0, 3),
           ),
         ],
@@ -4100,14 +4595,36 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Left Icon
+          // Left Platform Icon (Authentic YouTube Logo)
           Container(
-            padding: const EdgeInsets.all(9),
+            width: 44,
+            height: 44,
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(12),
+              color: isYouTube ? Colors.white : iconBg,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(
+                color: isYouTube
+                    ? const Color(0xFFFEE2E2)
+                    : Colors.transparent,
+                width: 1,
+              ),
+              boxShadow: isYouTube
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
-            child: Text(iconEmoji, style: const TextStyle(fontSize: 18)),
+            child: Center(
+              child: PlatformLogo(
+                platform: isYouTube ? 'youtube' : _getPlatform(),
+                size: isYouTube ? 28 : 26,
+              ),
+            ),
           ),
           const SizedBox(width: 10),
 
@@ -4119,20 +4636,29 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
               children: [
                 Text(
                   headerText,
-                  style: const TextStyle(
-                    color: Color(0xFF0F172A),
+                  style: TextStyle(
+                    color: isYouTube
+                        ? const Color(0xFF991B1B)
+                        : const Color(0xFF0F172A),
                     fontSize: 13.5,
                     fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subText,
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
+                  style: TextStyle(
+                    color: isYouTube
+                        ? const Color(0xFFDC2626).withValues(alpha: 0.85)
+                        : const Color(0xFF64748B),
                     fontSize: 11,
+                    fontWeight: isYouTube ? FontWeight.w600 : FontWeight.normal,
+                    height: 1.25,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -4140,9 +4666,37 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
           ),
           const SizedBox(width: 10),
 
-          // Right Button (Fixed padding & shrink-wrapped)
+          // Right Button (YouTube RED styling)
           InkWell(
             onTap: () async {
+              if (!_isTaskAccepted) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Row(
+                      children: [
+                        Icon(Icons.lock_outline_rounded,
+                            color: Colors.white, size: 20),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Accept task first to open',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                    backgroundColor: const Color(0xFFDC2626),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    margin: const EdgeInsets.all(16),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+                return;
+              }
               await _syncReviewToKeyboard();
               if (_isYouTubeTask() && _isTaskAccepted && !_isWatchCompleted) {
                 _startWatchingYouTubeVideo();
@@ -4152,47 +4706,53 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
             },
             borderRadius: BorderRadius.circular(12),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: isGoogleBusiness
-                      ? const [Color(0xFF2563EB), Color(0xFF3B82F6)]
-                      : (isPlayStore
-                          ? const [Color(0xFF059669), Color(0xFF10B981)]
-                          : const [Color(0xFFEA580C), Color(0xFFF97316)]),
+                  colors: isYouTube
+                      ? const [Color(0xFFDC2626), Color(0xFFFF0000)]
+                      : (isGoogleBusiness
+                          ? const [Color(0xFF2563EB), Color(0xFF3B82F6)]
+                          : (isPlayStore
+                              ? const [Color(0xFF059669), Color(0xFF10B981)]
+                              : const [Color(0xFFEA580C), Color(0xFFF97316)])),
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        (isGoogleBusiness
+                    color: (isYouTube
+                            ? const Color(0xFFDC2626)
+                            : (isGoogleBusiness
                                 ? const Color(0xFF3B82F6)
                                 : (isPlayStore
                                     ? const Color(0xFF10B981)
-                                    : const Color(0xFFF97316)))
-                            .withValues(alpha: 0.35),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                                    : const Color(0xFFF97316))))
+                        .withValues(alpha: 0.38),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.open_in_new_rounded,
+                  Icon(
+                    isYouTube
+                        ? Icons.play_arrow_rounded
+                        : Icons.open_in_new_rounded,
                     color: Colors.white,
-                    size: 14,
+                    size: 16,
                   ),
-                  const SizedBox(width: 5),
+                  const SizedBox(width: 4),
                   Text(
                     'Open $platformName',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w900,
                       fontSize: 11.5,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ],
@@ -4206,6 +4766,44 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   // ── YouTube Video Watch Requirement Card (Submit proof locked until watched) ──
   Widget _buildYouTubeWatchCard(String targetUrl) {
+    final type = (widget.task['taskType'] ??
+            widget.task['type'] ??
+            widget.task['serviceCode'] ??
+            '')
+        .toString()
+        .toUpperCase();
+    final isCombo = type.contains('COMBO');
+    final isSub = !isCombo && (type.contains('SUB') || type.contains('CHANNEL'));
+    final isLike = !isCombo && type.contains('LIKE');
+    final isComment = !isCombo && type.contains('COMMENT');
+
+    String cardTitle = 'Watch Video & Engage';
+    String cardSubtitle = 'Complete watching to unlock proof submission';
+    String cardNotice = 'Please watch the video for at least the timer duration. Proof submission unlocks automatically once watch duration completes.';
+    String buttonText = 'Watch Video on YouTube';
+
+    if (isCombo) {
+      cardTitle = 'Watch Video & Engage (Combo)';
+      cardSubtitle = 'Complete full requested watch duration to unlock proof';
+      cardNotice = 'Please watch the video completely, like, subscribe, and post the assigned comment. All actions are verified.';
+      buttonText = 'Watch & Engage on YouTube';
+    } else if (isSub) {
+      cardTitle = 'Watch & Subscribe Channel';
+      cardSubtitle = 'Watch video to unlock Subscribe proof submission';
+      cardNotice = 'Please watch the video for at least the timer duration before subscribing. YouTube anti-spam filters drop subscriptions made without prior watchtime.';
+      buttonText = 'Watch & Subscribe on YouTube';
+    } else if (isLike) {
+      cardTitle = 'Watch & Like Video';
+      cardSubtitle = 'Watch video to unlock Like proof submission';
+      cardNotice = 'Please watch the video for at least the timer duration before tapping Like. This guarantees your Like is permanently counted by YouTube.';
+      buttonText = 'Watch & Like on YouTube';
+    } else if (isComment) {
+      cardTitle = 'Watch & Post Comment';
+      cardSubtitle = 'Watch video to unlock Comment proof submission';
+      cardNotice = 'Please watch the video before commenting. High-retention viewing ensures your comment ranks prominently and is not marked as spam.';
+      buttonText = 'Watch & Comment on YouTube';
+    }
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -4254,22 +4852,22 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Watch Complete Video',
-                      style: TextStyle(
+                      cardTitle,
+                      style: const TextStyle(
                         color: Color(0xFF0F172A),
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
-                      'Complete watching to unlock proof submission',
-                      style: TextStyle(
+                      cardSubtitle,
+                      style: const TextStyle(
                         color: Color(0xFF64748B),
                         fontSize: 11.5,
                       ),
@@ -4316,19 +4914,19 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
+                const Icon(
                   Icons.info_outline_rounded,
                   color: Color(0xFF475569),
                   size: 16,
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Please watch the full video. Proof attachment and submission will be unlocked after watching.',
-                    style: TextStyle(
+                    cardNotice,
+                    style: const TextStyle(
                       color: Color(0xFF475569),
                       fontSize: 12,
                       height: 1.4,
@@ -4362,18 +4960,18 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                   ),
                 ],
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.play_circle_fill_rounded,
                     color: Colors.white,
                     size: 22,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
-                    'Watch Video on YouTube',
-                    style: TextStyle(
+                    buttonText,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 14.5,
                       fontWeight: FontWeight.w900,
@@ -5450,203 +6048,87 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: [
-            // Left: Save Task Bookmark Button
-            InkWell(
-              onTap: () {
-                setState(() => _isSaved = !_isSaved);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      _isSaved
-                          ? 'Task saved to bookmarks!'
-                          : 'Task removed from bookmarks.',
-                    ),
-                    duration: const Duration(seconds: 1),
-                  ),
-                );
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: _isSaved
-                      ? const Color(0xFFEDE9FE)
-                      : const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _isSaved
-                        ? const Color(0xFF7C3AED)
-                        : const Color(0xFFE2E8F0),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _isSaved
-                          ? Icons.bookmark_added_rounded
-                          : Icons.bookmark_border_rounded,
-                      color: _isSaved
-                          ? const Color(0xFF7C3AED)
-                          : const Color(0xFF475569),
-                      size: 18,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _isSaved ? 'Saved' : 'Save Task',
-                      style: TextStyle(
-                        color: _isSaved
-                            ? const Color(0xFF7C3AED)
-                            : const Color(0xFF475569),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-
-            // Right: "Accept Task & Start" or "Submit Proof" or "Watch on YouTube" Button
-            Expanded(
-              child: _isTaskAccepted
-                  ? (_isYouTubeTask() && !_isWatchCompleted
-                        ? InkWell(
-                            onTap: _startWatchingYouTubeVideo,
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFFDC2626),
-                                    Color(0xFFEF4444),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFFDC2626,
-                                    ).withValues(alpha: 0.35),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.play_circle_fill_rounded,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      'Watch Video on YouTube',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w900,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : InkWell(
-                            onTap: _onPressSubmit,
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF059669),
-                                    Color(0xFF10B981),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF059669,
-                                    ).withOpacity(0.35),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: _isSubmitting
-                                  ? const Center(
-                                      child: SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2.2,
-                                        ),
-                                      ),
-                                    )
-                                  : const Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.cloud_upload_rounded,
-                                          color: Colors.white,
-                                          size: 20,
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'Submit Task Proof',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 14.5,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 0.3,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ))
-                  : InkWell(
-                      onTap: _isAccepting ? null : _onAcceptAndStart,
+        child: _isTaskAccepted
+            ? (_isYouTubeTask() && !_isWatchCompleted
+                  ? InkWell(
+                      onTap: _startWatchingYouTubeVideo,
                       borderRadius: BorderRadius.circular(14),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF059669), Color(0xFF10B981)],
+                            colors: [
+                              Color(0xFFDC2626),
+                              Color(0xFFEF4444),
+                            ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF059669).withOpacity(0.35),
+                              color: const Color(
+                                0xFFDC2626,
+                              ).withValues(alpha: 0.35),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: _isAccepting
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.play_circle_fill_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Watch Video on YouTube',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : InkWell(
+                      onTap: _onPressSubmit,
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFF059669),
+                              Color(0xFF10B981),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(
+                                0xFF059669,
+                              ).withOpacity(0.35),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: _isSubmitting
                             ? const Center(
                                 child: SizedBox(
                                   width: 20,
@@ -5658,45 +6140,33 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                                 ),
                               )
                             : const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.center,
                                 children: [
                                   Icon(
-                                    Icons.verified_user_rounded,
+                                    Icons.cloud_upload_rounded,
                                     color: Colors.white,
                                     size: 20,
                                   ),
                                   SizedBox(width: 8),
-                                  Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Accept Task & Start',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14.5,
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 0.3,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Task will be locked for you',
-                                        style: TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 9.5,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
+                                  Text(
+                                    'Submit Task Proof',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.3,
+                                    ),
                                   ),
                                 ],
                               ),
                       ),
-                    ),
-            ),
-          ],
-        ),
+                    ))
+            : RiderSwipeToAcceptButton(
+                onSwipeComplete: _onAcceptAndStart,
+                isAccepting: _isAccepting,
+                isAccepted: _isTaskAccepted,
+              ),
       ),
     );
   }

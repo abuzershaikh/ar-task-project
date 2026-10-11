@@ -18,6 +18,7 @@ import { SubmissionRepository } from '../../../../shared/database/repositories/s
 import { OrderRepository } from '../../../../shared/database/repositories/order.repository';
 import { TaskRepository } from '../../../../shared/database/repositories/task.repository';
 import { UserRepository } from '../../../../shared/database/repositories/user.repository';
+import { SystemSettingsRepository } from '../../../../shared/database/repositories/system-settings.repository';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
@@ -36,6 +37,7 @@ export class BuyerReviewController {
         private readonly orderRepo: OrderRepository,
         private readonly taskRepo: TaskRepository,
         private readonly userRepo: UserRepository,
+        private readonly settingsRepo: SystemSettingsRepository,
     ) { }
 
     /**
@@ -137,10 +139,29 @@ export class BuyerReviewController {
             }
         }
 
+        const hoursSetting = await this.settingsRepo.findByKey('review_auto_approve_hours');
+        const autoApproveHours = hoursSetting ? Number(hoursSetting.value) : 24.0;
+
         return {
             success: true,
             submissions: buyerPendingSubmissions,
             count: buyerPendingSubmissions.length,
+            autoApproveHours,
+        };
+    }
+
+    @Get('auto-approve-settings')
+    @ApiOperation({ summary: 'Get system review auto-approve hours for buyer' })
+    async getReviewAutoApproveSettings() {
+        const hoursSetting = await this.settingsRepo.findByKey('review_auto_approve_hours');
+        const enabledSetting = await this.settingsRepo.findByKey('review_auto_approve_enabled');
+        const autoApproveHours = hoursSetting ? Number(hoursSetting.value) : 24.0;
+        const enabled = enabledSetting ? (String(enabledSetting.value).toLowerCase() !== 'false') : true;
+
+        return {
+            success: true,
+            autoApproveHours,
+            enabled,
         };
     }
 
@@ -150,6 +171,9 @@ export class BuyerReviewController {
         @Query('orderId') orderId: string | undefined,
         @CurrentUser() user: User,
     ) {
+        const hoursSetting = await this.settingsRepo.findByKey('review_auto_approve_hours');
+        const autoApproveHours = hoursSetting ? Number(hoursSetting.value) : 24.0;
+
         if (orderId) {
             const order = await this.orderRepo.findById(orderId);
             if (!order || !(await this.isOwnerOrAdmin(user, order))) {
@@ -161,6 +185,7 @@ export class BuyerReviewController {
                 success: true,
                 orderId,
                 autoApprove: isAuto,
+                autoApproveHours,
             };
         }
 
@@ -181,6 +206,7 @@ export class BuyerReviewController {
             autoApprove: isAutoApprove || (targetList.length > 0 && autoCount > 0),
             autoCount,
             totalOrders: targetList.length,
+            autoApproveHours,
         };
     }
 

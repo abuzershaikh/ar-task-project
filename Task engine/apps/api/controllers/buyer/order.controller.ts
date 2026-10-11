@@ -78,15 +78,18 @@ export class BuyerOrderController {
     @Public()
     @Post('youtube-video-info')
     @HttpCode(HttpStatus.OK)
-    @ApiOperation({ summary: 'Fetch YouTube video duration, title, thumbnail, and 5-min capped watch time' })
+    @ApiOperation({ summary: 'Fetch YouTube video duration, title, thumbnail, and watch time cap' })
     async getYouTubeVideoInfo(
-        @Body() body: { url?: string; link?: string; videoId?: string },
+        @Body() body: { url?: string; link?: string; videoId?: string; serviceCode?: string },
     ) {
         const input = body.url || body.link || body.videoId || '';
         if (!input) {
             throw new BadRequestException('URL or videoId is required');
         }
-        const info = await this.ytMetadataService.getVideoMetadata(input);
+        const sCode = (body.serviceCode || '').toUpperCase();
+        const isCombo = sCode.includes('COMBO');
+        const cap = isCombo ? 300 : 120;
+        const info = await this.ytMetadataService.getVideoMetadata(input, cap);
         return info;
     }
 
@@ -302,7 +305,15 @@ export class BuyerOrderController {
             ((codeUpper.includes('COMBO') || nameUpper.includes('COMBO')) &&
                 (codeUpper.includes('YT') || codeUpper.includes('YOUTUBE') || catUpper.includes('YOUTUBE')));
 
-        let watchTimeSeconds = isYouTubeCombo ? (reqs.watchTimeSeconds || catalog?.watchtimeSeconds || 0) : 0;
+        const isYouTubeService = isYouTubeCombo ||
+            codeUpper.includes('YOUTUBE') ||
+            codeUpper.includes('YT') ||
+            catUpper.includes('YOUTUBE') ||
+            nameUpper.includes('YOUTUBE');
+
+        let watchTimeSeconds = isYouTubeCombo
+            ? (reqs.watchTimeSeconds || catalog?.watchtimeSeconds || 0)
+            : (isYouTubeService ? (catalog?.watchtimeSeconds || 120) : 0);
         let videoDurationSeconds = reqs.videoDurationSeconds || 0;
 
         let extraMinutes = 0;
@@ -311,7 +322,8 @@ export class BuyerOrderController {
         const ytId = this.ytMetadataService.extractVideoId(targetUrl);
         if (ytId) {
             try {
-                const ytInfo = await this.ytMetadataService.getVideoMetadata(targetUrl);
+                const cap = isYouTubeCombo ? 300 : 120;
+                const ytInfo = await this.ytMetadataService.getVideoMetadata(targetUrl, cap);
                 if (ytInfo && ytInfo.success) {
                     videoDurationSeconds = ytInfo.durationSeconds || 0;
                     if (isYouTubeCombo) {
@@ -327,6 +339,13 @@ export class BuyerOrderController {
                         } else {
                             watchTimeSeconds = ytInfo.requiredWatchSeconds || 0;
                         }
+                    } else if (isYouTubeService) {
+                        // NON-COMBO (Likes, Subscribers, Comments):
+                        // Mandatory 2-minute max cap!
+                        // If video is shorter than 120s, full video duration; otherwise capped at 120s.
+                        watchTimeSeconds = videoDurationSeconds > 120
+                            ? 120
+                            : (videoDurationSeconds > 0 ? videoDurationSeconds : 120);
                     } else {
                         watchTimeSeconds = 0;
                     }
@@ -334,6 +353,12 @@ export class BuyerOrderController {
             } catch (err: any) {
                 this.logger.warn(`Failed to auto-fetch YouTube metadata for ${targetUrl}: ${err?.message || err}`);
             }
+        }
+
+        if (isYouTubeService && !isYouTubeCombo && (!watchTimeSeconds || watchTimeSeconds === 0)) {
+            watchTimeSeconds = videoDurationSeconds > 120
+                ? 120
+                : (videoDurationSeconds > 0 ? videoDurationSeconds : 120);
         }
 
         // The buyer UI offers whole-minute selections from 5 to 60 minutes.
@@ -344,7 +369,14 @@ export class BuyerOrderController {
         }
 
         // Auto-extract Google Play Store app icon & name if targetUrl is a Play Store link or package ID
-        const playPackageId = this.playStoreScraper.extractPackageId(targetUrl);
+        // isYouTubeService already declared above
+        if (isYouTubeService) {
+            reqs.appName = null;
+            reqs.packageId = null;
+            reqs.appIcon = null;
+        }
+
+        const playPackageId = !isYouTubeService ? this.playStoreScraper.extractPackageId(targetUrl) : null;
         if (playPackageId) {
             try {
                 const appInfo = await this.playStoreScraper.getAppMetadata(targetUrl);
@@ -406,8 +438,12 @@ export class BuyerOrderController {
             autoApprove: isAutoApproveRequested || finalReviewMode === 'automatic',
             targetUrl,
             customText: reqs.customText || reqs.text || reqs.comment || reqs.instructions || data.description || '',
-            watchTimeSeconds: isYouTubeCombo ? (Number(watchTimeSeconds) || 0) : 0,
-            selectedWatchMinutes: isYouTubeCombo ? Math.round(Number(watchTimeSeconds) / 60) : 0,
+            watchTimeSeconds: isYouTubeCombo
+                ? (Number(watchTimeSeconds) || 0)
+                : (isYouTubeService ? (Number(watchTimeSeconds) || 120) : 0),
+            selectedWatchMinutes: isYouTubeCombo
+                ? Math.round(Number(watchTimeSeconds) / 60)
+                : (isYouTubeService ? Math.ceil((Number(watchTimeSeconds) || 120) / 60) : 0),
             extraMinutes: isYouTubeCombo ? extraMinutes : 0,
             extraPricePerMinute: isYouTubeCombo ? extraPricePerMin : 0,
             videoDurationSeconds: Number(videoDurationSeconds) || 0,

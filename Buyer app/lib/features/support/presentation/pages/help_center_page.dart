@@ -223,19 +223,19 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Need Dedicated Help?',
+                        'Need Live Support?',
                         style: GoogleFonts.outfit(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Our VIP campaign managers are available 24/7.',
+                        'Our live chat support desk is active 24/7.',
                         style: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 11),
                       ),
                     ],
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, AppRouter.support),
+                  onTap: () => Navigator.pushNamed(context, AppRouter.chat),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                     decoration: BoxDecoration(
@@ -243,7 +243,7 @@ class _HelpCenterPageState extends State<HelpCenterPage> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      'Contact →',
+                      'Chat Now →',
                       style: GoogleFonts.outfit(color: const Color(0xFF080C16), fontSize: 12, fontWeight: FontWeight.w800),
                     ),
                   ),

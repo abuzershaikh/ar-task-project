@@ -364,21 +364,29 @@ class _TaskCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.person_outline_rounded, size: 13, color: Color(0xFF94A3B8)),
-                        const SizedBox(width: 4),
-                        Text(
-                          worker == 'Unassigned' ? 'Worker: Unassigned' : 'Worker: ${worker.length > 10 ? worker.substring(0, 10) + '...' : worker}',
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                        ),
-                      ],
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person_outline_rounded, size: 13, color: Color(0xFF94A3B8)),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              worker == 'Unassigned' ? 'Worker: Unassigned' : 'Worker: $worker',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    if (reward.isNotEmpty)
+                    if (reward.isNotEmpty) ...[
+                      const SizedBox(width: 8),
                       Text(
                         'Reward: $reward',
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF059669)),
                       ),
+                    ],
                   ],
                 ),
               ],

@@ -134,13 +134,18 @@ class RecentCampaignItem extends StatelessWidget {
                   
                   Row(
                     children: [
-                      Text(
-                        '${campaign.completedTasks} / ${campaign.totalTasks} completed',
-                        style: AppTextStyles.bodySmall,
+                      Expanded(
+                        child: Text(
+                          '${campaign.completedTasks} / ${campaign.totalTasks} completed',
+                          style: AppTextStyles.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      const Spacer(),
-                      if (campaign.expiresIn != null)
+                      if (campaign.expiresIn != null) ...[
+                        const SizedBox(width: 8),
                         Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
                               Icons.access_time,
@@ -156,6 +161,7 @@ class RecentCampaignItem extends StatelessWidget {
                             ),
                           ],
                         ),
+                      ],
                     ],
                   ),
                   

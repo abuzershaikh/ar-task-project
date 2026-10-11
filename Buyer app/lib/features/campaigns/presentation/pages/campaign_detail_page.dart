@@ -78,11 +78,47 @@ class _CampaignDetailViewState extends State<_CampaignDetailView>
               slivers: [
                 // App Bar with Campaign Info
                 SliverAppBar(
-                  expandedHeight: 110,
-                  floating: false,
                   pinned: true,
+                  floating: false,
+                  toolbarHeight: 64,
                   backgroundColor: const Color(0xFF0F172A),
                   iconTheme: const IconThemeData(color: Colors.white),
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        campaign.name,
+                        style: const TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            campaign.id.length > 8
+                                ? '#${campaign.id.substring(0, 8).toUpperCase()}'
+                                : campaign.id,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _StatusBadge(status: campaign.status),
+                        ],
+                      ),
+                    ],
+                  ),
                   actions: [
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
@@ -144,44 +180,6 @@ class _CampaignDetailViewState extends State<_CampaignDetailView>
                       ],
                     ),
                   ],
-                  flexibleSpace: FlexibleSpaceBar(
-                    titlePadding: const EdgeInsets.only(left: 56, bottom: 12, right: 56),
-                    title: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          campaign.name,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 3),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              campaign.id.length > 8
-                                  ? '#${campaign.id.substring(0, 8).toUpperCase()}'
-                                  : campaign.id,
-                              style: const TextStyle(
-                                fontSize: 8.5,
-                                color: Colors.white70,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            _StatusBadge(status: campaign.status),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
 
                 // Tab Bar

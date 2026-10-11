@@ -779,56 +779,77 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
   // ── Voice Audio Player Card with Local Cache Integration ───────────────────
   Widget _buildAudioCard(WorkerSupportMessage msg) {
     final isPlaying = _currentlyPlayingId == msg.id && _playerState == PlayerState.playing;
+    final hasCaption = msg.content.trim().isNotEmpty && msg.content.trim() != 'Voice Note';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: Icon(
-              isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded,
-              size: 38,
-              color: const Color(0xFF00E676),
-            ),
-            onPressed: () => _toggleAudioPlay(msg),
-          ),
-          const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
+              IconButton(
+                icon: Icon(
+                  isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded,
+                  size: 38,
+                  color: const Color(0xFF00E676),
+                ),
+                onPressed: () => _toggleAudioPlay(msg),
+              ),
+              const SizedBox(width: 6),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.mic_rounded, size: 14, color: Color(0xFF00E676)),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Voice Note (${msg.durationSeconds}s)',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                  Row(
+                    children: [
+                      const Icon(Icons.mic_rounded, size: 14, color: Color(0xFF00E676)),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Voice Note (${msg.durationSeconds}s)',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: 140,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white12,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    child: isPlaying
+                        ? LinearProgressIndicator(
+                            value: _totalDuration.inMilliseconds > 0
+                                ? _currentPosition.inMilliseconds / _totalDuration.inMilliseconds
+                                : 0,
+                            color: const Color(0xFF00E676),
+                            backgroundColor: Colors.white12,
+                          )
+                        : null,
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Container(
-                width: 140,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white12,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: isPlaying
-                    ? LinearProgressIndicator(
-                        value: _totalDuration.inMilliseconds > 0
-                            ? _currentPosition.inMilliseconds / _totalDuration.inMilliseconds
-                            : 0,
-                        color: const Color(0xFF00E676),
-                        backgroundColor: Colors.white12,
-                      )
-                    : null,
-              ),
             ],
           ),
+        ),
+        if (hasCaption) ...[
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: Text(
+              msg.content.trim(),
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFFE9EDEF),
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
-      ),
+      ],
     );
   }
 
@@ -894,7 +915,9 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
       );
     }
 
-    return ClipRRect(
+    final hasCaption = msg.content.trim().isNotEmpty && msg.content.trim() != 'Photo';
+
+    final imageCard = ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: GestureDetector(
         onTap: () {
@@ -927,6 +950,28 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
         },
         child: imageWidget,
       ),
+    );
+
+    if (!hasCaption) return imageCard;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        imageCard,
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Text(
+            msg.content.trim(),
+            style: const TextStyle(
+              fontSize: 14.5,
+              color: Color(0xFFE9EDEF), // WhatsApp Crisp Text
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

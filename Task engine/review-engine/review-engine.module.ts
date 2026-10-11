@@ -8,6 +8,7 @@ import { ProgressEngineModule } from '../progress-engine/progress-engine.module'
 import { ReviewEngineService } from './review.service';
 import { ReviewAssignmentService } from './services/review-assignment.service';
 import { ReviewDecisionService } from './services/review-decision.service';
+import { ReviewAutoApproveMonitorService } from './services/review-auto-approve-monitor.service';
 
 @Module({
     imports: [
@@ -18,7 +19,15 @@ import { ReviewDecisionService } from './services/review-decision.service';
         ProgressEngineModule,
         forwardRef(() => TaskEngineModule) // using forwardRef if circular dependency exists, though TaskEngine doesn't seem to import ReviewEngine
     ],
-    providers: [ReviewEngineService, ReviewAssignmentService, ReviewDecisionService],
-    exports: [ReviewEngineService],
+    providers: [
+        ReviewEngineService,
+        ReviewAssignmentService,
+        ReviewDecisionService,
+        ReviewAutoApproveMonitorService,
+    ],
+    exports: [
+        ReviewEngineService,
+        ReviewAutoApproveMonitorService,
+    ],
 })
 export class ReviewEngineModule { }

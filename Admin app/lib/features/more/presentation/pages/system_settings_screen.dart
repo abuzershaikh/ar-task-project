@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../service_builder/presentation/pages/app_update_management_screen.dart';
+import '../../../review_auto_approve/presentation/pages/review_auto_approve_screen.dart';
 
 class SystemSettingsScreen extends StatefulWidget {
   const SystemSettingsScreen({super.key});
@@ -247,6 +248,38 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const AppUpdateManagementScreen()),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  Card(
+                    color: const Color(0xFF0F172A),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4F46E5).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.auto_mode_rounded, color: Color(0xFF818CF8), size: 28),
+                      ),
+                      title: const Text(
+                        'Auto-Approve Review Time',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      subtitle: const Text(
+                        'Auto-approve worker proof if buyer inactive in set timeframe',
+                        style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ReviewAutoApproveScreen()),
                         );
                       },
                     ),

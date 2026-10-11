@@ -1,8 +1,10 @@
 import { Controller, Get, Post, Put, Patch, Delete, Param, Body, NotFoundException, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SystemSettingsRepository } from '../../../../shared/database/repositories/system-settings.repository';
+import { SubmissionRepository } from '../../../../shared/database/repositories/submission.repository';
 import { AuditLogService } from '../../../../shared/services/audit-log.service';
 import { DeadlineMonitorService } from '../../../../shared/engines/reallocation-engine/services/deadline-monitor.service';
+import { ReviewAutoApproveMonitorService } from '../../../../review-engine/services/review-auto-approve-monitor.service';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
 import { UserRole, User } from '../../../../shared/database/entities/user.entity';
@@ -17,9 +19,11 @@ export class AdminSystemSettingsController {
 
     constructor(
         private readonly settingsRepo: SystemSettingsRepository,
+        private readonly submissionRepo: SubmissionRepository,
         private readonly auditLogService: AuditLogService,
         private readonly deadlineMonitor: DeadlineMonitorService,
         private readonly payoutEngine: PayoutEngineService,
+        private readonly reviewAutoApproveMonitor: ReviewAutoApproveMonitorService,
     ) { }
 
     @Get('task-expiry')
@@ -114,6 +118,91 @@ export class AdminSystemSettingsController {
         return {
             success: true,
             message: 'Deadline monitor cycle executed successfully',
+            result,
+        };
+    }
+
+    @Get('review-auto-approve')
+    @ApiOperation({ summary: 'Get Review Auto-Approve Timeframe configuration' })
+    async getReviewAutoApproveSettings() {
+        const hoursSetting = await this.settingsRepo.findByKey('review_auto_approve_hours');
+        const enabledSetting = await this.settingsRepo.findByKey('review_auto_approve_enabled');
+        const pendingCount = (await this.submissionRepo.findPendingReviews()).length;
+
+        const parseBool = (val: any, defaultVal = true): boolean => {
+            if (val === null || val === undefined) return defaultVal;
+            if (typeof val === 'boolean') return val;
+            const s = String(val).trim().toLowerCase();
+            if (s === 'false' || s === '0' || s === 'no') return false;
+            if (s === 'true' || s === '1' || s === 'yes') return true;
+            return defaultVal;
+        };
+
+        return {
+            success: true,
+            settings: {
+                reviewAutoApproveHours: hoursSetting ? Number(hoursSetting.value) : 24.0,
+                reviewAutoApproveEnabled: parseBool(enabledSetting?.value, true),
+            },
+            pendingCount,
+        };
+    }
+
+    @Post('review-auto-approve')
+    @ApiOperation({ summary: 'Update Review Auto-Approve Timeframe configuration' })
+    async updateReviewAutoApproveSettings(
+        @Body() body: {
+            reviewAutoApproveHours?: number;
+            reviewAutoApproveEnabled?: boolean;
+        },
+        @CurrentUser() user: User,
+    ) {
+        const userId = user ? user.id : 'admin';
+
+        if (body.reviewAutoApproveHours !== undefined) {
+            await this.settingsRepo.set(
+                'review_auto_approve_hours',
+                Number(body.reviewAutoApproveHours),
+                userId,
+                'Review auto-approval timeout in hours if buyer or admin does not review proof',
+            );
+        }
+
+        if (body.reviewAutoApproveEnabled !== undefined) {
+            await this.settingsRepo.set(
+                'review_auto_approve_enabled',
+                Boolean(body.reviewAutoApproveEnabled),
+                userId,
+                'Enable or disable automated review approval upon timeout',
+            );
+        }
+
+        await this.auditLogService.logAction({
+            userId,
+            action: 'UPDATE_REVIEW_AUTO_APPROVE_SETTINGS',
+            targetType: 'SYSTEM_SETTINGS',
+            targetId: 'REVIEW_AUTO_APPROVE',
+            newValue: body,
+        });
+
+        return {
+            success: true,
+            message: 'Review auto-approval settings saved successfully',
+            settings: {
+                reviewAutoApproveHours: body.reviewAutoApproveHours ?? 24.0,
+                reviewAutoApproveEnabled: body.reviewAutoApproveEnabled ?? true,
+            },
+        };
+    }
+
+    @Post('review-auto-approve/trigger')
+    @ApiOperation({ summary: 'Trigger manual review auto-approve evaluation sweep' })
+    async triggerReviewAutoApproveSweep(@CurrentUser() user: User) {
+        this.logger.log(`Manual review auto-approve sweep triggered by user ${user?.id || 'admin'}`);
+        const result = await this.reviewAutoApproveMonitor.evaluatePendingReviews();
+        return {
+            success: true,
+            message: 'Review auto-approve cycle executed successfully',
             result,
         };
     }

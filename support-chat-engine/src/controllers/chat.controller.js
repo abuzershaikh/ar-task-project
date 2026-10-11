@@ -122,15 +122,23 @@ class ChatController {
         durationSeconds: durationSeconds ? parseInt(durationSeconds, 10) : 0,
       });
 
-      // Real-time Socket.IO dispatch for each targeted worker
+      // Real-time Socket.IO dispatch for each targeted worker & admin
       const io = req.app.get('io');
-      if (io && result && result.messages) {
-        for (const msg of result.messages) {
-          if (msg.worker_id) {
-            io.to(`worker_${msg.worker_id}`).emit('new_message', msg);
+      if (io && result) {
+        if (Array.isArray(result.messages)) {
+          for (const msg of result.messages) {
+            if (msg.worker_id) {
+              io.to(`worker_${msg.worker_id}`).emit('new_message', msg);
+            }
           }
         }
         io.to('admin_support').emit('bulk_messages_sent', result);
+        io.to('admin_support').emit('conversation_updated', {
+          count: result.count,
+          last_message_text: content || (messageType === 'IMAGE' ? '📷 Photo' : (messageType === 'AUDIO' ? '🎙️ Voice Note' : '')),
+          last_message_type: messageType || 'TEXT',
+          last_message_at: new Date().toISOString(),
+        });
       }
 
       return res.json({ success: true, data: result });

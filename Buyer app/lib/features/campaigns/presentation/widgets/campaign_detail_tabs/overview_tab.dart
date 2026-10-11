@@ -122,10 +122,15 @@ class _ProgressCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '${campaign.totalTasks - campaign.completedTasks} tasks remaining',
-                style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+              Expanded(
+                child: Text(
+                  '${campaign.totalTasks - campaign.completedTasks} tasks remaining',
+                  style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '${campaign.completionPercentage.toStringAsFixed(1)}% Complete',
                 style: TextStyle(
@@ -315,10 +320,15 @@ class _DetailsCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Total Campaign Budget',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+              const Expanded(
+                child: Text(
+                  'Total Campaign Budget',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               Text(
                 CurrencyFormatter.formatINR(campaign.totalAmount),
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF2563EB)),
@@ -569,12 +579,16 @@ class _MetricItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: color,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ),
           const SizedBox(height: 2),
@@ -585,6 +599,8 @@ class _MetricItem extends StatelessWidget {
               color: Color(0xFF64748B),
               fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

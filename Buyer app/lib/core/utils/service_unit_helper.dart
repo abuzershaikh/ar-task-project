@@ -38,20 +38,20 @@ class ServiceUnitHelper {
       singular = 'Comment';
       plural = 'Comments';
     }
-    // 5. Views / Watch Time (Guard strictly against 'review')
-    else if (combined.contains('watch') || (combined.contains('view') && !combined.contains('review'))) {
-      singular = 'View';
-      plural = 'Views';
-    }
-    // 6. Subscribers
+    // 5. Subscribers (Checked before generic watch)
     else if (combined.contains('sub') || combined.contains('subscriber')) {
       singular = 'Subscriber';
       plural = 'Subscribers';
     }
-    // 7. Likes
+    // 6. Likes (Checked before generic watch)
     else if (combined.contains('like')) {
       singular = 'Like';
       plural = 'Likes';
+    }
+    // 7. Views / Watch Time (Guard strictly against 'review')
+    else if (combined.contains('watch') || (combined.contains('view') && !combined.contains('review'))) {
+      singular = 'View';
+      plural = 'Views';
     }
     // 8. Followers
     else if (combined.contains('follow')) {
@@ -107,13 +107,22 @@ class ServiceUnitHelper {
 
     final singular = getUnitName(serviceCodeOrName, serviceCode: serviceCode, count: 1);
     if (singular == 'Subscriber') {
+      if (combined.contains('yt') || combined.contains('youtube') || combined.contains('watch')) {
+        return '1 Subscriber = Up to 2 Min Watch + 1 Real Channel Subscription';
+      }
       return '1 Subscriber = 1 Real Channel Subscription';
     } else if (singular == 'Like') {
+      if (combined.contains('yt') || combined.contains('youtube') || combined.contains('watch')) {
+        return '1 Like = Up to 2 Min Watch + 1 Genuine Video Like';
+      }
       if (combined.contains('insta') || combined.contains('ig')) {
         return '1 Like = 1 Genuine Instagram Post / Reel Like';
       }
       return '1 Like = 1 Genuine Video / Post Like';
     } else if (singular == 'Comment') {
+      if (combined.contains('yt') || combined.contains('youtube') || combined.contains('watch')) {
+        return '1 Comment = Up to 2 Min Watch + 1 Topic-Relevant Comment';
+      }
       if (combined.contains('insta') || combined.contains('ig')) {
         return '1 Comment = 1 Authentic Instagram Comment';
       }

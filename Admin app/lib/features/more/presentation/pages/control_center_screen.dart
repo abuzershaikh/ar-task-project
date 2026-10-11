@@ -16,6 +16,9 @@ import 'admin_profile_screen.dart';
 import '../../../service_builder/presentation/pages/app_update_management_screen.dart';
 import '../../../support_chat/presentation/pages/admin_chat_list_screen.dart';
 import '../../../support_chat/presentation/pages/admin_buyer_chat_list_screen.dart';
+import '../../../tutorials_management/presentation/pages/tutorial_management_screen.dart';
+import '../../../review_auto_approve/presentation/pages/review_auto_approve_screen.dart';
+import '../../../service_builder/presentation/pages/task_expiry_settings_screen.dart';
 
 class ControlCenterScreen extends StatelessWidget {
   const ControlCenterScreen({super.key});
@@ -38,7 +41,8 @@ class ControlCenterScreen extends StatelessWidget {
             () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const AdminBuyerChatListScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const AdminBuyerChatListScreen()),
               );
             },
           ),
@@ -50,11 +54,25 @@ class ControlCenterScreen extends StatelessWidget {
             () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const AdminChatListScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const AdminChatListScreen()),
               );
             },
           ),
           _buildSection('System Management', [
+            _buildMenuItem(
+              context,
+              Icons.video_library_rounded,
+              'Tutorials Management (Buyer & Worker)',
+              'Add videos, configure tags, display order & playback',
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const TutorialManagementScreen()),
+                );
+              },
+            ),
             _buildMenuItem(
               context,
               Icons.system_update_rounded,
@@ -63,7 +81,8 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AppUpdateManagementScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const AppUpdateManagementScreen()),
                 );
               },
             ),
@@ -75,7 +94,8 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const ServicesListScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const ServicesListScreen()),
                 );
               },
             ),
@@ -87,7 +107,8 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const MatchingBrainScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const MatchingBrainScreen()),
                 );
               },
             ),
@@ -99,7 +120,8 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const PayoutsQueueScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const PayoutsQueueScreen()),
                 );
               },
             ),
@@ -111,14 +133,26 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const KycQueueScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const KycQueueScreen()),
+                );
+              },
+            ),
+            _buildMenuItem(
+              context,
+              Icons.timer_outlined,
+              'Task Expiry & Auto-Reassign',
+              'Configure worker execution & pool expiry timeouts',
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const TaskExpirySettingsScreen()),
                 );
               },
             ),
           ]),
-          
           const SizedBox(height: 16),
-          
           _buildSection('Operations', [
             _buildMenuItem(
               context,
@@ -128,7 +162,21 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const TaskReviewsQueueScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const TaskReviewsQueueScreen()),
+                );
+              },
+            ),
+            _buildMenuItem(
+              context,
+              Icons.auto_mode_rounded,
+              'Auto-Approve Review Time',
+              'Auto-approve worker proof if not reviewed within time frame',
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const ReviewAutoApproveScreen()),
                 );
               },
             ),
@@ -140,7 +188,8 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const FinanceLedgerScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const FinanceLedgerScreen()),
                 );
               },
             ),
@@ -152,14 +201,13 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const RiskFraudScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const RiskFraudScreen()),
                 );
               },
             ),
           ]),
-          
           const SizedBox(height: 16),
-          
           _buildSection('System', [
             _buildMenuItem(
               context,
@@ -169,7 +217,8 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AuditLogsScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const AuditLogsScreen()),
                 );
               },
             ),
@@ -181,7 +230,8 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const SystemSettingsScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const SystemSettingsScreen()),
                 );
               },
             ),
@@ -193,14 +243,14 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const NotificationsAnnouncementsScreen()),
+                  MaterialPageRoute(
+                      builder: (context) =>
+                          const NotificationsAnnouncementsScreen()),
                 );
               },
             ),
           ]),
-          
           const SizedBox(height: 16),
-          
           _buildSection('Account', [
             _buildMenuItem(
               context,
@@ -210,7 +260,8 @@ class ControlCenterScreen extends StatelessWidget {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AdminProfileScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const AdminProfileScreen()),
                 );
               },
             ),
@@ -223,7 +274,9 @@ class ControlCenterScreen extends StatelessWidget {
                 context.read<AuthBloc>().add(AuthLogoutRequested());
                 // Force navigation to clear any stuck navigator state
                 Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const Scaffold(body: Center(child: CircularProgressIndicator()))),
+                  MaterialPageRoute(
+                      builder: (_) => const Scaffold(
+                          body: Center(child: CircularProgressIndicator()))),
                   (route) => false,
                 );
               },

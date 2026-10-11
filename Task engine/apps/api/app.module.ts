@@ -24,6 +24,7 @@ import { PayoutEngineModule } from '../../payout-engine/payout-engine.module';
 import { FraudEngineModule } from '../../fraud-engine/fraud-engine.module';
 import { NotificationEngineModule } from '../../notification-engine/notification-engine.module';
 import { ExecutionEngineModule } from '../../execution-engine/execution.module';
+import { TutorialEngineModule } from '../../tutorial-engine/tutorial-engine.module';
 
 import { AuthController } from './controllers/auth/auth.controller';
 import { FileController } from './controllers/common/file.controller';
@@ -44,6 +45,7 @@ import { WorkerNotificationController } from './controllers/worker/notification.
 import { WorkerScoreController } from './controllers/worker/score.controller';
 import { WorkerAvailabilityController } from './controllers/worker/availability.controller';
 import { WorkerHeartbeatController } from './controllers/worker/heartbeat.controller';
+import { WorkerTutorialController } from './controllers/worker/tutorial-worker.controller';
 
 // Buyer Controllers
 import { BuyerOrderController } from './controllers/buyer/order.controller';
@@ -55,6 +57,7 @@ import { BuyerProfileController } from './controllers/buyer/profile.controller';
 import { BuyerPaymentController } from './controllers/buyer/payment.controller';
 import { BuyerWalletController } from './controllers/buyer/wallet.controller';
 import { BuyerServiceCatalogController } from './controllers/buyer/service-catalog.controller';
+import { BuyerTutorialController } from './controllers/buyer/tutorial-buyer.controller';
 
 // Admin Controllers
 import { AdminDashboardController } from './controllers/admin/dashboard.controller';
@@ -72,6 +75,7 @@ import { AdminServiceCatalogController } from './controllers/admin/service-catal
 import { AdminAuditController } from './controllers/admin/audit.controller';
 import { AdminSystemSettingsController } from './controllers/admin/system-settings.controller';
 import { AdminWalletController } from './controllers/admin/wallet.controller';
+import { AdminTutorialController } from './controllers/admin/tutorial-admin.controller';
 
 @Module({
     imports: [
@@ -107,6 +111,7 @@ import { AdminWalletController } from './controllers/admin/wallet.controller';
         FraudEngineModule,
         NotificationEngineModule,
         ExecutionEngineModule,
+        TutorialEngineModule,
     ],
     controllers: [
         HealthController,
@@ -127,6 +132,7 @@ import { AdminWalletController } from './controllers/admin/wallet.controller';
         WorkerScoreController,
         WorkerAvailabilityController,
         WorkerHeartbeatController,
+        WorkerTutorialController,
 
         // Buyer
         BuyerOrderController,
@@ -138,6 +144,7 @@ import { AdminWalletController } from './controllers/admin/wallet.controller';
         BuyerPaymentController,
         BuyerWalletController,
         BuyerServiceCatalogController,
+        BuyerTutorialController,
 
         // Admin
         AdminDashboardController,
@@ -155,6 +162,7 @@ import { AdminWalletController } from './controllers/admin/wallet.controller';
         AdminAuditController,
         AdminSystemSettingsController,
         AdminWalletController,
+        AdminTutorialController,
     ],
 })
 export class AppModule { }

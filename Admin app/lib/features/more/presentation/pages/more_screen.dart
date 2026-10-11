@@ -9,6 +9,8 @@ import '../../../service_builder/presentation/pages/task_expiry_settings_screen.
 import '../../../service_builder/presentation/pages/app_update_management_screen.dart';
 import 'system_settings_screen.dart';
 import 'finance_ledger_screen.dart';
+import '../../../tutorials_management/presentation/pages/tutorial_management_screen.dart';
+import '../../../review_auto_approve/presentation/pages/review_auto_approve_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -77,6 +79,19 @@ class MoreScreen extends StatelessWidget {
           // Engine & System
           const _SectionTitle(title: 'Engine & System'),
           _MenuItem(
+            icon: Icons.video_library_rounded,
+            title: 'Set Buyer App Tutorials',
+            subtitle: 'Add video tutorials, configure tags, display order & playback',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const TutorialManagementScreen(initialAudience: 'buyer'),
+                ),
+              );
+            },
+          ),
+          _MenuItem(
             icon: Icons.system_update_rounded,
             title: 'App Version & Updates',
             subtitle: 'Manage forced update list & APK download URLs',
@@ -95,6 +110,17 @@ class MoreScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const TaskExpirySettingsScreen()),
+              );
+            },
+          ),
+          _MenuItem(
+            icon: Icons.auto_mode_rounded,
+            title: 'Auto-Approve Review Time',
+            subtitle: 'Auto-approve worker proof if not reviewed within time frame',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReviewAutoApproveScreen()),
               );
             },
           ),

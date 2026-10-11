@@ -264,4 +264,124 @@ export class WalletService {
             total,
         };
     }
+
+    /**
+     * Admin: Get all buyer topup purchase history (Razorpay + Admin additions)
+     */
+    async getBuyerTopupHistory(options?: {
+        filter?: 'ALL' | 'RAZORPAY' | 'ADMIN';
+        search?: string;
+        limit?: number;
+    }) {
+        const filter = options?.filter || 'ALL';
+        const search = options?.search?.trim();
+
+        // 1. Calculate overall summary
+        const summaryRaw = await this.dataSource.query(`
+            SELECT 
+                COALESCE(SUM(wt.amount), 0) as totalTopupAmount,
+                COALESCE(SUM(CASE WHEN wt.description LIKE '%Razorpay%' THEN wt.amount ELSE 0 END), 0) as totalRazorpayAmount,
+                COALESCE(SUM(CASE WHEN wt.description NOT LIKE '%Razorpay%' THEN wt.amount ELSE 0 END), 0) as totalAdminAmount,
+                COUNT(*) as totalCount,
+                COALESCE(SUM(CASE WHEN wt.description LIKE '%Razorpay%' THEN 1 ELSE 0 END), 0) as razorpayCount,
+                COALESCE(SUM(CASE WHEN wt.description NOT LIKE '%Razorpay%' THEN 1 ELSE 0 END), 0) as adminCount
+            FROM wallet_transactions wt
+            JOIN wallets w ON wt.wallet_id = w.id
+            JOIN users u ON w.user_id = u.id
+            WHERE wt.type = 'CREDIT' 
+              AND (wt.description LIKE '%Razorpay%' OR wt.description LIKE '%Admin%' OR wt.description LIKE '%Top-up%' OR wt.description LIKE '%Topup%');
+        `);
+
+        const summary = {
+            totalTopupAmount: Number(summaryRaw[0]?.totalTopupAmount || 0),
+            totalRazorpayAmount: Number(summaryRaw[0]?.totalRazorpayAmount || 0),
+            totalAdminAmount: Number(summaryRaw[0]?.totalAdminAmount || 0),
+            totalCount: Number(summaryRaw[0]?.totalCount || 0),
+            razorpayCount: Number(summaryRaw[0]?.razorpayCount || 0),
+            adminCount: Number(summaryRaw[0]?.adminCount || 0),
+        };
+
+        // 2. Build list query with filtering and search
+        const whereClauses: string[] = [
+            "wt.type = 'CREDIT'",
+            "(wt.description LIKE '%Razorpay%' OR wt.description LIKE '%Admin%' OR wt.description LIKE '%Top-up%' OR wt.description LIKE '%Topup%')"
+        ];
+        const params: any[] = [];
+
+        if (filter === 'RAZORPAY') {
+            whereClauses.push("wt.description LIKE '%Razorpay%'");
+        } else if (filter === 'ADMIN') {
+            whereClauses.push("wt.description NOT LIKE '%Razorpay%'");
+        }
+
+        if (search && search.length > 0) {
+            const term = `%${search.toLowerCase()}%`;
+            whereClauses.push("(LOWER(u.full_name) LIKE ? OR LOWER(u.email) LIKE ? OR LOWER(wt.description) LIKE ? OR u.phone LIKE ? OR wt.id LIKE ?)");
+            params.push(term, term, term, term, term);
+        }
+
+        const whereSql = `WHERE ${whereClauses.join(' AND ')}`;
+
+        const sql = `
+            SELECT 
+                wt.id, 
+                wt.amount, 
+                wt.balance_after as balanceAfter, 
+                wt.description, 
+                wt.status,
+                DATE_FORMAT(wt.created_at, '%Y-%m-%d %H:%i:%s') as createdAt, 
+                u.id as userId, 
+                u.full_name as fullName, 
+                u.email, 
+                u.phone, 
+                u.avatar_url as avatarUrl, 
+                u.role
+            FROM wallet_transactions wt
+            JOIN wallets w ON wt.wallet_id = w.id
+            JOIN users u ON w.user_id = u.id
+            ${whereSql}
+            ORDER BY wt.created_at DESC
+        `;
+
+        const rawList = await this.dataSource.query(sql, params);
+
+        const transactions = rawList.map((item: any) => {
+            const isRazorpay = typeof item.description === 'string' && item.description.includes('Razorpay');
+            let paymentId: string | null = null;
+            if (isRazorpay) {
+                const match = item.description.match(/pay_[A-Za-z0-9]+/);
+                if (match) {
+                    paymentId = match[0];
+                }
+            }
+
+            return {
+                id: item.id,
+                amount: Number(item.amount),
+                balanceAfter: Number(item.balanceAfter),
+                method: isRazorpay ? 'RAZORPAY' : 'ADMIN',
+                source: isRazorpay ? 'RAZORPAY' : 'ADMIN',
+                paymentId,
+                description: item.description,
+                status: item.status || 'COMPLETED',
+                createdAt: item.createdAt,
+                buyer: {
+                    id: item.userId,
+                    fullName: item.fullName || (item.email ? item.email.split('@')[0] : 'Buyer'),
+                    email: item.email,
+                    phone: item.phone,
+                    avatarUrl: item.avatarUrl,
+                    role: item.role,
+                },
+            };
+        });
+
+        return {
+            success: true,
+            summary,
+            transactions,
+            total: transactions.length,
+        };
+    }
 }
+

@@ -26,6 +26,23 @@ export class AdminWalletController {
         return this.walletService.getAllBuyersWithWallet(search);
     }
 
+    @Get('topups')
+    @ApiOperation({ summary: 'Get buyer topup and purchase history with summary stats' })
+    @ApiQuery({ name: 'filter', required: false, enum: ['ALL', 'RAZORPAY', 'ADMIN'] })
+    @ApiQuery({ name: 'search', required: false })
+    @ApiQuery({ name: 'limit', required: false })
+    async getBuyerTopupHistory(
+        @Query('filter') filter?: 'ALL' | 'RAZORPAY' | 'ADMIN',
+        @Query('search') search?: string,
+        @Query('limit') limit?: number,
+    ) {
+        return this.walletService.getBuyerTopupHistory({
+            filter,
+            search,
+            limit: limit ? Number(limit) : 100,
+        });
+    }
+
     @Get('buyers/:buyerId/transactions')
     @ApiOperation({ summary: 'Get transactions for a specific buyer' })
     @ApiQuery({ name: 'limit', required: false })

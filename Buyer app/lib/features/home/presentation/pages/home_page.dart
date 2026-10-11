@@ -2228,8 +2228,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               const SizedBox(width: 10),
               _buildTrustCard(
                 iconAsset: 'assets/icons/mobile-chatting.png',
-                title: '24/7 VIP Support',
-                desc: 'Direct dedicated support for large enterprise campaigns',
+                title: '24/7 Live Support',
+                desc: 'Instant 1-on-1 chat support desk for all campaigns',
                 color: const Color(0xFFA855F7),
               ),
             ],

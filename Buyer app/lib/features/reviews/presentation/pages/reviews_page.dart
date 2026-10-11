@@ -5,6 +5,7 @@ import '../../../../core/di/injection.dart';
 import '../bloc/reviews_bloc.dart';
 import '../../data/models/review_submission_model.dart';
 import 'review_detail_page.dart';
+import '../../data/services/review_auto_approve_config_service.dart';
 
 class ReviewsPage extends StatelessWidget {
   const ReviewsPage({super.key});
@@ -18,8 +19,23 @@ class ReviewsPage extends StatelessWidget {
   }
 }
 
-class _ReviewsView extends StatelessWidget {
+class _ReviewsView extends StatefulWidget {
   const _ReviewsView();
+
+  @override
+  State<_ReviewsView> createState() => _ReviewsViewState();
+}
+
+class _ReviewsViewState extends State<_ReviewsView> {
+  double _autoApproveHours = ReviewAutoApproveConfigService.getCachedHoursSync();
+
+  @override
+  void initState() {
+    super.initState();
+    ReviewAutoApproveConfigService.getAutoApproveHours().then((hours) {
+      if (mounted) setState(() => _autoApproveHours = hours);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +245,7 @@ class _ReviewsView extends StatelessWidget {
           const SizedBox(width: 8),
           Switch.adaptive(
             value: isAutoApprove,
-            activeColor: const Color(0xFF7C3AED),
+            activeTrackColor: const Color(0xFF7C3AED),
             onChanged: (val) {
               context.read<ReviewsBloc>().add(ToggleAutoApproveEvent(autoApprove: val));
             },
@@ -239,49 +255,123 @@ class _ReviewsView extends StatelessWidget {
     );
   }
 
-  Widget _buildApproveAllBar(BuildContext context, int count) {
+  Widget _buildApproveAllBar(BuildContext context, List<ReviewSubmissionModel> submissions) {
+    final count = submissions.length;
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFFECFDF5),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
       ),
-      child: Row(
+      child: Column(
         children: [
-          const Icon(Icons.playlist_add_check_circle_rounded, color: Color(0xFF059669), size: 24),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Pending Review: $count Tasks',
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: const Color(0xFF065F46),
+          Row(
+            children: [
+              const Icon(Icons.playlist_add_check_circle_rounded, color: Color(0xFF059669), size: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pending Review: $count Tasks',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: const Color(0xFF065F46),
+                      ),
+                    ),
+                    Text(
+                      'Swipe up Reel style or approve all in 1 click',
+                      style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF047857)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: submissions.isEmpty
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ReviewDetailPage(
+                                submissionId: submissions.first.id,
+                                initialSubmission: submissions.first,
+                                allSubmissions: submissions,
+                                initialIndex: 0,
+                              ),
+                            ),
+                          ).then((_) {
+                            if (context.mounted) {
+                              context.read<ReviewsBloc>().add(const LoadPendingReviewsEvent());
+                            }
+                          });
+                        },
+                  icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                  label: const Text('Reel Review'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF7C3AED),
+                    backgroundColor: const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                    side: const BorderSide(color: Color(0xFF7C3AED), width: 1.2),
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12),
                   ),
                 ),
-                Text(
-                  'Accept all tasks in a single click',
-                  style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF047857)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _confirmApproveAll(context, count),
+                  icon: const Icon(Icons.done_all_rounded, size: 16),
+                  label: Text('Approve All ($count)'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Info notice for auto-approve timeframe
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFFBEB),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.timer_outlined, color: Color(0xFFD97706), size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'If you do not review within ${_autoApproveHours.toInt()} hours, submissions will auto-approve automatically.',
+                    style: GoogleFonts.outfit(
+                      color: const Color(0xFF92400E),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.25,
+                    ),
+                  ),
                 ),
               ],
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => _confirmApproveAll(context, count),
-            icon: const Icon(Icons.done_all_rounded, size: 16),
-            label: const Text('Approve All'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF059669),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12),
             ),
           ),
         ],
@@ -380,7 +470,7 @@ class _ReviewsView extends StatelessWidget {
             return _buildAutoApproveToggleCard(context, isAutoApprove);
           }
           if (isPendingTab && index == 1) {
-            return _buildApproveAllBar(context, submissions.length);
+            return _buildApproveAllBar(context, submissions);
           }
 
           final itemIndex = isPendingTab ? index - 2 : index;
@@ -412,6 +502,8 @@ class _ReviewsView extends StatelessWidget {
                       builder: (_) => ReviewDetailPage(
                         submissionId: item.id,
                         initialSubmission: item,
+                        allSubmissions: submissions,
+                        initialIndex: itemIndex,
                       ),
                     ),
                   ).then((_) {
@@ -503,6 +595,32 @@ class _ReviewsView extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.outfit(color: const Color(0xFF4B5563), fontSize: 11.5),
+                          ),
+                        ),
+                      ],
+                      if (isPending) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.timer_outlined, size: 13, color: Color(0xFFD97706)),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Auto-approves in ${_autoApproveHours.toInt()}h if unreviewed',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11,
+                                  color: const Color(0xFFB45309),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
