@@ -152,10 +152,30 @@ class _BuyerTutorialsPageState extends State<BuyerTutorialsPage>
   }
 
   Widget _buildHeader() {
+    final bool canPop = Navigator.canPop(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
       child: Row(
         children: [
+          if (canPop) ...[
+            InkWell(
+              onTap: () => Navigator.pop(context),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.textPrimary,
+                  size: 18,
+                ),
+              ),
+            ),
+          ],
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(

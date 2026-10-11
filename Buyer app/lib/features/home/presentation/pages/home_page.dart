@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/routes/app_router.dart';
-import '../../../../core/storage/local_storage_service.dart';
-import '../../../../core/di/injection.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../../../wallet/presentation/bloc/wallet_bloc.dart';
 import '../../../wallet/presentation/bloc/wallet_event.dart';
@@ -14,6 +11,7 @@ import '../../domain/entities/dashboard_data.dart';
 import '../../domain/entities/campaign_summary.dart';
 import '../../../../core/services/currency_service.dart';
 import '../../../../shared/presentation/widgets/currency_toggle_switch.dart';
+import '../../../tutorials/presentation/buyer_tutorials_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -537,69 +535,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
         child: Row(
           children: [
-            // 3D Metallic Avatar Badge
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF38BDF8),
-                    Color(0xFF4F46E5),
-                    Color(0xFF9333EA)
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(2),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: () {
-                      final googlePhoto =
-                          FirebaseAuth.instance.currentUser?.photoURL ??
-                              getIt<LocalStorageService>().getUserPhoto();
-                      if (googlePhoto != null && googlePhoto.isNotEmpty) {
-                        return Image.network(
-                          googlePhoto,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Image.asset(
-                            'assets/images/vip_badge_3d.jpg',
-                            fit: BoxFit.cover,
-                          ),
-                        );
-                      }
-                      return Image.asset(
-                        'assets/images/vip_badge_3d.jpg',
-                        fit: BoxFit.cover,
-                      );
-                    }(),
-                  ),
+            // 1st: Currency Switch Pill (₹ INR / $ USD)
+            const CurrencyToggleSwitch(compact: true),
+            const SizedBox(width: 8),
+
+            // 2nd: Animated YouTube Tutorial Icon linked to Tutorials Page
+            _AnimatedYouTubeTutorialButton(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const BuyerTutorialsPage(),
                 ),
               ),
             ),
             const Spacer(),
-
-            // Currency Switch Pill (₹ INR / $ USD)
-            const CurrencyToggleSwitch(compact: true),
-            const SizedBox(width: 8),
 
             // Live Support Chat Action with Animated Lottie Customer Care (No outline, increased size, with 'Chat Support' text)
             GestureDetector(
@@ -2410,3 +2362,108 @@ class _BlinkingChatTextState extends State<_BlinkingChatText>
     );
   }
 }
+
+class _AnimatedYouTubeTutorialButton extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _AnimatedYouTubeTutorialButton({
+    required this.onTap,
+  });
+
+  @override
+  State<_AnimatedYouTubeTutorialButton> createState() =>
+      _AnimatedYouTubeTutorialButtonState();
+}
+
+class _AnimatedYouTubeTutorialButtonState
+    extends State<_AnimatedYouTubeTutorialButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 0.90, end: 1.10).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _glowAnimation = Tween<double>(begin: 0.25, end: 0.85).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Tooltip(
+          message: 'Tutorials & Guides',
+          child: GestureDetector(
+            onTap: widget.onTap,
+            child: Container(
+              height: 30,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.90),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFFFF0000)
+                      .withValues(alpha: _glowAnimation.value),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFF0000)
+                        .withValues(alpha: _glowAnimation.value * 0.45),
+                    blurRadius: 8 + 4 * _controller.value,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Transform.scale(
+                    scale: _scaleAnimation.value,
+                    child: Image.asset(
+                      'assets/icons/youtube.png',
+                      width: 20,
+                      height: 20,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.play_circle_fill_rounded,
+                        color: Color(0xFFFF0000),
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+

@@ -173,13 +173,8 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     final t = widget.task;
     if (t == null) return false;
     final p = _getPlatform();
-    final target = _getTargetUrl().toLowerCase();
-    final isYt = p == 'youtube' || target.contains('youtube.com') || target.contains('youtu.be');
-    if (!isYt) return false;
-
-    // All YouTube tasks require watch time:
-    // Combo: 5 min base or slider time
-    // Non-combo (Like, Subscribe, Comment): Mandatory 2-minute max cap
+    // Only genuine YouTube tasks are YouTube tasks
+    if (p != 'youtube') return false;
     return true;
   }
 
@@ -659,137 +654,138 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
     final type = (t['taskType'] ?? t['task_type'] ?? t['type'] ?? t['serviceCode'] ?? '')
         .toString()
-        .toLowerCase();
-    String reqStr = '';
-    if (reqObj is Map) {
-      reqStr = reqObj.toString().toLowerCase();
-    } else if (t['requirements'] != null) {
-      reqStr = t['requirements'].toString().toLowerCase();
-    }
-    final metaStr = (t['metadata'] != null)
-        ? t['metadata'].toString().toLowerCase()
-        : '';
-    final titleStr = (t['title'] ??
+        .toLowerCase()
+        .trim();
+
+    final rawPlat = (t['platform'] ?? '').toString().toLowerCase().trim();
+    final reqPlat = (reqObj is Map ? reqObj['platform'] : null)?.toString().toLowerCase().trim() ?? '';
+
+    // Check service names / titles
+    final serviceName = (t['serviceTitle'] ??
             t['serviceName'] ??
-            t['serviceTitle'] ??
-            (reqObj is Map ? (reqObj['serviceName'] ?? reqObj['title']) : null) ??
+            (reqObj is Map ? (reqObj['serviceName'] ?? reqObj['serviceTitle']) : null) ??
             '')
         .toString()
-        .toLowerCase();
-    final descStr = (t['description'] ?? t['body'] ?? '')
+        .toLowerCase()
+        .trim();
+    final titleStr = (t['title'] ?? (reqObj is Map ? reqObj['title'] : null) ?? '')
         .toString()
-        .toLowerCase();
-    final targetUrl = _getTargetUrl().toLowerCase();
-    final combined = '$type $reqStr $metaStr $titleStr $descStr $targetUrl';
+        .toLowerCase()
+        .trim();
 
-    final reqPlat = (reqObj is Map ? reqObj['platform'] : null)?.toString().toLowerCase().trim() ?? '';
-    final rawPlat = (t['platform'] ?? '')?.toString().toLowerCase().trim() ?? '';
+    // Clean Target URL (pure target, ignoring tutorial video)
+    final targetUrl = _getTargetUrl().toLowerCase().trim();
 
-    // 0. EXPLICIT YOUTUBE CHECK FIRST (Absolute Priority #0)
-    if (rawPlat == 'youtube' ||
-        reqPlat == 'youtube' ||
-        type.contains('youtube') ||
-        type.contains('yt_') ||
-        type == 'yt' ||
-        targetUrl.contains('youtu.be') ||
-        targetUrl.contains('youtube.com') ||
-        titleStr.contains('youtube') ||
-        descStr.contains('youtube') ||
-        reqStr.contains('youtube') ||
-        reqStr.contains('youtu.be') ||
-        combined.contains('youtube') ||
-        combined.contains('youtu.be')) {
-      return 'youtube';
-    }
-
-    // 1. Google Business / Maps
-    if (type.contains('google_business') ||
-        type.contains('google_maps') ||
-        type.contains('gmb') ||
-        rawPlat == 'google_maps' ||
+    // ── 1. GOOGLE MAPS / BUSINESS / GMB (Highest accuracy) ──
+    if (rawPlat == 'google_maps' ||
         rawPlat == 'google_business' ||
         rawPlat == 'maps' ||
         rawPlat == 'google' ||
+        rawPlat == 'gmb' ||
         reqPlat == 'google_maps' ||
         reqPlat == 'google_business' ||
+        reqPlat == 'maps' ||
         reqPlat == 'google' ||
+        reqPlat == 'gmb' ||
+        type.contains('google_maps') ||
+        type.contains('google_business') ||
+        type.contains('gmb') ||
+        (type.contains('map') && !type.contains('bitmap')) ||
+        serviceName.contains('google maps') ||
+        serviceName.contains('google business') ||
+        serviceName.contains('gmb') ||
+        serviceName.contains('business review') ||
+        serviceName.contains('maps review') ||
+        titleStr.contains('google maps') ||
+        titleStr.contains('google business') ||
         targetUrl.contains('maps.google') ||
         targetUrl.contains('goo.gl/maps') ||
         targetUrl.contains('maps.app.goo.gl') ||
         targetUrl.contains('share.google') ||
-        targetUrl.contains('search.google.com/local') ||
-        titleStr.contains('google business') ||
-        titleStr.contains('google maps') ||
-        titleStr.contains('business review') ||
-        combined.contains('google_business') ||
-        combined.contains('google_maps') ||
-        combined.contains('share.google') ||
-        combined.contains('maps.app.goo.gl') ||
-        combined.contains('gmb_')) {
+        targetUrl.contains('search.google.com/local')) {
       return 'google_maps';
     }
 
-    // 2. Play Store & App Install (Strict checks, NEVER generic 'play' word)
-    if (type.contains('app_install') ||
-        type.contains('playstore') ||
-        type.contains('google_play') ||
-        type.contains('play_store') ||
-        type.contains('app_review') ||
-        rawPlat == 'playstore' ||
+    // ── 2. PLAY STORE / APP REVIEW / APP INSTALL ──
+    if (rawPlat == 'playstore' ||
         rawPlat == 'google_play' ||
         rawPlat == 'play_store' ||
         reqPlat == 'playstore' ||
         reqPlat == 'google_play' ||
         reqPlat == 'play_store' ||
-        targetUrl.contains('play.google.com') ||
-        targetUrl.contains('market://') ||
+        type.contains('playstore') ||
+        type.contains('google_play') ||
+        type.contains('play_store') ||
+        type.contains('app_review') ||
+        type.contains('app_install') ||
+        (type.contains('install') && !type.contains('instagram')) ||
+        serviceName.contains('play store') ||
+        serviceName.contains('playstore') ||
+        serviceName.contains('app review') ||
+        serviceName.contains('app install') ||
+        serviceName.contains('install app') ||
         titleStr.contains('play store') ||
         titleStr.contains('app review') ||
         (titleStr.contains('install & open') && !titleStr.contains('instagram')) ||
-        (type.contains('install') && !type.contains('instagram')) ||
-        combined.contains('playstore') ||
-        combined.contains('google_play') ||
-        combined.contains('play_store') ||
-        combined.contains('play.google')) {
+        targetUrl.contains('play.google.com') ||
+        targetUrl.contains('market://')) {
       return 'playstore';
     }
 
-    // 3. Instagram (Strict check: ensure not 'install')
-    if (type.contains('instagram') ||
-        type.contains('ig_') ||
-        rawPlat == 'instagram' ||
+    // ── 3. INSTAGRAM ──
+    if (rawPlat == 'instagram' ||
         reqPlat == 'instagram' ||
-        targetUrl.contains('instagram.com') ||
+        type.contains('instagram') ||
+        type.contains('ig_') ||
+        serviceName.contains('instagram') ||
         titleStr.contains('instagram') ||
-        combined.contains('instagram') ||
-        (combined.contains('insta') && !combined.contains('install'))) {
+        targetUrl.contains('instagram.com')) {
       return 'instagram';
     }
 
-    // 4. Facebook
-    if (type.contains('facebook') ||
-        rawPlat == 'facebook' ||
+    // ── 4. YOUTUBE ──
+    if (rawPlat == 'youtube' ||
+        reqPlat == 'youtube' ||
+        type.contains('youtube') ||
+        type.contains('yt_') ||
+        type == 'yt' ||
+        serviceName.contains('youtube') ||
+        titleStr.contains('youtube') ||
+        targetUrl.contains('youtube.com') ||
+        targetUrl.contains('youtu.be')) {
+      return 'youtube';
+    }
+
+    // ── 5. FACEBOOK ──
+    if (rawPlat == 'facebook' ||
         reqPlat == 'facebook' ||
-        targetUrl.contains('facebook.com') ||
-        combined.contains('facebook') ||
-        combined.contains('fb')) {
+        type.contains('facebook') ||
+        type.contains('fb') ||
+        serviceName.contains('facebook') ||
+        targetUrl.contains('facebook.com')) {
       return 'facebook';
     }
 
-    // 5. X / Twitter
-    if (type.contains('twitter') ||
-        rawPlat == 'x' ||
+    // ── 6. X / TWITTER ──
+    if (rawPlat == 'x' ||
         rawPlat == 'twitter' ||
+        reqPlat == 'x' ||
+        reqPlat == 'twitter' ||
+        type.contains('twitter') ||
+        type.contains('x_') ||
+        serviceName.contains('twitter') ||
+        serviceName.contains(' x ') ||
         targetUrl.contains('twitter.com') ||
-        targetUrl.contains('x.com') ||
-        combined.contains('twitter') ||
-        combined.contains(' x ') ||
-        combined.contains('x.com')) {
+        targetUrl.contains('x.com')) {
       return 'x';
     }
 
-    // 6. Telegram
-    if (type.contains('telegram') || rawPlat == 'telegram' || combined.contains('telegram')) {
+    // ── 7. TELEGRAM ──
+    if (rawPlat == 'telegram' ||
+        reqPlat == 'telegram' ||
+        type.contains('telegram') ||
+        serviceName.contains('telegram') ||
+        targetUrl.contains('t.me')) {
       return 'telegram';
     }
 
@@ -1352,6 +1348,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   String _getTargetUrl() {
     final t = widget.task;
+    if (t == null) return '';
     String rawUrl = '';
     dynamic req = t['requirements'];
     if (req is String && req.trim().startsWith('{')) {
@@ -1359,39 +1356,68 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
         req = jsonDecode(req);
       } catch (_) {}
     }
+    final reqMap = req is Map ? req as Map : null;
+
+    // 1. Direct explicit keys on root or requirements
     if (t['targetUrl'] != null && t['targetUrl'].toString().trim().isNotEmpty) {
       rawUrl = t['targetUrl'].toString().trim();
+    } else if (reqMap != null && reqMap['targetUrl'] != null && reqMap['targetUrl'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['targetUrl'].toString().trim();
+    } else if (t['target_url'] != null && t['target_url'].toString().trim().isNotEmpty) {
+      rawUrl = t['target_url'].toString().trim();
+    } else if (reqMap != null && reqMap['target_url'] != null && reqMap['target_url'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['target_url'].toString().trim();
     } else if (t['url'] != null && t['url'].toString().trim().isNotEmpty) {
       rawUrl = t['url'].toString().trim();
-    } else if (t['packageId'] != null &&
-        t['packageId'].toString().trim().isNotEmpty) {
+    } else if (reqMap != null && reqMap['url'] != null && reqMap['url'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['url'].toString().trim();
+    } else if (t['packageId'] != null && t['packageId'].toString().trim().isNotEmpty) {
       rawUrl = t['packageId'].toString().trim();
-    } else if (req is Map) {
-      final reqMap = req as Map;
-      if (reqMap['targetUrl'] != null &&
-          reqMap['targetUrl'].toString().trim().isNotEmpty) {
-        rawUrl = reqMap['targetUrl'].toString().trim();
-      } else if (reqMap['packageId'] != null &&
-          reqMap['packageId'].toString().trim().isNotEmpty) {
-        rawUrl = reqMap['packageId'].toString().trim();
-      } else if (reqMap['packageName'] != null &&
-          reqMap['packageName'].toString().trim().isNotEmpty) {
-        rawUrl = reqMap['packageName'].toString().trim();
-      } else if (reqMap['buttonUrl'] != null &&
-          reqMap['buttonUrl'].toString().trim().isNotEmpty) {
-        rawUrl = reqMap['buttonUrl'].toString().trim();
-      } else {
-        for (final entry in reqMap.entries) {
-          final k = entry.key.toString().toLowerCase();
-          final v = entry.value.toString().trim();
-          if ((k.contains('actionbutton') ||
-                  k.contains('url') ||
-                  k.contains('link') ||
-                  k.contains('package')) &&
-              v.isNotEmpty) {
-            rawUrl = v;
-            break;
-          }
+    } else if (reqMap != null && reqMap['packageId'] != null && reqMap['packageId'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['packageId'].toString().trim();
+    } else if (reqMap != null && reqMap['package_id'] != null && reqMap['package_id'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['package_id'].toString().trim();
+    } else if (reqMap != null && reqMap['packageName'] != null && reqMap['packageName'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['packageName'].toString().trim();
+    } else if (reqMap != null && reqMap['package_name'] != null && reqMap['package_name'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['package_name'].toString().trim();
+    } else if (reqMap != null && reqMap['buttonUrl'] != null && reqMap['buttonUrl'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['buttonUrl'].toString().trim();
+    } else if (reqMap != null && reqMap['button_url'] != null && reqMap['button_url'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['button_url'].toString().trim();
+    } else if (reqMap != null && reqMap['appUrl'] != null && reqMap['appUrl'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['appUrl'].toString().trim();
+    } else if (reqMap != null && reqMap['mapUrl'] != null && reqMap['mapUrl'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['mapUrl'].toString().trim();
+    } else if (reqMap != null && reqMap['mapsUrl'] != null && reqMap['mapsUrl'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['mapsUrl'].toString().trim();
+    } else if (reqMap != null && reqMap['gmbUrl'] != null && reqMap['gmbUrl'].toString().trim().isNotEmpty) {
+      rawUrl = reqMap['gmbUrl'].toString().trim();
+    } else if (reqMap != null) {
+      // Safe fallback search: NEVER match tutorial, video, instruction, audio, icon, etc.
+      for (final entry in reqMap.entries) {
+        final k = entry.key.toString().toLowerCase();
+        final v = entry.value.toString().trim();
+        if (v.isEmpty) continue;
+        if (k.contains('tutorial') ||
+            k.contains('instruction') ||
+            k.contains('video') ||
+            k.contains('audio') ||
+            k.contains('guide') ||
+            k.contains('icon') ||
+            k.contains('image') ||
+            k.contains('proof') ||
+            k.contains('avatar') ||
+            k.contains('thumbnail')) {
+          continue;
+        }
+        if (k.contains('actionbutton') ||
+            k.contains('target') ||
+            k.contains('link') ||
+            k.contains('url') ||
+            k.contains('package')) {
+          rawUrl = v;
+          break;
         }
       }
     }
@@ -1405,10 +1431,11 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
     }
     final p = _getPlatform();
     if (p == 'google_business' || p == 'google_maps' || p == 'google') return 'https://maps.google.com';
+    if (p == 'playstore') return 'https://play.google.com/store';
     if (p == 'instagram') return 'https://instagram.com';
     if (p == 'facebook') return 'https://facebook.com';
-    if (p == 'playstore' || p == 'google')
-      return 'https://play.google.com/store';
+    if (p == 'x') return 'https://x.com';
+    if (p == 'telegram') return 'https://t.me';
     return 'https://youtube.com';
   }
 
@@ -2231,7 +2258,6 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   }
 
   String _getPlatformDisplayName() {
-    if (_isYouTubeTask()) return 'YouTube';
     final p = _getPlatform();
     switch (p) {
       case 'google_business':
@@ -2331,7 +2357,10 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                       ],
 
                       // ── 3. Video Tutorial & Instruction Cards ──────────────────
-                      _buildVideoCardsSection(videoTutorialUrl),
+                      if (videoTutorialUrl.isNotEmpty) ...[
+                        _buildVideoCardsSection(videoTutorialUrl),
+                        const SizedBox(height: 16),
+                      ],
                     ],
                   ),
                 ),
@@ -4322,23 +4351,16 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                                     ),
                                   ),
                                 ),
-                                Text(
-                                  isReview
-                                      ? 'Type via Keyboard • Copying Disabled'
-                                      : 'Tap card to copy',
-                                  style: TextStyle(
-                                    color: isReview
-                                        ? const Color(0xFF2563EB)
-                                        : const Color(0xFF94A3B8),
-                                    fontSize: 10,
-                                    fontWeight: isReview
-                                        ? FontWeight.w700
-                                        : FontWeight.normal,
-                                    fontStyle: isReview
-                                        ? FontStyle.normal
-                                        : FontStyle.italic,
+                                if (!isReview)
+                                  const Text(
+                                    'Tap card to copy',
+                                    style: TextStyle(
+                                      color: Color(0xFF94A3B8),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.normal,
+                                      fontStyle: FontStyle.italic,
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                             const SizedBox(height: 10),

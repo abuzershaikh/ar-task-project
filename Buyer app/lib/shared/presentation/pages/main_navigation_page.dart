@@ -3,7 +3,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../features/home/presentation/pages/home_page.dart';
 import '../../../features/campaigns/presentation/pages/campaigns_page.dart';
 import '../../../features/campaigns/presentation/pages/create_campaign_page.dart';
-import '../../../features/tutorials/presentation/buyer_tutorials_page.dart';
 import '../../../features/wallet/presentation/pages/wallet_screen.dart';
 import '../../../features/profile/presentation/pages/profile_page.dart';
 
@@ -34,7 +33,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       key: _createCampaignKey,
       onBackToHome: _goToHome,
     ),
-    const BuyerTutorialsPage(),
     const WalletScreen(),
     const ProfilePage(),
   ];
@@ -98,11 +96,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
               icon: Icon(Icons.add_circle_outline, size: 28),
               activeIcon: Icon(Icons.add_circle, size: 28),
               label: 'Create',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.play_circle_outline),
-              activeIcon: Icon(Icons.play_circle_filled),
-              label: 'Tutorials',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.account_balance_wallet_outlined),

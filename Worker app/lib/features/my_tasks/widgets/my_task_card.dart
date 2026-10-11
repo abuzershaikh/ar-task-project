@@ -152,9 +152,65 @@ class MyTaskCard extends StatelessWidget {
     final metaStr = (task['metadata'] != null)
         ? task['metadata'].toString().toLowerCase()
         : '';
-    final combined = '$type $reqStr $metaStr $titleStr $serviceName $urlStr';
+    // ── 1. Google Business / Maps ──
+    if (rawPlat == 'google_maps' ||
+        rawPlat == 'google_business' ||
+        rawPlat == 'maps' ||
+        rawPlat == 'google' ||
+        rawPlat == 'gmb' ||
+        type.contains('google_maps') ||
+        type.contains('google_business') ||
+        type.contains('gmb') ||
+        (type.contains('map') && !type.contains('bitmap')) ||
+        urlStr.contains('maps.google') ||
+        urlStr.contains('goo.gl/maps') ||
+        urlStr.contains('maps.app.goo.gl') ||
+        urlStr.contains('share.google') ||
+        urlStr.contains('search.google.com/local') ||
+        serviceName.contains('google maps') ||
+        serviceName.contains('google business') ||
+        serviceName.contains('gmb') ||
+        serviceName.contains('business review') ||
+        serviceName.contains('maps review') ||
+        titleStr.contains('google maps') ||
+        titleStr.contains('google business')) {
+      return 'google_maps';
+    }
 
-    // 0. EXPLICIT YOUTUBE CHECK FIRST (Highest Priority)
+    // ── 2. Play Store & App Install ──
+    if (rawPlat == 'playstore' ||
+        rawPlat == 'google_play' ||
+        rawPlat == 'play_store' ||
+        type.contains('app_install') ||
+        type.contains('playstore') ||
+        type.contains('google_play') ||
+        type.contains('play_store') ||
+        type.contains('app_review') ||
+        urlStr.contains('play.google.com') ||
+        urlStr.contains('market://') ||
+        serviceName.contains('play store') ||
+        serviceName.contains('playstore') ||
+        serviceName.contains('app review') ||
+        serviceName.contains('app install') ||
+        serviceName.contains('install app') ||
+        titleStr.contains('play store') ||
+        titleStr.contains('app review') ||
+        (type.contains('install') && !type.contains('instagram')) ||
+        (titleStr.contains('install & open') && !titleStr.contains('instagram'))) {
+      return 'playstore';
+    }
+
+    // ── 3. Instagram ──
+    if (rawPlat == 'instagram' ||
+        type.contains('instagram') ||
+        type.contains('ig_') ||
+        urlStr.contains('instagram.com') ||
+        serviceName.contains('instagram') ||
+        titleStr.contains('instagram')) {
+      return 'instagram';
+    }
+
+    // ── 4. YouTube ──
     if (rawPlat == 'youtube' ||
         type.contains('youtube') ||
         type.contains('yt_') ||
@@ -162,95 +218,36 @@ class MyTaskCard extends StatelessWidget {
         urlStr.contains('youtu.be') ||
         urlStr.contains('youtube.com') ||
         serviceName.contains('youtube') ||
-        titleStr.contains('youtube') ||
-        metaStr.contains('youtube') ||
-        reqStr.contains('youtube') ||
-        reqStr.contains('youtu.be') ||
-        combined.contains('youtube') ||
-        combined.contains('youtu.be')) {
+        titleStr.contains('youtube')) {
       return 'youtube';
     }
 
-    // 1. Google Business / Maps
-    if (type.contains('google_business') ||
-        type.contains('google_maps') ||
-        type.contains('gmb') ||
-        rawPlat == 'google_maps' ||
-        rawPlat == 'google_business' ||
-        rawPlat == 'maps' ||
-        urlStr.contains('maps.google') ||
-        urlStr.contains('goo.gl/maps') ||
-        urlStr.contains('maps.app.goo.gl') ||
-        urlStr.contains('share.google') ||
-        serviceName.contains('google maps') ||
-        serviceName.contains('google review') ||
-        titleStr.contains('google maps') ||
-        titleStr.contains('google business') ||
-        combined.contains('google_business') ||
-        combined.contains('google_maps') ||
-        combined.contains('share.google') ||
-        combined.contains('maps.app.goo.gl')) {
-      return 'google_maps';
-    }
-
-    // 2. Play Store & App Install (Strict checks, NEVER generic 'play' word)
-    if (type.contains('app_install') ||
-        type.contains('playstore') ||
-        type.contains('google_play') ||
-        type.contains('play_store') ||
-        type.contains('app_review') ||
-        urlStr.contains('play.google.com') ||
-        urlStr.contains('market://') ||
-        rawPlat == 'playstore' ||
-        rawPlat == 'google_play' ||
-        rawPlat == 'play_store' ||
-        serviceName.contains('play store') ||
-        serviceName.contains('playstore') ||
-        serviceName.contains('app install') ||
-        titleStr.contains('play store') ||
-        titleStr.contains('app review') ||
-        (type.contains('install') && !type.contains('instagram')) ||
-        combined.contains('playstore') ||
-        combined.contains('google_play') ||
-        combined.contains('play_store')) {
-      return 'playstore';
-    }
-
-    // 3. Instagram (Strict check: ensure not 'install')
-    if (type.contains('instagram') ||
-        type.contains('ig_') ||
-        urlStr.contains('instagram.com') ||
-        rawPlat == 'instagram' ||
-        serviceName.contains('instagram') ||
-        titleStr.contains('instagram') ||
-        combined.contains('instagram') ||
-        (combined.contains('insta') && !combined.contains('install'))) {
-      return 'instagram';
-    }
-
-    // 4. Facebook
-    if (type.contains('facebook') ||
-        rawPlat == 'facebook' ||
+    // ── 5. Facebook ──
+    if (rawPlat == 'facebook' ||
+        type.contains('facebook') ||
+        type.contains('fb') ||
         urlStr.contains('facebook.com') ||
-        combined.contains('facebook') ||
-        combined.contains('fb')) {
+        serviceName.contains('facebook')) {
       return 'facebook';
     }
 
-    // 5. Twitter / X
-    if (type.contains('twitter') ||
-        rawPlat == 'x' ||
+    // ── 6. Twitter / X ──
+    if (rawPlat == 'x' ||
         rawPlat == 'twitter' ||
+        type.contains('twitter') ||
+        type.contains('x_') ||
         urlStr.contains('twitter.com') ||
         urlStr.contains('x.com') ||
-        combined.contains('twitter') ||
-        combined.contains(' x ') ||
-        combined.contains('x.com')) {
+        serviceName.contains('twitter') ||
+        serviceName.contains(' x ')) {
       return 'x';
     }
 
-    // 6. Telegram
-    if (type.contains('telegram') || rawPlat == 'telegram' || combined.contains('telegram')) {
+    // ── 7. Telegram ──
+    if (rawPlat == 'telegram' ||
+        type.contains('telegram') ||
+        serviceName.contains('telegram') ||
+        urlStr.contains('t.me')) {
       return 'telegram';
     }
 

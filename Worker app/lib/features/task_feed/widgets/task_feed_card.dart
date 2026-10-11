@@ -302,48 +302,54 @@ class TaskFeedCard extends StatelessWidget {
     final urlStr = (task['targetUrl'] ?? task['url'] ?? (task['requirements'] is Map ? task['requirements']['targetUrl'] : null) ?? '').toString().toLowerCase();
     final rawPlat = (task['platform'] ?? (task['requirements'] is Map ? task['requirements']['platform'] : null) ?? '').toString().toLowerCase().trim();
 
-    // 0. Explicit YouTube check FIRST
-    if (type.contains('youtube') ||
-        type.contains('yt_') ||
-        urlStr.contains('youtu.be') ||
-        urlStr.contains('youtube.com') ||
-        rawPlat == 'youtube') {
-      return 'youtube';
-    }
-
     // 1. Google Business / Maps
-    if (type.contains('google_business') ||
+    if (rawPlat == 'google_maps' ||
+        rawPlat == 'google_business' ||
+        rawPlat == 'maps' ||
+        rawPlat == 'google' ||
+        rawPlat == 'gmb' ||
         type.contains('google_maps') ||
+        type.contains('google_business') ||
         type.contains('gmb') ||
-        type.contains('map') ||
+        (type.contains('map') && !type.contains('bitmap')) ||
         urlStr.contains('maps.google') ||
         urlStr.contains('goo.gl/maps') ||
         urlStr.contains('maps.app.goo.gl') ||
         urlStr.contains('share.google') ||
-        rawPlat == 'google_maps' ||
-        rawPlat == 'google_business' ||
-        rawPlat == 'google' ||
-        rawPlat == 'maps') {
+        urlStr.contains('search.google.com/local')) {
       return 'google_maps';
     }
 
-    // 2. Instagram (Strict check: ensure not install)
-    if (type.contains('instagram') ||
+    // 2. Play Store / App Install / App Review
+    if (rawPlat == 'playstore' ||
+        rawPlat == 'google_play' ||
+        rawPlat == 'play_store' ||
+        type.contains('app_install') ||
+        type.contains('playstore') ||
+        type.contains('play_store') ||
+        type.contains('app_review') ||
+        urlStr.contains('play.google.com') ||
+        urlStr.contains('market://') ||
+        (type.contains('install') && !type.contains('instagram'))) {
+      return 'playstore';
+    }
+
+    // 3. Instagram (Strict check: ensure not install)
+    if (rawPlat == 'instagram' ||
+        type.contains('instagram') ||
         type.contains('ig_') ||
-        urlStr.contains('instagram.com') ||
-        rawPlat == 'instagram') {
+        urlStr.contains('instagram.com')) {
       return 'instagram';
     }
 
-    // 3. Play Store / App Install
-    if (type.contains('app_install') ||
-        type.contains('playstore') ||
-        type.contains('play_store') ||
-        urlStr.contains('play.google.com') ||
-        urlStr.contains('market://') ||
-        rawPlat == 'playstore' ||
-        (type.contains('install') && !type.contains('instagram'))) {
-      return 'playstore';
+    // 4. Explicit YouTube check
+    if (rawPlat == 'youtube' ||
+        type.contains('youtube') ||
+        type.contains('yt_') ||
+        type == 'yt' ||
+        urlStr.contains('youtu.be') ||
+        urlStr.contains('youtube.com')) {
+      return 'youtube';
     }
 
     final serviceName = (task['serviceTitle'] ?? task['serviceName'] ?? (task['requirements'] is Map ? task['requirements']['serviceName'] : null) ?? '').toString().toLowerCase();
