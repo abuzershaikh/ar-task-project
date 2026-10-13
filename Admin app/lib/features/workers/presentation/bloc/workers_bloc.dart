@@ -112,7 +112,7 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
   Future<void> _onLoadWorkerDetail(LoadWorkerDetailEvent event, Emitter<WorkersState> emit) async {
     emit(WorkerDetailLoading(_cachedWorkers));
     try {
-      final worker = await repository.getWorkerDetail(event.workerId);
+      final worker = await repository.getWorkerDetail(event.workerId, forceRefresh: true);
       final tasks = await repository.getWorkerTasks(event.workerId).catchError((_) => <dynamic>[]);
       final earnings = await repository.getWorkerEarnings(event.workerId).catchError((_) => <dynamic>[]);
       final ratings = await repository.getWorkerRatings(event.workerId).catchError((_) => <dynamic>[]);
@@ -131,11 +131,7 @@ class WorkersBloc extends Bloc<WorkersEvent, WorkersState> {
         risk: risk,
       ));
     } catch (e) {
-      if (_cachedWorkers.isNotEmpty) {
-        emit(WorkersLoaded(_cachedWorkers));
-      } else {
-        emit(WorkersError(e.toString()));
-      }
+      emit(WorkersError(e.toString()));
     }
   }
 

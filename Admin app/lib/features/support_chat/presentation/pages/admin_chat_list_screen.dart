@@ -55,7 +55,9 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
   }
 
   void _openWorkerProfile(SupportConversationModel conv) {
-    final targetId = conv.workerActualId ?? conv.workerId;
+    final targetId = (conv.workerActualId != null && conv.workerActualId!.isNotEmpty)
+        ? conv.workerActualId!
+        : (conv.workerEmail.isNotEmpty ? conv.workerEmail : conv.workerId);
     if (targetId.isNotEmpty) {
       Navigator.push(
         context,
@@ -454,15 +456,19 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
   PreferredSizeWidget _buildNormalAppBar() {
     return AppBar(
       title: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'Support Chats',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          const Flexible(
+            child: Text(
+              'Support Chats',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           if (_totalUnread > 0) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: const BoxDecoration(
                 color: Color(0xFF16A34A),
                 shape: BoxShape.circle,
@@ -473,9 +479,9 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
               ),
             ),
           ],
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: _chatService.isConnected ? Colors.green.withValues(alpha: 0.2) : Colors.amber.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),

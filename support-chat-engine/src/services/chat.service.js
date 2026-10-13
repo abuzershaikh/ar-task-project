@@ -161,10 +161,22 @@ class ChatService {
              COALESCE(NULLIF(c.worker_phone, ''), u.phone, w.phone, '') as worker_phone,
              COALESCE(NULLIF(c.worker_avatar_url, ''), u.avatar_url) as worker_avatar_url,
              COALESCE(w.id, c.worker_id) as worker_actual_id,
-             w.last_active_at, w.total_tasks_completed, w.status as worker_status
+             w.last_active_at, 
+             COALESCE(w.total_tasks_completed, 0) as total_tasks_completed, 
+             w.status as worker_status
       FROM support_conversations c
-      LEFT JOIN workers w ON (w.user_id = c.worker_id OR w.id = c.worker_id)
-      LEFT JOIN users u ON (u.id = c.worker_id OR u.id = w.user_id OR (c.worker_email != '' AND u.email = c.worker_email))
+      LEFT JOIN users u ON u.id = (
+        SELECT id FROM users 
+        WHERE id = c.worker_id OR (c.worker_email != '' AND email = c.worker_email)
+        ORDER BY CASE WHEN id = c.worker_id THEN 1 ELSE 2 END 
+        LIMIT 1
+      )
+      LEFT JOIN workers w ON w.id = (
+        SELECT id FROM workers 
+        WHERE user_id = c.worker_id OR user_id = u.id OR id = c.worker_id
+        ORDER BY total_tasks_completed DESC, last_active_at DESC, created_at DESC 
+        LIMIT 1
+      )
     `;
     const params = [];
 

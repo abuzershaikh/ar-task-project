@@ -126,9 +126,10 @@ export class WorkerProfileController {
     @ApiOperation({ summary: 'Get worker dashboard overview' })
     async getDashboard(@CurrentUser() user: User) {
         const worker = await this.getOrCreateWorker(user);
-        const assignedTasks = await this.taskRepo.findByWorkerAndStatus(user.id, 'assigned');
-        const activeTasks = await this.taskRepo.findByWorkerAndStatus(user.id, 'in_progress');
-        const totalEarnings = await this.earningRepo.getTotalEarnings(user.id);
+        const searchIds = Array.from(new Set([user.id, user.email, worker.id].filter(Boolean) as string[]));
+        const assignedTasks = await this.taskRepo.findByWorkerAndStatus(searchIds, 'assigned');
+        const activeTasks = await this.taskRepo.findByWorkerAndStatus(searchIds, 'in_progress');
+        const totalEarnings = await this.earningRepo.getTotalEarnings(searchIds);
         const ratingSummary = await this.ratingRepo.getWorkerRatingSummary(worker.id);
 
         return {

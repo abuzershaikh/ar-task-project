@@ -8,6 +8,7 @@ import {
     Query,
     NotFoundException,
     BadRequestException,
+    Optional,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { WorkerRepository } from '../../../../shared/database/repositories/worker.repository';
@@ -21,6 +22,7 @@ import { WalletRepository } from '../../../../shared/database/repositories/walle
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
 import { UserRole, UserStatus } from '../../../../shared/database/entities/user.entity';
 import { Worker } from '../../../../shared/database/entities/worker.entity';
+import { FirebaseAdminService } from '../../../../shared/services/firebase-admin.service';
 import { DataSource } from 'typeorm';
 
 @ApiTags('Admin - Worker Management')
@@ -38,6 +40,7 @@ export class AdminWorkerManagementController {
         private readonly ratingRepo: RatingRepository,
         private readonly walletRepo: WalletRepository,
         private readonly dataSource: DataSource,
+        @Optional() private readonly firebaseAdminService?: FirebaseAdminService,
     ) { }
 
     @Get()
@@ -59,9 +62,10 @@ export class AdminWorkerManagementController {
 
         let results = await Promise.all(userWorkers.map(async (u) => {
             const w = workerMap.get(u.id);
-            const earnings = await this.earningRepo.findByWorker(u.id);
+            const searchIds = Array.from(new Set([u.id, u.email, w?.id].filter(Boolean) as string[]));
+            const earnings = await this.earningRepo.findByWorker(searchIds);
             const totalEarned = earnings.reduce((sum, e) => sum + Number(e.amount || 0), 0);
-            const tasks = await this.taskRepo.findByWorkerAndStatus(u.id, 'completed');
+            const tasks = await this.taskRepo.findByWorkerAndStatus(searchIds, 'completed');
             const wallet = await this.walletRepo.findByUserId(u.id);
             const scoreRecord = w ? await this.scoreRepo.findByWorker(w.id) : null;
             const score = scoreRecord ? Number(scoreRecord.totalScore) : Math.round(Number(w?.averageRating || 4.8) * 20);
@@ -141,28 +145,81 @@ export class AdminWorkerManagementController {
         };
     }
 
-    @Get(':id')
-    @ApiOperation({ summary: 'Get worker details' })
-    async getWorkerDetail(@Param('id') workerId: string) {
-        let worker = await this.workerRepo.findById(workerId);
+    private async resolveWorkerAndUser(identifier: string): Promise<{
+        worker: Worker | null;
+        user: any | null;
+        searchIds: string[];
+    }> {
+        if (!identifier) {
+            return { worker: null, user: null, searchIds: [] };
+        }
+
+        let worker = await this.workerRepo.findById(identifier);
         let user: any = null;
 
         if (worker) {
             user = await this.userRepo.findById(worker.userId);
         } else {
-            user = await this.userRepo.findById(workerId);
+            user = await this.userRepo.findById(identifier);
             if (user) {
                 worker = await this.workerRepo.findByUserId(user.id);
+            } else if (identifier.includes('@')) {
+                user = await this.userRepo.findByEmail(identifier);
+                if (user) {
+                    worker = await this.workerRepo.findByUserId(user.id);
+                }
             }
         }
+
+        // If not found in MySQL, check Firebase Auth / Firestore (in case a Firebase UID was passed from client)
+        if (!user && !worker && this.firebaseAdminService) {
+            try {
+                const fbUser = await this.firebaseAdminService.auth.getUser(identifier);
+                if (fbUser?.email) {
+                    user = await this.userRepo.findByEmail(fbUser.email);
+                    if (user) {
+                        worker = await this.workerRepo.findByUserId(user.id);
+                    }
+                }
+            } catch (_) {
+                // Not a Firebase Auth UID
+            }
+
+            if (!user && !worker) {
+                try {
+                    const firestoreUser = await this.firebaseAdminService.getFirestoreUser(identifier);
+                    if (firestoreUser?.email) {
+                        user = await this.userRepo.findByEmail(firestoreUser.email);
+                        if (user) {
+                            worker = await this.workerRepo.findByUserId(user.id);
+                        }
+                    }
+                } catch (_) {
+                    // Not in Firestore
+                }
+            }
+        }
+
+        const userId = user?.id || worker?.userId;
+        const searchIds = Array.from(
+            new Set([identifier, userId, worker?.id, user?.email].filter(Boolean) as string[])
+        );
+
+        return { worker, user, searchIds };
+    }
+
+    @Get(':id')
+    @ApiOperation({ summary: 'Get worker details' })
+    async getWorkerDetail(@Param('id') workerId: string) {
+        const { worker, user, searchIds } = await this.resolveWorkerAndUser(workerId);
 
         if (!user && !worker) {
             throw new NotFoundException('Worker not found');
         }
 
         const userId = user?.id || worker?.userId;
-        const earnings = userId ? await this.earningRepo.findByWorker(userId) : [];
-        const tasks = userId ? await this.taskRepo.findByWorkerAndStatus(userId, 'completed') : [];
+        const earnings = searchIds.length > 0 ? await this.earningRepo.findByWorker(searchIds) : [];
+        const tasks = searchIds.length > 0 ? await this.taskRepo.findByWorkerAndStatus(searchIds, 'completed') : [];
         const ratings = worker ? await this.ratingRepo.findByWorkerId(worker.id) : [];
         const score = worker ? await this.scoreRepo.findByWorker(worker.id) : null;
         const wallet = userId ? await this.walletRepo.findByUserId(userId) : null;
@@ -178,8 +235,8 @@ export class AdminWorkerManagementController {
         }
 
         const formattedWorker = {
-            id: worker?.id || user?.id,
-            userId: userId,
+            id: worker?.id || user?.id || workerId,
+            userId: userId || workerId,
             name: (user as any)?.fullName || (user as any)?.name || user?.email?.split('@')[0] || 'Worker',
             email: user?.email || '',
             phone: user?.phone || '',
@@ -214,38 +271,31 @@ export class AdminWorkerManagementController {
     @Get(':id/tasks')
     @ApiOperation({ summary: 'Get tasks assigned to or completed by worker' })
     async getWorkerTasks(@Param('id') workerId: string) {
-        let worker = await this.workerRepo.findById(workerId);
-        const userId = worker ? worker.userId : workerId;
-        const tasks = await this.taskRepo.findByWorkerAndStatus(userId, 'completed');
+        const { searchIds } = await this.resolveWorkerAndUser(workerId);
+        const tasks = searchIds.length > 0 ? await this.taskRepo.findByWorkerAndStatus(searchIds, 'completed') : [];
         return { success: true, tasks, total: tasks.length };
     }
 
     @Get(':id/earnings')
     @ApiOperation({ summary: 'Get worker earnings breakdown' })
     async getWorkerEarnings(@Param('id') workerId: string) {
-        let worker = await this.workerRepo.findById(workerId);
-        const userId = worker ? worker.userId : workerId;
-        const earnings = await this.earningRepo.findByWorker(userId);
+        const { searchIds } = await this.resolveWorkerAndUser(workerId);
+        const earnings = searchIds.length > 0 ? await this.earningRepo.findByWorker(searchIds) : [];
         return { success: true, earnings };
     }
 
     @Get(':id/withdrawals')
     @ApiOperation({ summary: 'Get worker withdrawal requests' })
     async getWorkerWithdrawals(@Param('id') workerId: string) {
-        let worker = await this.workerRepo.findById(workerId);
-        if (!worker) {
-            worker = await this.workerRepo.findByUserId(workerId);
-        }
-        const userId = worker ? worker.userId : workerId;
-        const matchingIds = Array.from(new Set([workerId, userId, worker?.id].filter(Boolean) as string[]));
-        const withdrawals = await this.withdrawalRepo.findByWorker(matchingIds);
+        const { searchIds } = await this.resolveWorkerAndUser(workerId);
+        const withdrawals = searchIds.length > 0 ? await this.withdrawalRepo.findByWorker(searchIds) : [];
         return { success: true, withdrawals };
     }
 
     @Get(':id/ratings')
     @ApiOperation({ summary: 'Get ratings received by worker' })
     async getWorkerRatings(@Param('id') workerId: string) {
-        let worker = await this.workerRepo.findById(workerId);
+        const { worker } = await this.resolveWorkerAndUser(workerId);
         const ratings = worker ? await this.ratingRepo.findByWorkerId(worker.id) : [];
         return { success: true, ratings };
     }
@@ -253,7 +303,7 @@ export class AdminWorkerManagementController {
     @Get(':id/score-history')
     @ApiOperation({ summary: 'Get worker score history' })
     async getWorkerScoreHistory(@Param('id') workerId: string) {
-        let worker = await this.workerRepo.findWorker(workerId);
+        const { worker } = await this.resolveWorkerAndUser(workerId);
         const score = worker ? await this.scoreRepo.findByWorker(worker.id) : null;
         return {
             success: true,
@@ -280,8 +330,7 @@ export class AdminWorkerManagementController {
     @Get(':id/risk')
     @ApiOperation({ summary: 'Get worker risk assessment score' })
     async getWorkerRisk(@Param('id') workerId: string) {
-        let worker = await this.workerRepo.findById(workerId);
-        let user = await this.userRepo.findById(worker?.userId || workerId);
+        const { user } = await this.resolveWorkerAndUser(workerId);
         const isBanned = user?.status === UserStatus.BANNED;
         return {
             success: true,
@@ -298,17 +347,7 @@ export class AdminWorkerManagementController {
         @Param('id') workerId: string,
         @Body() body: { status: string },
     ) {
-        let worker = await this.workerRepo.findById(workerId);
-        let user: any = null;
-
-        if (worker) {
-            user = await this.userRepo.findById(worker.userId);
-        } else {
-            user = await this.userRepo.findById(workerId);
-            if (user) {
-                worker = await this.workerRepo.findByUserId(user.id);
-            }
-        }
+        const { worker, user } = await this.resolveWorkerAndUser(workerId);
 
         if (!worker && !user) {
             throw new NotFoundException('Worker not found');

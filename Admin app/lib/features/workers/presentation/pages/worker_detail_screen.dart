@@ -106,8 +106,14 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
             );
           },
         ),
-        backgroundColor: Colors.transparent,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'Refresh Worker Data',
+            onPressed: () {
+              context.read<WorkersBloc>().add(RefreshWorkerDetailEvent(widget.workerId));
+            },
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
@@ -207,9 +213,6 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
           
           if (state is WorkerDetailLoaded) {
             final detailState = state;
-            if (detailState.worker.id != widget.workerId && detailState.worker.userId != widget.workerId) {
-              return const Center(child: CircularProgressIndicator(color: Color(0xFF0284C7)));
-            }
             return TabBarView(
               controller: _tabController,
               children: [

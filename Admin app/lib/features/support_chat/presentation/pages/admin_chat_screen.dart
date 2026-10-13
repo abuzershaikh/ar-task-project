@@ -10,6 +10,8 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_avatar.dart';
 import '../../../workers/presentation/pages/worker_detail_screen.dart';
+import '../../../workers/domain/repositories/workers_repository.dart';
+import '../../../../core/di/injection.dart';
 import '../../data/models/support_conversation_model.dart';
 import '../../data/models/support_message_model.dart';
 import '../../data/services/support_chat_service.dart';
@@ -35,6 +37,8 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
   bool _isLoading = true;
   bool _isSending = false;
   bool _hasText = false;
+
+  int? _liveTasksCount;
 
   // Voice recording state
   bool _isRecording = false;
@@ -84,6 +88,22 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
 
     _chatService.initSocket();
     _loadMessages();
+
+    // Fetch live worker task count so header never displays stale 0 tasks
+    final targetWorkerId = (widget.conversation.workerActualId != null && widget.conversation.workerActualId!.isNotEmpty)
+        ? widget.conversation.workerActualId!
+        : (widget.conversation.workerEmail.isNotEmpty
+            ? widget.conversation.workerEmail
+            : widget.conversation.workerId);
+    if (targetWorkerId.isNotEmpty) {
+      getIt<WorkersRepository>().getWorkerDetail(targetWorkerId, forceRefresh: true).then((w) {
+        if (mounted) {
+          setState(() {
+            _liveTasksCount = w.completedTasks;
+          });
+        }
+      }).catchError((_) {});
+    }
 
     // Mark as read immediately
     _chatService.markRead(widget.conversation.id, widget.conversation.workerId);
@@ -712,7 +732,11 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
   }
 
   void _openWorkerProfile() {
-    final targetId = widget.conversation.workerActualId ?? widget.conversation.workerId;
+    final targetId = (widget.conversation.workerActualId != null && widget.conversation.workerActualId!.isNotEmpty)
+        ? widget.conversation.workerActualId!
+        : (widget.conversation.workerEmail.isNotEmpty
+            ? widget.conversation.workerEmail
+            : widget.conversation.workerId);
     if (targetId.isNotEmpty) {
       Navigator.push(
         context,
@@ -890,22 +914,25 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
           tooltip: 'Worker Profile',
           onPressed: _openWorkerProfile,
         ),
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.task_alt_rounded, size: 14, color: Color(0xFF4ADE80)),
-              const SizedBox(width: 4),
-              Text(
-                '${conv.totalTasksCompleted} tasks',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-            ],
+        GestureDetector(
+          onTap: _openWorkerProfile,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.task_alt_rounded, size: 14, color: Color(0xFF4ADE80)),
+                const SizedBox(width: 4),
+                Text(
+                  '${_liveTasksCount ?? conv.totalTasksCompleted} tasks',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ],
+            ),
           ),
         ),
         // Delete All button in popup menu
