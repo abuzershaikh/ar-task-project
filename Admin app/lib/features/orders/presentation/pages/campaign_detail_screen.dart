@@ -229,6 +229,173 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
 
                 const SizedBox(height: 14),
 
+                // Campaign Controls Card
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFA7F3D0), width: 1.2),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0C059669),
+                        blurRadius: 8,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.tune_rounded, size: 18, color: Color(0xFF059669)),
+                              SizedBox(width: 8),
+                              Text(
+                                'Campaign Controls',
+                                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: Color(0xFF064E3B)),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _getStatusBg(order?.status ?? 'ACTIVE'),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: _getStatusColor(order?.status ?? 'ACTIVE').withOpacity(0.3)),
+                            ),
+                            child: Text(
+                              (order?.status ?? 'ACTIVE').toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: _getStatusColor(order?.status ?? 'ACTIVE'),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      const Divider(color: Color(0xFFE2E8F0), height: 1),
+                      const SizedBox(height: 12),
+                      if ((order?.status ?? '').toUpperCase() == 'ACTIVE') ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _handleAction(context, 'pause'),
+                                icon: const Icon(Icons.pause_circle_outline_rounded, size: 18),
+                                label: const Text('Pause Campaign', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFD97706),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 11),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _handleAction(context, 'cancel'),
+                                icon: const Icon(Icons.cancel_outlined, size: 18, color: Color(0xFFDC2626)),
+                                label: const Text('Cancel & Refund', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFDC2626))),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Color(0xFFDC2626), width: 1.2),
+                                  padding: const EdgeInsets.symmetric(vertical: 11),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else if ((order?.status ?? '').toUpperCase() == 'PAUSED') ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _handleAction(context, 'resume'),
+                                icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
+                                label: const Text('Resume Campaign', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF059669),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 11),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                                  elevation: 0,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _handleAction(context, 'cancel'),
+                                icon: const Icon(Icons.cancel_outlined, size: 18, color: Color(0xFFDC2626)),
+                                label: const Text('Cancel & Refund', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFDC2626))),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Color(0xFFDC2626), width: 1.2),
+                                  padding: const EdgeInsets.symmetric(vertical: 11),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ] else if ((order?.status ?? '').toUpperCase() == 'COMPLETED') ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDCFCE7),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFF16A34A).withOpacity(0.3)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 20),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'All required tasks for this campaign have been completed successfully.',
+                                  style: TextStyle(fontSize: 12.5, color: Color(0xFF064E3B), fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else if ((order?.status ?? '').toUpperCase() == 'CANCELLED') ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFDC2626).withOpacity(0.3)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.cancel_rounded, color: Color(0xFFDC2626), size: 20),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'This campaign was cancelled and unused budget was refunded.',
+                                  style: TextStyle(fontSize: 12.5, color: Color(0xFF991B1B), fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
                 // Task Generation Matrix Card
                 Container(
                   decoration: BoxDecoration(
@@ -570,14 +737,35 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () {
+              Navigator.pop(dialogContext);
               if (action == 'pause') {
                 context.read<OrdersBloc>().add(PauseOrderEvent(widget.orderId));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Campaign paused successfully'),
+                    backgroundColor: Color(0xFFD97706),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               } else if (action == 'resume') {
                 context.read<OrdersBloc>().add(ResumeOrderEvent(widget.orderId));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Campaign resumed successfully'),
+                    backgroundColor: Color(0xFF059669),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               } else if (action == 'cancel') {
                 context.read<OrdersBloc>().add(CancelOrderEvent(orderId: widget.orderId, reason: _reasonController.text.trim()));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Campaign cancelled & refunded successfully'),
+                    backgroundColor: Color(0xFFDC2626),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               }
-              Navigator.pop(dialogContext);
             },
             child: const Text('Confirm'),
           ),

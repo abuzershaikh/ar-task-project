@@ -19,7 +19,7 @@ export class OrderUnit {
     @Column({ name: 'unit_number', type: 'int' })
     unitNumber: number;
 
-    @Column({ name: 'target_url', length: 500, nullable: true })
+    @Column({ name: 'target_url', type: 'text', nullable: true })
     targetUrl: string;
 
     @Column({ name: 'generated_content', type: 'text', nullable: true })

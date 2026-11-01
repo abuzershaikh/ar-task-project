@@ -19,7 +19,10 @@ export class OrderRepository {
     }
 
     async findByBuyer(buyerId: string): Promise<Order[]> {
-        return this.repository.find({ where: { buyerId } });
+        return this.repository.find({
+            where: { buyerId },
+            order: { createdAt: 'DESC' },
+        });
     }
 
     async findAll(): Promise<Order[]> {

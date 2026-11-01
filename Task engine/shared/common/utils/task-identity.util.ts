@@ -4,7 +4,9 @@ import * as net from 'net';
 export interface TaskIdentity {
     packageId?: string;
     normalizedUrl?: string;
+    businessNameKey?: string;
     entityKey?: string;
+    entityKeys: string[];
 }
 
 /**
@@ -22,20 +24,21 @@ export function cacheResolvedUrl(shortUrl: string, destinationUrl: string): void
 }
 
 /**
- * Universal extractor and normalizer for Task Identity (Package ID and Target URL).
+ * Universal extractor and normalizer for Task Identity (Package ID, Target URL, Business Name).
  * Used across TaskQueryService, TaskCommandService, MatchingEngine, and NotificationEngine
  * to enforce the strict business rule:
- * "Agar user ne same app ka task kiya hai toh usko task na mile, aur YouTube/Instagram/Map URL
- * same hai already kar chuka hai toh task ka notification bhi na jaye."
+ * "App Reviews & Google Reviews ke Task mei Repeat Users Task karrahe hai Usme Unique System Chahiye,
+ * same link / same app / same Google review aane par repeat user ko task nahi jana chahiye."
  */
 export function extractTaskIdentity(task: any): TaskIdentity {
-    if (!task) return {};
+    if (!task) return { entityKeys: [] };
 
     const reqs = task.requirements || {};
     const meta = task.metadata || {};
+    const entityKeys: string[] = [];
 
     // ── 1. Resolve Package ID (Play Store / App Install) ──────────────────────
-    let pkg = (
+    let rawPkg = (
         reqs.packageId ||
         meta.packageId ||
         reqs.appPackage ||
@@ -46,8 +49,32 @@ export function extractTaskIdentity(task: any): TaskIdentity {
         ''
     ).toString().trim().toLowerCase();
 
+    // Reset falsy or invalid package values
+    if (rawPkg === 'null' || rawPkg === 'undefined' || rawPkg === '[object object]') {
+        rawPkg = '';
+    }
+
+    // If packageId was accidentally passed as a URL or query string, extract id param
+    if (rawPkg.includes('id=')) {
+        const match = rawPkg.match(/[?&]id=([a-zA-Z0-9_.]+)/i);
+        if (match && match[1]) rawPkg = match[1].toLowerCase().trim();
+    } else if (rawPkg.includes('/')) {
+        const parts = rawPkg.split('/').filter(Boolean);
+        const lastPart = parts[parts.length - 1];
+        if (lastPart && /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(lastPart)) {
+            rawPkg = lastPart.toLowerCase().trim();
+        } else {
+            rawPkg = '';
+        }
+    }
+
+    let pkg = rawPkg;
+
     // ── 2. Resolve Raw Target URL ─────────────────────────────────────────────
     let rawUrl = (
+        reqs.canonicalUrl ||
+        reqs.canonicalTargetUrl ||
+        meta.canonicalUrl ||
         reqs.targetUrl ||
         meta.targetUrl ||
         task.targetUrl ||
@@ -68,6 +95,35 @@ export function extractTaskIdentity(task: any): TaskIdentity {
     }
 
     let normalizedUrl: string | undefined = undefined;
+    let businessNameKey: string | undefined = undefined;
+
+    // ── 3. Resolve Business Name for Google Business / Maps tasks ─────────────
+    const rawBusinessName = (
+        reqs.businessName ||
+        meta.businessName ||
+        reqs.appName ||
+        meta.appName ||
+        task.businessName ||
+        ''
+    ).toString().trim();
+
+    if (rawBusinessName && rawBusinessName !== 'null' && rawBusinessName !== 'undefined') {
+        const cleanName = rawBusinessName
+            .replace(/\s*-\s*Google Maps.*/i, '')
+            .replace(/\s*·\s*Google Maps.*/i, '')
+            .replace(/\s*\|\s*Google Maps.*/i, '')
+            .replace(/Google Maps/i, '')
+            .replace(/Google Search/i, '')
+            .replace(/Dynamic Link Not Found/i, '')
+            .replace(/Dynamic Link/i, '')
+            .trim();
+
+        const normName = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (normName.length >= 3 && !['google', 'search', 'googlemaps', 'googlesearch', 'dynamiclink', 'notfound'].includes(normName)) {
+            businessNameKey = `gmb:name:${normName}`;
+            entityKeys.push(businessNameKey);
+        }
+    }
 
     if (rawUrl) {
         try {
@@ -81,20 +137,22 @@ export function extractTaskIdentity(task: any): TaskIdentity {
             if (host.includes('google.com') && (pathname.includes('/store/apps/details') || pathname.includes('/store/apps'))) {
                 const idParam = (parsed.searchParams.get('id') || '').toLowerCase().trim();
                 if (idParam) {
-                    if (!pkg) pkg = idParam;
+                    pkg = idParam;
                     normalizedUrl = `https://play.google.com/store/apps/details?id=${idParam}`;
                 }
             } else if (rawUrl.startsWith('market://')) {
                 const match = rawUrl.match(/id=([a-zA-Z0-9_.]+)/i);
                 if (match && match[1]) {
                     const idParam = match[1].toLowerCase().trim();
-                    if (!pkg) pkg = idParam;
+                    pkg = idParam;
                     normalizedUrl = `https://play.google.com/store/apps/details?id=${idParam}`;
                 }
+            } else if (/^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(rawUrl)) {
+                pkg = rawUrl.toLowerCase().trim();
+                normalizedUrl = `https://play.google.com/store/apps/details?id=${pkg}`;
             }
             // ── (B) YouTube Links (Watch, Short, Shorts, Embed, Live, Channel) ───
             else if (host.includes('youtube.com') || host.includes('youtu.be')) {
-                // Check 11-char video ID across all YouTube URL variations
                 const ytVideoMatch = rawUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
                 if (ytVideoMatch && ytVideoMatch[1]) {
                     const videoId = ytVideoMatch[1].trim();
@@ -111,13 +169,11 @@ export function extractTaskIdentity(task: any): TaskIdentity {
             }
             // ── (C) Instagram Links (Post, Reel, Story, User Profile) ───────────
             else if (host.includes('instagram.com')) {
-                // Post or Reel: instagram.com/p/{code} or instagram.com/reel/{code} or instagram.com/reels/{code}
                 const igCodeMatch = pathname.match(/\/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/i);
                 if (igCodeMatch && igCodeMatch[1]) {
                     const shortcode = igCodeMatch[1].trim();
                     normalizedUrl = `https://www.instagram.com/p/${shortcode}`;
                 } else {
-                    // Profile URL: instagram.com/{username}
                     const userMatch = pathname.match(/^\/([A-Za-z0-9_.]+)/i);
                     if (userMatch && userMatch[1] && !['explore', 'direct', 'accounts', 'stories'].includes(userMatch[1].toLowerCase())) {
                         normalizedUrl = `https://www.instagram.com/${userMatch[1].toLowerCase()}`;
@@ -132,42 +188,85 @@ export function extractTaskIdentity(task: any): TaskIdentity {
                 host.includes('goo.gl') ||
                 host.includes('share.google') ||
                 host.includes('maps.app.goo.gl') ||
-                (host.includes('google.com') && pathname.includes('/maps'))
+                host.includes('g.page') ||
+                host.includes('g.co') ||
+                (host.includes('google.') && (
+                    pathname.includes('/maps') ||
+                    pathname.includes('/local') ||
+                    (pathname.includes('/search') && (parsed.searchParams.has('kgmid') || parsed.searchParams.has('q') || parsed.searchParams.has('lrd')))
+                ))
             ) {
                 const cid = parsed.searchParams.get('cid');
                 const placeId = parsed.searchParams.get('placeid') || parsed.searchParams.get('place_id');
+                let rawKgmid = parsed.searchParams.get('kgmid');
+                if (rawKgmid) {
+                    try { rawKgmid = decodeURIComponent(rawKgmid); } catch (_) {}
+                }
                 const hexMatch = rawUrl.match(/1s(0x[a-f0-9]+:0x[a-f0-9]+)/i);
                 const placeMatch = pathname.match(/\/maps\/place\/([^\/@?]+)/i);
                 const searchParam = parsed.searchParams.get('query') || parsed.searchParams.get('q');
                 const searchPathMatch = pathname.match(/\/maps\/search\/([^\/?]+)/i);
 
+                if (rawKgmid) {
+                    const cleanKgmid = rawKgmid.toLowerCase().trim();
+                    normalizedUrl = `google_maps:kgmid:${cleanKgmid}`;
+                    entityKeys.push(`url:google_maps:kgmid:${cleanKgmid}`);
+                    entityKeys.push(`google_maps:kgmid:${cleanKgmid}`);
+                }
                 if (cid) {
-                    normalizedUrl = `google_maps:cid:${cid.trim()}`;
-                } else if (placeId) {
-                    normalizedUrl = `google_maps:placeid:${placeId.trim()}`;
-                } else if (hexMatch && hexMatch[1]) {
-                    normalizedUrl = `google_maps:hex:${hexMatch[1].toLowerCase()}`;
-                } else if (placeMatch && placeMatch[1]) {
+                    const cleanCid = cid.trim();
+                    if (!normalizedUrl) normalizedUrl = `google_maps:cid:${cleanCid}`;
+                    entityKeys.push(`url:google_maps:cid:${cleanCid}`);
+                    entityKeys.push(`google_maps:cid:${cleanCid}`);
+                }
+                if (placeId) {
+                    const cleanPid = placeId.trim();
+                    if (!normalizedUrl) normalizedUrl = `google_maps:placeid:${cleanPid}`;
+                    entityKeys.push(`url:google_maps:placeid:${cleanPid}`);
+                    entityKeys.push(`google_maps:placeid:${cleanPid}`);
+                }
+                if (hexMatch && hexMatch[1]) {
+                    const cleanHex = hexMatch[1].toLowerCase();
+                    if (!normalizedUrl) normalizedUrl = `google_maps:hex:${cleanHex}`;
+                    entityKeys.push(`url:google_maps:hex:${cleanHex}`);
+                    entityKeys.push(`google_maps:hex:${cleanHex}`);
+                }
+                if (placeMatch && placeMatch[1]) {
                     const cleanPlace = decodeURIComponent(placeMatch[1]).trim().toLowerCase().replace(/\+/g, ' ');
-                    normalizedUrl = `google_maps:place:${cleanPlace}`;
-                } else if (searchParam || searchPathMatch) {
+                    if (!normalizedUrl) normalizedUrl = `google_maps:place:${cleanPlace}`;
+                    entityKeys.push(`url:google_maps:place:${cleanPlace}`);
+                    const placeAlnum = cleanPlace.split(',')[0].replace(/[^a-z0-9]/g, '');
+                    if (placeAlnum.length >= 3) {
+                        entityKeys.push(`gmb:name:${placeAlnum}`);
+                        if (!businessNameKey) businessNameKey = `gmb:name:${placeAlnum}`;
+                    }
+                }
+                if (searchParam || searchPathMatch) {
                     const rawSearch = searchParam || (searchPathMatch ? searchPathMatch[1] : '');
                     const cleanSearch = decodeURIComponent(rawSearch).trim().toLowerCase().replace(/\+/g, ' ');
-                    normalizedUrl = `google_maps:search:${cleanSearch}`;
-                } else if (host.includes('goo.gl') || host.includes('share.google') || host.includes('maps.app.goo.gl')) {
-                    // Short Google Maps / Business links: preserve host + pathname
-                    normalizedUrl = `https://${host}${pathname}`;
-                } else {
-                    normalizedUrl = `https://${host}${pathname.toLowerCase()}`;
+                    if (!normalizedUrl) normalizedUrl = `google_maps:search:${cleanSearch}`;
+                    entityKeys.push(`url:google_maps:search:${cleanSearch}`);
+                    const searchAlnum = cleanSearch.split(',')[0].replace(/[^a-z0-9]/g, '');
+                    if (searchAlnum.length >= 3 && !['google', 'maps', 'search'].includes(searchAlnum)) {
+                        entityKeys.push(`gmb:name:${searchAlnum}`);
+                        if (!businessNameKey) businessNameKey = `gmb:name:${searchAlnum}`;
+                    }
+                }
+
+                if (!normalizedUrl) {
+                    if (host.includes('goo.gl') || host.includes('share.google') || host.includes('maps.app.goo.gl') || host.includes('g.page') || host.includes('g.co')) {
+                        normalizedUrl = `https://${host}${pathname}`;
+                    } else {
+                        normalizedUrl = `https://${host}${pathname.toLowerCase()}`;
+                    }
                 }
             }
             // ── (E) General Web URLs ──────────────────────────────────────────
             else {
-                // Strip common advertising, social, and tracking query params
                 [
                     'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
                     'si', 'fbclid', 'igsh', 'feature', 'ref', 'source', 'gclid',
-                    'g_st', 'entry', 'g_ep', 'ved', 'referrer'
+                    'g_st', 'entry', 'g_ep', 'ved', 'referrer', 'shem', 'shndl', 'kgs'
                 ].forEach((p) => parsed.searchParams.delete(p));
 
                 const cleanSearch = parsed.searchParams.toString();
@@ -180,6 +279,7 @@ export function extractTaskIdentity(task: any): TaskIdentity {
         }
     }
 
+    // ── 4. Fallback Package ID extraction from resolved normalized URL ────────
     if (!pkg && normalizedUrl && normalizedUrl.includes('play.google.com/store/apps/details?id=')) {
         try {
             const u = new URL(normalizedUrl);
@@ -188,12 +288,37 @@ export function extractTaskIdentity(task: any): TaskIdentity {
         } catch (_) {}
     }
 
-    const entityKey = pkg ? `pkg:${pkg}` : (normalizedUrl ? `url:${normalizedUrl}` : undefined);
+    // ── 5. Populate All Entity Keys for Multi-Dimensional Deduplication ───────
+    if (pkg) {
+        pkg = pkg.toLowerCase().trim();
+        entityKeys.push(`pkg:${pkg}`);
+        entityKeys.push(`app:${pkg}`);
+        entityKeys.push(`https://play.google.com/store/apps/details?id=${pkg}`);
+        entityKeys.push(`url:https://play.google.com/store/apps/details?id=${pkg}`);
+    }
+
+    if (normalizedUrl) {
+        entityKeys.push(`url:${normalizedUrl}`);
+        entityKeys.push(normalizedUrl);
+    }
+
+    // Deduplicate and sanitize entityKeys
+    const dedupedKeys = Array.from(
+        new Set(
+            entityKeys
+                .map((k) => (k || '').toString().toLowerCase().trim())
+                .filter((k) => k.length > 0 && k !== 'pkg:null' && k !== 'pkg:undefined' && k !== 'app:null')
+        )
+    );
+
+    const primaryEntityKey = pkg ? `pkg:${pkg}` : (dedupedKeys[0] || (normalizedUrl ? `url:${normalizedUrl}` : undefined));
 
     return {
         packageId: pkg || undefined,
         normalizedUrl: normalizedUrl || undefined,
-        entityKey,
+        businessNameKey,
+        entityKey: primaryEntityKey,
+        entityKeys: dedupedKeys,
     };
 }
 
@@ -344,6 +469,7 @@ export async function resolveShortUrl(url: string, timeoutMs = 4000): Promise<st
         }
 
         if (currentUrl && currentUrl !== cleanUrl) {
+            currentUrl = sanitizeGoogleMapsUrl(currentUrl);
             cacheResolvedUrl(cleanUrl, currentUrl);
             return currentUrl;
         }
@@ -352,5 +478,27 @@ export async function resolveShortUrl(url: string, timeoutMs = 4000): Promise<st
     }
 
     return cleanUrl;
+}
+
+/**
+ * Remove tracking noise (utm_*, g_st, entry, coh, skid, etc.) from Google Maps URLs
+ * while preserving place paths, coordinates, and data parameters.
+ */
+export function sanitizeGoogleMapsUrl(url: string): string {
+    if (!url || typeof url !== 'string') return url || '';
+    const clean = url.trim();
+    if (!clean.includes('google.com/maps') && !clean.includes('maps.google') && !clean.includes('/maps/place/')) {
+        return clean;
+    }
+    try {
+        const u = new URL(clean);
+        [
+            'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+            'entry', 'coh', 'g_ep', 'skid', 'g_st', 'ved', 'source', 'ref', 'feature'
+        ].forEach((p) => u.searchParams.delete(p));
+        return u.toString();
+    } catch (_) {
+        return clean;
+    }
 }
 

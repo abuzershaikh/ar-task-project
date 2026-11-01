@@ -153,7 +153,7 @@ class BuyerSupportChatService {
   /// Fetch all buyer conversations (Buyer-Only, with search)
   Future<List<BuyerSupportConversationModel>> getConversations({
     String search = '',
-    int limit = 100,
+    int limit = 1000,
     int offset = 0,
   }) async {
     try {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -284,6 +285,54 @@ class _AdminBuyerChatScreenState extends State<AdminBuyerChatScreen> {
     setState(() {
       _selectedMessageIds.addAll(_messages.map((m) => m.id));
     });
+  }
+
+  void _copySelectedMessages() {
+    if (_selectedMessageIds.isEmpty) return;
+    final selected = _messages.where((m) => _selectedMessageIds.contains(m.id)).toList();
+    final text = selected.map((m) => m.content).where((c) => c.isNotEmpty).join('\n');
+    if (text.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: text));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                selected.length > 1
+                    ? '${selected.length} messages copied to clipboard'
+                    : 'Message copied to clipboard',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF4F46E5),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+    _exitSelectionMode();
+  }
+
+  void _copySingleMessage(String text) {
+    if (text.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text('Message copied to clipboard', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        backgroundColor: Color(0xFF4F46E5),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _handleDeleteSelected() async {
@@ -820,6 +869,11 @@ class _AdminBuyerChatScreenState extends State<AdminBuyerChatScreen> {
           onPressed: _selectAll,
         ),
         IconButton(
+          icon: const Icon(Icons.copy_rounded, color: Colors.white),
+          tooltip: 'Copy Selected',
+          onPressed: _selectedMessageIds.isEmpty ? null : _copySelectedMessages,
+        ),
+        IconButton(
           icon: const Icon(Icons.delete_rounded, color: Colors.redAccent),
           tooltip: 'Delete Selected',
           onPressed: _isDeleting ? null : _handleDeleteSelected,
@@ -867,6 +921,7 @@ class _AdminBuyerChatScreenState extends State<AdminBuyerChatScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: InkWell(
         onLongPress: () => _enterSelectionMode(msg.id),
+        onDoubleTap: () => _copySingleMessage(msg.content),
         onTap: _isSelectionMode ? () => _toggleMessageSelection(msg.id) : null,
         borderRadius: BorderRadius.circular(16),
         child: Container(
@@ -927,7 +982,7 @@ class _AdminBuyerChatScreenState extends State<AdminBuyerChatScreen> {
                       if (msg.isYoutube) _buildYoutubeContent(msg, isAdmin),
                       if (msg.isAudio) _buildAudioContent(msg, isAdmin),
                       if (!msg.isImage && !msg.isYoutube && !msg.isAudio)
-                        Text(
+                        SelectableText(
                           msg.content,
                           style: TextStyle(
                             fontSize: 14,

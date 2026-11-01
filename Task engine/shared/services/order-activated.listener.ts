@@ -17,7 +17,7 @@ import { AiGeneratorService } from '../ai-generator/ai-generator.service';
 import { sanitizeReviewText } from '../ai-generator/review-sanitizer';
 import { FirebaseAdminService } from './firebase-admin.service';
 import { PlayStoreScraperService } from './playstore-scraper.service';
-import { extractTaskIdentity, resolveShortUrl } from '../common/utils/task-identity.util';
+import { extractTaskIdentity, resolveShortUrl, sanitizeGoogleMapsUrl } from '../common/utils/task-identity.util';
 
 export interface OrderActivatedEventPayload {
     orderId: string;
@@ -104,6 +104,7 @@ export class OrderActivatedListener {
                 } catch (resErr) {
                     this.logger.warn(`Could not resolve short targetUrl '${targetUrl}': ${resErr?.message}`);
                 }
+                targetUrl = sanitizeGoogleMapsUrl(targetUrl);
             }
 
             const isGoogleBusiness = serviceIdentifier.includes('GOOGLE_BUSINESS') ||
@@ -115,7 +116,17 @@ export class OrderActivatedListener {
                 (serviceCatalog?.category || '').toLowerCase().includes('maps') ||
                 (serviceCatalog?.name || '').toLowerCase().includes('google business') ||
                 (serviceCatalog?.name || '').toLowerCase().includes('google maps') ||
-                (targetUrl && (targetUrl.includes('maps.google.com') || targetUrl.includes('goo.gl/maps') || targetUrl.includes('maps.app.goo.gl') || targetUrl.includes('search.google.com/local')));
+                (targetUrl && (
+                    targetUrl.includes('maps.google') ||
+                    targetUrl.includes('google.com/maps') ||
+                    targetUrl.includes('goo.gl/maps') ||
+                    targetUrl.includes('maps.app.goo.gl') ||
+                    targetUrl.includes('share.google') ||
+                    targetUrl.includes('search.google.com') ||
+                    targetUrl.includes('g.page') ||
+                    targetUrl.includes('g.co') ||
+                    (targetUrl.includes('google.') && (targetUrl.includes('/maps') || targetUrl.includes('/local') || targetUrl.includes('kgmid=')))
+                ));
 
             const isPlayStore = !isGoogleBusiness && (
                 serviceIdentifier.includes('PLAY') ||
@@ -432,13 +443,15 @@ export class OrderActivatedListener {
                     packageId,
                 });
 
-                // 2. Identify workers who have ALREADY completed/held a task for this packageId or normalizedUrl
+                // 2. Identify workers who have ALREADY completed/held a task for this packageId, normalizedUrl, businessNameKey, or entityKeys
                 const excludedWorkerIds = new Set<string>();
-                if (taskIdentity.packageId || taskIdentity.normalizedUrl) {
+                if (taskIdentity.packageId || taskIdentity.normalizedUrl || taskIdentity.businessNameKey || (taskIdentity.entityKeys && taskIdentity.entityKeys.length > 0)) {
                     try {
                         const excluded = await this.taskRepo.findWorkerIdsWithPackageOrUrl(
                             taskIdentity.packageId,
                             taskIdentity.normalizedUrl,
+                            taskIdentity.businessNameKey,
+                            taskIdentity.entityKeys,
                         );
                         for (const id of excluded) {
                             excludedWorkerIds.add(id.toLowerCase().trim());
@@ -450,7 +463,7 @@ export class OrderActivatedListener {
 
                 // 3. Resolve eligible workers who have device push tokens
                 let eligibleTokens: string[] | undefined = undefined;
-                if (taskIdentity.packageId || taskIdentity.normalizedUrl) {
+                if (taskIdentity.packageId || taskIdentity.normalizedUrl || taskIdentity.businessNameKey || (taskIdentity.entityKeys && taskIdentity.entityKeys.length > 0)) {
                     try {
                         const allWorkers = await this.userRepo.findByRole(UserRole.WORKER);
                         const tokenList: string[] = [];

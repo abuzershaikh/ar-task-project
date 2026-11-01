@@ -48,11 +48,13 @@ export class DuplicateFilterService {
         const targetIdentity = extractTaskIdentity(context.task);
         const workersWithSameAppOrUrl = new Set<string>();
 
-        if (targetIdentity.packageId || targetIdentity.normalizedUrl) {
+        if (targetIdentity.packageId || targetIdentity.normalizedUrl || targetIdentity.businessNameKey || (targetIdentity.entityKeys && targetIdentity.entityKeys.length > 0)) {
             try {
                 const excluded = await this.taskRepo.findWorkerIdsWithPackageOrUrl(
                     targetIdentity.packageId,
                     targetIdentity.normalizedUrl,
+                    targetIdentity.businessNameKey,
+                    targetIdentity.entityKeys,
                 );
                 for (const id of excluded) {
                     workersWithSameAppOrUrl.add(id.toLowerCase().trim());

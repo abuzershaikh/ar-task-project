@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -520,6 +521,29 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
     );
   }
 
+  void _copyMessageText(String text) {
+    if (text.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text(
+              'Message copied to clipboard',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF00A884),
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   // ── Message Row with Clean WhatsApp Style ──────────────────────────────────
   Widget _buildMessageRow(WorkerSupportMessage msg) {
     final isWorker = msg.isWorker;
@@ -559,104 +583,107 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
 
           // Clean WhatsApp Chat Bubble (No Outline Stroke)
           Flexible(
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.78,
-              ),
-              decoration: BoxDecoration(
-                // WhatsApp Dark: Outgoing (#005C4B) vs Incoming (#1F2C34)
-                color: isWorker ? const Color(0xFF005C4B) : const Color(0xFF1F2C34),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isWorker ? 16 : 2),
-                  bottomRight: Radius.circular(isWorker ? 2 : 16),
+            child: GestureDetector(
+              onLongPress: () => _copyMessageText(msg.content),
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.78,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.22),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
+                decoration: BoxDecoration(
+                  // WhatsApp Dark: Outgoing (#005C4B) vs Incoming (#1F2C34)
+                  color: isWorker ? const Color(0xFF005C4B) : const Color(0xFF1F2C34),
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(16),
+                    topRight: const Radius.circular(16),
+                    bottomLeft: Radius.circular(isWorker ? 16 : 2),
+                    bottomRight: Radius.circular(isWorker ? 2 : 16),
                   ),
-                ],
-              ),
-              padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Admin Header Label inside bubble
-                  if (!isWorker)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'Admin Support',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF53BDEB), // WhatsApp Cyan Header
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.22),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Admin Header Label inside bubble
+                    if (!isWorker)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Admin Support',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF53BDEB), // WhatsApp Cyan Header
+                              ),
                             ),
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.all(1.5),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF00B4D8),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.check_rounded, size: 8, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Message Content
+                    if (msg.isYoutube)
+                      _buildYouTubeCard(msg)
+                    else if (msg.isAudio)
+                      _buildAudioCard(msg)
+                    else if (msg.isImage)
+                      _buildImageCard(msg)
+                    else
+                      SelectableText(
+                        msg.content,
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          color: Color(0xFFE9EDEF), // WhatsApp Crisp Text
+                          height: 1.35,
+                        ),
+                      ),
+
+                    const SizedBox(height: 3),
+
+                    // Time & Double Checkmark
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        const Spacer(),
+                        Text(
+                          timeStr,
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            color: Color(0xFF8696A0), // WhatsApp timestamp grey
                           ),
+                        ),
+                        if (isWorker) ...[
                           const SizedBox(width: 4),
-                          Container(
-                            padding: const EdgeInsets.all(1.5),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF00B4D8),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.check_rounded, size: 8, color: Colors.white),
+                          Icon(
+                            Icons.done_all_rounded,
+                            size: 15,
+                            color: msg.isRead
+                                ? const Color(0xFF53BDEB) // WhatsApp Blue Read Ticks
+                                : const Color(0xFF8696A0), // WhatsApp Grey Delivered Ticks
                           ),
                         ],
-                      ),
-                    ),
-
-                  // Message Content
-                  if (msg.isYoutube)
-                    _buildYouTubeCard(msg)
-                  else if (msg.isAudio)
-                    _buildAudioCard(msg)
-                  else if (msg.isImage)
-                    _buildImageCard(msg)
-                  else
-                    Text(
-                      msg.content,
-                      style: const TextStyle(
-                        fontSize: 14.5,
-                        color: Color(0xFFE9EDEF), // WhatsApp Crisp Text
-                        height: 1.35,
-                      ),
-                    ),
-
-                  const SizedBox(height: 3),
-
-                  // Time & Double Checkmark
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      const Spacer(),
-                      Text(
-                        timeStr,
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          color: Color(0xFF8696A0), // WhatsApp timestamp grey
-                        ),
-                      ),
-                      if (isWorker) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.done_all_rounded,
-                          size: 15,
-                          color: msg.isRead
-                              ? const Color(0xFF53BDEB) // WhatsApp Blue Read Ticks
-                              : const Color(0xFF8696A0), // WhatsApp Grey Delivered Ticks
-                        ),
                       ],
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

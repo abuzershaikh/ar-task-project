@@ -80,6 +80,10 @@ class ApiEndpoints {
   
   // ==================== Payouts ====================
   static const String payouts = '/admin/payouts/pending';
+  static const String payoutsPending = '/admin/payouts/pending';
+  static const String payoutsHistory = '/admin/payouts/history';
+  static const String payoutsAll = '/admin/payouts';
+  static const String payoutsStats = '/admin/payouts/stats';
   static String payoutById(String id) => '/admin/payouts/$id';
   static String payoutProcess(String id) => '/admin/payouts/$id/process';
   static String payoutReject(String id) => '/admin/payouts/$id/reject';

@@ -245,7 +245,7 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
     final reqServiceName = (req['serviceName'] ?? '').toString().toLowerCase();
     final reqCategory = (req['category'] ?? '').toString().toLowerCase();
     final reqPlatform = (req['platform'] ?? '').toString().toLowerCase();
-    final targetUrl = (req['targetUrl'] ?? req['url'] ?? '').toString().toLowerCase();
+    final targetUrl = (task['targetUrl'] ?? task['target_url'] ?? task['url'] ?? task['link'] ?? req['targetUrl'] ?? req['url'] ?? req['link'] ?? req['mapUrl'] ?? req['mapsUrl'] ?? '').toString().toLowerCase().trim();
 
     // 0. YouTube (Checked first to prevent video titles containing words like "install" from hijacking it)
     if (type.contains('YOUTUBE') ||
@@ -265,17 +265,30 @@ class _TaskFeedScreenState extends State<TaskFeedScreen> with WidgetsBindingObse
         serviceCode.contains('GOOGLE_BUSINESS') ||
         type.contains('GOOGLE_MAPS') ||
         serviceCode.contains('GOOGLE_MAPS') ||
-        type.contains('MAP') ||
-        serviceCode.contains('MAP') ||
+        type.contains('GMB') ||
+        serviceCode.contains('GMB') ||
+        (type.contains('MAP') && !type.contains('BITMAP')) ||
+        (serviceCode.contains('MAP') && !serviceCode.contains('BITMAP')) ||
         reqPlatform == 'google_maps' ||
         reqPlatform == 'google_business' ||
+        reqPlatform == 'maps' ||
+        reqPlatform == 'google' ||
         reqCategory.contains('google business') ||
         reqCategory.contains('google maps') ||
         reqCategory.contains('google') ||
-        targetUrl.contains('maps.google.com') ||
+        reqCategory.contains('maps') ||
+        reqServiceName.contains('google maps') ||
+        reqServiceName.contains('google business') ||
+        reqServiceName.contains('maps') ||
+        targetUrl.contains('maps.google') ||
+        targetUrl.contains('google.com/maps') ||
         targetUrl.contains('share.google') ||
         targetUrl.contains('maps.app.goo.gl') ||
-        targetUrl.contains('goo.gl/maps')) {
+        targetUrl.contains('goo.gl/maps') ||
+        targetUrl.contains('search.google.com') ||
+        targetUrl.contains('g.page') ||
+        targetUrl.contains('g.co') ||
+        (targetUrl.contains('google.') && (targetUrl.contains('/maps') || targetUrl.contains('/local') || targetUrl.contains('kgmid=')))) {
       return 'google_maps';
     }
 

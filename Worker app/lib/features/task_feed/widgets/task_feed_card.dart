@@ -313,10 +313,14 @@ class TaskFeedCard extends StatelessWidget {
         type.contains('gmb') ||
         (type.contains('map') && !type.contains('bitmap')) ||
         urlStr.contains('maps.google') ||
+        urlStr.contains('google.com/maps') ||
         urlStr.contains('goo.gl/maps') ||
         urlStr.contains('maps.app.goo.gl') ||
         urlStr.contains('share.google') ||
-        urlStr.contains('search.google.com/local')) {
+        urlStr.contains('search.google.com') ||
+        urlStr.contains('g.page') ||
+        urlStr.contains('g.co') ||
+        (urlStr.contains('google.') && (urlStr.contains('/maps') || urlStr.contains('/local') || urlStr.contains('kgmid=')))) {
       return 'google_maps';
     }
 
@@ -356,7 +360,7 @@ class TaskFeedCard extends StatelessWidget {
     if (serviceName.contains('play store') || serviceName.contains('playstore') || serviceName.contains('app install')) {
       return 'playstore';
     }
-    if (serviceName.contains('google maps') || serviceName.contains('google review')) {
+    if (serviceName.contains('google maps') || serviceName.contains('google review') || serviceName.contains('google business') || serviceName.contains('gmb') || serviceName.contains('maps review')) {
       return 'google_maps';
     }
     if (serviceName.contains('youtube')) {

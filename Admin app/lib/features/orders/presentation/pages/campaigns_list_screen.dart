@@ -56,14 +56,14 @@ class _CampaignsListScreenState extends State<CampaignsListScreen> {
             builder: (context, state) {
               int totalCampaigns = 0;
               int activeCampaigns = 0;
-              int totalTasks = 0;
+              int completedCampaigns = 0;
               double totalBudget = 0.0;
 
               if (state is OrdersLoaded) {
                 totalCampaigns = state.orders.length;
                 activeCampaigns = state.orders.where((o) => o.status.toUpperCase() == 'ACTIVE').length;
+                completedCampaigns = state.orders.where((o) => o.status.toUpperCase() == 'COMPLETED').length;
                 for (var o in state.orders) {
-                  totalTasks += o.totalTasks;
                   totalBudget += o.totalBudget;
                 }
               }
@@ -94,7 +94,7 @@ class _CampaignsListScreenState extends State<CampaignsListScreen> {
                     Container(height: 24, width: 1, color: const Color(0xFF6EE7B7)),
                     _buildMetricCol('Active', '$activeCampaigns', const Color(0xFF047857)),
                     Container(height: 24, width: 1, color: const Color(0xFF6EE7B7)),
-                    _buildMetricCol('Tasks', '$totalTasks', const Color(0xFF065F46)),
+                    _buildMetricCol('Completed', '$completedCampaigns', const Color(0xFF0284C7)),
                     Container(height: 24, width: 1, color: const Color(0xFF6EE7B7)),
                     _buildMetricCol('Budget', '₹${totalBudget.toStringAsFixed(0)}', const Color(0xFF064E3B)),
                   ],
@@ -146,7 +146,7 @@ class _CampaignsListScreenState extends State<CampaignsListScreen> {
 
           // Filter Chips
           FilterChipRow(
-            filters: const ['All', 'ACTIVE', 'PAUSED', 'COMPLETED', 'PENDING'],
+            filters: const ['All', 'ACTIVE', 'PAUSED', 'COMPLETED', 'CANCELLED', 'PENDING'],
             selectedFilter: _selectedFilter,
             onFilterSelected: (filter) => setState(() => _selectedFilter = filter),
           ),

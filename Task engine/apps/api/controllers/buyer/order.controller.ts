@@ -33,7 +33,7 @@ import { PlayStoreScraperService } from '../../../../shared/services/playstore-s
 import { YouTubeMetadataService } from '../../../../shared/services/youtube-metadata.service';
 import { GoogleMapsMetadataService } from '../../../../shared/services/google-maps-metadata.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { resolveShortUrl } from '../../../../shared/common/utils/task-identity.util';
+import { resolveShortUrl, sanitizeGoogleMapsUrl } from '../../../../shared/common/utils/task-identity.util';
 import { calculateYouTubeDurationPricing, roundCurrency } from '../../../../shared/engines/pricing-engine/youtube-duration-pricing';
 
 @ApiTags('Buyer - Orders')
@@ -390,6 +390,39 @@ export class BuyerOrderController {
             }
         }
 
+        // Auto-extract Google Maps / Google Business listing metadata if targetUrl is a Google Maps link
+        const isMapsTarget = targetUrl && (
+            targetUrl.includes('maps.google') ||
+            targetUrl.includes('google.com/maps') ||
+            targetUrl.includes('goo.gl/maps') ||
+            targetUrl.includes('maps.app.goo.gl') ||
+            targetUrl.includes('share.google') ||
+            targetUrl.includes('search.google.com') ||
+            targetUrl.includes('g.page') ||
+            targetUrl.includes('g.co') ||
+            (targetUrl.includes('google.') && (targetUrl.includes('/maps') || targetUrl.includes('/local') || targetUrl.includes('kgmid=')))
+        );
+        if (isMapsTarget) {
+            targetUrl = sanitizeGoogleMapsUrl(targetUrl);
+            if (!reqs.businessName || !reqs.appName) {
+                try {
+                    const gmbInfo = await this.googleMapsMetadataService.getBusinessMetadata(targetUrl);
+                    if (gmbInfo && gmbInfo.success) {
+                        if (gmbInfo.businessName) {
+                            if (!reqs.businessName) reqs.businessName = gmbInfo.businessName;
+                            if (!reqs.appName) reqs.appName = gmbInfo.businessName;
+                        }
+                        if (!reqs.appIcon && gmbInfo.businessIcon) reqs.appIcon = gmbInfo.businessIcon;
+                        if (gmbInfo.mapsUrl) {
+                            targetUrl = sanitizeGoogleMapsUrl(gmbInfo.mapsUrl);
+                        }
+                    }
+                } catch (err: any) {
+                    this.logger.warn(`Failed to auto-fetch Google Maps metadata for ${targetUrl}: ${err?.message || err}`);
+                }
+            }
+        }
+
         // Dynamic duration-based pricing strictly for YouTube Combo (> 5 minutes / 300s)
         let effectiveBuyerUnitPrice = Number(snapshot.buyerUnitPrice);
         let effectiveWorkerReward = Number(snapshot.workerRewardSnapshot);
@@ -576,6 +609,7 @@ export class BuyerOrderController {
     @ApiOperation({ summary: 'Get buyer real-time dashboard data' })
     async getBuyerDashboard(@CurrentUser() user: User) {
         const orders = await this.orderRepo.findByBuyer(user.id);
+        orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         let totalSpend = 0;
         let activeOrdersCount = 0;
@@ -645,6 +679,7 @@ export class BuyerOrderController {
     @ApiOperation({ summary: 'List orders created by buyer (Hides worker rewards and internal margins)' })
     async getOrders(@CurrentUser() user: User) {
         const orders = await this.orderRepo.findByBuyer(user.id);
+        orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         const buyerSafeOrders = await Promise.all(orders.map(async (o) => {
             const tasks = await this.taskRepo.findByOrderId(o.id);
             const completed = tasks.filter(t => this.taskRepo.matchesStatus(t.status, 'completed')).length;

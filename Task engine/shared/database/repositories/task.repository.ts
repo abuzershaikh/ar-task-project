@@ -256,23 +256,65 @@ export class TaskRepository {
         return participationMap;
     }
 
-    async findWorkerIdsWithPackageOrUrl(packageId?: string, normalizedUrl?: string): Promise<string[]> {
-        if (!packageId && !normalizedUrl) return [];
+    async findWorkerIdsWithPackageOrUrl(
+        packageId?: string,
+        normalizedUrl?: string,
+        businessNameKey?: string,
+        entityKeys?: string[],
+    ): Promise<string[]> {
+        if (!packageId && !normalizedUrl && !businessNameKey && (!entityKeys || entityKeys.length === 0)) return [];
 
+        const workerIds = new Set<string>();
+        const matchingTaskIds: string[] = [];
+
+        // 1. Check physical DB unique constraint table worker_completed_identities
+        const keysToSearch: string[] = [];
+        if (entityKeys && entityKeys.length > 0) {
+            keysToSearch.push(...entityKeys.map((k) => k.toLowerCase().trim()));
+        }
+        if (packageId) {
+            const cleanPkg = packageId.toLowerCase().trim();
+            keysToSearch.push(`pkg:${cleanPkg}`);
+            keysToSearch.push(`app:${cleanPkg}`);
+        }
+        if (normalizedUrl) {
+            const cleanUrl = normalizedUrl.toLowerCase().trim();
+            keysToSearch.push(`url:${cleanUrl}`);
+            keysToSearch.push(cleanUrl);
+        }
+        if (businessNameKey) {
+            keysToSearch.push(businessNameKey.toLowerCase().trim());
+        }
+
+        const uniqueKeys = Array.from(new Set(keysToSearch.filter(Boolean)));
+        if (uniqueKeys.length > 0) {
+            try {
+                const rows = await this.repository.query(
+                    `SELECT DISTINCT worker_key AS workerKey FROM worker_completed_identities WHERE entity_key IN (?)`,
+                    [uniqueKeys],
+                );
+                for (const r of rows) {
+                    if (r.workerKey) workerIds.add(r.workerKey.toString().trim());
+                }
+            } catch (_) {}
+        }
+
+        // 2. Scan historical tasks
         const tasks = await this.repository.find({
             select: ['id', 'assignedTo', 'requirements', 'metadata', 'status'],
         });
 
-        const workerIds = new Set<string>();
-        const matchingTaskIds: string[] = [];
+        const entityKeySet = new Set(uniqueKeys);
 
         for (const t of tasks) {
             if (t.status === 'cancelled' || t.status === TaskStatus.CANCELLED) continue;
 
             const id = extractTaskIdentity(t);
             let match = false;
-            if (packageId && id.packageId === packageId) match = true;
-            if (normalizedUrl && id.normalizedUrl === normalizedUrl) match = true;
+            if (packageId && id.packageId && id.packageId.toLowerCase() === packageId.toLowerCase()) match = true;
+            if (normalizedUrl && id.normalizedUrl && id.normalizedUrl.toLowerCase() === normalizedUrl.toLowerCase()) match = true;
+            if (businessNameKey && id.businessNameKey && id.businessNameKey.toLowerCase() === businessNameKey.toLowerCase()) match = true;
+            if (id.entityKeys && id.entityKeys.some((k) => entityKeySet.has(k.toLowerCase().trim()))) match = true;
 
             if (match) {
                 matchingTaskIds.push(t.id);

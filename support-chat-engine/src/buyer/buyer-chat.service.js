@@ -149,7 +149,7 @@ class BuyerChatService {
   /**
    * Get conversations for Admin (Buyer-Only list)
    */
-  async getConversations({ search = '', limit = 100, offset = 0 } = {}) {
+  async getConversations({ search = '', limit = 1000, offset = 0 } = {}) {
     // 1. Auto-sync registered buyers from users table so Admin sees all registered buyers
     try {
       const [registeredBuyers] = await pool.query(`
@@ -197,7 +197,7 @@ class BuyerChatService {
     }
 
     query += ` ORDER BY c.last_message_at DESC, c.created_at DESC LIMIT ? OFFSET ?`;
-    params.push(Number(limit) || 100, Number(offset) || 0);
+    params.push(Number(limit) || 1000, Number(offset) || 0);
 
     const [rows] = await pool.query(query, params);
     return rows;

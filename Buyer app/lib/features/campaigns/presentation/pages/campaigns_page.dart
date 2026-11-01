@@ -1129,22 +1129,27 @@ class _CampaignsViewState extends State<_CampaignsView> {
     List<CampaignDetail> allCampaigns,
     String filter,
   ) {
+    List<CampaignDetail> list;
     if (filter == 'active') {
-      return allCampaigns
+      list = allCampaigns
           .where((c) => c.status.toLowerCase() == 'active')
           .toList();
     } else if (filter == 'in_progress') {
-      return allCampaigns
+      list = allCampaigns
           .where((c) =>
               c.status.toLowerCase() == 'in_progress' ||
               c.status.toLowerCase() == 'inprogress')
           .toList();
     } else if (filter == 'completed') {
-      return allCampaigns
+      list = allCampaigns
           .where((c) => c.status.toLowerCase() == 'completed')
           .toList();
+    } else {
+      list = List.from(allCampaigns);
     }
-    return allCampaigns;
+    // Latest created campaign always at the top
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
   }
 
   Widget _buildEmptyState(String filter) {

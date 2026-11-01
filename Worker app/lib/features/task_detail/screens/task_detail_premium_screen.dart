@@ -697,12 +697,15 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
         serviceName.contains('business review') ||
         serviceName.contains('maps review') ||
         titleStr.contains('google maps') ||
-        titleStr.contains('google business') ||
         targetUrl.contains('maps.google') ||
+        targetUrl.contains('google.com/maps') ||
         targetUrl.contains('goo.gl/maps') ||
         targetUrl.contains('maps.app.goo.gl') ||
         targetUrl.contains('share.google') ||
-        targetUrl.contains('search.google.com/local')) {
+        targetUrl.contains('search.google.com') ||
+        targetUrl.contains('g.page') ||
+        targetUrl.contains('g.co') ||
+        (targetUrl.contains('google.') && (targetUrl.contains('/maps') || targetUrl.contains('/local') || targetUrl.contains('kgmid=')))) {
       return 'google_maps';
     }
 

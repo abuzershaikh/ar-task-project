@@ -21,6 +21,8 @@ class CampaignRepositoryImpl implements CampaignRepository {
         page: page,
         limit: limit,
       );
+      // Ensure latest created campaign is at the top
+      models.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return Right(models);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

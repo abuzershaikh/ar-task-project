@@ -121,29 +121,31 @@ export class TaskCommandService {
         }
     }
 
-    private async recordWorkerCompletedIdentity(
+    private async recordWorkerCompletedIdentities(
         manager: any,
         workerAliases: string[],
-        entityKey: string,
+        entityKeys: string[],
         taskId: string,
     ): Promise<void> {
-        if (!entityKey || !workerAliases || workerAliases.length === 0) return;
-        const cleanEntity = entityKey.toLowerCase().trim();
+        if (!entityKeys || entityKeys.length === 0 || !workerAliases || workerAliases.length === 0) return;
 
         for (const alias of workerAliases) {
             const cleanAlias = (alias || '').toLowerCase().trim();
             if (!cleanAlias) continue;
-            try {
-                await manager.query(
-                    `INSERT INTO worker_completed_identities (worker_key, entity_key, task_id) VALUES (?, ?, ?)`,
-                    [cleanAlias, cleanEntity, taskId],
-                );
-            } catch (dupErr: any) {
-                if (dupErr?.code === 'ER_DUP_ENTRY' || dupErr?.errno === 1062) {
-                    throw new BadRequestException('You have already completed or attempted a task for this app/URL.');
+            for (const key of entityKeys) {
+                const cleanKey = (key || '').toLowerCase().trim();
+                if (!cleanKey) continue;
+                try {
+                    await manager.query(
+                        `INSERT INTO worker_completed_identities (worker_key, entity_key, task_id)
+                         VALUES (?, ?, ?)
+                         ON DUPLICATE KEY UPDATE task_id = VALUES(task_id)`,
+                        [cleanAlias, cleanKey, taskId],
+                    );
+                } catch (dupErr: any) {
+                    // Unique constraint or warning
+                    this.logger.warn(`Could not insert into worker_completed_identities: ${dupErr?.message}`);
                 }
-                // If table doesn't exist yet, we log and do not crash
-                this.logger.warn(`Could not insert into worker_completed_identities: ${dupErr?.message}`);
             }
         }
     }
@@ -154,17 +156,36 @@ export class TaskCommandService {
         allIds: string[],
         targetIdentity: any,
     ) {
-        if (!targetIdentity.packageId && !targetIdentity.normalizedUrl && !targetIdentity.entityKey) return;
+        if (
+            !targetIdentity.packageId &&
+            !targetIdentity.normalizedUrl &&
+            !targetIdentity.businessNameKey &&
+            !targetIdentity.entityKey &&
+            (!targetIdentity.entityKeys || targetIdentity.entityKeys.length === 0)
+        ) {
+            return;
+        }
+
+        const cleanAliases = allIds.map((id) => (id || '').toLowerCase().trim()).filter(Boolean);
+        if (cleanAliases.length === 0) return;
+
+        const keysToCheck: string[] = targetIdentity.entityKeys && targetIdentity.entityKeys.length > 0
+            ? targetIdentity.entityKeys
+            : (targetIdentity.entityKey ? [targetIdentity.entityKey] : []);
+
+        if (targetIdentity.businessNameKey && !keysToCheck.includes(targetIdentity.businessNameKey)) {
+            keysToCheck.push(targetIdentity.businessNameKey);
+        }
 
         // 1. Check physical DB unique constraint table
-        if (targetIdentity.entityKey) {
+        if (keysToCheck.length > 0) {
             try {
                 const dupRows = await manager.query(
-                    `SELECT id FROM worker_completed_identities WHERE worker_key IN (?) AND entity_key = ? LIMIT 1`,
-                    [allIds, targetIdentity.entityKey.toLowerCase().trim()],
+                    `SELECT id, entity_key FROM worker_completed_identities WHERE worker_key IN (?) AND entity_key IN (?) LIMIT 1`,
+                    [cleanAliases, keysToCheck.map((k: string) => k.toLowerCase().trim())],
                 );
                 if (dupRows && dupRows.length > 0) {
-                    throw new BadRequestException('You have already completed or attempted a task for this app/URL.');
+                    throw new BadRequestException('You have already completed or attempted a task for this app/URL/review.');
                 }
             } catch (err: any) {
                 if (err instanceof BadRequestException) throw err;
@@ -193,17 +214,31 @@ export class TaskCommandService {
             allTasksToCheck = allTasksToCheck.concat(historicalTasks);
         }
 
+        const targetEntityKeySet = new Set(keysToCheck.map((k: string) => k.toLowerCase().trim()));
+
         const checkedTaskIds = new Set<string>();
         for (const wt of allTasksToCheck) {
             if (wt.id === task.id || checkedTaskIds.has(wt.id)) continue;
             checkedTaskIds.add(wt.id);
 
             const pastIdentity = extractTaskIdentity(wt);
-            if (targetIdentity.packageId && pastIdentity.packageId === targetIdentity.packageId) {
+            if (targetIdentity.packageId && pastIdentity.packageId && targetIdentity.packageId.toLowerCase() === pastIdentity.packageId.toLowerCase()) {
                 throw new BadRequestException('You have already completed or accepted a task for this app.');
             }
-            if (targetIdentity.normalizedUrl && pastIdentity.normalizedUrl === targetIdentity.normalizedUrl) {
+            if (targetIdentity.normalizedUrl && pastIdentity.normalizedUrl && targetIdentity.normalizedUrl.toLowerCase() === pastIdentity.normalizedUrl.toLowerCase()) {
                 throw new BadRequestException('You have already completed or accepted a task for this link/URL.');
+            }
+            if (targetIdentity.businessNameKey && pastIdentity.businessNameKey && targetIdentity.businessNameKey.toLowerCase() === pastIdentity.businessNameKey.toLowerCase()) {
+                throw new BadRequestException('You have already completed or accepted a task for this Google Business listing.');
+            }
+            if (pastIdentity.entityKeys && pastIdentity.entityKeys.length > 0) {
+                for (const pk of pastIdentity.entityKeys) {
+                    if (targetEntityKeySet.has(pk.toLowerCase().trim())) {
+                        throw new BadRequestException('You have already completed or accepted a task for this app/URL/review.');
+                    }
+                }
+            } else if (pastIdentity.entityKey && targetEntityKeySet.has(pastIdentity.entityKey.toLowerCase().trim())) {
+                throw new BadRequestException('You have already completed or accepted a task for this app/URL/review.');
             }
         }
     }
@@ -305,8 +340,11 @@ export class TaskCommandService {
                 }
 
                 // Insert into worker_completed_identities for DB-level physical unique constraint
-                if (targetIdentity.entityKey) {
-                    await this.recordWorkerCompletedIdentity(manager, allIds, targetIdentity.entityKey, task.id);
+                const keysToRecord = (targetIdentity.entityKeys && targetIdentity.entityKeys.length > 0)
+                    ? targetIdentity.entityKeys
+                    : (targetIdentity.entityKey ? [targetIdentity.entityKey] : []);
+                if (keysToRecord.length > 0) {
+                    await this.recordWorkerCompletedIdentities(manager, allIds, keysToRecord, task.id);
                 }
 
                 const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
@@ -447,8 +485,11 @@ export class TaskCommandService {
                 }
 
                 // Insert into worker_completed_identities for DB-level physical unique constraint
-                if (targetIdentity.entityKey) {
-                    await this.recordWorkerCompletedIdentity(manager, allIds, targetIdentity.entityKey, task.id);
+                const keysToRecord = (targetIdentity.entityKeys && targetIdentity.entityKeys.length > 0)
+                    ? targetIdentity.entityKeys
+                    : (targetIdentity.entityKey ? [targetIdentity.entityKey] : []);
+                if (keysToRecord.length > 0) {
+                    await this.recordWorkerCompletedIdentities(manager, allIds, keysToRecord, task.id);
                 }
 
                 const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
@@ -648,6 +689,18 @@ export class TaskCommandService {
             task.status = TaskStatus.APPROVED;
             task.completedAt = new Date();
             task.metadata = { ...(task.metadata || {}), reviewedBy: command.reviewedBy, reviewNotes: command.notes };
+
+            const targetIdentity = extractTaskIdentity(task);
+            const keysToRecord = (targetIdentity.entityKeys && targetIdentity.entityKeys.length > 0)
+                ? targetIdentity.entityKeys
+                : (targetIdentity.entityKey ? [targetIdentity.entityKey] : []);
+            if (keysToRecord.length > 0 && task.assignedTo) {
+                try {
+                    const { allIds } = await this.resolveWorkerIdentifiers(manager, task.assignedTo);
+                    await this.recordWorkerCompletedIdentities(manager, allIds, keysToRecord, task.id);
+                } catch (_) {}
+            }
+
             return manager.save(task);
         });
     }

@@ -6,8 +6,9 @@ import {
     Body,
     NotFoundException,
     BadRequestException,
+    Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { WithdrawalRepository } from '../../../../shared/database/repositories/withdrawal.repository';
 import { WorkerRepository } from '../../../../shared/database/repositories/worker.repository';
 import { UserRepository } from '../../../../shared/database/repositories/user.repository';
@@ -28,6 +29,53 @@ export class AdminPayoutManagementController {
         private readonly workerRepo: WorkerRepository,
         private readonly userRepo: UserRepository,
     ) { }
+
+    private async enrichWithdrawal(w: any) {
+        let worker = await this.workerRepo.findById(w.workerId);
+        if (!worker) {
+            worker = await this.workerRepo.findByUserId(w.workerId);
+        }
+        const userId = worker ? worker.userId : w.workerId;
+        const user = await this.userRepo.findById(userId);
+
+        const bankDetails = worker?.profile?.bankDetails;
+        let paymentMethod = w.paymentMethodId;
+        if (!paymentMethod || paymentMethod === 'DEFAULT') {
+            paymentMethod = bankDetails?.upiId ? `UPI (${bankDetails.upiId})` : 
+                            (bankDetails?.accountNumber ? `${bankDetails?.bankName || 'Bank'}: ${bankDetails.accountNumber}` : 'UPI / Bank');
+        } else if (!paymentMethod.includes(':') && !paymentMethod.includes('(') && paymentMethod.includes('@')) {
+            paymentMethod = `UPI (${paymentMethod})`;
+        }
+
+        return {
+            ...w,
+            workerId: worker?.id || w.workerId,
+            userId,
+            workerName: user?.fullName || (worker as any)?.fullName || 'Worker Account',
+            workerEmail: user?.email || '',
+            workerPhone: user?.phone || (worker as any)?.phone || '',
+            avatarUrl: user?.avatarUrl || '',
+            workerAvatarUrl: user?.avatarUrl || '',
+            paymentMethod,
+            paymentMethodId: w.paymentMethodId,
+            bankDetails: bankDetails || null,
+            transactionId: w.transactionId || null,
+            providerReference: w.providerReference || null,
+            paidAt: w.paidAt || null,
+            requestedAt: w.requestedAt || w.createdAt || null,
+            rejectionReason: w.rejectionReason || null,
+        };
+    }
+
+    @Get('stats')
+    @ApiOperation({ summary: 'Get total and status breakdown statistics of payouts' })
+    async getPayoutStats() {
+        const stats = await this.withdrawalRepo.getStats();
+        return {
+            success: true,
+            stats,
+        };
+    }
 
     @Get('config')
     @ApiOperation({ summary: 'Get global minimum withdrawal threshold configuration' })
@@ -56,44 +104,29 @@ export class AdminPayoutManagementController {
         };
     }
 
+    @Get('history')
+    @ApiOperation({ summary: 'List all paid and processed payout records' })
+    async getPayoutHistory() {
+        const withdrawals = await this.withdrawalRepo.findProcessed();
+        const enriched = await Promise.all(withdrawals.map((w) => this.enrichWithdrawal(w)));
+        return {
+            success: true,
+            withdrawals: enriched,
+            count: enriched.length,
+        };
+    }
+
+    @Get('processed')
+    @ApiOperation({ summary: 'List all processed and paid payout records' })
+    async getProcessedPayouts() {
+        return this.getPayoutHistory();
+    }
+
     @Get('pending')
     @ApiOperation({ summary: 'List pending worker withdrawal requests' })
     async getPendingPayouts() {
         const withdrawals = await this.withdrawalRepo.findPending();
-
-        const enriched = await Promise.all(
-            withdrawals.map(async (w) => {
-                let worker = await this.workerRepo.findById(w.workerId);
-                if (!worker) {
-                    worker = await this.workerRepo.findByUserId(w.workerId);
-                }
-                const userId = worker ? worker.userId : w.workerId;
-                const user = await this.userRepo.findById(userId);
-
-                const bankDetails = worker?.profile?.bankDetails;
-                let paymentMethod = w.paymentMethodId;
-                if (!paymentMethod || paymentMethod === 'DEFAULT') {
-                    paymentMethod = bankDetails?.upiId ? `UPI (${bankDetails.upiId})` : 
-                                    (bankDetails?.accountNumber ? `${bankDetails?.bankName || 'Bank'}: ${bankDetails.accountNumber}` : 'UPI / Bank');
-                } else if (!paymentMethod.includes(':') && !paymentMethod.includes('(') && paymentMethod.includes('@')) {
-                    paymentMethod = `UPI (${paymentMethod})`;
-                }
-
-                return {
-                    ...w,
-                    workerId: worker?.id || w.workerId,
-                    userId,
-                    workerName: user?.fullName || (worker as any)?.fullName || 'Worker Account',
-                    workerEmail: user?.email || '',
-                    workerPhone: user?.phone || (worker as any)?.phone || '',
-                    avatarUrl: user?.avatarUrl || '',
-                    workerAvatarUrl: user?.avatarUrl || '',
-                    paymentMethod,
-                    paymentMethodId: w.paymentMethodId,
-                    bankDetails: bankDetails || null,
-                };
-            }),
-        );
+        const enriched = await Promise.all(withdrawals.map((w) => this.enrichWithdrawal(w)));
 
         return {
             success: true,
@@ -101,6 +134,22 @@ export class AdminPayoutManagementController {
             count: enriched.length,
         };
     }
+
+    @Get('')
+    @ApiOperation({ summary: 'List all payouts with optional status filter (ALL, PENDING, PAID, REJECTED)' })
+    @ApiQuery({ name: 'status', required: false, enum: ['ALL', 'PENDING', 'PAID', 'REJECTED'] })
+    async getAllPayouts(@Query('status') status?: string) {
+        const withdrawals = await this.withdrawalRepo.findAll(status);
+        const enriched = await Promise.all(withdrawals.map((w) => this.enrichWithdrawal(w)));
+
+        return {
+            success: true,
+            withdrawals: enriched,
+            count: enriched.length,
+            status: status || 'ALL',
+        };
+    }
+
 
     @Post(':withdrawalId/process')
     @ApiOperation({ summary: 'Mark withdrawal as PAID and release reserved funds' })

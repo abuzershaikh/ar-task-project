@@ -38,6 +38,94 @@ export class WithdrawalRepository {
         });
     }
 
+    async findProcessed(): Promise<Withdrawal[]> {
+        return this.repository.find({
+            where: { status: WithdrawalStatus.PAID },
+            order: { paidAt: 'DESC', createdAt: 'DESC' },
+        });
+    }
+
+    async findAll(status?: string): Promise<Withdrawal[]> {
+        if (status && status !== 'ALL') {
+            const upperStatus = status.toUpperCase();
+            if (upperStatus === 'PENDING') {
+                return this.findPending();
+            }
+            if (upperStatus === 'PROCESSED' || upperStatus === 'PAID') {
+                return this.findProcessed();
+            }
+            return this.repository.find({
+                where: { status: upperStatus as WithdrawalStatus },
+                order: { createdAt: 'DESC' },
+            });
+        }
+        return this.repository.find({
+            order: { createdAt: 'DESC' },
+        });
+    }
+
+    async getStats(): Promise<{
+        pendingCount: number;
+        pendingAmount: number;
+        paidCount: number;
+        paidAmount: number;
+        rejectedCount: number;
+        rejectedAmount: number;
+        totalCount: number;
+        totalAmount: number;
+    }> {
+        const rows = await this.repository
+            .createQueryBuilder('w')
+            .select('w.status', 'status')
+            .addSelect('COUNT(w.id)', 'count')
+            .addSelect('COALESCE(SUM(w.amount), 0)', 'total')
+            .groupBy('w.status')
+            .getRawMany();
+
+        let pendingCount = 0;
+        let pendingAmount = 0;
+        let paidCount = 0;
+        let paidAmount = 0;
+        let rejectedCount = 0;
+        let rejectedAmount = 0;
+        let totalCount = 0;
+        let totalAmount = 0;
+
+        for (const row of rows) {
+            const count = parseInt(row.count, 10) || 0;
+            const amount = parseFloat(row.total) || 0;
+            totalCount += count;
+            totalAmount += amount;
+
+            if (row.status === WithdrawalStatus.PAID) {
+                paidCount += count;
+                paidAmount += amount;
+            } else if (
+                row.status === WithdrawalStatus.REQUESTED ||
+                row.status === WithdrawalStatus.UNDER_REVIEW ||
+                row.status === WithdrawalStatus.PROCESSING
+            ) {
+                pendingCount += count;
+                pendingAmount += amount;
+            } else if (row.status === WithdrawalStatus.REJECTED || row.status === WithdrawalStatus.FAILED) {
+                rejectedCount += count;
+                rejectedAmount += amount;
+            }
+        }
+
+        return {
+            pendingCount,
+            pendingAmount,
+            paidCount,
+            paidAmount,
+            rejectedCount,
+            rejectedAmount,
+            totalCount,
+            totalAmount,
+        };
+    }
+
+
     async getTotalWithdrawalsAmount(workerId: string | string[], statuses: WithdrawalStatus[]): Promise<number> {
         if (!statuses || statuses.length === 0) return 0;
         const ids = Array.isArray(workerId) ? workerId : [workerId];

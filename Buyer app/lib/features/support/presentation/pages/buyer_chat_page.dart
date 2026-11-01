@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -528,6 +529,29 @@ class _BuyerChatPageState extends State<BuyerChatPage> {
     );
   }
 
+  void _copyMessageText(String text) {
+    if (text.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text(
+              'Message copied to clipboard',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF4F46E5),
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   Widget _buildMessageBubble(BuyerChatMessage msg) {
     final isBuyer = msg.isBuyer;
 
@@ -561,83 +585,85 @@ class _BuyerChatPageState extends State<BuyerChatPage> {
           ],
 
           Flexible(
-            child: Container(
-              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                gradient: isBuyer
-                    ? const LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : null,
-                color: isBuyer ? null : const Color(0xFF1E293B),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isBuyer ? 16 : 4),
-                  bottomRight: Radius.circular(isBuyer ? 4 : 16),
-                ),
-                border: isBuyer
-                    ? null
-                    : Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.25)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+            child: GestureDetector(
+              onLongPress: () => _copyMessageText(msg.content),
+              child: Container(
+                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: isBuyer
+                      ? const LinearGradient(
+                          colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: isBuyer ? null : const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(16),
+                    topRight: const Radius.circular(16),
+                    bottomLeft: Radius.circular(isBuyer ? 16 : 4),
+                    bottomRight: Radius.circular(isBuyer ? 4 : 16),
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: isBuyer ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                children: [
-                  // Header Label
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        isBuyer ? 'You' : 'Admin Support',
-                        style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: isBuyer ? const Color(0xFFE0E7FF) : const Color(0xFF38BDF8),
-                        ),
-                      ),
-                      if (!isBuyer) ...[
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.all(1),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF00B4D8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.check_rounded, size: 7, color: Colors.white),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-
-                  // Message Content based on type
-                  if (msg.isYoutube)
-                    _buildYouTubeCard(msg)
-                  else if (msg.isAudio)
-                    _buildAudioCard(msg)
-                  else if (msg.isImage)
-                    _buildImageCard(msg)
-                  else
-                    Text(
-                      msg.content,
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        color: Colors.white,
-                        height: 1.35,
-                      ),
+                  border: isBuyer
+                      ? null
+                      : Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.25)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
                     ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: isBuyer ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  children: [
+                    // Header Label
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isBuyer ? 'You' : 'Admin Support',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isBuyer ? const Color(0xFFE0E7FF) : const Color(0xFF38BDF8),
+                          ),
+                        ),
+                        if (!isBuyer) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.all(1),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF00B4D8),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check_rounded, size: 7, color: Colors.white),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 6),
 
-                  const SizedBox(height: 4),
+                    // Message Content based on type
+                    if (msg.isYoutube)
+                      _buildYouTubeCard(msg)
+                    else if (msg.isAudio)
+                      _buildAudioCard(msg)
+                    else if (msg.isImage)
+                      _buildImageCard(msg)
+                    else
+                      SelectableText(
+                        msg.content,
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          color: Colors.white,
+                          height: 1.35,
+                        ),
+                      ),
+
+                    const SizedBox(height: 4),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -662,6 +688,7 @@ class _BuyerChatPageState extends State<BuyerChatPage> {
               ),
             ),
           ),
+        ),
         ],
       ),
     );

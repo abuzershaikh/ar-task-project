@@ -1,13 +1,16 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OrderRepository } from '../../../../shared/database/repositories/order.repository';
 import { TaskRepository } from '../../../../shared/database/repositories/task.repository';
 import { SubmissionRepository } from '../../../../shared/database/repositories/submission.repository';
 import { UserRepository } from '../../../../shared/database/repositories/user.repository';
 import { WorkerRepository } from '../../../../shared/database/repositories/worker.repository';
 import { ProgressEngineService } from '../../../../progress-engine/progress.service';
+import { AuditLogService } from '../../../../shared/services/audit-log.service';
 import { Roles } from '../../../../shared/auth/decorators/roles.decorator';
-import { UserRole } from '../../../../shared/database/entities/user.entity';
+import { CurrentUser } from '../../../../shared/auth/decorators/current-user.decorator';
+import { User, UserRole } from '../../../../shared/database/entities/user.entity';
 
 @ApiTags('Admin - Order Management')
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
@@ -21,12 +24,14 @@ export class AdminOrderController {
         private readonly userRepo: UserRepository,
         private readonly workerRepo: WorkerRepository,
         private readonly progressEngine: ProgressEngineService,
+        private readonly auditLogService: AuditLogService,
+        private readonly eventEmitter: EventEmitter2,
     ) { }
 
     @Get()
     @ApiOperation({ summary: 'List all orders across platform' })
     async listOrders() {
-        const orders = await this.orderRepo.findActiveOrders();
+        const orders = await this.orderRepo.findAll();
         const buyers = await this.userRepo.findByRole(UserRole.BUYER).catch(() => []);
         const allUsers = await this.userRepo.findByRole(UserRole.WORKER).then((w) => [...buyers, ...w]).catch(() => buyers);
 
@@ -36,18 +41,33 @@ export class AdminOrderController {
             if (u.firebaseUid) userMap.set(u.firebaseUid, u);
         }
 
-        const enriched = orders.map((o) => {
+        const enriched = await Promise.all(orders.map(async (o) => {
             const buyerUser = userMap.get(o.buyerId);
             const buyerName = (buyerUser as any)?.fullName || (buyerUser as any)?.name || (buyerUser?.email ? buyerUser.email.split('@')[0] : 'Direct Buyer');
             const buyerEmail = buyerUser?.email || '';
 
+            // Automatically check and sync COMPLETED status
+            let currentStatus = (o.status || 'ACTIVE').toUpperCase();
+            const totalRequired = Number(o.totalTasksRequired || 0);
+            const completedCount = Number(o.tasksCompleted || 0);
+
+            if (totalRequired > 0 && completedCount >= totalRequired && currentStatus !== 'CANCELLED' && currentStatus !== 'PAUSED') {
+                if (currentStatus !== 'COMPLETED') {
+                    currentStatus = 'COMPLETED';
+                    try {
+                        await this.orderRepo.update(o.id, { status: 'COMPLETED' });
+                    } catch (_) {}
+                }
+            }
+
             return {
                 ...o,
+                status: currentStatus,
                 buyerName,
                 buyerEmail,
                 buyerPhone: buyerUser?.phone || '',
             };
-        });
+        }));
 
         return {
             success: true,
@@ -81,10 +101,25 @@ export class AdminOrderController {
         const rejected = this.taskRepo.filterByStatus(tasks, 'rejected').length;
         const pending = this.taskRepo.filterByStatus(tasks, 'pending').length;
 
+        // Auto-check completed status
+        let currentStatus = (order.status || 'ACTIVE').toUpperCase();
+        const totalRequired = Number(order.totalTasksRequired || 0);
+        const completedCount = Math.max(Number(order.tasksCompleted || 0), approved);
+        if (totalRequired > 0 && completedCount >= totalRequired && currentStatus !== 'CANCELLED' && currentStatus !== 'PAUSED') {
+            if (currentStatus !== 'COMPLETED') {
+                currentStatus = 'COMPLETED';
+                try {
+                    await this.orderRepo.update(order.id, { status: 'COMPLETED', tasksCompleted: completedCount });
+                } catch (_) {}
+            }
+        }
+
         return {
             success: true,
             order: {
                 ...order,
+                status: currentStatus,
+                tasksCompleted: completedCount,
                 buyerName,
                 buyerEmail,
                 buyerPhone: buyerUser?.phone || '',
@@ -220,6 +255,135 @@ export class AdminOrderController {
             timeline: [
                 { status: 'CREATED', timestamp: order.createdAt },
             ],
+        };
+    }
+
+    @Post(':id/pause')
+    @ApiOperation({ summary: 'Pause campaign allocation from Admin App' })
+    async pauseOrder(
+        @Param('id') orderId: string,
+        @Body() body: any,
+        @CurrentUser() currentUser?: User,
+    ) {
+        const order = await this.orderRepo.findById(orderId);
+        if (!order) {
+            throw new NotFoundException('Campaign not found');
+        }
+
+        const previousStatus = order.status;
+        order.status = 'PAUSED';
+        await this.orderRepo.save(order);
+
+        // Record central audit log
+        try {
+            await this.auditLogService.logAction({
+                userId: currentUser?.id || 'ADMIN',
+                action: 'CAMPAIGN_PAUSED',
+                targetType: 'ORDER',
+                targetId: orderId,
+                previousValue: { status: previousStatus },
+                newValue: { status: 'PAUSED' },
+                metadata: { reason: body?.reason || 'Campaign paused by administrator' },
+            });
+        } catch (_) {}
+
+        this.eventEmitter.emit('order.paused', { orderId });
+
+        return {
+            success: true,
+            message: 'Campaign has been paused successfully',
+            orderId,
+            status: 'PAUSED',
+        };
+    }
+
+    @Post(':id/resume')
+    @ApiOperation({ summary: 'Resume paused campaign from Admin App' })
+    async resumeOrder(
+        @Param('id') orderId: string,
+        @CurrentUser() currentUser?: User,
+    ) {
+        const order = await this.orderRepo.findById(orderId);
+        if (!order) {
+            throw new NotFoundException('Campaign not found');
+        }
+
+        const previousStatus = order.status;
+        order.status = 'ACTIVE';
+        await this.orderRepo.save(order);
+
+        // Record central audit log
+        try {
+            await this.auditLogService.logAction({
+                userId: currentUser?.id || 'ADMIN',
+                action: 'CAMPAIGN_RESUMED',
+                targetType: 'ORDER',
+                targetId: orderId,
+                previousValue: { status: previousStatus },
+                newValue: { status: 'ACTIVE' },
+                metadata: { resumedAt: new Date().toISOString() },
+            });
+        } catch (_) {}
+
+        this.eventEmitter.emit('order.resumed', { orderId });
+
+        return {
+            success: true,
+            message: 'Campaign has been resumed successfully',
+            orderId,
+            status: 'ACTIVE',
+        };
+    }
+
+    @Post(':id/cancel')
+    @ApiOperation({ summary: 'Cancel campaign and refund unused budget from Admin App' })
+    async cancelOrder(
+        @Param('id') orderId: string,
+        @Body() body: { reason?: string },
+        @CurrentUser() currentUser?: User,
+    ) {
+        const order = await this.orderRepo.findById(orderId);
+        if (!order) {
+            throw new NotFoundException('Campaign not found');
+        }
+
+        const reason = body?.reason || 'Cancelled by Administrator';
+        const previousStatus = order.status;
+        order.status = 'CANCELLED';
+        await this.orderRepo.save(order);
+
+        // Cancel any pending / unassigned tasks for this order
+        try {
+            const tasks = await this.taskRepo.findByOrderId(orderId);
+            for (const t of tasks) {
+                const s = (t.status || '').toLowerCase();
+                if (s === 'active' || s === 'pending' || s === 'created' || s === 'available') {
+                    await this.taskRepo.update(t.id, { status: 'cancelled' as any });
+                }
+            }
+        } catch (_) {}
+
+        // Record central audit log
+        try {
+            await this.auditLogService.logAction({
+                userId: currentUser?.id || 'ADMIN',
+                action: 'CAMPAIGN_CANCELLED',
+                targetType: 'ORDER',
+                targetId: orderId,
+                previousValue: { status: previousStatus },
+                newValue: { status: 'CANCELLED' },
+                metadata: { reason },
+            });
+        } catch (_) {}
+
+        this.eventEmitter.emit('order.cancelled', { orderId, reason });
+
+        return {
+            success: true,
+            message: 'Campaign has been cancelled successfully',
+            orderId,
+            status: 'CANCELLED',
+            reason,
         };
     }
 }

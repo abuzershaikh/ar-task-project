@@ -153,7 +153,7 @@ class ChatService {
   /**
    * Get conversations for Admin (WhatsApp-like list)
    */
-  async getConversations({ search = '', limit = 100, offset = 0 } = {}) {
+  async getConversations({ search = '', limit = 2000, offset = 0 } = {}) {
     let query = `
       SELECT c.*, 
              COALESCE(NULLIF(NULLIF(c.worker_name, 'Worker'), ''), u.full_name, w.full_name, u.email, 'Worker') as worker_name,
@@ -180,8 +180,11 @@ class ChatService {
     `;
     const params = [];
 
+    let countQuery = `SELECT COUNT(*) as total_count FROM support_conversations c`;
+    const countParams = [];
+
     if (search && search.trim()) {
-      query += ` WHERE (
+      const searchClause = ` WHERE (
         COALESCE(NULLIF(NULLIF(c.worker_name, 'Worker'), ''), u.full_name, 'Worker') LIKE ? 
         OR u.email LIKE ? 
         OR c.worker_email LIKE ? 
@@ -189,14 +192,30 @@ class ChatService {
         OR u.phone LIKE ? 
         OR c.last_message_text LIKE ?
       )`;
+      query += searchClause;
+      countQuery += ` LEFT JOIN users u ON u.id = (
+        SELECT id FROM users 
+        WHERE id = c.worker_id OR (c.worker_email != '' AND email = c.worker_email)
+        ORDER BY CASE WHEN id = c.worker_id THEN 1 ELSE 2 END 
+        LIMIT 1
+      )` + searchClause;
+
       const term = `%${search.trim()}%`;
       params.push(term, term, term, term, term, term);
+      countParams.push(term, term, term, term, term, term);
     }
 
+    const parsedLimit = parseInt(limit, 10);
+    const parsedOffset = parseInt(offset, 10);
+    const effectiveLimit = isNaN(parsedLimit) || parsedLimit <= 0 ? 2000 : parsedLimit;
+    const effectiveOffset = isNaN(parsedOffset) || parsedOffset < 0 ? 0 : parsedOffset;
+
     query += ` ORDER BY c.last_message_at DESC LIMIT ? OFFSET ?`;
-    params.push(parseInt(limit, 10) || 100, parseInt(offset, 10) || 0);
+    params.push(effectiveLimit, effectiveOffset);
 
     const [rows] = await pool.query(query, params);
+    const [countRows] = await pool.query(countQuery, countParams);
+    const totalCount = countRows[0]?.total_count || 0;
 
     // Auto-resolve any generic 'Worker' names or missing emails via Firebase Auth
     for (const r of rows) {
@@ -242,13 +261,14 @@ class ChatService {
     }
 
     // Total unread count for admin badge
-    const [countRows] = await pool.query(
+    const [unreadRows] = await pool.query(
       'SELECT SUM(unread_admin_count) as total_unread FROM support_conversations'
     );
-    const totalUnread = countRows[0]?.total_unread || 0;
+    const totalUnread = unreadRows[0]?.total_unread || 0;
 
     return {
       conversations: rows,
+      totalCount: Number(totalCount),
       totalUnread: Number(totalUnread),
     };
   }

@@ -7,6 +7,8 @@ abstract class MoreRepository {
   Future<void> rejectKyc(String kycId, String reason);
 
   Future<List<PayoutItemModel>> getPendingPayoutsQueue();
+  Future<List<PayoutItemModel>> getPayoutsHistory();
+  Future<Map<String, dynamic>> getPayoutsStats();
   Future<void> processPayout(String payoutId);
   Future<void> rejectPayout(String payoutId, String reason);
 
@@ -33,6 +35,12 @@ class MoreRepositoryImpl implements MoreRepository {
 
   @override
   Future<List<PayoutItemModel>> getPendingPayoutsQueue() => remoteDataSource.getPendingPayoutsQueue();
+
+  @override
+  Future<List<PayoutItemModel>> getPayoutsHistory() => remoteDataSource.getPayoutsHistory();
+
+  @override
+  Future<Map<String, dynamic>> getPayoutsStats() => remoteDataSource.getPayoutsStats();
 
   @override
   Future<void> processPayout(String payoutId) => remoteDataSource.processPayout(payoutId);

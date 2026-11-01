@@ -56,6 +56,8 @@ export class GoogleMapsMetadataService {
             lower.includes('301 moved') ||
             lower.includes('moved permanently') ||
             lower.includes('redirecting') ||
+            lower.includes('dynamic link not found') ||
+            lower.includes('dynamic link') ||
             lower === 'google' ||
             lower === 'search' ||
             lower.startsWith('http://') ||

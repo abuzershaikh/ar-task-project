@@ -356,7 +356,14 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
   void _onTargetUrlChanged(String val) {
     final trimmed = val.trim();
-    final isGoogleBusiness = _isGoogleBusinessService(_selectedService);
+    final isGoogleBusiness = _isGoogleBusinessService(_selectedService) ||
+        trimmed.contains('maps.google') ||
+        trimmed.contains('google.com/maps') ||
+        trimmed.contains('maps.app.goo.gl') ||
+        trimmed.contains('goo.gl/maps') ||
+        trimmed.contains('share.google') ||
+        trimmed.contains('search.google.com') ||
+        (trimmed.contains('google.') && (trimmed.contains('/maps') || trimmed.contains('/local') || trimmed.contains('kgmid=')));
     final isPlayStore = _isPlayStoreService(_selectedService);
     final isInstagram = _isInstagramService(_selectedService) ||
         trimmed.contains('instagram.com') ||

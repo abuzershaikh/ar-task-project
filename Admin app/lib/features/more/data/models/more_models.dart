@@ -67,22 +67,32 @@ class PayoutItemModel {
   final String workerId;
   final String workerName;
   final String workerEmail;
+  final String? workerPhone;
   final String? avatarUrl;
   final double amount;
   final String paymentMethod;
   final String status;
   final DateTime? requestedAt;
+  final DateTime? paidAt;
+  final String? transactionId;
+  final String? providerReference;
+  final String? rejectionReason;
 
   PayoutItemModel({
     required this.id,
     required this.workerId,
     required this.workerName,
     this.workerEmail = '',
+    this.workerPhone,
     this.avatarUrl,
     required this.amount,
     required this.paymentMethod,
     required this.status,
     this.requestedAt,
+    this.paidAt,
+    this.transactionId,
+    this.providerReference,
+    this.rejectionReason,
   });
 
   factory PayoutItemModel.fromJson(Map<String, dynamic> json) {
@@ -106,6 +116,7 @@ class PayoutItemModel {
       workerId: workerId,
       workerName: json['workerName'] ?? 'Worker',
       workerEmail: json['workerEmail'] ?? json['email'] ?? '',
+      workerPhone: json['workerPhone']?.toString() ?? json['phone']?.toString(),
       avatarUrl: avatar,
       amount: double.tryParse(json['amount']?.toString() ?? '0.0') ?? 0.0,
       paymentMethod: json['paymentMethod'] ?? json['method'] ?? json['paymentMethodId'] ?? 'UPI / Bank',
@@ -113,6 +124,10 @@ class PayoutItemModel {
       requestedAt: json['requestedAt'] != null 
           ? DateTime.tryParse(json['requestedAt'].toString()) 
           : (json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) : null),
+      paidAt: json['paidAt'] != null ? DateTime.tryParse(json['paidAt'].toString()) : null,
+      transactionId: json['transactionId']?.toString(),
+      providerReference: json['providerReference']?.toString(),
+      rejectionReason: json['rejectionReason']?.toString(),
     );
   }
 }

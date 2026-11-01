@@ -106,6 +106,7 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     try {
       await repository.pauseOrder(event.orderId);
       add(LoadOrderDetailEvent(event.orderId));
+      add(LoadOrdersEvent());
     } catch (e) {
       if (_cachedOrders.isNotEmpty) {
         emit(OrdersLoaded(_cachedOrders));
@@ -119,6 +120,7 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     try {
       await repository.resumeOrder(event.orderId);
       add(LoadOrderDetailEvent(event.orderId));
+      add(LoadOrdersEvent());
     } catch (e) {
       if (_cachedOrders.isNotEmpty) {
         emit(OrdersLoaded(_cachedOrders));
@@ -132,6 +134,7 @@ class OrdersBloc extends Bloc<OrdersEvent, OrdersState> {
     try {
       await repository.cancelOrder(event.orderId, event.reason);
       add(LoadOrderDetailEvent(event.orderId));
+      add(LoadOrdersEvent());
     } catch (e) {
       if (_cachedOrders.isNotEmpty) {
         emit(OrdersLoaded(_cachedOrders));

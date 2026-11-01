@@ -67,14 +67,39 @@ export class TaskQueryService {
         // 2. Identify all worker identifiers (Gmail, UID, Worker profile ID)
         const allWorkerIds = await this.resolveAllWorkerIdentifiers(workerId, workerEmail);
 
-        // 3. Collect all campaignIds, taskIds, orderUnitIds, AND workerExcludedPackageIds & workerExcludedUrls
+        // 3. Collect all campaignIds, taskIds, orderUnitIds, AND workerExcludedPackageIds & workerExcludedUrls & entityKeys
         const excludedCampaignIds = new Set<string>();
         const excludedTaskIds = new Set<string>();
         const excludedOrderUnitIds = new Set<string>();
         const workerExcludedPackageIds = new Set<string>();
         const workerExcludedUrls = new Set<string>();
+        const workerExcludedBusinessNames = new Set<string>();
+        const workerExcludedEntityKeys = new Set<string>();
 
         const pastTasksMap = new Map<string, Task>();
+
+        // (0) Fetch directly from worker_completed_identities table (physical DB records)
+        if (allWorkerIds.length > 0) {
+            try {
+                const identityRows = await this.taskRepository.query(
+                    `SELECT entity_key FROM worker_completed_identities WHERE worker_key IN (?)`,
+                    [allWorkerIds.map((id) => id.toLowerCase().trim())],
+                );
+                for (const row of identityRows) {
+                    if (row.entity_key) {
+                        const key = row.entity_key.toString().toLowerCase().trim();
+                        workerExcludedEntityKeys.add(key);
+                        if (key.startsWith('pkg:')) {
+                            workerExcludedPackageIds.add(key.replace('pkg:', ''));
+                        } else if (key.startsWith('url:')) {
+                            workerExcludedUrls.add(key.replace('url:', ''));
+                        } else if (key.startsWith('gmb:name:')) {
+                            workerExcludedBusinessNames.add(key);
+                        }
+                    }
+                }
+            } catch (_) {}
+        }
 
         // (a) From campaign_worker_participation
         try {
@@ -143,18 +168,28 @@ export class TaskQueryService {
             }
         } catch (_) {}
 
-        // (e) Extract packageId and normalizedUrl from ALL past tasks worker interacted with
+        // (e) Extract packageId, normalizedUrl, businessNameKey, and entityKeys from ALL past tasks worker interacted with
         for (const pt of pastTasksMap.values()) {
             const identity = extractTaskIdentity(pt);
             if (identity.packageId) {
-                workerExcludedPackageIds.add(identity.packageId);
+                workerExcludedPackageIds.add(identity.packageId.toLowerCase().trim());
             }
             if (identity.normalizedUrl) {
-                workerExcludedUrls.add(identity.normalizedUrl);
+                workerExcludedUrls.add(identity.normalizedUrl.toLowerCase().trim());
+            }
+            if (identity.businessNameKey) {
+                workerExcludedBusinessNames.add(identity.businessNameKey.toLowerCase().trim());
+            }
+            if (identity.entityKeys && identity.entityKeys.length > 0) {
+                for (const k of identity.entityKeys) {
+                    workerExcludedEntityKeys.add(k.toLowerCase().trim());
+                }
+            } else if (identity.entityKey) {
+                workerExcludedEntityKeys.add(identity.entityKey.toLowerCase().trim());
             }
         }
 
-        // 4. Filter out any task matching excluded campaign, order, unit, taskId, OR same App/URL
+        // 4. Filter out any task matching excluded campaign, order, unit, taskId, OR same App/Business/URL
         const eligibleTasks = availableTasks.filter((task) => {
             const taskCampaign = (task.campaignId || '').toString();
             const taskOrder = (task.orderId || '').toString();
@@ -166,25 +201,36 @@ export class TaskQueryService {
             if (taskUnit && excludedOrderUnitIds.has(taskUnit)) return false;
             if (taskId && excludedTaskIds.has(taskId)) return false;
 
-            // 🔒 STRICT BUSINESS RULE:
-            // "agar user na same app ka task kia hai toh usko woh task na mila samjha ,
-            // aur youtube link instagram , ka url map url bhi same hai alaready kar chuka hai toh task na mila"
+            // 🔒 STRICT UNIQUE SYSTEM RULE:
+            // "App Reviews & Google Reviews ke Task mei Repeat Users Task karrahe hai Usme Unique System Chahiye,
+            // same link aana par repeat user ko task nahi jana chaia"
             const identity = extractTaskIdentity(task);
-            if (identity.packageId && workerExcludedPackageIds.has(identity.packageId)) {
+            if (identity.packageId && workerExcludedPackageIds.has(identity.packageId.toLowerCase().trim())) {
                 return false;
             }
-            if (identity.normalizedUrl && workerExcludedUrls.has(identity.normalizedUrl)) {
+            if (identity.normalizedUrl && workerExcludedUrls.has(identity.normalizedUrl.toLowerCase().trim())) {
+                return false;
+            }
+            if (identity.businessNameKey && workerExcludedBusinessNames.has(identity.businessNameKey.toLowerCase().trim())) {
+                return false;
+            }
+            if (identity.entityKeys && identity.entityKeys.length > 0) {
+                const hasMatch = identity.entityKeys.some((k) => workerExcludedEntityKeys.has(k.toLowerCase().trim()));
+                if (hasMatch) return false;
+            } else if (identity.entityKey && workerExcludedEntityKeys.has(identity.entityKey.toLowerCase().trim())) {
                 return false;
             }
 
             return true;
         });
 
-        // 5. DISTINCT BY CAMPAIGN/ORDER, PACKAGE ID, AND NORMALIZED URL:
-        // Exactly 1 task per campaign/order, per app package, and per URL is offered to each worker
+        // 5. DISTINCT BY CAMPAIGN/ORDER, PACKAGE ID, NORMALIZED URL, BUSINESS NAME, AND ENTITY KEYS:
+        // Guarantee exactly 1 task per campaign/order, per app package, per business, and per link is offered
         const seenCampaigns = new Set<string>();
         const seenPackageIds = new Set<string>();
         const seenUrls = new Set<string>();
+        const seenBusinessNames = new Set<string>();
+        const seenEntityKeys = new Set<string>();
         const distinctTasks: Task[] = [];
 
         for (const task of eligibleTasks) {
@@ -192,12 +238,20 @@ export class TaskQueryService {
             if (campaignKey && seenCampaigns.has(campaignKey)) continue;
 
             const identity = extractTaskIdentity(task);
-            if (identity.packageId && seenPackageIds.has(identity.packageId)) continue;
-            if (identity.normalizedUrl && seenUrls.has(identity.normalizedUrl)) continue;
+            if (identity.packageId && seenPackageIds.has(identity.packageId.toLowerCase().trim())) continue;
+            if (identity.normalizedUrl && seenUrls.has(identity.normalizedUrl.toLowerCase().trim())) continue;
+            if (identity.businessNameKey && seenBusinessNames.has(identity.businessNameKey.toLowerCase().trim())) continue;
+            if (identity.entityKeys && identity.entityKeys.some((k) => seenEntityKeys.has(k.toLowerCase().trim()))) continue;
 
             if (campaignKey) seenCampaigns.add(campaignKey);
-            if (identity.packageId) seenPackageIds.add(identity.packageId);
-            if (identity.normalizedUrl) seenUrls.add(identity.normalizedUrl);
+            if (identity.packageId) seenPackageIds.add(identity.packageId.toLowerCase().trim());
+            if (identity.normalizedUrl) seenUrls.add(identity.normalizedUrl.toLowerCase().trim());
+            if (identity.businessNameKey) seenBusinessNames.add(identity.businessNameKey.toLowerCase().trim());
+            if (identity.entityKeys) {
+                for (const k of identity.entityKeys) {
+                    seenEntityKeys.add(k.toLowerCase().trim());
+                }
+            }
 
             distinctTasks.push(task);
         }
@@ -213,14 +267,43 @@ export class TaskQueryService {
     }
 
     /**
-     * Resolves all packageIds and normalizedUrls a worker has ever interacted with.
+     * Resolves all packageIds, normalizedUrls, businessNameKeys, and entityKeys a worker has ever interacted with.
      * Used by Notification Engine to suppress notifications for already completed apps and links.
      */
-    async getWorkerExcludedEntities(workerId: string, workerEmail?: string): Promise<{ packageIds: Set<string>; normalizedUrls: Set<string> }> {
+    async getWorkerExcludedEntities(
+        workerId: string,
+        workerEmail?: string,
+    ): Promise<{
+        packageIds: Set<string>;
+        normalizedUrls: Set<string>;
+        businessNameKeys: Set<string>;
+        entityKeys: Set<string>;
+    }> {
         const allWorkerIds = await this.resolveAllWorkerIdentifiers(workerId, workerEmail);
         const packageIds = new Set<string>();
         const normalizedUrls = new Set<string>();
+        const businessNameKeys = new Set<string>();
+        const entityKeys = new Set<string>();
         const pastTasksMap = new Map<string, Task>();
+
+        // (0) Fetch directly from worker_completed_identities table
+        if (allWorkerIds.length > 0) {
+            try {
+                const rows = await this.taskRepository.query(
+                    `SELECT entity_key FROM worker_completed_identities WHERE worker_key IN (?)`,
+                    [allWorkerIds.map((id) => id.toLowerCase().trim())],
+                );
+                for (const r of rows) {
+                    if (r.entity_key) {
+                        const key = r.entity_key.toString().toLowerCase().trim();
+                        entityKeys.add(key);
+                        if (key.startsWith('pkg:')) packageIds.add(key.replace('pkg:', ''));
+                        else if (key.startsWith('url:')) normalizedUrls.add(key.replace('url:', ''));
+                        else if (key.startsWith('gmb:name:')) businessNameKeys.add(key);
+                    }
+                }
+            } catch (_) {}
+        }
 
         try {
             const workerTasks = await this.taskRepository.findByWorker(allWorkerIds);
@@ -256,11 +339,19 @@ export class TaskQueryService {
 
         for (const t of pastTasksMap.values()) {
             const identity = extractTaskIdentity(t);
-            if (identity.packageId) packageIds.add(identity.packageId);
-            if (identity.normalizedUrl) normalizedUrls.add(identity.normalizedUrl);
+            if (identity.packageId) packageIds.add(identity.packageId.toLowerCase().trim());
+            if (identity.normalizedUrl) normalizedUrls.add(identity.normalizedUrl.toLowerCase().trim());
+            if (identity.businessNameKey) businessNameKeys.add(identity.businessNameKey.toLowerCase().trim());
+            if (identity.entityKeys && identity.entityKeys.length > 0) {
+                for (const k of identity.entityKeys) {
+                    entityKeys.add(k.toLowerCase().trim());
+                }
+            } else if (identity.entityKey) {
+                entityKeys.add(identity.entityKey.toLowerCase().trim());
+            }
         }
 
-        return { packageIds, normalizedUrls };
+        return { packageIds, normalizedUrls, businessNameKeys, entityKeys };
     }
 
     async getWorkerTasks(workerId: string, status?: string, workerEmail?: string): Promise<Task[]> {

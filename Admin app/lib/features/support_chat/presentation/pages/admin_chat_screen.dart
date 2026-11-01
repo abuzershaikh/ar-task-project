@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -233,6 +234,54 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
     setState(() {
       _selectedMessageIds.addAll(_messages.map((m) => m.id));
     });
+  }
+
+  void _copySelectedMessages() {
+    if (_selectedMessageIds.isEmpty) return;
+    final selected = _messages.where((m) => _selectedMessageIds.contains(m.id)).toList();
+    final text = selected.map((m) => m.content).where((c) => c.isNotEmpty).join('\n');
+    if (text.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: text));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                selected.length > 1
+                    ? '${selected.length} messages copied to clipboard'
+                    : 'Message copied to clipboard',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF00875A),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+    _exitSelectionMode();
+  }
+
+  void _copySingleMessage(String text) {
+    if (text.isEmpty) return;
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text('Message copied to clipboard', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        backgroundColor: Color(0xFF00875A),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   // ── Delete Selected Messages ───────────────────────────────────────────────
@@ -1016,6 +1065,12 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
             }
           },
         ),
+        // Copy Selected
+        IconButton(
+          icon: const Icon(Icons.copy_rounded, color: Colors.white, size: 22),
+          tooltip: 'Copy Selected',
+          onPressed: _selectedMessageIds.isEmpty ? null : _copySelectedMessages,
+        ),
         // Delete Selected
         _isDeleting
             ? const Padding(
@@ -1081,6 +1136,7 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
           _enterSelectionMode(msg.id);
         }
       },
+      onDoubleTap: () => _copySingleMessage(msg.content),
       onTap: _isSelectionMode ? () => _toggleMessageSelection(msg.id) : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -1151,7 +1207,7 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
                       else if (msg.isImage)
                         _buildImageBubble(msg)
                       else
-                        Text(
+                        SelectableText(
                           msg.content,
                           style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A), height: 1.3),
                         ),

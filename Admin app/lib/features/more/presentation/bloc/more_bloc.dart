@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/repositories/more_repository.dart';
 import '../../data/models/more_models.dart';
@@ -39,7 +40,9 @@ class KycQueueLoaded extends MoreState {
 
 class PayoutsQueueLoaded extends MoreState {
   final List<PayoutItemModel> items;
-  PayoutsQueueLoaded(this.items);
+  final List<PayoutItemModel> historyItems;
+  final Map<String, dynamic> stats;
+  PayoutsQueueLoaded(this.items, {this.historyItems = const [], this.stats = const {}});
 }
 
 class ReviewsQueueLoaded extends MoreState {
@@ -94,7 +97,15 @@ class MoreBloc extends Bloc<MoreEvent, MoreState> {
     emit(MoreLoading());
     try {
       final items = await repository.getPendingPayoutsQueue();
-      emit(PayoutsQueueLoaded(items));
+      List<PayoutItemModel> history = [];
+      Map<String, dynamic> stats = {};
+      try {
+        history = await repository.getPayoutsHistory();
+        stats = await repository.getPayoutsStats();
+      } catch (err) {
+        debugPrint('Error loading payouts history/stats: $err');
+      }
+      emit(PayoutsQueueLoaded(items, historyItems: history, stats: stats));
     } catch (e) {
       emit(MoreError(e.toString()));
     }

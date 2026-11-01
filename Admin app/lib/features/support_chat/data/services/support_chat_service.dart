@@ -146,10 +146,14 @@ class SupportChatService {
   }
 
   /// Fetch WhatsApp-like conversations list
-  Future<Map<String, dynamic>> getConversations({String search = '', int limit = 200}) async {
+  Future<Map<String, dynamic>> getConversations({
+    String search = '',
+    int limit = 1000,
+    int offset = 0,
+  }) async {
     try {
-      final uri = Uri.parse('$_apiBase/conversations?search=${Uri.encodeComponent(search)}&limit=$limit');
-      final res = await http.get(uri).timeout(const Duration(seconds: 8));
+      final uri = Uri.parse('$_apiBase/conversations?search=${Uri.encodeComponent(search)}&limit=$limit&offset=$offset');
+      final res = await http.get(uri).timeout(const Duration(seconds: 15));
 
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -157,16 +161,18 @@ class SupportChatService {
           final List rawList = body['data']['conversations'] ?? [];
           final convs = rawList.map((j) => SupportConversationModel.fromJson(j)).toList();
           final totalUnread = body['data']['totalUnread'] ?? 0;
+          final totalCount = (body['data']['totalCount'] as num?)?.toInt() ?? convs.length;
           return {
             'conversations': convs,
             'totalUnread': totalUnread,
+            'totalCount': totalCount,
           };
         }
       }
     } catch (e) {
       debugPrint('[AdminChatService] getConversations error: $e');
     }
-    return {'conversations': <SupportConversationModel>[], 'totalUnread': 0};
+    return {'conversations': <SupportConversationModel>[], 'totalUnread': 0, 'totalCount': 0};
   }
 
   /// Fetch messages for a conversation

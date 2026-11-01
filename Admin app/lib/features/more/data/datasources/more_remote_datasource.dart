@@ -8,6 +8,8 @@ abstract class MoreRemoteDataSource {
   Future<void> rejectKyc(String kycId, String reason);
 
   Future<List<PayoutItemModel>> getPendingPayoutsQueue();
+  Future<List<PayoutItemModel>> getPayoutsHistory();
+  Future<Map<String, dynamic>> getPayoutsStats();
   Future<void> processPayout(String payoutId);
   Future<void> rejectPayout(String payoutId, String reason);
 
@@ -46,11 +48,27 @@ class MoreRemoteDataSourceImpl implements MoreRemoteDataSource {
   @override
   Future<List<PayoutItemModel>> getPendingPayoutsQueue() async {
     final response = await _dioClient.get(
-      ApiEndpoints.payouts,
+      ApiEndpoints.payoutsPending,
       queryParameters: {'page': 1, 'limit': 50},
     );
     final list = (response.data['withdrawals'] ?? response.data['data'] ?? []) as List;
     return list.map((e) => PayoutItemModel.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  @override
+  Future<List<PayoutItemModel>> getPayoutsHistory() async {
+    final response = await _dioClient.get(
+      ApiEndpoints.payoutsHistory,
+      queryParameters: {'page': 1, 'limit': 100},
+    );
+    final list = (response.data['withdrawals'] ?? response.data['data'] ?? []) as List;
+    return list.map((e) => PayoutItemModel.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getPayoutsStats() async {
+    final response = await _dioClient.get(ApiEndpoints.payoutsStats);
+    return Map<String, dynamic>.from(response.data['stats'] ?? {});
   }
 
   @override

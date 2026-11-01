@@ -26,10 +26,14 @@ class AdminChatListScreen extends StatefulWidget {
 class _AdminChatListScreenState extends State<AdminChatListScreen> {
   final _chatService = SupportChatService.instance;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   List<SupportConversationModel> _conversations = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = false;
   int _totalUnread = 0;
+  int _totalChatsInDb = 0;
   ChatFilter _selectedFilter = ChatFilter.all;
 
   bool _isToday(DateTime dt) {
@@ -86,6 +90,7 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _chatService.initSocket();
     _loadConversations();
 
@@ -127,6 +132,8 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _msgSub?.cancel();
     _convSub?.cancel();
     _readSub?.cancel();
@@ -134,6 +141,13 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
     _allConvDelSub?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients &&
+        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 250) {
+      _loadMoreConversations();
+    }
   }
 
   void _enterSelectionMode(String convId) {
@@ -334,13 +348,47 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
 
     final res = await _chatService.getConversations(
       search: _searchController.text.trim(),
+      limit: 1000,
+      offset: 0,
     );
 
     if (mounted) {
+      final convs = (res['conversations'] as List<SupportConversationModel>?) ?? [];
+      final totalCount = (res['totalCount'] as int?) ?? convs.length;
       setState(() {
-        _conversations = (res['conversations'] as List<SupportConversationModel>?) ?? [];
+        _conversations = convs;
         _totalUnread = (res['totalUnread'] as int?) ?? 0;
+        _totalChatsInDb = totalCount;
+        _hasMore = convs.length < totalCount;
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreConversations() async {
+    if (_isLoadingMore || !_hasMore || _isLoading) return;
+    setState(() => _isLoadingMore = true);
+
+    final res = await _chatService.getConversations(
+      search: _searchController.text.trim(),
+      limit: 500,
+      offset: _conversations.length,
+    );
+
+    if (mounted) {
+      final newConvs = (res['conversations'] as List<SupportConversationModel>?) ?? [];
+      final totalCount = (res['totalCount'] as int?) ?? _totalChatsInDb;
+      setState(() {
+        final existingIds = _conversations.map((c) => c.id).toSet();
+        for (final c in newConvs) {
+          if (!existingIds.contains(c.id)) {
+            _conversations.add(c);
+            existingIds.add(c.id);
+          }
+        }
+        _totalChatsInDb = totalCount;
+        _hasMore = _conversations.length < totalCount && newConvs.isNotEmpty;
+        _isLoadingMore = false;
       });
     }
   }
@@ -380,13 +428,26 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
                   : RefreshIndicator(
                       onRefresh: () => _loadConversations(),
                       child: ListView.separated(
-                        itemCount: displayList.length,
+                        controller: _scrollController,
+                        itemCount: displayList.length + (_isLoadingMore ? 1 : 0),
                         separatorBuilder: (_, __) => const Divider(
                           height: 1,
                           indent: 74,
                           color: Color(0xFFE2E8F0),
                         ),
                         itemBuilder: (context, index) {
+                          if (index == displayList.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 20),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00875A)),
+                                ),
+                              ),
+                            );
+                          }
                           final conv = displayList[index];
                           return _buildConversationTile(conv);
                         },
@@ -616,7 +677,7 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
       return c.unreadAdminCount > 0 || c.totalTasksCompleted == 0 || isRecent;
     }).length;
     final todayCount = _conversations.where((c) => _isToday(c.lastMessageAt)).length;
-    final allCount = _conversations.length;
+    final allCount = _totalChatsInDb > _conversations.length ? _totalChatsInDb : _conversations.length;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,

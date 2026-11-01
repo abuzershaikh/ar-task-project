@@ -33,24 +33,36 @@ export class WorkerNotificationController {
         notif: any,
         excludedPackageIds: Set<string>,
         excludedUrls: Set<string>,
+        excludedBusinessNames: Set<string>,
+        excludedEntityKeys: Set<string>,
     ): boolean {
         const data = notif.data || {};
         const packageId = data.packageId;
         const normalizedUrl = data.normalizedUrl;
         const targetUrl = data.targetUrl || data.url;
 
-        if (packageId && excludedPackageIds.has(packageId.toLowerCase())) {
+        if (packageId && excludedPackageIds.has(packageId.toLowerCase().trim())) {
             return true;
         }
-        if (normalizedUrl && excludedUrls.has(normalizedUrl)) {
+        if (normalizedUrl && excludedUrls.has(normalizedUrl.toLowerCase().trim())) {
             return true;
         }
-        if (targetUrl || packageId) {
+        if (targetUrl || packageId || data.businessName || data.appName) {
             const identity = extractTaskIdentity(data);
-            if (identity.packageId && excludedPackageIds.has(identity.packageId.toLowerCase())) {
+            if (identity.packageId && excludedPackageIds.has(identity.packageId.toLowerCase().trim())) {
                 return true;
             }
-            if (identity.normalizedUrl && excludedUrls.has(identity.normalizedUrl)) {
+            if (identity.normalizedUrl && excludedUrls.has(identity.normalizedUrl.toLowerCase().trim())) {
+                return true;
+            }
+            if (identity.businessNameKey && excludedBusinessNames.has(identity.businessNameKey.toLowerCase().trim())) {
+                return true;
+            }
+            if (identity.entityKeys && identity.entityKeys.length > 0) {
+                if (identity.entityKeys.some((k) => excludedEntityKeys.has(k.toLowerCase().trim()))) {
+                    return true;
+                }
+            } else if (identity.entityKey && excludedEntityKeys.has(identity.entityKey.toLowerCase().trim())) {
                 return true;
             }
         }
@@ -61,10 +73,11 @@ export class WorkerNotificationController {
     @ApiOperation({ summary: 'Get worker notifications' })
     async getNotifications(@CurrentUser() user: User) {
         const notifications = await this.notificationRepo.findByUserId(user.id);
-        const { packageIds, normalizedUrls } = await this.taskEngine.getWorkerExcludedEntities(user.id, user.email);
+        const { packageIds, normalizedUrls, businessNameKeys, entityKeys } =
+            await this.taskEngine.getWorkerExcludedEntities(user.id, user.email);
 
         const filteredNotifications = notifications.filter(
-            (notif) => !this.isNotificationExcluded(notif, packageIds, normalizedUrls),
+            (notif) => !this.isNotificationExcluded(notif, packageIds, normalizedUrls, businessNameKeys, entityKeys),
         );
 
         return {
@@ -78,10 +91,11 @@ export class WorkerNotificationController {
     @ApiOperation({ summary: 'Get unread notification count' })
     async getUnreadCount(@CurrentUser() user: User) {
         const notifications = await this.notificationRepo.findByUserId(user.id, 100);
-        const { packageIds, normalizedUrls } = await this.taskEngine.getWorkerExcludedEntities(user.id, user.email);
+        const { packageIds, normalizedUrls, businessNameKeys, entityKeys } =
+            await this.taskEngine.getWorkerExcludedEntities(user.id, user.email);
 
         const count = notifications.filter(
-            (notif) => !notif.isRead && !this.isNotificationExcluded(notif, packageIds, normalizedUrls),
+            (notif) => !notif.isRead && !this.isNotificationExcluded(notif, packageIds, normalizedUrls, businessNameKeys, entityKeys),
         ).length;
 
         return {

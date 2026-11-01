@@ -2037,8 +2037,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 12),
 
-          // Campaigns List
-          ...campaigns.take(3).map((c) {
+          // Campaigns List (Latest campaigns on top)
+          ...(() {
+            final sorted = List<CampaignSummary>.from(campaigns)
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return sorted.take(3);
+          })().map((c) {
             final progress =
                 c.totalTasks > 0 ? c.completedTasks / c.totalTasks : 0.0;
             return Container(
