@@ -1,4 +1,4 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Header, Param, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ServiceCatalogService } from '../../../../shared/modules/service-catalog/services/service-catalog.service';
 import { ServicePricingService } from '../../../../shared/modules/service-catalog/services/service-pricing.service';
@@ -16,6 +16,7 @@ export class BuyerServiceCatalogController {
     ) { }
 
     @Get()
+    @Header('Cache-Control', 'no-store')
     @ApiOperation({ summary: 'List all active services in catalog available for purchase' })
     async listActiveServices() {
         const services = await this.serviceCatalogService.getActiveServices();
@@ -119,6 +120,7 @@ export class BuyerServiceCatalogController {
     }
 
     @Get(':id')
+    @Header('Cache-Control', 'no-store')
     @ApiOperation({ summary: 'Get specific service details and dynamic elements schema' })
     async getServiceDetails(@Param('id') id: string) {
         let service;

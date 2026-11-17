@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -17,8 +18,44 @@ class MyTasksScreen extends StatefulWidget {
   State<MyTasksScreen> createState() => _MyTasksScreenState();
 }
 
-class _MyTasksScreenState extends State<MyTasksScreen> {
+class _MyTasksScreenState extends State<MyTasksScreen> with WidgetsBindingObserver {
   int _currentStageIndex = 0;
+  Timer? _refreshTimer;
+  bool _refreshing = false;
+
+  Future<void> _refreshCurrentStage() async {
+    if (!mounted || _refreshing || ModalRoute.of(context)?.isCurrent == false) return;
+    _refreshing = true;
+    try {
+      await Provider.of<TaskProvider>(context, listen: false).fetchMyTasks(
+        AppConstants.myTaskStages[_currentStageIndex], forceRefresh: true, silent: true,
+      );
+    } finally {
+      _refreshing = false;
+    }
+  }
+
+  void _startRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) => _refreshCurrentStage());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshCurrentStage();
+      _startRefresh();
+    } else {
+      _refreshTimer?.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
 
   final List<Map<String, dynamic>> _stageMeta = [
     {
@@ -46,6 +83,8 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startRefresh();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadStage(0);
       Provider.of<TaskProvider>(context, listen: false).fetchWalletData();

@@ -15,6 +15,7 @@ export interface TaskReleaseRequest {
     campaignId: string;
     reason: ReleaseReason;
     details?: string;
+    expectedDeadline?: Date;
 }
 
 export interface PostDeadlineEvaluation {

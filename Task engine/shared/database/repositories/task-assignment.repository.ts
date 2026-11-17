@@ -30,8 +30,12 @@ export class TaskAssignmentRepository {
     }
 
     async createAssignment(data: Partial<TaskAssignment>): Promise<TaskAssignment> {
-        const attempts = await this.findByTaskId(data.taskId!);
-        const attemptNumber = attempts.length + 1;
+        const maxRow = await this.repository.query(
+            'SELECT COALESCE(MAX(attempt_number), 0) AS max_attempt FROM task_assignments WHERE task_id = ?',
+            [data.taskId],
+        );
+        const maxAttempt = Number(maxRow?.[0]?.max_attempt || 0);
+        const attemptNumber = maxAttempt + 1;
 
         const assignment = this.repository.create({
             ...data,

@@ -240,7 +240,8 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
   }
 
   Future<void> _toggleAudioPlay(WorkerSupportMessage msg) async {
-    if (msg.mediaUrl == null) return;
+    final audioUrl = msg.effectiveAudioUrl;
+    if (audioUrl == null || audioUrl.isEmpty) return;
 
     if (_currentlyPlayingId == msg.id && _playerState == PlayerState.playing) {
       await _audioPlayer.pause();
@@ -249,12 +250,12 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
       await _audioPlayer.stop();
 
       // Check local disk cache first!
-      final localFile = await _mediaCache.getOrDownloadMedia(msg.mediaUrl!);
+      final localFile = await _mediaCache.getOrDownloadMedia(audioUrl);
       if (localFile != null && await localFile.exists()) {
         debugPrint('[AudioPlayer] Playing from local disk cache: ${localFile.path}');
         await _audioPlayer.play(DeviceFileSource(localFile.path));
       } else {
-        await _audioPlayer.play(UrlSource(msg.mediaUrl!));
+        await _audioPlayer.play(UrlSource(audioUrl));
       }
     }
   }
@@ -645,6 +646,8 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
                       _buildAudioCard(msg)
                     else if (msg.isImage)
                       _buildImageCard(msg)
+                    else if (msg.hasWebLink)
+                      _buildWebLinkCard(msg)
                     else
                       SelectableText(
                         msg.content,
@@ -724,13 +727,28 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
 
   // ── YouTube Bubble with Thumbnail & Inline Playback ────────────────────────
   Widget _buildYouTubeCard(WorkerSupportMessage msg) {
-    final ytId = msg.youtubeId;
+    final ytId = msg.effectiveYoutubeId;
     final thumb = msg.youtubeThumbnailUrl;
-    final url = msg.content;
+    final linkUrl = msg.effectiveWebUrl ?? (ytId != null ? 'https://www.youtube.com/watch?v=$ytId' : msg.content);
+    final headerText = msg.textWithoutLink;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // 1. Text announcement / instructions (if present)
+        if (headerText.isNotEmpty) ...[
+          SelectableText(
+            headerText,
+            style: const TextStyle(
+              fontSize: 14.5,
+              color: Color(0xFFE9EDEF), // WhatsApp Crisp Text
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+
+        // 2. Rich YouTube Thumbnail Card
         if (thumb != null && ytId != null)
           GestureDetector(
             onTap: () => _playYoutubeInline(ytId),
@@ -742,10 +760,10 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
                   Image.network(
                     thumb,
                     width: double.infinity,
-                    height: 145,
+                    height: 155,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
-                      height: 145,
+                      height: 155,
                       color: const Color(0xFF1E293B),
                       child: const Center(
                         child: Icon(Icons.play_circle_outline_rounded, color: Colors.white54, size: 48),
@@ -784,18 +802,41 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
               ),
             ),
           ),
-        const SizedBox(height: 6),
+
+        const SizedBox(height: 8),
+
+        // 3. Clickable link button
         InkWell(
           onTap: () async {
-            final uri = Uri.parse(url);
-            if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+            final uri = Uri.tryParse(linkUrl);
+            if (uri != null && await canLaunchUrl(uri)) {
+              launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
           },
-          child: Text(
-            url,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF38BDF8),
-              decoration: TextDecoration.underline,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.open_in_new_rounded, size: 14, color: Color(0xFF38BDF8)),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    linkUrl,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF38BDF8),
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -803,71 +844,125 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
     );
   }
 
-  // ── Voice Audio Player Card with Local Cache Integration ───────────────────
+  // ── Web Link Card (Modern Rich Preview) ───────────────────────────────────
+  Widget _buildWebLinkCard(WorkerSupportMessage msg) {
+    final linkUrl = msg.effectiveWebUrl ?? '';
+    final headerText = msg.textWithoutLink;
+    String host = '';
+    try {
+      final uri = Uri.parse(linkUrl);
+      host = uri.host;
+    } catch (_) {}
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (headerText.isNotEmpty) ...[
+          SelectableText(
+            headerText,
+            style: const TextStyle(
+              fontSize: 14.5,
+              color: Color(0xFFE9EDEF),
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        InkWell(
+          onTap: () async {
+            final uri = Uri.tryParse(linkUrl);
+            if (uri != null && await canLaunchUrl(uri)) {
+              launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF182229),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF2A3942)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00A884).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.link_rounded, color: Color(0xFF00A884), size: 22),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (host.isNotEmpty)
+                        Text(
+                          host,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF53BDEB),
+                          ),
+                        ),
+                      Text(
+                        linkUrl,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF8696A0),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.arrow_outward_rounded, color: Color(0xFF53BDEB), size: 18),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatAudioTime(Duration d) {
+    final mins = d.inMinutes.remainder(60).toString();
+    final secs = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$mins:$secs';
+  }
+
+  // ── Voice / MP3 Audio Player Card with Local Cache Integration ─────────────
   Widget _buildAudioCard(WorkerSupportMessage msg) {
-    final isPlaying = _currentlyPlayingId == msg.id && _playerState == PlayerState.playing;
-    final hasCaption = msg.content.trim().isNotEmpty && msg.content.trim() != 'Voice Note';
+    final isCurrent = _currentlyPlayingId == msg.id;
+    final isPlaying = isCurrent && _playerState == PlayerState.playing;
+    final caption = msg.textWithoutLink;
+    final hasCaption = caption.isNotEmpty && caption != 'Voice Note';
+    final totalSecs = msg.durationSeconds > 0
+        ? msg.durationSeconds
+        : (isCurrent ? _totalDuration.inSeconds : 0);
+    final durationLabel = isPlaying && _totalDuration.inMilliseconds > 0
+        ? '${_formatAudioTime(_currentPosition)} / ${_formatAudioTime(_totalDuration)}'
+        : (totalSecs > 0 ? '${totalSecs}s' : 'Tap to play');
+    final progress = (isCurrent && _totalDuration.inMilliseconds > 0)
+        ? (_currentPosition.inMilliseconds / _totalDuration.inMilliseconds).clamp(0.0, 1.0)
+        : 0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(
-                  isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_filled_rounded,
-                  size: 38,
-                  color: const Color(0xFF00E676),
-                ),
-                onPressed: () => _toggleAudioPlay(msg),
-              ),
-              const SizedBox(width: 6),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.mic_rounded, size: 14, color: Color(0xFF00E676)),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Voice Note (${msg.durationSeconds}s)',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: 140,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white12,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: isPlaying
-                        ? LinearProgressIndicator(
-                            value: _totalDuration.inMilliseconds > 0
-                                ? _currentPosition.inMilliseconds / _totalDuration.inMilliseconds
-                                : 0,
-                            color: const Color(0xFF00E676),
-                            backgroundColor: Colors.white12,
-                          )
-                        : null,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
         if (hasCaption) ...[
-          const SizedBox(height: 4),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            child: Text(
-              msg.content.trim(),
+            padding: const EdgeInsets.only(bottom: 6),
+            child: SelectableText(
+              caption,
               style: const TextStyle(
                 fontSize: 14,
                 color: Color(0xFFE9EDEF),
@@ -876,6 +971,83 @@ class _WorkerSupportChatScreenState extends State<WorkerSupportChatScreen>
             ),
           ),
         ],
+        InkWell(
+          onTap: () => _toggleAudioPlay(msg),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF182229),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF2A3942)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00A884).withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    size: 26,
+                    color: const Color(0xFF00E676),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.graphic_eq_rounded, size: 15, color: Color(0xFF00E676)),
+                          const SizedBox(width: 5),
+                          Text(
+                            msg.messageType == 'AUDIO' || msg.messageType == 'VOICE'
+                                ? 'Voice Note'
+                                : 'Audio / MP3',
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            durationLabel,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF8696A0),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        width: 150,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: isCurrent ? progress : 0,
+                            minHeight: 4,
+                            color: const Color(0xFF00E676),
+                            backgroundColor: Colors.white12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

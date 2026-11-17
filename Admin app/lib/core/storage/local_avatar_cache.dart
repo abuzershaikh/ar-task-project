@@ -129,6 +129,11 @@ class LocalAvatarCache {
     }
   }
 
+  static Future<void> removeAvatar(String id) async {
+    _memoryCache.remove(id);
+    await _db?.delete('avatar_cache', where: 'user_id = ?', whereArgs: [id]);
+  }
+
   /// Clear all cached avatars (e.g. on logout or database clear).
   static Future<void> clearAll() async {
     _memoryCache.clear();

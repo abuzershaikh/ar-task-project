@@ -5,6 +5,9 @@ import '../bloc/service_builder_event.dart';
 import '../bloc/service_builder_state.dart';
 import 'service_builder_screen.dart';
 import 'task_expiry_settings_screen.dart';
+import '../../../../core/di/injection.dart';
+import '../../../../core/network/dio_client.dart';
+import '../../domain/models/service_model.dart';
 
 class ServicesListScreen extends StatefulWidget {
   const ServicesListScreen({super.key});
@@ -16,6 +19,36 @@ class ServicesListScreen extends StatefulWidget {
 class _ServicesListScreenState extends State<ServicesListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedFilter = 'All';
+  final Set<String> _updatingServices = {};
+  final Map<String, bool> _confirmedStatus = {};
+
+  Future<void> _setServiceActive(ServiceModel service, bool active) async {
+    setState(() => _updatingServices.add(service.id));
+    try {
+      final response = await getIt<DioClient>().patch(
+        '/admin/services/${service.id}/status',
+        data: {'isActive': active},
+      );
+      if (response.data['success'] != true ||
+          response.data['service']?['isActive'] != active) {
+        throw StateError('Server did not confirm the service status');
+      }
+      if (!mounted) return;
+      setState(() => _confirmedStatus[service.id] = active);
+      context.read<ServiceBuilderBloc>().add(LoadServicesEvent());
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${service.name}: ${active ? "Active — visible to buyers" : "Inactive — hidden from buyers"}'),
+      ));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Could not update service: $error'),
+        backgroundColor: Colors.red,
+      ));
+    } finally {
+      if (mounted) setState(() => _updatingServices.remove(service.id));
+    }
+  }
 
   // Professional Blue Theme Colors
   static const Color primaryBlue = Color(0xFF1E40AF); // Deep Royal Blue
@@ -362,6 +395,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
       ),
       body: BlocListener<ServiceBuilderBloc, ServiceBuilderState>(
         listener: (context, state) {
+          if (state is ServiceCatalogLoaded) _confirmedStatus.clear();
           if (state is ServiceDeletedState) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -735,7 +769,7 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                                                 ),
                                               ),
                                               child: Text(
-                                                service.isActive ? 'ACTIVE' : 'DRAFT',
+                                                (_confirmedStatus[service.id] ?? service.isActive) ? 'ACTIVE' : 'INACTIVE',
                                                 style: TextStyle(
                                                   color: service.isActive
                                                       ? const Color(0xFF059669)
@@ -750,6 +784,15 @@ class _ServicesListScreenState extends State<ServicesListScreen> {
                                         ),
                                         const SizedBox(height: 12),
 
+                                        SwitchListTile.adaptive(
+                                          contentPadding: EdgeInsets.zero,
+                                          title: const Text('Available in Buyer App'),
+                                          subtitle: const Text('Inactive services are hidden from buyers'),
+                                          value: _confirmedStatus[service.id] ?? service.isActive,
+                                          onChanged: _updatingServices.contains(service.id)
+                                              ? null
+                                              : (active) => _setServiceActive(service, active),
+                                        ),
                                         // Pricing Pills Row
                                         Wrap(
                                           spacing: 6,

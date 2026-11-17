@@ -1,6 +1,21 @@
 const admin = require('../config/firebase');
 const { pool } = require('../config/db');
 
+function formatNotificationBody(messageData, fallback) {
+  const rawContent = (messageData.content || '').trim();
+  const type = (messageData.message_type || 'TEXT').toUpperCase();
+  if (type === 'YOUTUBE') {
+    return rawContent ? `📹 ${rawContent}` : '📹 Sent a video link';
+  }
+  if (type === 'AUDIO') {
+    return (rawContent && rawContent !== 'Voice Note') ? `🎙️ ${rawContent}` : '🎙️ Sent a voice audio message';
+  }
+  if (type === 'IMAGE') {
+    return (rawContent && rawContent !== 'Photo') ? `📷 ${rawContent}` : '📷 Sent an image';
+  }
+  return rawContent || fallback;
+}
+
 /**
  * Sends FCM push notification to a specific worker
  */
@@ -27,14 +42,7 @@ async function sendWorkerChatNotification(workerId, messageData) {
       } catch (_) {}
     }
 
-    let bodyText = messageData.content || 'New message from Support Team';
-    if (messageData.message_type === 'YOUTUBE') {
-      bodyText = '📹 Sent a video link';
-    } else if (messageData.message_type === 'AUDIO') {
-      bodyText = '🎙️ Sent a voice audio message';
-    } else if (messageData.message_type === 'IMAGE') {
-      bodyText = '📷 Sent an image';
-    }
+    const bodyText = formatNotificationBody(messageData, 'New message from Support Team');
 
     const payload = {
       data: {
@@ -115,14 +123,7 @@ async function sendBuyerChatNotification(buyerId, messageData) {
       } catch (_) {}
     }
 
-    let bodyText = messageData.content || 'New message from Support Desk';
-    if (messageData.message_type === 'YOUTUBE') {
-      bodyText = '📹 Sent a video link';
-    } else if (messageData.message_type === 'AUDIO') {
-      bodyText = '🎙️ Sent a voice audio message';
-    } else if (messageData.message_type === 'IMAGE') {
-      bodyText = '📷 Sent an image';
-    }
+    const bodyText = formatNotificationBody(messageData, 'New message from Support Desk');
 
     const payload = {
       data: {

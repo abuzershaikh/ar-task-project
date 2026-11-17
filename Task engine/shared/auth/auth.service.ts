@@ -6,6 +6,8 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
+import { DataSource } from 'typeorm';
+import { assertWorkerAccountNotDeleted } from '../services/worker-deletion-guard';
 import { UserRepository } from '../database/repositories/user.repository';
 import { WorkerRepository } from '../database/repositories/worker.repository';
 import { User, UserRole, UserStatus } from '../database/entities/user.entity';
@@ -27,9 +29,11 @@ export class AuthService {
         private readonly userRepo: UserRepository,
         private readonly workerRepo: WorkerRepository,
         private readonly jwtService: JwtService,
+        private readonly dataSource: DataSource,
     ) {}
 
     async register(dto: RegisterDto) {
+        await assertWorkerAccountNotDeleted(this.dataSource, dto.email);
         if (dto.role !== UserRole.WORKER && dto.role !== UserRole.BUYER) {
             throw new BadRequestException('Public registration is limited to worker or buyer accounts');
         }

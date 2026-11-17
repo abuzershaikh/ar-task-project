@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { CampaignWorkerParticipationRepository } from '../../shared/database/repositories/campaign-worker-participation.repository';
 import { MatchingContext } from '../types';
-import { extractTaskIdentity } from '../../shared/common/utils/task-identity.util';
+import { extractTaskIdentity, hasStableGoogleBusinessIdentity } from '../../shared/common/utils/task-identity.util';
 
 /**
  * Duplicate task & Campaign-level worker participation filter.
@@ -46,6 +46,7 @@ export class DuplicateFilterService {
 
         // 3. Check Cross-Campaign App Package and Target URL duplication
         const targetIdentity = extractTaskIdentity(context.task);
+        if (targetIdentity.googleBusiness && !hasStableGoogleBusinessIdentity(targetIdentity)) return [];
         const workersWithSameAppOrUrl = new Set<string>();
 
         if (targetIdentity.packageId || targetIdentity.normalizedUrl || targetIdentity.businessNameKey || (targetIdentity.entityKeys && targetIdentity.entityKeys.length > 0)) {

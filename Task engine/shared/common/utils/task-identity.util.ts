@@ -2,6 +2,7 @@ import * as dns from 'dns';
 import * as net from 'net';
 
 export interface TaskIdentity {
+    googleBusiness?: boolean;
     packageId?: string;
     normalizedUrl?: string;
     businessNameKey?: string;
@@ -129,7 +130,7 @@ export function extractTaskIdentity(task: any): TaskIdentity {
         try {
             // Strip wrapper quotes or whitespace
             rawUrl = rawUrl.replace(/^["']|["']$/g, '').trim();
-            const parsed = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`);
+            const parsed = new URL(/^(https?:|market:)\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`);
             const host = parsed.hostname.toLowerCase();
             const pathname = parsed.pathname.replace(/\/+$/, '');
 
@@ -196,13 +197,13 @@ export function extractTaskIdentity(task: any): TaskIdentity {
                     (pathname.includes('/search') && (parsed.searchParams.has('kgmid') || parsed.searchParams.has('q') || parsed.searchParams.has('lrd')))
                 ))
             ) {
-                const cid = parsed.searchParams.get('cid');
-                const placeId = parsed.searchParams.get('placeid') || parsed.searchParams.get('place_id');
+                const cid = parsed.searchParams.get('cid') || parsed.searchParams.get('ludocid');
+                const placeId = parsed.searchParams.get('placeid') || parsed.searchParams.get('place_id') || parsed.searchParams.get('query_place_id');
                 let rawKgmid = parsed.searchParams.get('kgmid');
                 if (rawKgmid) {
                     try { rawKgmid = decodeURIComponent(rawKgmid); } catch (_) {}
                 }
-                const hexMatch = rawUrl.match(/1s(0x[a-f0-9]+:0x[a-f0-9]+)/i);
+                const hexMatch = (parsed.searchParams.get('ftid') || rawUrl).match(/(?:^|1s|ftid=)(0x[a-f0-9]+:0x[a-f0-9]+)/i);
                 const placeMatch = pathname.match(/\/maps\/place\/([^\/@?]+)/i);
                 const searchParam = parsed.searchParams.get('query') || parsed.searchParams.get('q');
                 const searchPathMatch = pathname.match(/\/maps\/search\/([^\/?]+)/i);
@@ -227,7 +228,10 @@ export function extractTaskIdentity(task: any): TaskIdentity {
                 }
                 if (hexMatch && hexMatch[1]) {
                     const cleanHex = hexMatch[1].toLowerCase();
-                    if (!normalizedUrl) normalizedUrl = `google_maps:hex:${cleanHex}`;
+                    // Google's hex feature ID and decimal CID identify the same place.
+                    const decimalCid = BigInt(cleanHex.split(':')[1]).toString(10);
+                    if (!normalizedUrl) normalizedUrl = `google_maps:cid:${decimalCid}`;
+                    entityKeys.push(`url:google_maps:cid:${decimalCid}`, `google_maps:cid:${decimalCid}`);
                     entityKeys.push(`url:google_maps:hex:${cleanHex}`);
                     entityKeys.push(`google_maps:hex:${cleanHex}`);
                 }
@@ -302,6 +306,15 @@ export function extractTaskIdentity(task: any): TaskIdentity {
         entityKeys.push(normalizedUrl);
     }
 
+    // Keep aliases from the original link as well as the persisted canonical URL.
+    // This lets historical CID/hex links match a canonical kgmid/Place ID later.
+    const originalUrl = reqs.originalTargetUrl || reqs.targetUrl || meta.targetUrl;
+    const canonicalUrl = reqs.canonicalUrl || reqs.canonicalTargetUrl || meta.canonicalUrl;
+    if (canonicalUrl && originalUrl && canonicalUrl !== originalUrl) {
+        const original = extractTaskIdentity({ requirements: { targetUrl: originalUrl } });
+        entityKeys.push(...original.entityKeys);
+    }
+
     // Deduplicate and sanitize entityKeys
     const dedupedKeys = Array.from(
         new Set(
@@ -311,15 +324,41 @@ export function extractTaskIdentity(task: any): TaskIdentity {
         )
     );
 
-    const primaryEntityKey = pkg ? `pkg:${pkg}` : (dedupedKeys[0] || (normalizedUrl ? `url:${normalizedUrl}` : undefined));
+    const stableBusinessKey = dedupedKeys.find((key) => /^google_maps:(cid|kgmid|placeid):/.test(key));
+    const primaryEntityKey = pkg ? `pkg:${pkg}` : (stableBusinessKey || dedupedKeys[0] || (normalizedUrl ? `url:${normalizedUrl}` : undefined));
 
     return {
+        googleBusiness: isGoogleBusinessTask(task),
         packageId: pkg || undefined,
         normalizedUrl: normalizedUrl || undefined,
         businessNameKey,
         entityKey: primaryEntityKey,
         entityKeys: dedupedKeys,
     };
+}
+
+export function isGoogleBusinessTask(task: any): boolean {
+    const req = task?.requirements || {};
+    const label = [task?.taskType, task?.task_type, task?.serviceCode, task?.category,
+        task?.platform, req.platform, req.serviceName, req.category].join(' ');
+    if (/google[\s_-]*(business|maps?)|\bgmb\b|\bgmaps?\b/i.test(label)) return true;
+    const url = req.canonicalUrl || req.targetUrl || req.url || req.link || task?.targetUrl || '';
+    return /maps\.app\.goo\.gl|maps\.google\.|share\.google|g\.page\/|google\.[^/]+\/(maps|local)|[?&]kgmid=/i.test(url);
+}
+
+export function hasStableGoogleBusinessIdentity(identity: TaskIdentity): boolean {
+    return identity.entityKeys.some((key) => /^google_maps:(cid|kgmid|placeid):/.test(key));
+}
+
+/** Resolve once, persist on orders/tasks; synchronous filters never depend on a warm cache. */
+export async function canonicalizeGoogleBusinessTarget(requirements: any): Promise<any> {
+    const original = requirements.originalTargetUrl || requirements.targetUrl || requirements.url || requirements.link || '';
+    const canonicalUrl = sanitizeGoogleMapsUrl(await resolveShortUrl(original));
+    const result = { ...requirements, originalTargetUrl: original, canonicalUrl };
+    if (!hasStableGoogleBusinessIdentity(extractTaskIdentity({ requirements: result }))) {
+        throw new Error('Could not verify the Google Business listing ID. Retry with the full Google Maps listing link.');
+    }
+    return result;
 }
 
 function isPrivateOrReservedIp(ip: string): boolean {

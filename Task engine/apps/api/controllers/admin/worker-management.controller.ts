@@ -9,6 +9,7 @@ import {
     NotFoundException,
     BadRequestException,
     Optional,
+    Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { WorkerRepository } from '../../../../shared/database/repositories/worker.repository';
@@ -24,12 +25,15 @@ import { UserRole, UserStatus } from '../../../../shared/database/entities/user.
 import { Worker } from '../../../../shared/database/entities/worker.entity';
 import { FirebaseAdminService } from '../../../../shared/services/firebase-admin.service';
 import { DataSource } from 'typeorm';
+import { WorkerDeletionService } from '../../../../shared/services/worker-deletion.service';
 
 @ApiTags('Admin - Worker Management')
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
 @ApiBearerAuth('bearer')
 @Controller('admin/workers')
 export class AdminWorkerManagementController {
+    private readonly logger = new Logger(AdminWorkerManagementController.name);
+
     constructor(
         private readonly workerRepo: WorkerRepository,
         private readonly scoreRepo: WorkerScoreRepository,
@@ -40,6 +44,7 @@ export class AdminWorkerManagementController {
         private readonly ratingRepo: RatingRepository,
         private readonly walletRepo: WalletRepository,
         private readonly dataSource: DataSource,
+        private readonly workerDeletionService: WorkerDeletionService,
         @Optional() private readonly firebaseAdminService?: FirebaseAdminService,
     ) { }
 
@@ -212,7 +217,6 @@ export class AdminWorkerManagementController {
     @ApiOperation({ summary: 'Get worker details' })
     async getWorkerDetail(@Param('id') workerId: string) {
         const { worker, user, searchIds } = await this.resolveWorkerAndUser(workerId);
-
         if (!user && !worker) {
             throw new NotFoundException('Worker not found');
         }
@@ -416,80 +420,57 @@ export class AdminWorkerManagementController {
     }
 
     private async performCascadeWorkerDelete(targetId: string): Promise<boolean> {
-        let worker = await this.workerRepo.findById(targetId);
-        let userId = worker?.userId;
-        let workerId = worker?.id;
-
-        if (!userId) {
-            const user = await this.userRepo.findById(targetId);
-            if (user) {
-                userId = user.id;
-                if (!worker) {
-                    const allWorkers = await this.workerRepo.findActiveWorkers();
-                    worker = allWorkers.find(w => w.userId === userId) || null;
-                    if (worker) workerId = worker.id;
-                }
-            }
+        if (typeof targetId !== 'string' || !targetId.trim() || targetId.includes('/')) {
+            throw new BadRequestException('A valid worker ID is required');
         }
-
-        if (!userId && !workerId) {
-            return true; // Already deleted, consider success
-        }
-
-        // Safety check: protect Super Admins & Admins
-        if (userId) {
-            const user = await this.userRepo.findById(userId);
-            if (user && (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN)) {
-                return false;
-            }
-        }
-
-        await this.dataSource.query('SET FOREIGN_KEY_CHECKS = 0;');
-        try {
-            if (workerId) {
-                await this.dataSource.query('DELETE FROM worker_completed_identities WHERE worker_key = ? OR worker_key = ?;', [workerId, userId || '']);
-                await this.dataSource.query('DELETE FROM campaign_worker_participation WHERE worker_id = ?;', [workerId]);
-                await this.dataSource.query('DELETE FROM task_submissions WHERE worker_id = ?;', [workerId]);
-                await this.dataSource.query('DELETE FROM task_assignments WHERE worker_id = ?;', [workerId]);
-                await this.dataSource.query('DELETE FROM worker_scores WHERE worker_id = ?;', [workerId]);
-                await this.dataSource.query('DELETE FROM kyc_profiles WHERE worker_id = ?;', [workerId]);
-                await this.dataSource.query('DELETE FROM earnings WHERE worker_id = ?;', [workerId]);
-                await this.dataSource.query('DELETE FROM withdrawals WHERE worker_id = ?;', [workerId]);
-                await this.dataSource.query('DELETE FROM ratings WHERE worker_id = ?;', [workerId]);
-                await this.dataSource.query('DELETE FROM workers WHERE id = ?;', [workerId]);
-            }
-            if (userId) {
-                await this.dataSource.query('DELETE FROM notifications WHERE user_id = ?;', [userId]);
-                await this.dataSource.query('DELETE FROM files WHERE uploaded_by = ?;', [userId]);
-                await this.dataSource.query('DELETE FROM wallet_transactions WHERE wallet_id IN (SELECT id FROM wallets WHERE user_id = ?);', [userId]);
-                await this.dataSource.query('DELETE FROM wallets WHERE user_id = ?;', [userId]);
-                await this.dataSource.query('DELETE FROM workers WHERE user_id = ?;', [userId]);
-                await this.dataSource.query('DELETE FROM users WHERE id = ?;', [userId]);
-            }
-        } finally {
-            await this.dataSource.query('SET FOREIGN_KEY_CHECKS = 1;');
-        }
-
+        const resolved = await this.resolveWorkerAndUser(targetId.trim());
+        await this.workerDeletionService.deleteWorker(targetId.trim(), resolved);
         return true;
     }
 
     @Post('batch-delete')
     @ApiOperation({ summary: 'Batch delete multiple workers' })
-    async batchDeleteWorkers(@Body() body: { ids: string[] }) {
-        if (!body.ids || !Array.isArray(body.ids) || body.ids.length === 0) {
-            throw new BadRequestException('ids array is required');
+    async batchDeleteWorkers(@Body() body: { ids?: string[]; workerIds?: string[] }) {
+        const rawIds = body.ids || body.workerIds;
+        if (!rawIds || !Array.isArray(rawIds) || rawIds.length === 0) {
+            throw new BadRequestException('ids or workerIds array is required');
+        }
+
+        const uniqueIds = [...new Set(
+            rawIds.map((id) => (typeof id === 'string' ? id.trim() : '')).filter(Boolean),
+        )];
+        if (uniqueIds.length === 0) {
+            throw new BadRequestException('At least one valid worker ID is required');
         }
 
         let deletedCount = 0;
-        for (const id of body.ids) {
-            const success = await this.performCascadeWorkerDelete(id);
-            if (success) deletedCount++;
+        const deletedIds: string[] = [];
+        const failedIds: string[] = [];
+        const errors: Array<{ id: string; message: string }> = [];
+
+        for (const id of uniqueIds) {
+            try {
+                await this.performCascadeWorkerDelete(id);
+                deletedIds.push(id);
+                deletedCount++;
+            } catch (error: any) {
+                const msg = error?.message || 'Unknown deletion error';
+                this.logger?.error(`Batch delete failed for worker ${id}: ${msg}`, error?.stack);
+                failedIds.push(id);
+                errors.push({ id, message: msg });
+            }
         }
 
+        const firstError = errors[0]?.message;
         return {
-            success: true,
+            success: failedIds.length === 0,
+            deletedIds,
+            failedIds,
+            errors,
             deletedCount,
-            message: `Successfully deleted ${deletedCount} worker(s)`,
+            message: failedIds.length
+                ? `Deleted ${deletedCount} worker(s); ${failedIds.length} failed (${firstError || 'error'}).`
+                : `Permanently deleted ${deletedCount} worker(s) and all worker history`,
         };
     }
 
@@ -503,7 +484,7 @@ export class AdminWorkerManagementController {
 
         return {
             success: true,
-            message: `Worker ${workerId} permanently deleted`,
+            message: `Worker ${workerId} permanently deleted and all tasks wiped to 0`,
         };
     }
 }

@@ -450,12 +450,13 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
   // ── Send YouTube Link ──────────────────────────────────────────────────────
   Future<void> _showYouTubeDialog() async {
     final ytController = TextEditingController();
+    final captionController = TextEditingController(text: _textController.text.trim());
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.play_circle_fill_rounded, color: Colors.red, size: 24),
             SizedBox(width: 8),
             Text('Share YouTube Video', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -466,7 +467,7 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Paste a YouTube link. It will render with rich player cards in the chat:',
+              'Paste a YouTube / Shorts link and optional caption:',
               style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 12),
@@ -476,6 +477,19 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
                 hintText: 'https://youtube.com/watch?v=...',
                 hintStyle: const TextStyle(fontSize: 13),
                 prefixIcon: const Icon(Icons.link_rounded, size: 20),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: captionController,
+              maxLines: 2,
+              minLines: 1,
+              decoration: InputDecoration(
+                hintText: 'Caption / message (optional)...',
+                hintStyle: const TextStyle(fontSize: 13),
+                prefixIcon: const Icon(Icons.short_text_rounded, size: 20),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
@@ -497,9 +511,10 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
             label: const Text('Send Video'),
             onPressed: () {
               final url = ytController.text.trim();
+              final caption = captionController.text.trim();
               if (url.isNotEmpty) {
                 Navigator.pop(ctx);
-                _sendYouTubeMessage(url);
+                _sendYouTubeMessage(url, caption: caption);
               }
             },
           ),
@@ -508,15 +523,21 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
     );
   }
 
-  Future<void> _sendYouTubeMessage(String url) async {
+  Future<void> _sendYouTubeMessage(String url, {String caption = ''}) async {
     setState(() => _isSending = true);
+    final combinedContent = caption.isNotEmpty && !caption.contains(url)
+        ? '$caption\n\n$url'
+        : (caption.isNotEmpty ? caption : url);
     final sent = await _chatService.sendMessage(
       conversationId: widget.conversation.id,
       workerId: widget.conversation.workerId,
       messageType: 'YOUTUBE',
-      content: url,
+      content: combinedContent,
     );
     if (sent != null && mounted) {
+      if (caption.isNotEmpty && _textController.text.trim() == caption) {
+        _textController.clear();
+      }
       setState(() {
         if (!_messages.any((m) => m.id == sent.id)) _messages.add(sent);
       });
@@ -525,27 +546,75 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
     if (mounted) setState(() => _isSending = false);
   }
 
-  // ── Send Photo (Camera or Gallery) ─────────────────────────────────────────
+  // ── Send Photo (Camera or Gallery) with Caption ────────────────────────────
   Future<void> _pickAndSendImage({ImageSource source = ImageSource.gallery}) async {
     try {
       final XFile? image = await _picker.pickImage(source: source, imageQuality: 80);
-      if (image == null) return;
+      if (image == null || !mounted) return;
+
+      final file = File(image.path);
+      final captionController = TextEditingController(text: _textController.text.trim());
+      final confirmedCaption = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Send Photo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(file, height: 180, width: double.infinity, fit: BoxFit.cover),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: captionController,
+                maxLines: 3,
+                minLines: 1,
+                decoration: InputDecoration(
+                  hintText: 'Add a caption (optional)...',
+                  hintStyle: const TextStyle(fontSize: 13),
+                  prefixIcon: const Icon(Icons.short_text_rounded, size: 20),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00875A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.send_rounded, size: 16),
+              label: const Text('Send'),
+              onPressed: () => Navigator.pop(ctx, captionController.text.trim()),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmedCaption == null || !mounted) return;
 
       setState(() => _isSending = true);
-      final file = File(image.path);
       final mediaUrl = await _chatService.uploadMedia(file);
 
       if (mediaUrl != null && mounted) {
-        final caption = _textController.text.trim();
         final sent = await _chatService.sendMessage(
           conversationId: widget.conversation.id,
           workerId: widget.conversation.workerId,
           messageType: 'IMAGE',
-          content: caption.isNotEmpty ? caption : 'Photo',
+          content: confirmedCaption.isNotEmpty ? confirmedCaption : 'Photo',
           mediaUrl: mediaUrl,
         );
         if (sent != null && mounted) {
-          if (caption.isNotEmpty) _textController.clear();
+          if (_textController.text.trim().isNotEmpty) _textController.clear();
           setState(() {
             if (!_messages.any((m) => m.id == sent.id)) _messages.add(sent);
           });
@@ -735,15 +804,17 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
         final mediaUrl = await _chatService.uploadMedia(file);
 
         if (mediaUrl != null && mounted) {
+          final caption = _textController.text.trim();
           final sent = await _chatService.sendMessage(
             conversationId: widget.conversation.id,
             workerId: widget.conversation.workerId,
             messageType: 'AUDIO',
-            content: 'Voice Note',
+            content: caption.isNotEmpty ? caption : 'Voice Note',
             mediaUrl: mediaUrl,
             durationSeconds: _recordDuration,
           );
           if (sent != null && mounted) {
+            if (caption.isNotEmpty) _textController.clear();
             setState(() {
               if (!_messages.any((m) => m.id == sent.id)) _messages.add(sent);
             });
@@ -1206,6 +1277,8 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
                         _buildAudioBubble(msg)
                       else if (msg.isImage)
                         _buildImageBubble(msg)
+                      else if (msg.hasWebLink)
+                        _buildWebLinkBubble(msg)
                       else
                         SelectableText(
                           msg.content,
@@ -1247,17 +1320,26 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
 
   // ── YouTube Bubble (WhatsApp Card Style) ───────────────────────────────────
   Widget _buildYouTubeBubble(SupportMessageModel msg) {
+    final ytId = msg.effectiveYoutubeId;
     final thumb = msg.youtubeThumbnailUrl;
-    final ytUrl = msg.content;
+    final ytUrl = msg.effectiveWebUrl ?? (ytId != null ? 'https://www.youtube.com/watch?v=$ytId' : msg.content);
+    final headerText = msg.textWithoutLink;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (headerText.isNotEmpty) ...[
+          SelectableText(
+            headerText,
+            style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A), height: 1.3),
+          ),
+          const SizedBox(height: 8),
+        ],
         if (thumb != null)
           GestureDetector(
             onTap: () async {
-              final uri = Uri.parse(ytUrl);
-              if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+              final uri = Uri.tryParse(ytUrl);
+              if (uri != null && await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
             },
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
@@ -1310,15 +1392,101 @@ class _AdminChatScreenState extends State<AdminChatScreen> {
         const SizedBox(height: 6),
         InkWell(
           onTap: () async {
-            final uri = Uri.parse(ytUrl);
-            if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+            final uri = Uri.tryParse(ytUrl);
+            if (uri != null && await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
           },
           child: Text(
             ytUrl,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 13,
               color: Color(0xFF0369A1),
               decoration: TextDecoration.underline,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Web Link Bubble (Modern Rich Preview) ──────────────────────────────────
+  Widget _buildWebLinkBubble(SupportMessageModel msg) {
+    final linkUrl = msg.effectiveWebUrl ?? '';
+    final headerText = msg.textWithoutLink;
+    String host = '';
+    try {
+      final uri = Uri.parse(linkUrl);
+      host = uri.host;
+    } catch (_) {}
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (headerText.isNotEmpty) ...[
+          SelectableText(
+            headerText,
+            style: const TextStyle(fontSize: 14, color: Color(0xFF0F172A), height: 1.3),
+          ),
+          const SizedBox(height: 8),
+        ],
+        InkWell(
+          onTap: () async {
+            final uri = Uri.tryParse(linkUrl);
+            if (uri != null && await canLaunchUrl(uri)) {
+              launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFCBD5E1)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4F46E5).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.link_rounded, color: Color(0xFF4F46E5), size: 20),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (host.isNotEmpty)
+                        Text(
+                          host,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4338CA),
+                          ),
+                        ),
+                      Text(
+                        linkUrl,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.arrow_outward_rounded, color: Color(0xFF4F46E5), size: 16),
+              ],
             ),
           ),
         ),

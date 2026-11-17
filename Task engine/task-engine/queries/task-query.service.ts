@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
 import { CampaignWorkerParticipationRepository } from '../../shared/database/repositories/campaign-worker-participation.repository';
 import { SubmissionRepository } from '../../shared/database/repositories/submission.repository';
 import { TaskAssignmentRepository } from '../../shared/database/repositories/task-assignment.repository';
 import { UserRepository } from '../../shared/database/repositories/user.repository';
 import { Task } from '../../shared/database/entities/task.entity';
-import { extractTaskIdentity } from '../../shared/common/utils/task-identity.util';
+import { extractTaskIdentity, hasStableGoogleBusinessIdentity } from '../../shared/common/utils/task-identity.util';
 
 @Injectable()
 export class TaskQueryService {
@@ -45,7 +45,7 @@ export class TaskQueryService {
                 if (r.userEmail) ids.add(r.userEmail.toString().trim().toLowerCase());
                 if (r.workerId) ids.add(r.workerId.toString().trim());
             }
-        } catch (_) {}
+        } catch (error) { throw new ServiceUnavailableException('Worker history could not be verified. Please retry.'); }
 
         if (!resolvedEmail && workerId) {
             try {
@@ -54,7 +54,7 @@ export class TaskQueryService {
                     resolvedEmail = user.email.toLowerCase().trim();
                     ids.add(resolvedEmail);
                 }
-            } catch (_) {}
+            } catch (error) { throw new ServiceUnavailableException('Worker history could not be verified. Please retry.'); }
         }
 
         return Array.from(ids);
@@ -98,7 +98,7 @@ export class TaskQueryService {
                         }
                     }
                 }
-            } catch (_) {}
+            } catch (error) { throw new ServiceUnavailableException('Worker history could not be verified. Please retry.'); }
         }
 
         // (a) From campaign_worker_participation
@@ -107,7 +107,7 @@ export class TaskQueryService {
             for (const cId of participations) {
                 if (cId) excludedCampaignIds.add(cId.toString());
             }
-        } catch (_) {}
+        } catch (error) { throw new ServiceUnavailableException('Worker history could not be verified. Please retry.'); }
 
         // (b) From task_assignments (all historical attempts: expired, released, completed)
         try {
@@ -130,7 +130,7 @@ export class TaskQueryService {
                     if (t?.id) pastTasksMap.set(t.id.toString(), t);
                 }
             }
-        } catch (_) {}
+        } catch (error) { throw new ServiceUnavailableException('Worker history could not be verified. Please retry.'); }
 
         // (c) From tasks table where assigned_to in allWorkerIds
         try {
@@ -144,7 +144,7 @@ export class TaskQueryService {
                 }
                 if (wt.orderUnitId) excludedOrderUnitIds.add(wt.orderUnitId.toString());
             }
-        } catch (_) {}
+        } catch (error) { throw new ServiceUnavailableException('Worker history could not be verified. Please retry.'); }
 
         // (d) From submissions table (batch fetched to prevent N+1 query overhead)
         try {
@@ -166,7 +166,7 @@ export class TaskQueryService {
                     if (t?.orderUnitId) excludedOrderUnitIds.add(t.orderUnitId.toString());
                 }
             }
-        } catch (_) {}
+        } catch (error) { throw new ServiceUnavailableException('Worker history could not be verified. Please retry.'); }
 
         // (e) Extract packageId, normalizedUrl, businessNameKey, and entityKeys from ALL past tasks worker interacted with
         for (const pt of pastTasksMap.values()) {
@@ -205,6 +205,7 @@ export class TaskQueryService {
             // "App Reviews & Google Reviews ke Task mei Repeat Users Task karrahe hai Usme Unique System Chahiye,
             // same link aana par repeat user ko task nahi jana chaia"
             const identity = extractTaskIdentity(task);
+            if (identity.googleBusiness && !hasStableGoogleBusinessIdentity(identity)) return false;
             if (identity.packageId && workerExcludedPackageIds.has(identity.packageId.toLowerCase().trim())) {
                 return false;
             }
@@ -302,7 +303,7 @@ export class TaskQueryService {
                         else if (key.startsWith('gmb:name:')) businessNameKeys.add(key);
                     }
                 }
-            } catch (_) {}
+            } catch (error) { throw new ServiceUnavailableException('Worker history could not be verified. Please retry.'); }
         }
 
         try {
@@ -310,7 +311,7 @@ export class TaskQueryService {
             for (const wt of workerTasks) {
                 if (wt.id) pastTasksMap.set(wt.id, wt);
             }
-        } catch (_) {}
+        } catch (error) { throw new ServiceUnavailableException('Worker history could not be verified. Please retry.'); }
 
         // Include all historical task_assignments (covers expired, released, rejected, completed)
         try {
@@ -323,7 +324,7 @@ export class TaskQueryService {
                     if (t?.id) pastTasksMap.set(t.id, t);
                 }
             }
-        } catch (_) {}
+        } catch (error) { throw new ServiceUnavailableException('Worker history could not be verified. Please retry.'); }
 
         try {
             const subs = await this.submissionRepo.findByWorker(allWorkerIds);
@@ -335,7 +336,7 @@ export class TaskQueryService {
                     if (t?.id) pastTasksMap.set(t.id, t);
                 }
             }
-        } catch (_) {}
+        } catch (error) { throw new ServiceUnavailableException('Worker history could not be verified. Please retry.'); }
 
         for (const t of pastTasksMap.values()) {
             const identity = extractTaskIdentity(t);

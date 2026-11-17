@@ -1,3 +1,4 @@
+import { executionDeadline } from '../../../common/utils/worker-execution-deadline';
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { TaskRepository } from '../../../database/repositories/task.repository';
 import { OrderRepository } from '../../../database/repositories/order.repository';
@@ -21,7 +22,7 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
     ) { }
 
     onModuleInit() {
-        this.logger.log('🕒 Initializing automated real-time Task Deadline & Expiry Monitor background service (interval: 60s)...');
+        this.logger.log('🕒 Initializing automated real-time Task Deadline & Expiry Monitor background service (interval: 15s)...');
         // Initial delayed check (15s after startup)
         setTimeout(() => {
             this.monitorDeadlines().catch((err) =>
@@ -40,7 +41,7 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
             } finally {
                 this.isRunningCycle = false;
             }
-        }, 60000);
+        }, 15000);
     }
 
     onModuleDestroy() {
@@ -69,13 +70,13 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
             };
 
             return {
-                workerExecutionTimeoutHours: workerTimeout ? Number(workerTimeout.value) : 2.0,
+                workerExecutionTimeoutHours: workerTimeout ? Number(workerTimeout.value) : 0.5,
                 unacceptedTaskExpiryHours: unacceptedExpiry ? Number(unacceptedExpiry.value) : 24.0,
                 autoReassignOnExpiry: parseBool(autoReassign?.value, true),
             };
         } catch (_) {
             return {
-                workerExecutionTimeoutHours: 2.0,
+                workerExecutionTimeoutHours: 0.5,
                 unacceptedTaskExpiryHours: 24.0,
                 autoReassignOnExpiry: true,
             };
@@ -114,7 +115,7 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
     }
 
     async processFullTimeouts(
-        defaultWorkerTimeoutHours: number = 2.0,
+        defaultWorkerTimeoutHours: number = 0.5,
         unacceptedTaskExpiryHours: number = 24.0,
         autoReassign: boolean = true,
     ): Promise<{ evaluatedCount: number; expiredCount: number; reallocatedCount: number }> {
@@ -136,12 +137,12 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
             // Production Protection: ONLY process ASSIGNED, ACCEPTED, or IN_PROGRESS tasks.
             // SUBMITTED, UNDER_REVIEW, APPROVED, and COMPLETED tasks are STRICTLY UNTOUCHABLE.
             const allowedStatuses = ['ASSIGNED', 'assigned', 'ACCEPTED', 'accepted', 'IN_PROGRESS', 'in_progress'];
-            if (!allowedStatuses.includes(task.status)) {
+            if (!allowedStatuses.includes(task.status) || task.submittedAt) {
                 continue;
             }
 
             // Determine deadline based on state (unaccepted assigned vs accepted/in_progress)
-            let effectiveDeadline: Date | null = task.deadline ? new Date(task.deadline) : null;
+            let effectiveDeadline: Date | null = executionDeadline(task);
             if (!effectiveDeadline || isNaN(effectiveDeadline.getTime())) {
                 const normStatus = (task.status || '').toLowerCase();
                 const isAcceptedOrStarted = normStatus === 'accepted' || normStatus === 'in_progress' || Boolean(task.acceptedAt || task.startedAt);
@@ -160,7 +161,7 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
             }
 
             // Check if deadline passed
-            if (effectiveDeadline && effectiveDeadline < now) {
+            if (effectiveDeadline && effectiveDeadline <= now) {
                 this.logger.warn(`POST-DEADLINE TIMEOUT: Task '${task.id}' deadline (${effectiveDeadline.toISOString()}) passed for Worker '${assignedWorkerId}'.`);
 
                 // 1. Release worker with reason WORKER_TIMEOUT (Locks participation in DB -> Worker excluded from this task)
@@ -170,13 +171,19 @@ export class DeadlineMonitorService implements OnModuleInit, OnModuleDestroy {
                     campaignId,
                     reason: ReleaseReason.WORKER_TIMEOUT,
                     details: 'Task completion deadline expired without proof submission',
+                    expectedDeadline: effectiveDeadline,
                 });
 
                 if (released) {
                     expiredCount++;
 
                     // 2. If autoReassign is enabled, immediately reassign or release to pool for other workers
-                    if (autoReassign) {
+                    const accepted = Boolean(task.acceptedAt || task.startedAt) || ['accepted', 'in_progress'].includes(task.status.toLowerCase());
+                    if (accepted) {
+                        // Keep the unit open so another eligible worker can see and accept it.
+                        reallocatedCount++;
+                        this.logger.log(`Task '${task.id}' returned to available pool after its 30-minute window.`);
+                    } else if (autoReassign) {
                         const newWorkerId = await this.reassignmentService.reassignTaskToNewWorker(task.id, campaignId);
                         if (newWorkerId) {
                             reallocatedCount++;

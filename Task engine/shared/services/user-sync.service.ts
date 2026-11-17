@@ -1,4 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import { assertWorkerAccountNotDeleted } from './worker-deletion-guard';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { Worker } from '../database/entities/worker.entity';
 import { UserRepository } from '../database/repositories/user.repository';
 import { WorkerRepository } from '../database/repositories/worker.repository';
 import { UserRole, UserStatus, User } from '../database/entities/user.entity';
@@ -12,11 +15,13 @@ export class UserSyncService {
     private readonly userRepo: UserRepository,
     private readonly workerRepo: WorkerRepository,
     private readonly firebaseAdminService: FirebaseAdminService,
+    private readonly dataSource: DataSource,
   ) {}
 
   /// Ensures user exists in MySQL. If not found, fetches from Firestore ONCE and saves to MySQL.
   /// Updates last_login timestamp on MySQL user and worker records.
   async ensureUserInMySQL(emailOrId: string, preferredRole: UserRole = UserRole.WORKER): Promise<User> {
+    await this.assertAccountAvailable(emailOrId);
     let resolvedEmail: string | null = null;
     const now = new Date();
 
@@ -45,6 +50,7 @@ export class UserSyncService {
       const firestoreUser = await this.firebaseAdminService.getFirestoreUser(emailOrId);
 
       resolvedEmail = firestoreUser?.email || (emailOrId.includes('@') ? emailOrId : `${emailOrId}@app.user`);
+      await this.assertAccountAvailable(resolvedEmail, firestoreUser?.uid, firestoreUser?.id);
       const fullName = firestoreUser?.name || resolvedEmail.split('@')[0];
       const phone = firestoreUser?.phone || null;
       const role = firestoreUser?.role === 'BUYER' ? UserRole.BUYER : preferredRole;
@@ -122,18 +128,26 @@ export class UserSyncService {
     }
   }
 
+  async assertAccountAvailable(...identifiers: string[]): Promise<void> {
+    await assertWorkerAccountNotDeleted(this.dataSource, ...identifiers);
+  }
+
   private async ensureWorkerRecord(userId: string): Promise<void> {
     try {
-      const worker = await this.workerRepo.findByUserId(userId);
-      if (!worker) {
-        await this.workerRepo.create({
-          userId,
-          status: 'active',
-          kycStatus: 'APPROVED',
-        });
-      }
+      await this.dataSource.transaction(async (manager) => {
+        // Serialize creation with account deletion on the same parent row. An
+        // already in-flight request must not create an orphan after cleanup.
+        const users = await manager.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [userId]);
+        if (!users.length) throw new ForbiddenException('Worker account no longer exists');
+        await assertWorkerAccountNotDeleted(manager, userId);
+        const repository = manager.getRepository(Worker);
+        const worker = await repository.findOne({ where: { userId } });
+        if (!worker) {
+          await repository.save(repository.create({ userId, status: 'active', kycStatus: 'APPROVED' }));
+        }
+      });
     } catch (err) {
-      // Safe ignore for concurrent worker creation
+      if (err?.code !== 'ER_DUP_ENTRY' && err?.errno !== 1062) throw err;
       this.logger.debug(`Worker record for ${userId} already created concurrently`);
     }
   }

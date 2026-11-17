@@ -50,6 +50,7 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
   Timer? _searchDebounce;
 
   String? _youtubePreviewId;
+  String? _attachedWebLink;
   File? _attachedImage;
   String? _uploadedImageUrl;
 
@@ -150,16 +151,22 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
     });
   }
 
-  void _extractYouTubePreview(String url) {
-    final match = RegExp(r'(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})').firstMatch(url);
+  void _attachLink(String rawUrl) {
+    final url = rawUrl.trim();
+    if (url.isEmpty) return;
+
+    final ytMatch = RegExp(
+      r'(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})',
+      caseSensitive: false,
+    ).firstMatch(url);
+
     setState(() {
-      _youtubePreviewId = match?.group(1);
-      if (_youtubePreviewId != null) {
-        _attachedImage = null;
-        _uploadedImageUrl = null;
-        _attachedAudioFile = null;
-        _isPlayingAudio = false;
-      }
+      _attachedWebLink = url;
+      _youtubePreviewId = ytMatch?.group(1);
+      _attachedImage = null;
+      _uploadedImageUrl = null;
+      _attachedAudioFile = null;
+      _isPlayingAudio = false;
     });
   }
 
@@ -174,6 +181,7 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
         _isPlayingAudio = false;
         _audioDurationSeconds = 0;
         _youtubePreviewId = null;
+        _attachedWebLink = null;
       });
     }
   }
@@ -195,6 +203,7 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
           _attachedImage = null;
           _uploadedImageUrl = null;
           _youtubePreviewId = null;
+          _attachedWebLink = null;
         });
 
         _recordTimer?.cancel();
@@ -261,6 +270,7 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
           _attachedImage = null;
           _uploadedImageUrl = null;
           _youtubePreviewId = null;
+          _attachedWebLink = null;
         });
       }
     } catch (e) {
@@ -301,9 +311,10 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
 
   Future<void> _handleSendBroadcast() async {
     final text = _textController.text.trim();
-    if (text.isEmpty && _youtubePreviewId == null && _attachedImage == null && _attachedAudioFile == null) {
+    final hasLink = (_attachedWebLink != null && _attachedWebLink!.isNotEmpty) || _youtubePreviewId != null;
+    if (text.isEmpty && !hasLink && _attachedImage == null && _attachedAudioFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a message, record voice, or attach media')),
+        const SnackBar(content: Text('Please enter a message, record voice, or attach media/link')),
       );
       return;
     }
@@ -393,16 +404,28 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
       messageType = 'YOUTUBE';
     }
 
+    // Build combined content preserving BOTH text and link
+    String finalContent = text;
+    if (_attachedWebLink != null && _attachedWebLink!.isNotEmpty) {
+      if (finalContent.isNotEmpty) {
+        if (!finalContent.contains(_attachedWebLink!)) {
+          finalContent = '$finalContent\n\n$_attachedWebLink';
+        }
+      } else {
+        finalContent = _attachedWebLink!;
+      }
+    } else if (messageType == 'AUDIO' && finalContent.isEmpty) {
+      finalContent = 'Voice Note';
+    } else if (messageType == 'IMAGE' && finalContent.isEmpty) {
+      finalContent = 'Photo';
+    }
+
     final result = await _chatService.sendBulkMessage(
       segment: _selectedSegment,
       customWorkerIds: _selectedSegment == 'CUSTOM' ? _selectedWorkerIds.toList() : null,
       messageType: messageType,
-      content: _youtubePreviewId != null
-          ? _ytController.text.trim()
-          : (messageType == 'AUDIO' && text.isEmpty
-              ? 'Voice Note'
-              : (messageType == 'IMAGE' && text.isEmpty ? 'Photo' : text)),
-      mediaUrl: mediaUrl,
+      content: finalContent,
+      mediaUrl: mediaUrl ?? (_youtubePreviewId == null ? _attachedWebLink : null),
       youtubeId: _youtubePreviewId,
       durationSeconds: durationSec,
     );
@@ -717,6 +740,18 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
                         label: const Text('YouTube Video', style: TextStyle(fontSize: 12)),
                         onPressed: _showYouTubeInputDialog,
                       ),
+
+                      // Any Web Link Button
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF4F46E5),
+                          side: const BorderSide(color: Color(0xFF4F46E5)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.link_rounded, size: 18),
+                        label: const Text('Attach Link', style: TextStyle(fontSize: 12)),
+                        onPressed: _showLinkInputDialog,
+                      ),
                     ],
                   ),
 
@@ -859,7 +894,7 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
                                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red),
                                 ),
                                 Text(
-                                  _ytController.text,
+                                  _attachedWebLink ?? _ytController.text,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
@@ -872,7 +907,61 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
                             onPressed: () {
                               setState(() {
                                 _youtubePreviewId = null;
+                                _attachedWebLink = null;
                                 _ytController.clear();
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Web Link Preview Card
+                  if (_attachedWebLink != null && _youtubePreviewId == null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFC7D2FE)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4F46E5),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.link_rounded, color: Colors.white, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Web Link Attached',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4338CA)),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _attachedWebLink!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.cancel, color: Colors.grey, size: 20),
+                            onPressed: () {
+                              setState(() {
+                                _attachedWebLink = null;
                               });
                             },
                           ),
@@ -982,6 +1071,7 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
   }
 
   void _showYouTubeInputDialog() {
+    _ytController.text = _youtubePreviewId != null ? (_attachedWebLink ?? '') : '';
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -993,13 +1083,24 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
             Text('YouTube Video URL', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: TextField(
-          controller: _ytController,
-          decoration: InputDecoration(
-            hintText: 'https://youtube.com/watch?v=...',
-            hintStyle: const TextStyle(fontSize: 13),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Paste any YouTube video or Shorts link (watch, youtu.be, shorts):',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _ytController,
+              decoration: InputDecoration(
+                hintText: 'https://youtube.com/watch?v=... or /shorts/...',
+                hintStyle: const TextStyle(fontSize: 13),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -1007,9 +1108,56 @@ class _AdminBulkBroadcastScreenState extends State<AdminBulkBroadcastScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () {
               Navigator.pop(ctx);
-              _extractYouTubePreview(_ytController.text.trim());
+              _attachLink(_ytController.text.trim());
             },
             child: const Text('Attach Video'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLinkInputDialog() {
+    final linkController = TextEditingController(text: _attachedWebLink ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.link_rounded, color: Color(0xFF4F46E5), size: 24),
+            SizedBox(width: 8),
+            Text('Attach Web Link', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Paste any website, tutorial, form, or document URL for workers:',
+              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: linkController,
+              decoration: InputDecoration(
+                hintText: 'https://...',
+                hintStyle: const TextStyle(fontSize: 13),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F46E5), foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _attachLink(linkController.text.trim());
+            },
+            child: const Text('Attach Link'),
           ),
         ],
       ),

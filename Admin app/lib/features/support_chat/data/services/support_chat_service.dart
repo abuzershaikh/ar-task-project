@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+// ignore: library_prefixes
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import '../models/support_conversation_model.dart';
 import '../models/support_message_model.dart';
@@ -159,20 +160,48 @@ class SupportChatService {
         final body = jsonDecode(res.body);
         if (body['success'] == true && body['data'] != null) {
           final List rawList = body['data']['conversations'] ?? [];
-          final convs = rawList.map((j) => SupportConversationModel.fromJson(j)).toList();
+          final convs = <SupportConversationModel>[];
+          var failedRows = 0;
+          for (final item in rawList) {
+            try {
+              if (item is Map) {
+                convs.add(SupportConversationModel.fromJson(Map<String, dynamic>.from(item)));
+              } else {
+                failedRows++;
+              }
+            } catch (e) {
+              failedRows++;
+              debugPrint('[AdminChatService] Skipping malformed conversation row: $e');
+            }
+          }
           final totalUnread = body['data']['totalUnread'] ?? 0;
           final totalCount = (body['data']['totalCount'] as num?)?.toInt() ?? convs.length;
           return {
+            'success': true,
             'conversations': convs,
             'totalUnread': totalUnread,
             'totalCount': totalCount,
+            'failedRows': failedRows,
           };
         }
       }
+      return {
+        'success': false,
+        'conversations': <SupportConversationModel>[],
+        'totalUnread': 0,
+        'totalCount': 0,
+        'error': 'Server returned ${res.statusCode}',
+      };
     } catch (e) {
       debugPrint('[AdminChatService] getConversations error: $e');
+      return {
+        'success': false,
+        'conversations': <SupportConversationModel>[],
+        'totalUnread': 0,
+        'totalCount': 0,
+        'error': e.toString(),
+      };
     }
-    return {'conversations': <SupportConversationModel>[], 'totalUnread': 0, 'totalCount': 0};
   }
 
   /// Fetch messages for a conversation

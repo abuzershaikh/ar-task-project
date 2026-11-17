@@ -72,8 +72,7 @@ class _AdminBuyerChatScreenState extends State<AdminBuyerChatScreen> {
   StreamSubscription? _readSub;
   StreamSubscription? _typingSub;
 
-  String get _effectiveBuyerId =>
-      _activeConversation?.buyerId ?? widget.buyerId ?? '';
+  String get _effectiveBuyerId => _activeConversation?.buyerId ?? widget.buyerId ?? '';
 
   String get _effectiveBuyerName {
     if (_activeConversation != null && _activeConversation!.buyerName.isNotEmpty) {
@@ -82,14 +81,11 @@ class _AdminBuyerChatScreenState extends State<AdminBuyerChatScreen> {
     return widget.buyerName?.isNotEmpty == true ? widget.buyerName! : 'Buyer';
   }
 
-  String get _effectiveBuyerEmail =>
-      _activeConversation?.buyerEmail ?? widget.buyerEmail ?? '';
+  String get _effectiveBuyerEmail => _activeConversation?.buyerEmail ?? widget.buyerEmail ?? '';
 
-  String get _effectiveBuyerPhone =>
-      _activeConversation?.buyerPhone ?? widget.buyerPhone ?? '';
+  String get _effectiveBuyerPhone => _activeConversation?.buyerPhone ?? widget.buyerPhone ?? '';
 
-  String? get _effectiveBuyerAvatar =>
-      _activeConversation?.buyerAvatarUrl ?? widget.buyerAvatarUrl;
+  String? get _effectiveBuyerAvatar => _activeConversation?.buyerAvatarUrl ?? widget.buyerAvatarUrl;
 
   void _onTextChanged() {
     final hasText = _textController.text.trim().isNotEmpty;
@@ -300,9 +296,7 @@ class _AdminBuyerChatScreenState extends State<AdminBuyerChatScreen> {
               const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
               const SizedBox(width: 8),
               Text(
-                selected.length > 1
-                    ? '${selected.length} messages copied to clipboard'
-                    : 'Message copied to clipboard',
+                selected.length > 1 ? '${selected.length} messages copied to clipboard' : 'Message copied to clipboard',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
@@ -981,7 +975,9 @@ class _AdminBuyerChatScreenState extends State<AdminBuyerChatScreen> {
                       if (msg.isImage) _buildImageContent(msg, isAdmin),
                       if (msg.isYoutube) _buildYoutubeContent(msg, isAdmin),
                       if (msg.isAudio) _buildAudioContent(msg, isAdmin),
-                      if (!msg.isImage && !msg.isYoutube && !msg.isAudio)
+                      if (msg.hasWebLink && !msg.isImage && !msg.isYoutube && !msg.isAudio)
+                        _buildWebLinkContent(msg, isAdmin),
+                      if (!msg.isImage && !msg.isYoutube && !msg.isAudio && !msg.hasWebLink)
                         SelectableText(
                           msg.content,
                           style: TextStyle(
@@ -1063,7 +1059,9 @@ class _AdminBuyerChatScreenState extends State<AdminBuyerChatScreen> {
     return InkWell(
       onTap: () async {
         final uri = Uri.parse(msg.content);
-        if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1094,6 +1092,89 @@ class _AdminBuyerChatScreenState extends State<AdminBuyerChatScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildWebLinkContent(BuyerSupportMessageModel msg, bool isAdmin) {
+    final linkUrl = msg.effectiveWebUrl ?? '';
+    final headerText = msg.textWithoutLink;
+    final uri = Uri.tryParse(linkUrl);
+    final host = uri?.host.replaceFirst(RegExp(r'^www\.', caseSensitive: false), '') ?? '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (headerText.isNotEmpty) ...[
+          SelectableText(
+            headerText,
+            style: TextStyle(
+              fontSize: 14,
+              color: isAdmin ? Colors.white : const Color(0xFF1E293B),
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        InkWell(
+          onTap: () async {
+            if (uri != null && await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+            decoration: BoxDecoration(
+              color: isAdmin ? Colors.white.withValues(alpha: 0.13) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: isAdmin ? Colors.white24 : const Color(0xFFCBD5E1)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.link_rounded,
+                  size: 22,
+                  color: isAdmin ? Colors.white : const Color(0xFF4F46E5),
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (host.isNotEmpty)
+                        Text(
+                          host,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isAdmin ? Colors.white : const Color(0xFF4338CA),
+                          ),
+                        ),
+                      Text(
+                        linkUrl,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isAdmin ? Colors.white70 : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.arrow_outward_rounded,
+                  size: 17,
+                  color: isAdmin ? Colors.white : const Color(0xFF4F46E5),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

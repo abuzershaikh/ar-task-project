@@ -1,3 +1,4 @@
+import { WorkerDeletionService } from './worker-deletion.service';
 import { Module, Global, forwardRef } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
 import { AuditLogService } from './audit-log.service';
@@ -49,6 +50,7 @@ import { RedisCacheService } from './redis-cache.service';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 const providers = [
+    WorkerDeletionService,
     AuditLogService,
     NotificationService,
     FileStorageService,

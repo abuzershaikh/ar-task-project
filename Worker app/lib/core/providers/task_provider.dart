@@ -94,7 +94,7 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchMyTasks(String stage, {bool forceRefresh = false}) async {
+  Future<void> fetchMyTasks(String stage, {bool forceRefresh = false, bool silent = false}) async {
     _selectedStage = stage;
     final hasCached = _stageTasksCache.containsKey(stage);
 
@@ -103,7 +103,7 @@ class TaskProvider extends ChangeNotifier {
       _isLoading = false;
       _error = null;
       notifyListeners();
-    } else {
+    } else if (!silent) {
       _isLoading = true;
       _error = null;
       notifyListeners();
@@ -181,6 +181,9 @@ class TaskProvider extends ChangeNotifier {
           res['status'] == 'ASSIGNED' ||
           res['status'] == 'accepted' ||
           res['status'] == 'ACCEPTED') {
+        if (taskData != null && res['task'] is Map) {
+          taskData.addAll(Map<String, dynamic>.from(res['task']));
+        }
         _stageTasksCache.clear();
 
         final acceptedTaskId = taskId.trim();

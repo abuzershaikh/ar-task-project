@@ -1,3 +1,4 @@
+import '../widgets/worker_delete_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -276,7 +277,7 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
           ],
         ),
         content: const Text(
-          'Are you sure you want to permanently delete this worker account? KYC profiles, earnings, task submissions, and wallet history will be permanently wiped. This action cannot be undone.',
+          'Are you sure you want to permanently delete this worker account?\n\nThis will permanently wipe:\n• Worker account & login credentials\n• All tasks & assignments (reset back to 0 & released so orders remain clean)\n• Wallet balance & financial history\n• KYC verification & profiles\n• Support chat history\n\nThis action cannot be undone.',
           style: TextStyle(fontSize: 13, color: Color(0xFF475569)),
         ),
         actions: [
@@ -290,16 +291,10 @@ class _WorkerDetailScreenState extends State<WorkerDetailScreen>
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(dialogContext);
-              context.read<WorkersBloc>().add(DeleteWorkerEvent(widget.workerId));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Worker deleted successfully.'),
-                  backgroundColor: Color(0xFF0F172A),
-                ),
-              );
-              Navigator.pop(context);
+              final deleted = await deleteWorkersWithFeedback(context, [widget.workerId]);
+              if (deleted && mounted) Navigator.pop(context);
             },
             child: const Text('Delete Permanently', style: TextStyle(fontWeight: FontWeight.bold)),
           ),

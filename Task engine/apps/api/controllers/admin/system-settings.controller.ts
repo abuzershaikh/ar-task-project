@@ -45,7 +45,7 @@ export class AdminSystemSettingsController {
         return {
             success: true,
             settings: {
-                workerExecutionTimeoutHours: workerTimeoutSetting ? Number(workerTimeoutSetting.value) : 2.0,
+                workerExecutionTimeoutHours: workerTimeoutSetting ? Number(workerTimeoutSetting.value) : 0.5,
                 unacceptedTaskExpiryHours: unacceptedExpirySetting ? Number(unacceptedExpirySetting.value) : 24.0,
                 autoReassignOnExpiry: parseBool(autoReassignSetting?.value, true),
             },
@@ -103,7 +103,7 @@ export class AdminSystemSettingsController {
             success: true,
             message: 'Task Expiry & Timeout configurations saved successfully',
             settings: {
-                workerExecutionTimeoutHours: body.workerExecutionTimeoutHours ?? 2.0,
+                workerExecutionTimeoutHours: body.workerExecutionTimeoutHours ?? 0.5,
                 unacceptedTaskExpiryHours: body.unacceptedTaskExpiryHours ?? 24.0,
                 autoReassignOnExpiry: body.autoReassignOnExpiry ?? true,
             },
@@ -663,7 +663,7 @@ export class AdminSystemSettingsController {
         const defaultSettings = [
             { key: 'minimum_withdrawal', value: minWithdrawal, description: 'Minimum withdrawal threshold limit in INR' },
             { key: 'max_concurrent_tasks', value: 5, description: 'Maximum active concurrent tasks allowed per worker' },
-            { key: 'worker_execution_timeout_hours', value: 2.0, description: 'Worker execution timeout in hours' },
+            { key: 'worker_execution_timeout_hours', value: 0.5, description: 'Worker execution timeout in hours' },
             { key: 'unaccepted_task_expiry_hours', value: 24.0, description: 'Unaccepted task pool expiry in hours' },
             { key: 'auto_reassign_on_expiry', value: true, description: 'Auto-reassign expired tasks' },
             { key: 'review_timeout', value: 86400, description: 'Auto-approval review timeout in seconds (24 hours)' },

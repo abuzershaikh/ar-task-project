@@ -49,6 +49,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
             const userId = payload.sub || payload.id;
             const user = await this.userRepo.findById(userId);
             if (user) {
+              if (user.role === UserRole.WORKER) await this.userSyncService.assertAccountAvailable(user.id, user.email);
               request.user = user;
               return true;
             }

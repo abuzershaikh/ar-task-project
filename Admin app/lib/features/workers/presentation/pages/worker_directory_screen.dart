@@ -1,3 +1,4 @@
+import '../widgets/worker_delete_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/models/worker_model.dart';
@@ -76,8 +77,8 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
           ],
         ),
         content: Text(
-          'Are you sure you want to permanently delete $count selected worker account${count > 1 ? 's' : ''}? This will wipe their KYC profile, earnings, task records, and wallet history. This action cannot be undone.',
-          style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
+          'Are you sure you want to permanently delete $count selected worker account${count > 1 ? 's' : ''}?\n\nThis will completely wipe:\n• All worker accounts & logins\n• All tasks & assignments (reset back to 0 & released so orders are not blocked)\n• All earnings, withdrawals & KYC records\n• All wallet balances & transactions\n• All support chat history\n\nThis action cannot be undone.',
+          style: const TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.4),
         ),
         actions: [
           TextButton(
@@ -90,21 +91,24 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              final idsToDelete = _selectedIds.toList();
-              context.read<WorkersBloc>().add(BatchDeleteWorkersEvent(idsToDelete));
-              setState(() {
-                _selectedIds.clear();
-                _isSelectionMode = false;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Deleting $count worker${count > 1 ? 's' : ''}...'),
-                  backgroundColor: const Color(0xFF0F172A),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
+              final deleted = await deleteWorkersWithFeedback(context, _selectedIds.toList(), batch: true);
+              if (mounted) {
+                setState(() {
+                  if (deleted) {
+                    _selectedIds.clear();
+                    _isSelectionMode = false;
+                  } else {
+                    final state = context.read<WorkersBloc>().state;
+                    if (state is WorkersLoaded) {
+                      final remainingIds = state.workers.expand((w) => [w.id, w.userId]).toSet();
+                      _selectedIds.removeWhere((id) => !remainingIds.contains(id));
+                      if (_selectedIds.isEmpty) _isSelectionMode = false;
+                    }
+                  }
+                });
+              }
             },
             child: const Text('Delete Permanently', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
@@ -114,6 +118,10 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
   }
 
   void _confirmDeleteSingle(BuildContext context, dynamic worker) {
+    final workerName = worker.name ?? 'Worker';
+    final workerEmail = (worker.email != null && worker.email.toString().isNotEmpty) ? worker.email : (worker.id ?? '');
+    final workerId = (worker.id != null && worker.id.toString().isNotEmpty) ? worker.id.toString() : (worker.userId?.toString() ?? '');
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -129,17 +137,17 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
               child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 24),
             ),
             const SizedBox(width: 12),
-            Expanded(
+            const Expanded(
               child: Text(
-                'Delete Worker?',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                'Delete & Wipe Worker?',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
               ),
             ),
           ],
         ),
         content: Text(
-          'Are you sure you want to permanently delete "${worker.name}" (${worker.email.isNotEmpty ? worker.email : worker.id})?',
-          style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
+          'Are you sure you want to permanently delete "$workerName" ($workerEmail)?\n\nThis will completely wipe:\n• Worker account & login\n• All tasks & assignments (reset back to 0 so orders remain clean)\n• All wallet balance & financial history\n• Earnings, KYC, and ratings\n• Support chat messages\n\nThis action cannot be undone.',
+          style: const TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.4),
         ),
         actions: [
           TextButton(
@@ -152,15 +160,9 @@ class _WorkerDirectoryScreenState extends State<WorkerDirectoryScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              context.read<WorkersBloc>().add(DeleteWorkerEvent(worker.id));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Deleting worker ${worker.name}...'),
-                  backgroundColor: const Color(0xFF0F172A),
-                ),
-              );
+              await deleteWorkersWithFeedback(context, [workerId]);
             },
             child: const Text('Delete Permanently', style: TextStyle(fontWeight: FontWeight.bold)),
           ),

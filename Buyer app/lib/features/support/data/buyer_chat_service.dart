@@ -44,6 +44,20 @@ class BuyerChatMessage {
     return match?.group(1);
   }
 
+  static String? extractFirstUrl(String? text) {
+    if (text == null || text.trim().isEmpty) return null;
+    final match = RegExp(
+      r'''(?:https?:\/\/|www\.)[^\s<>"']+''',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (match == null) return null;
+
+    var url = match.group(0)!;
+    url = url.replaceFirst(RegExp(r'[\.,;:!\?\)\]\}]+$'), '');
+    if (url.toLowerCase().startsWith('www.')) url = 'https://$url';
+    return url;
+  }
+
   String? get effectiveYoutubeId {
     if (youtubeId != null && youtubeId!.isNotEmpty) return youtubeId;
     return extractYoutubeId(content);
@@ -71,6 +85,22 @@ class BuyerChatMessage {
               mediaUrl!.toLowerCase().endsWith('.jpeg') ||
               mediaUrl!.toLowerCase().endsWith('.png') ||
               mediaUrl!.toLowerCase().endsWith('.webp')));
+
+  String? get effectiveWebUrl =>
+      extractFirstUrl(mediaUrl) ?? extractFirstUrl(content);
+
+  bool get hasWebLink =>
+      !isYoutube && !isAudio && !isImage && effectiveWebUrl != null;
+
+  String get textWithoutLink {
+    final match = RegExp(
+      r'''(?:https?:\/\/|www\.)[^\s<>"']+''',
+      caseSensitive: false,
+    ).firstMatch(content);
+    if (match == null) return content.trim();
+    return '${content.substring(0, match.start)}${content.substring(match.end)}'
+        .trim();
+  }
 
   String? get youtubeThumbnailUrl {
     final yId = effectiveYoutubeId;
@@ -100,19 +130,35 @@ class BuyerChatMessage {
 
     final rawContent = json['content']?.toString() ?? '';
     final rawYt = (json['youtube_id'] ?? json['youtubeId'])?.toString();
-    final finalYt = (rawYt != null && rawYt.isNotEmpty) ? rawYt : BuyerChatMessage.extractYoutubeId(rawContent);
+    final finalYt = (rawYt != null && rawYt.isNotEmpty)
+        ? rawYt
+        : BuyerChatMessage.extractYoutubeId(rawContent);
 
     return BuyerChatMessage(
       id: json['id']?.toString() ?? '',
-      conversationId: json['conversation_id']?.toString() ?? json['conversationId']?.toString() ?? '',
-      buyerId: json['buyer_id']?.toString() ?? json['buyerId']?.toString() ?? '',
-      senderType: json['sender_type']?.toString().toUpperCase() ?? json['senderType']?.toString().toUpperCase() ?? 'BUYER',
-      messageType: json['message_type']?.toString().toUpperCase() ?? json['messageType']?.toString().toUpperCase() ?? 'TEXT',
+      conversationId: json['conversation_id']?.toString() ??
+          json['conversationId']?.toString() ??
+          '',
+      buyerId:
+          json['buyer_id']?.toString() ?? json['buyerId']?.toString() ?? '',
+      senderType: json['sender_type']?.toString().toUpperCase() ??
+          json['senderType']?.toString().toUpperCase() ??
+          'BUYER',
+      messageType: json['message_type']?.toString().toUpperCase() ??
+          json['messageType']?.toString().toUpperCase() ??
+          'TEXT',
       content: rawContent,
       mediaUrl: json['media_url']?.toString() ?? json['mediaUrl']?.toString(),
       youtubeId: finalYt,
-      durationSeconds: int.tryParse((json['duration_seconds'] ?? json['durationSeconds'])?.toString() ?? '0') ?? 0,
-      isRead: json['is_read'] == 1 || json['is_read'] == true || json['isRead'] == 1 || json['isRead'] == true,
+      durationSeconds: int.tryParse(
+              (json['duration_seconds'] ?? json['durationSeconds'])
+                      ?.toString() ??
+                  '0') ??
+          0,
+      isRead: json['is_read'] == 1 ||
+          json['is_read'] == true ||
+          json['isRead'] == 1 ||
+          json['isRead'] == true,
       createdAt: parseDate(json['created_at'] ?? json['createdAt']),
     );
   }
@@ -156,23 +202,30 @@ class BuyerChatService {
   bool _isConnected = false;
   bool get isConnected => _isConnected;
 
-  final _messageStreamController = StreamController<BuyerChatMessage>.broadcast();
-  final _readStreamController = StreamController<Map<String, dynamic>>.broadcast();
-  final _typingStreamController = StreamController<Map<String, dynamic>>.broadcast();
+  final _messageStreamController =
+      StreamController<BuyerChatMessage>.broadcast();
+  final _readStreamController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _typingStreamController =
+      StreamController<Map<String, dynamic>>.broadcast();
   final _messagesDeletedController = StreamController<List<String>>.broadcast();
   final _allMessagesDeletedController = StreamController<String>.broadcast();
 
   Stream<BuyerChatMessage> get onNewMessage => _messageStreamController.stream;
-  Stream<Map<String, dynamic>> get onMessagesRead => _readStreamController.stream;
+  Stream<Map<String, dynamic>> get onMessagesRead =>
+      _readStreamController.stream;
   Stream<Map<String, dynamic>> get onTyping => _typingStreamController.stream;
-  Stream<List<String>> get onMessagesDeleted => _messagesDeletedController.stream;
-  Stream<String> get onAllMessagesDeleted => _allMessagesDeletedController.stream;
+  Stream<List<String>> get onMessagesDeleted =>
+      _messagesDeletedController.stream;
+  Stream<String> get onAllMessagesDeleted =>
+      _allMessagesDeletedController.stream;
 
   void initSocket(String buyerId) {
     if (_socket != null && _isConnected) return;
 
     try {
-      debugPrint('[BuyerChatSocket] Connecting to $_domainBase for buyer: $buyerId...');
+      debugPrint(
+          '[BuyerChatSocket] Connecting to $_domainBase for buyer: $buyerId...');
       _socket = IO.io(
         _domainBase,
         IO.OptionBuilder()
@@ -186,7 +239,8 @@ class BuyerChatService {
       );
 
       _socket!.onConnect((_) {
-        debugPrint('[BuyerChatSocket] Connected! Joining buyer room buyer_$buyerId');
+        debugPrint(
+            '[BuyerChatSocket] Connected! Joining buyer room buyer_$buyerId');
         _isConnected = true;
         _socket!.emit('join', {'role': 'BUYER', 'buyerId': buyerId});
       });
@@ -194,7 +248,8 @@ class BuyerChatService {
       _socket!.on('new_buyer_message', (data) {
         try {
           if (data is Map) {
-            final msg = BuyerChatMessage.fromJson(Map<String, dynamic>.from(data));
+            final msg =
+                BuyerChatMessage.fromJson(Map<String, dynamic>.from(data));
             _messageStreamController.add(msg);
           }
         } catch (e) {
@@ -217,7 +272,8 @@ class BuyerChatService {
       _socket!.on('messages_deleted', (data) {
         try {
           if (data is Map && data['messageIds'] != null) {
-            final ids = (data['messageIds'] as List).map((e) => e.toString()).toList();
+            final ids =
+                (data['messageIds'] as List).map((e) => e.toString()).toList();
             _messagesDeletedController.add(ids);
           }
         } catch (e) {
@@ -228,12 +284,14 @@ class BuyerChatService {
       _socket!.on('all_messages_deleted', (data) {
         try {
           if (data is Map && data['conversationId'] != null) {
-            _allMessagesDeletedController.add(data['conversationId'].toString());
+            _allMessagesDeletedController
+                .add(data['conversationId'].toString());
           } else {
             _allMessagesDeletedController.add('ALL');
           }
         } catch (e) {
-          debugPrint('[BuyerChatSocket] Error parsing all_messages_deleted: $e');
+          debugPrint(
+              '[BuyerChatSocket] Error parsing all_messages_deleted: $e');
         }
       });
 
@@ -266,7 +324,8 @@ class BuyerChatService {
         if (body['success'] == true && body['data'] != null) {
           final convId = body['data']['conversation']?['id']?.toString() ?? '';
           final msgs = (body['data']['messages'] as List)
-              .map((m) => BuyerChatMessage.fromJson(Map<String, dynamic>.from(m)))
+              .map((m) =>
+                  BuyerChatMessage.fromJson(Map<String, dynamic>.from(m)))
               .toList();
           return {'conversationId': convId, 'messages': msgs};
         }
@@ -293,8 +352,11 @@ class BuyerChatService {
     if (_socket != null && _isConnected) {
       final completer = Completer<BuyerChatMessage?>();
       _socket!.emitWithAck('send_buyer_message', payload, ack: (response) {
-        if (response != null && response['success'] == true && response['data'] != null) {
-          final msg = BuyerChatMessage.fromJson(Map<String, dynamic>.from(response['data']));
+        if (response != null &&
+            response['success'] == true &&
+            response['data'] != null) {
+          final msg = BuyerChatMessage.fromJson(
+              Map<String, dynamic>.from(response['data']));
           _messageStreamController.add(msg);
           if (!completer.isCompleted) completer.complete(msg);
         } else {
@@ -363,7 +425,8 @@ class BuyerChatService {
         },
       );
       if (res.statusCode == 200) {
-        debugPrint('[BuyerChatService] ✅ Registered FCM token with support-chat-engine for buyer $buyerId');
+        debugPrint(
+            '[BuyerChatService] ✅ Registered FCM token with support-chat-engine for buyer $buyerId');
         return true;
       }
     } catch (e) {
@@ -379,4 +442,3 @@ class BuyerChatService {
     _isConnected = false;
   }
 }
-

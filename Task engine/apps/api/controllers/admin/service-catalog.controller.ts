@@ -186,6 +186,13 @@ export class AdminServiceCatalogController {
         };
     }
 
+    @Patch(':id/status')
+    @ApiOperation({ summary: 'Activate or hide a service in the buyer catalog' })
+    async setServiceStatus(@Param('id') id: string, @Body() body: { isActive: boolean }) {
+        const service = await this.serviceCatalogService.updateService(id, { isActive: body.isActive });
+        return { success: true, service };
+    }
+
     @Patch(':id')
     @ApiOperation({ summary: 'Update service catalog metadata (name, description, active state, templates)' })
     async updateService(

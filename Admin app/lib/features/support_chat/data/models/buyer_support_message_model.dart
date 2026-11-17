@@ -27,15 +27,69 @@ class BuyerSupportMessageModel {
 
   bool get isAdmin => senderType == 'ADMIN';
   bool get isBuyer => senderType == 'BUYER';
-  bool get isYoutube => messageType == 'YOUTUBE' || youtubeId != null;
   bool get isAudio => messageType == 'AUDIO';
   bool get isImage => messageType == 'IMAGE';
 
+  static String? extractYouTubeId(String? text) {
+    if (text == null || text.trim().isEmpty) return null;
+    final regExp = RegExp(
+      r'(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/|live\/))([\w-]{11})',
+      caseSensitive: false,
+    );
+    final match = regExp.firstMatch(text);
+    return match?.group(1);
+  }
+
+  static String? extractFirstUrl(String? text) {
+    if (text == null || text.trim().isEmpty) return null;
+    final match = RegExp(
+      r'''(?:https?:\/\/|www\.)[^\s<>"']+''',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (match == null) return null;
+    var url = match.group(0)!;
+    url = url.replaceFirst(RegExp(r'[\.,;:!\?\)\]\}]+$'), '');
+    if (url.toLowerCase().startsWith('www.')) url = 'https://$url';
+    return url;
+  }
+
+  /// Returns effective YouTube ID from explicit field, mediaUrl or content
+  String? get effectiveYoutubeId {
+    if (youtubeId != null && youtubeId!.isNotEmpty) return youtubeId;
+    final fromMedia = extractYouTubeId(mediaUrl);
+    if (fromMedia != null) return fromMedia;
+    return extractYouTubeId(content);
+  }
+
+  bool get isYoutube => messageType == 'YOUTUBE' || effectiveYoutubeId != null;
+
   String? get youtubeThumbnailUrl {
-    if (youtubeId != null && youtubeId!.isNotEmpty) {
-      return 'https://img.youtube.com/vi/$youtubeId/hqdefault.jpg';
+    final ytId = effectiveYoutubeId;
+    if (ytId != null && ytId.isNotEmpty) {
+      return 'https://img.youtube.com/vi/$ytId/hqdefault.jpg';
     }
     return null;
+  }
+
+  /// Returns first web URL in content or mediaUrl (if any)
+  String? get effectiveWebUrl {
+    final fromMedia = extractFirstUrl(mediaUrl);
+    if (fromMedia != null) return fromMedia;
+    return extractFirstUrl(content);
+  }
+
+  /// True if message contains a non-YouTube web link
+  bool get hasWebLink => !isYoutube && effectiveWebUrl != null;
+
+  /// Returns text content with extracted link removed for clean caption display
+  String get textWithoutLink {
+    final match = RegExp(
+      r'''(?:https?:\/\/|www\.)[^\s<>"']+''',
+      caseSensitive: false,
+    ).firstMatch(content);
+    if (match == null) return content.trim();
+    return '${content.substring(0, match.start)}${content.substring(match.end)}'
+        .trim();
   }
 
   /// Indian Standard Time (IST = UTC + 05:30)
@@ -91,32 +145,46 @@ class BuyerSupportMessageModel {
     final dynamic rawCreated = json['created_at'] ?? json['createdAt'];
     return BuyerSupportMessageModel(
       id: json['id']?.toString() ?? '',
-      conversationId: json['conversation_id']?.toString() ?? json['conversationId']?.toString() ?? '',
-      buyerId: json['buyer_id']?.toString() ?? json['buyerId']?.toString() ?? '',
-      senderType: json['sender_type']?.toString().toUpperCase() ?? json['senderType']?.toString().toUpperCase() ?? 'ADMIN',
-      messageType: json['message_type']?.toString().toUpperCase() ?? json['messageType']?.toString().toUpperCase() ?? 'TEXT',
+      conversationId: json['conversation_id']?.toString() ??
+          json['conversationId']?.toString() ??
+          '',
+      buyerId:
+          json['buyer_id']?.toString() ?? json['buyerId']?.toString() ?? '',
+      senderType: json['sender_type']?.toString().toUpperCase() ??
+          json['senderType']?.toString().toUpperCase() ??
+          'ADMIN',
+      messageType: json['message_type']?.toString().toUpperCase() ??
+          json['messageType']?.toString().toUpperCase() ??
+          'TEXT',
       content: json['content']?.toString() ?? '',
       mediaUrl: json['media_url']?.toString() ?? json['mediaUrl']?.toString(),
-      youtubeId: json['youtube_id']?.toString() ?? json['youtubeId']?.toString(),
-      durationSeconds: int.tryParse(json['duration_seconds']?.toString() ?? json['durationSeconds']?.toString() ?? '0') ?? 0,
-      isRead: json['is_read'] == 1 || json['is_read'] == true || json['isRead'] == 1 || json['isRead'] == true,
+      youtubeId:
+          json['youtube_id']?.toString() ?? json['youtubeId']?.toString(),
+      durationSeconds: int.tryParse(json['duration_seconds']?.toString() ??
+              json['durationSeconds']?.toString() ??
+              '0') ??
+          0,
+      isRead: json['is_read'] == 1 ||
+          json['is_read'] == true ||
+          json['isRead'] == 1 ||
+          json['isRead'] == true,
       createdAt: parseServerDateTime(rawCreated),
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'conversation_id': conversationId,
-    'buyer_id': buyerId,
-    'sender_type': senderType,
-    'message_type': messageType,
-    'content': content,
-    'media_url': mediaUrl,
-    'youtube_id': youtubeId,
-    'duration_seconds': durationSeconds,
-    'is_read': isRead ? 1 : 0,
-    'created_at': createdAt.toIso8601String(),
-  };
+        'id': id,
+        'conversation_id': conversationId,
+        'buyer_id': buyerId,
+        'sender_type': senderType,
+        'message_type': messageType,
+        'content': content,
+        'media_url': mediaUrl,
+        'youtube_id': youtubeId,
+        'duration_seconds': durationSeconds,
+        'is_read': isRead ? 1 : 0,
+        'created_at': createdAt.toIso8601String(),
+      };
 
   BuyerSupportMessageModel copyWith({
     bool? isRead,

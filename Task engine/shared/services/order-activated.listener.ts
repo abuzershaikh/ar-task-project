@@ -1,3 +1,4 @@
+import { resolveEligibleTaskPushTokens } from '../common/utils/task-push-tokens.util';
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { InjectQueue } from '@nestjs/bull';
@@ -17,7 +18,7 @@ import { AiGeneratorService } from '../ai-generator/ai-generator.service';
 import { sanitizeReviewText } from '../ai-generator/review-sanitizer';
 import { FirebaseAdminService } from './firebase-admin.service';
 import { PlayStoreScraperService } from './playstore-scraper.service';
-import { extractTaskIdentity, resolveShortUrl, sanitizeGoogleMapsUrl } from '../common/utils/task-identity.util';
+import { canonicalizeGoogleBusinessTarget, extractTaskIdentity, resolveShortUrl, sanitizeGoogleMapsUrl } from '../common/utils/task-identity.util';
 
 export interface OrderActivatedEventPayload {
     orderId: string;
@@ -93,7 +94,8 @@ export class OrderActivatedListener {
                 ? (await this.serviceCatalogRepo.findByCode(rawIdentifier) || await this.serviceCatalogRepo.findById(rawIdentifier))
                 : null;
 
-            let targetUrl = order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '';
+            const originalTargetUrl = order?.requirements?.targetUrl || order?.requirements?.url || order?.requirements?.link || '';
+            let targetUrl = originalTargetUrl;
             if (targetUrl) {
                 try {
                     const canonicalUrl = await resolveShortUrl(targetUrl);
@@ -127,6 +129,18 @@ export class OrderActivatedListener {
                     targetUrl.includes('g.co') ||
                     (targetUrl.includes('google.') && (targetUrl.includes('/maps') || targetUrl.includes('/local') || targetUrl.includes('kgmid=')))
                 ));
+
+            let canonicalIdentityFields: { canonicalUrl?: string; originalTargetUrl?: string } = {};
+            if (isGoogleBusiness) {
+                const canonical = await canonicalizeGoogleBusinessTarget({
+                    ...(order?.requirements || {}), originalTargetUrl, targetUrl,
+                });
+                canonicalIdentityFields = { canonicalUrl: canonical.canonicalUrl, originalTargetUrl };
+                targetUrl = canonical.canonicalUrl;
+                await this.orderRepo.update(payload.orderId, {
+                    requirements: { ...(order?.requirements || {}), ...canonicalIdentityFields },
+                });
+            }
 
             const isPlayStore = !isGoogleBusiness && (
                 serviceIdentifier.includes('PLAY') ||
@@ -292,6 +306,7 @@ export class OrderActivatedListener {
 
             const combinedRequirements = {
                 ...(order?.requirements || {}),
+                ...canonicalIdentityFields,
                 platform: detectedPlatform,
                 serviceName: serviceCatalog?.name || order?.taskType || (isGoogleBusiness ? (isGoogleBusinessReview ? 'Google Business Review' : 'Google Business Rating') : (isPlayStore ? 'Play Store Review' : 'Task')),
                 serviceDescription: serviceCatalog?.description || '',
@@ -443,48 +458,16 @@ export class OrderActivatedListener {
                     packageId,
                 });
 
-                // 2. Identify workers who have ALREADY completed/held a task for this packageId, normalizedUrl, businessNameKey, or entityKeys
-                const excludedWorkerIds = new Set<string>();
-                if (taskIdentity.packageId || taskIdentity.normalizedUrl || taskIdentity.businessNameKey || (taskIdentity.entityKeys && taskIdentity.entityKeys.length > 0)) {
-                    try {
-                        const excluded = await this.taskRepo.findWorkerIdsWithPackageOrUrl(
-                            taskIdentity.packageId,
-                            taskIdentity.normalizedUrl,
-                            taskIdentity.businessNameKey,
-                            taskIdentity.entityKeys,
-                        );
-                        for (const id of excluded) {
-                            excludedWorkerIds.add(id.toLowerCase().trim());
-                        }
-                    } catch (e) {
-                        this.logger.warn(`Error finding excluded workers for task notification: ${e.message}`);
-                    }
-                }
-
-                // 3. Resolve eligible workers who have device push tokens
-                let eligibleTokens: string[] | undefined = undefined;
-                if (taskIdentity.packageId || taskIdentity.normalizedUrl || taskIdentity.businessNameKey || (taskIdentity.entityKeys && taskIdentity.entityKeys.length > 0)) {
-                    try {
-                        const allWorkers = await this.userRepo.findByRole(UserRole.WORKER);
-                        const tokenList: string[] = [];
-                        for (const w of allWorkers) {
-                            const wId = (w.id || '').toLowerCase().trim();
-                            const wEmail = (w.email || '').toLowerCase().trim();
-                            if (excludedWorkerIds.has(wId) || (wEmail && excludedWorkerIds.has(wEmail))) {
-                                continue; // 🚫 SUPPRESS! Worker has already done this app/URL
-                            }
-                            const meta = (w.metadata as any) || {};
-                            const token = meta.fcmToken || meta.deviceToken;
-                            if (token && typeof token === 'string' && token.length > 20) {
-                                tokenList.push(token);
-                            }
-                        }
-                        eligibleTokens = tokenList;
-                        this.logger.log(`🎯 [NOTIFICATION FILTER] Total workers: ${allWorkers.length}, Excluded (already completed): ${excludedWorkerIds.size}, Eligible tokens: ${eligibleTokens.length}`);
-                    } catch (e) {
-                        this.logger.warn(`Error resolving eligible worker tokens: ${e.message}`);
-                    }
-                }
+                // Missing identity or failed exclusion checks must never trigger a topic broadcast.
+                const eligibleTokens = await resolveEligibleTaskPushTokens(
+                    taskIdentity,
+                    () => this.taskRepo.findWorkerIdsWithPackageOrUrl(
+                        taskIdentity.packageId, taskIdentity.normalizedUrl,
+                        taskIdentity.businessNameKey, taskIdentity.entityKeys,
+                    ),
+                    () => this.userRepo.findByRole(UserRole.WORKER),
+                    (error) => this.logger.error(`Task push suppressed: eligibility could not be verified: ${error.message}`),
+                );
 
                 await this.firebaseAdmin.sendTaskBroadcastNotification({
                     title: notificationTitle,

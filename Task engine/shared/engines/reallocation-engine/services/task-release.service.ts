@@ -1,3 +1,9 @@
+import { DataSource, In } from 'typeorm';
+import { Task } from '../../../database/entities/task.entity';
+import { TaskAssignment } from '../../../database/entities/task-assignment.entity';
+import { CampaignWorkerParticipation } from '../../../database/entities/campaign-worker-participation.entity';
+import { executionDeadline } from '../../../common/utils/worker-execution-deadline';
+import { ReleaseReason } from '../types/reallocation.types';
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TaskRepository } from '../../../database/repositories/task.repository';
@@ -17,65 +23,68 @@ export class TaskReleaseService {
         private readonly participationRepo: CampaignWorkerParticipationRepository,
         private readonly assignmentRepo: TaskAssignmentRepository,
         private readonly eventEmitter: EventEmitter2,
+        private readonly dataSource: DataSource,
     ) { }
 
     async releaseWorkerFromTask(request: TaskReleaseRequest): Promise<boolean> {
-        this.logger.warn(
-            `Releasing Worker '${request.workerId}' from Task '${request.taskId}' in Campaign '${request.campaignId}'. Reason: ${request.reason}.`,
-        );
+        const released = await this.dataSource.transaction(async (manager) => {
+            // The same row lock used by acceptance and proof submission serializes all three paths.
+            const task = await manager.findOne(Task, {
+                where: { id: request.taskId }, lock: { mode: 'pessimistic_write' },
+            });
+            if (!task || task.assignedTo !== request.workerId || task.submittedAt) return false;
+            if (!['assigned', 'accepted', 'in_progress'].includes(task.status.toLowerCase())) return false;
+            if (request.reason === ReleaseReason.WORKER_TIMEOUT) {
+                const deadline = executionDeadline(task) || request.expectedDeadline;
+                if (!deadline || new Date(deadline).getTime() > Date.now()) return false;
+            }
 
-        const task = await this.taskRepo.findById(request.taskId);
-        if (!task) {
-            this.logger.warn(`Task '${request.taskId}' not found for release.`);
-            return false;
-        }
+            const campaignId = task.campaignId || task.orderId;
+            let participation = await manager.findOne(CampaignWorkerParticipation, {
+                where: { campaignId, workerId: request.workerId },
+            });
+            if (!participation) {
+                participation = manager.create(CampaignWorkerParticipation, {
+                    campaignId, workerId: request.workerId, expiredCount: 0,
+                });
+            }
+            participation.status = ParticipationStatus.EXPIRED;
+            participation.expiredCount = Number(participation.expiredCount || 0) + 1;
+            participation.lastAssignedAt = new Date();
+            await manager.save(participation);
 
-        // Verify task is currently assigned to the releasing worker to prevent wiping newly reassigned workers
-        if (task.assignedTo && task.assignedTo !== request.workerId) {
-            this.logger.warn(
-                `Task '${request.taskId}' current assignee is '${task.assignedTo}', ignoring release request for Worker '${request.workerId}'.`
-            );
-            return false;
-        }
+            const assignment = await manager.findOne(TaskAssignment, {
+                where: { taskId: task.id, workerId: request.workerId,
+                    status: In([TaskAssignmentStatus.ASSIGNED, TaskAssignmentStatus.ACCEPTED, TaskAssignmentStatus.STARTED]) },
+                order: { attemptNumber: 'DESC' },
+            });
+            if (assignment) {
+                assignment.status = request.reason === ReleaseReason.WORKER_TIMEOUT
+                    ? TaskAssignmentStatus.EXPIRED : TaskAssignmentStatus.EARLY_RELEASED;
+                assignment.expiredAt = new Date();
+                assignment.releaseReason = request.reason;
+                await manager.save(assignment);
+            }
 
-        // 1. Update Participation Status to EXPIRED (Participation record REMAINS locked in DB for Exclusion!)
-        await this.participationRepo.updateStatus(
-            request.campaignId,
-            request.workerId,
-            ParticipationStatus.EXPIRED,
-        );
-
-        // 2. Update active TaskAssignment record with releaseReason
-        const activeAssignment = await this.assignmentRepo.findActiveAssignment(request.taskId);
-        if (activeAssignment) {
-            await this.assignmentRepo.updateStatus(
-                activeAssignment.id,
-                TaskAssignmentStatus.EARLY_RELEASED,
-                { expiredAt: new Date(), releaseReason: request.reason },
-            );
-        }
-
-        // 3. Reset Task entity state to 'active' and unassign worker
-        await this.taskRepo.update(request.taskId, {
-            assignedTo: null,
-            assignedAt: null,
-            acceptedAt: null,
-            startedAt: null,
-            submittedAt: null,
-            completedAt: null,
-            deadline: null,
-            status: TaskStatus.ACTIVE,
+            // Keep task/order-unit identity and historical attempts so the previous worker stays excluded.
+            task.assignedTo = null;
+            task.assignedAt = null;
+            task.acceptedAt = null;
+            task.startedAt = null;
+            task.deadline = null;
+            task.status = TaskStatus.ACTIVE;
+            const metadata = { ...(task.metadata || {}) };
+            delete metadata.executionStartedAt;
+            task.metadata = metadata;
+            await manager.save(task);
+            return true;
         });
-
-        // 4. Dispatch event for Scoring Engine reliability score penalty
-        this.eventEmitter.emit('worker.task_released', {
-            workerId: request.workerId,
-            taskId: request.taskId,
-            campaignId: request.campaignId,
-            reason: request.reason,
-            timestamp: new Date(),
-        });
-
-        return true;
+        if (released) {
+            this.eventEmitter.emit('worker.task_released', {
+                workerId: request.workerId, taskId: request.taskId, campaignId: request.campaignId,
+                reason: request.reason, timestamp: new Date(),
+            });
+        }
+        return released;
     }
 }

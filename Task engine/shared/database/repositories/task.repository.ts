@@ -151,6 +151,9 @@ export class TaskRepository {
                 { status: TaskStatus.ASSIGNED },
                 { status: TaskStatus.ACCEPTED },
                 { status: TaskStatus.IN_PROGRESS },
+                { status: 'ASSIGNED' as TaskStatus },
+                { status: 'ACCEPTED' as TaskStatus },
+                { status: 'IN_PROGRESS' as TaskStatus },
             ],
         });
     }
@@ -296,7 +299,9 @@ export class TaskRepository {
                 for (const r of rows) {
                     if (r.workerKey) workerIds.add(r.workerKey.toString().trim());
                 }
-            } catch (_) {}
+            } catch (error) {
+                throw error; // Exclusion history is mandatory, never fall back to an incomplete match.
+            }
         }
 
         // 2. Scan historical tasks

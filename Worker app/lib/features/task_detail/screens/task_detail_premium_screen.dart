@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../core/utils/task_execution_deadline.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -51,7 +52,9 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   // Countdown timer state
   Timer? _countdownTimer;
-  int _secondsRemaining = 180;
+  int _secondsRemaining = 1800;
+  DateTime? _executionDeadline;
+  bool _taskWindowExpired = false;
 
   // YouTube watch time tracking state
   int _elapsedWatchSeconds = 0;
@@ -161,6 +164,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      if (_isTaskAccepted && !_isSubmitted) _startTimer();
       _syncReviewToKeyboard();
       _checkKeyboardReadiness();
       if (_isWatchingOnYouTube && !_isWatchCompleted) {
@@ -573,22 +577,30 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   void _startTimer() {
     _countdownTimer?.cancel();
-    final execTime =
-        widget.task['executionTimeSeconds'] ??
-        ((widget.task['timeToCompleteHours'] ?? 1) * 3600);
-    setState(
-      () => _secondsRemaining = (execTime is int && execTime > 0)
-          ? execTime
-          : 180,
-    );
-
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsRemaining > 0) {
-        if (mounted) setState(() => _secondsRemaining--);
-      } else {
-        timer.cancel();
+    _executionDeadline = taskExecutionDeadline(widget.task as Map) ??
+        _executionDeadline ?? DateTime.now().add(const Duration(minutes: 30));
+    void updateRemaining() {
+      if (!mounted) return;
+      final remaining = taskExecutionSecondsRemaining(_executionDeadline!, DateTime.now());
+      setState(() => _secondsRemaining = remaining);
+      if (remaining == 0 && !_taskWindowExpired && !_isSubmitted) {
+        _taskWindowExpired = true;
+        _countdownTimer?.cancel();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _isSubmitted) return;
+          final provider = Provider.of<TaskProvider>(context, listen: false);
+          unawaited(provider.fetchMyTasks('assigned', forceRefresh: true));
+          unawaited(provider.fetchAvailableTasks(silent: true));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('30-minute limit reached. This task is being made available to another worker.'),
+          ));
+        });
       }
-    });
+    }
+    updateRemaining();
+    if (!_taskWindowExpired) {
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) => updateRemaining());
+    }
   }
 
   String _formatTimer(int totalSeconds) {
@@ -1767,6 +1779,13 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
 
   // ── 3. Submit Task Proof Flow ─────────────────────────────────────────────
   void _onPressSubmit() {
+    if (_taskWindowExpired || (_executionDeadline != null &&
+        taskExecutionSecondsRemaining(_executionDeadline!, DateTime.now()) == 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Your 30-minute task window has expired. Please choose another task.'),
+      ));
+      return;
+    }
     // YouTube Watch Time Check (Strict: Proof cannot be submitted until full watch requirement is met)
     if (_isYouTubeTask() && !_isWatchCompleted) {
       _showPleaseWatchCompleteVideoDialog();
@@ -2793,7 +2812,7 @@ class _TaskDetailPremiumScreenState extends State<TaskDetailPremiumScreen>
                       SizedBox(
                         width: double.infinity,
                         child: MarqueeText(
-                          text: 'Complete task & submit proof below',
+                          text: 'Submit proof within 30 minutes or the task goes to another worker',
                           style: TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                       ),

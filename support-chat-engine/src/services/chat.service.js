@@ -2,6 +2,7 @@ const { pool } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 const { sendWorkerChatNotification, sendBulkWorkerChatNotifications } = require('./fcm.service');
 const admin = require('../config/firebase');
+const { createHash } = require('crypto');
 
 // Helper to extract YouTube video ID from URL
 function extractYouTubeId(url) {
@@ -11,10 +12,27 @@ function extractYouTubeId(url) {
 }
 
 class ChatService {
+  deletionKeys(...identifiers) {
+    return [...new Set(identifiers.filter(Boolean).map((value) => {
+      const clean = String(value).trim();
+      return createHash('sha256').update(clean.includes('@') ? clean.toLowerCase() : clean).digest('hex');
+    }))];
+  }
+
+  async assertWorkerNotDeleted(...identifiers) {
+    const keys = this.deletionKeys(...identifiers);
+    if (!keys.length) return;
+    const [deleted] = await pool.query(
+      `SELECT identity_hash FROM deleted_worker_accounts WHERE identity_hash IN (${keys.map(() => '?').join(',')}) LIMIT 1`, keys,
+    );
+    if (deleted.length) throw new Error('This worker account has been permanently deleted');
+  }
+
   /**
    * Get or create conversation for a worker
    */
   async getOrCreateConversation(workerId, workerDetails = {}) {
+    await this.assertWorkerNotDeleted(workerId, workerDetails.email);
     // 1. Lookup user & worker info from DB
     const [userRows] = await pool.query(
       `SELECT u.id, u.email, u.full_name as user_full_name, u.avatar_url, 
@@ -64,6 +82,8 @@ class ChatService {
         resolvedName = 'Worker';
       }
     }
+
+    await this.assertWorkerNotDeleted(workerId, email, userInfo.id, userInfo.worker_actual_id);
 
     // Comprehensive search for existing conversation:
     // Match by worker_id, or by worker_email, or by userInfo.id, or by userInfo.worker_actual_id
@@ -139,12 +159,15 @@ class ChatService {
     }
 
     const newId = uuidv4();
-    await pool.query(
+    const deletionKeys = this.deletionKeys(...possibleIds, email);
+    const [inserted] = await pool.query(
       `INSERT INTO support_conversations 
        (id, worker_id, worker_name, worker_phone, worker_email, worker_avatar_url, last_message_text, last_message_type, last_message_at, unread_admin_count, unread_worker_count)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0, 0)`,
-      [newId, workerId, resolvedName, phone, email, avatar, 'Started conversation', 'TEXT']
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0, 0 FROM DUAL
+       WHERE NOT EXISTS (SELECT 1 FROM deleted_worker_accounts WHERE identity_hash IN (${deletionKeys.map(() => '?').join(',')}))`,
+      [newId, workerId, resolvedName, phone, email, avatar, 'Started conversation', 'TEXT', ...deletionKeys]
     );
+    if (!inserted.affectedRows) throw new Error('This worker account has been permanently deleted');
 
     const [created] = await pool.query('SELECT * FROM support_conversations WHERE id = ?', [newId]);
     return created[0];
@@ -319,6 +342,11 @@ class ChatService {
       conversationId = conv.id;
     }
 
+    const [conversations] = await pool.query('SELECT worker_id, worker_email FROM support_conversations WHERE id = ?', [conversationId]);
+    if (!conversations.length) throw new Error('Worker conversation no longer exists');
+    workerId = workerId || conversations[0].worker_id;
+    await this.assertWorkerNotDeleted(workerId, conversations[0].worker_id, conversations[0].worker_email);
+
     // Auto-detect YouTube URL if text contains a youtube link
     if (messageType === 'TEXT' && senderType === 'ADMIN') {
       const ytId = extractYouTubeId(content);
@@ -331,10 +359,13 @@ class ChatService {
     }
 
     const messageId = uuidv4();
-    await pool.query(
+    const deletionKeys = this.deletionKeys(workerId, conversations[0].worker_id, conversations[0].worker_email);
+    const [inserted] = await pool.query(
       `INSERT INTO support_messages 
        (id, conversation_id, worker_id, sender_type, message_type, content, media_url, youtube_id, duration_seconds, is_read, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())`,
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW() FROM DUAL
+       WHERE EXISTS (SELECT 1 FROM support_conversations WHERE id = ?)
+       AND NOT EXISTS (SELECT 1 FROM deleted_worker_accounts WHERE identity_hash IN (${deletionKeys.map(() => '?').join(',')}))`,
       [
         messageId,
         conversationId,
@@ -345,8 +376,11 @@ class ChatService {
         mediaUrl,
         youtubeId,
         durationSeconds || 0,
+        conversationId,
+        ...deletionKeys,
       ]
     );
+    if (!inserted.affectedRows) throw new Error('Worker account or conversation has been deleted');
 
     // Update conversation snippet & counters
     let previewText = content;
@@ -430,41 +464,74 @@ class ChatService {
     let targetWorkerIds = [];
 
     if (segment === 'CUSTOM' && Array.isArray(customWorkerIds) && customWorkerIds.length > 0) {
-      targetWorkerIds = customWorkerIds;
+      const cleanIds = customWorkerIds.map((id) => String(id).trim()).filter(Boolean);
+      if (cleanIds.length > 0) {
+        const slots = cleanIds.map(() => '?').join(',');
+        const [blockedRows] = await pool.query(
+          `SELECT u.id as user_id, w.id as worker_id, u.email
+           FROM users u
+           LEFT JOIN workers w ON w.user_id = u.id
+           WHERE (u.id IN (${slots}) OR w.id IN (${slots}) OR u.email IN (${slots}))
+             AND (UPPER(COALESCE(u.status, 'ACTIVE')) IN ('SUSPENDED', 'BANNED')
+                  OR UPPER(COALESCE(w.status, 'ACTIVE')) IN ('SUSPENDED', 'BANNED'))`,
+          [...cleanIds, ...cleanIds, ...cleanIds]
+        );
+        const blockedSet = new Set();
+        for (const r of blockedRows) {
+          if (r.user_id) blockedSet.add(String(r.user_id));
+          if (r.worker_id) blockedSet.add(String(r.worker_id));
+          if (r.email) blockedSet.add(String(r.email));
+        }
+        targetWorkerIds = cleanIds.filter((id) => !blockedSet.has(id));
+      }
     } else if (segment === 'NEW') {
-      // Workers joined in the last 7 days: map to active conversation worker_id
+      // Workers joined in the last 7 days (excluding suspended/banned): map to active conversation worker_id
       const [rows] = await pool.query(
         `SELECT DISTINCT COALESCE(c.worker_id, u.id) as id 
          FROM users u
          LEFT JOIN workers w ON w.user_id = u.id
          LEFT JOIN support_conversations c ON (c.worker_id = u.id OR (c.worker_email != '' AND c.worker_email = u.email) OR (w.id IS NOT NULL AND c.worker_id = w.id))
-         WHERE UPPER(u.role) = 'WORKER' AND u.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`
+         WHERE UPPER(u.role) = 'WORKER'
+           AND UPPER(COALESCE(u.status, 'ACTIVE')) NOT IN ('SUSPENDED', 'BANNED')
+           AND UPPER(COALESCE(w.status, 'ACTIVE')) NOT IN ('SUSPENDED', 'BANNED')
+           AND u.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`
       );
       targetWorkerIds = rows.map((r) => r.id);
     } else if (segment === 'ACTIVE') {
-      // Workers with at least 1 completed task or active in last 7 days: map to active conversation worker_id
+      // Workers with at least 1 completed task or active in last 7 days (excluding suspended/banned): map to active conversation worker_id
       const [rows] = await pool.query(
         `SELECT DISTINCT COALESCE(c.worker_id, u.id) as id 
          FROM users u
          JOIN workers w ON w.user_id = u.id
          LEFT JOIN support_conversations c ON (c.worker_id = u.id OR (c.worker_email != '' AND c.worker_email = u.email) OR (w.id IS NOT NULL AND c.worker_id = w.id))
-         WHERE UPPER(u.role) = 'WORKER' AND (w.total_tasks_completed > 0 OR w.last_active_at >= DATE_SUB(NOW(), INTERVAL 7 DAY))`
+         WHERE UPPER(u.role) = 'WORKER'
+           AND UPPER(COALESCE(u.status, 'ACTIVE')) NOT IN ('SUSPENDED', 'BANNED')
+           AND UPPER(COALESCE(w.status, 'ACTIVE')) NOT IN ('SUSPENDED', 'BANNED')
+           AND (w.total_tasks_completed > 0 OR w.last_active_at >= DATE_SUB(NOW(), INTERVAL 7 DAY))`
       );
       targetWorkerIds = rows.map((r) => r.id);
     } else {
-      // ALL Workers: map every registered worker to their canonical active conversation worker_id
+      // ALL Workers (excluding suspended/banned): map every active registered worker to their canonical active conversation worker_id
       const [rows] = await pool.query(
         `SELECT DISTINCT COALESCE(c.worker_id, u.id) as id 
          FROM users u
          LEFT JOIN workers w ON w.user_id = u.id
          LEFT JOIN support_conversations c ON (c.worker_id = u.id OR (c.worker_email != '' AND c.worker_email = u.email) OR (w.id IS NOT NULL AND c.worker_id = w.id))
-         WHERE UPPER(u.role) = 'WORKER'`
+         WHERE UPPER(u.role) = 'WORKER'
+           AND UPPER(COALESCE(u.status, 'ACTIVE')) NOT IN ('SUSPENDED', 'BANNED')
+           AND UPPER(COALESCE(w.status, 'ACTIVE')) NOT IN ('SUSPENDED', 'BANNED')`
       );
       const userTargetIds = rows.map((r) => r.id);
 
-      // Also ensure any orphan support_conversations are included
+      // Also include non-suspended orphan support_conversations
       const [convRows] = await pool.query(
-        `SELECT DISTINCT worker_id as id FROM support_conversations WHERE worker_id IS NOT NULL AND worker_id != ''`
+        `SELECT DISTINCT c.worker_id as id
+         FROM support_conversations c
+         LEFT JOIN users u ON (u.id = c.worker_id OR (c.worker_email != '' AND c.worker_email = u.email))
+         LEFT JOIN workers w ON (w.id = c.worker_id OR w.user_id = u.id)
+         WHERE c.worker_id IS NOT NULL AND c.worker_id != ''
+           AND UPPER(COALESCE(u.status, 'ACTIVE')) NOT IN ('SUSPENDED', 'BANNED')
+           AND UPPER(COALESCE(w.status, 'ACTIVE')) NOT IN ('SUSPENDED', 'BANNED')`
       );
       const allSet = new Set(userTargetIds);
       for (const cr of convRows) {

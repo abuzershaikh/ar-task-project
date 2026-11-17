@@ -16,7 +16,7 @@ export class ServiceCatalogService {
 
     async getServiceById(id: string): Promise<ServiceCatalog> {
         const service = await this.serviceCatalogRepo.findById(id);
-        if (!service) {
+        if (!service || service.deletedAt) {
             throw new NotFoundException(`Service with ID '${id}' not found`);
         }
         return service;
@@ -117,6 +117,9 @@ export class ServiceCatalogService {
             maxAcceptHours?: number;
         },
     ): Promise<ServiceCatalog> {
+        if (Object.prototype.hasOwnProperty.call(data, 'isActive') && typeof data.isActive !== 'boolean') {
+            throw new BadRequestException('isActive must be a boolean');
+        }
         await this.getServiceById(id);
         const updated = await this.serviceCatalogRepo.update(id, data);
         return updated!;

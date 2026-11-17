@@ -23,12 +23,16 @@ class CreateCampaignPage extends StatefulWidget {
   State<CreateCampaignPage> createState() => CreateCampaignPageState();
 }
 
-class CreateCampaignPageState extends State<CreateCampaignPage> {
+class CreateCampaignPageState extends State<CreateCampaignPage> with WidgetsBindingObserver {
   final ServiceRepositoryImpl _serviceRepository = ServiceRepositoryImpl();
 
   List<ServiceModel> _publishedServices = [];
   ServiceModel? _selectedService;
   bool _isLoading = true;
+  bool _refreshingServices = false;
+  bool _initialServiceSelectionDone = false;
+  String? _catalogError;
+  Timer? _catalogRefreshTimer;
 
   /// Closes the order form if open and returns to the catalog.
   /// Returns true if handled (meaning it went from order form back to catalog),
@@ -108,12 +112,33 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadPublishedServices();
+    _startCatalogRefresh();
     _loadWalletBalance();
+  }
+
+  void _startCatalogRefresh() {
+    _catalogRefreshTimer?.cancel();
+    _catalogRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      _loadPublishedServices();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadPublishedServices();
+      _startCatalogRefresh();
+    } else {
+      _catalogRefreshTimer?.cancel();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _catalogRefreshTimer?.cancel();
     _urlDebounceTimer?.cancel();
     _targetUrlController.dispose();
     _appNameController.dispose();
@@ -866,18 +891,44 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
   }
 
   Future<void> _loadPublishedServices() async {
-    setState(() => _isLoading = true);
-    final services = await _serviceRepository.getPublishedServices();
-    setState(() {
-      _publishedServices = services;
-      _isLoading = false;
-
-      if (widget.serviceId != null) {
-        try {
-          _selectService(services.firstWhere((s) => s.id == widget.serviceId));
-        } catch (_) {}
+    if (_refreshingServices || _isSubmitting) return;
+    _refreshingServices = true;
+    try {
+      final services = await _serviceRepository.getPublishedServices();
+      if (!mounted || _isSubmitting) return;
+      final previous = _selectedService;
+      ServiceModel? updatedSelection;
+      for (final service in services) {
+        if (service.id == previous?.id) updatedSelection = service;
       }
-    });
+      setState(() {
+        _publishedServices = services;
+        _selectedService = updatedSelection;
+        _catalogError = null;
+        _isLoading = false;
+      });
+      if (previous != null && updatedSelection == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('This service is currently unavailable. Please choose another service.'),
+        ));
+      }
+      if (!_initialServiceSelectionDone) {
+        _initialServiceSelectionDone = true;
+        for (final service in services) {
+          if (service.id == widget.serviceId) _selectService(service);
+        }
+      }
+    } catch (_) {
+      if (!mounted || _isSubmitting) return;
+      setState(() {
+        _publishedServices = [];
+        _selectedService = null;
+        _catalogError = 'Could not refresh services. Please check your connection.';
+        _isLoading = false;
+      });
+    } finally {
+      _refreshingServices = false;
+    }
   }
 
   void _selectService(ServiceModel service) {
@@ -1245,6 +1296,16 @@ class CreateCampaignPageState extends State<CreateCampaignPage> {
 
   // ==================== VIEW 1: CATEGORY ACCORDION CATALOG ====================
   Widget _buildCategoryAccordionCatalogView() {
+    if (_publishedServices.isEmpty) {
+      return Center(child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(_catalogError ?? 'No services are available right now.'),
+          const SizedBox(height: 12),
+          TextButton(onPressed: _loadPublishedServices, child: const Text('Refresh services')),
+        ]),
+      ));
+    }
     // Group services by category
     final Map<String, List<ServiceModel>> grouped = {};
     for (var s in _publishedServices) {

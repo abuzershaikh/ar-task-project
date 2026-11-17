@@ -523,7 +523,7 @@ export class WorkerTaskController {
         }
 
         // 5. Accept task with workerEmail passed for 3-level verification & Gmail permanent lock
-        await this.taskEngine.acceptTask({
+        const acceptedTask = await this.taskEngine.acceptTask({
             taskId,
             workerId: user.id,
             workerEmail: normEmail,
@@ -537,6 +537,7 @@ export class WorkerTaskController {
             success: true,
             taskId,
             message: 'Task accepted successfully',
+            task: acceptedTask,
         };
     }
 

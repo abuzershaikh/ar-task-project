@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { createHash } from 'crypto';
+import { assertWorkerAccountNotDeleted } from '../../services/worker-deletion-guard';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
@@ -9,6 +11,49 @@ export class UserRepository {
         @InjectRepository(User)
         private readonly repository: Repository<User>,
     ) { }
+
+    async claimWorkerDeviceToken(userId: string, token: string): Promise<void> {
+        if (typeof token !== 'string' || token.trim() !== token || token.length < 21 || token.length > 4096) {
+            throw new BadRequestException('Invalid device token');
+        }
+        const runner = this.repository.manager.connection.createQueryRunner();
+        const lock = `push_owner_${createHash('sha256').update(token).digest('hex').slice(0, 48)}`;
+        let locked = false;
+        await runner.connect();
+        try {
+            const result = await runner.query('SELECT GET_LOCK(?, 10) AS acquired', [lock]);
+            locked = Number(result?.[0]?.acquired) === 1;
+            if (!locked) throw new BadRequestException('Device registration is busy. Please retry.');
+            await runner.startTransaction();
+            const users = await runner.query("SELECT id FROM users WHERE id = ? AND role = 'WORKER' FOR UPDATE", [userId]);
+            if (!users.length) throw new BadRequestException('Worker account no longer exists');
+            await assertWorkerAccountNotDeleted(runner, userId);
+            await runner.query(`UPDATE users SET metadata = CASE
+                WHEN JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.fcmToken')) = ?
+                 AND JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.deviceToken')) = ?
+                    THEN JSON_REMOVE(metadata, '$.fcmToken', '$.deviceToken')
+                WHEN JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.fcmToken')) = ?
+                    THEN JSON_REMOVE(metadata, '$.fcmToken')
+                ELSE JSON_REMOVE(metadata, '$.deviceToken') END
+                WHERE role = 'WORKER' AND id <> ? AND
+                (JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.fcmToken')) = ?
+                 OR JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.deviceToken')) = ?)`,
+            [token, token, token, userId, token, token]);
+            await runner.query(`UPDATE users SET metadata = JSON_SET(COALESCE(metadata, JSON_OBJECT()),
+                '$.fcmToken', ?, '$.deviceToken', ?, '$.tokenUpdatedAt', ?) WHERE id = ?`,
+            [token, token, new Date().toISOString(), userId]);
+            await runner.commitTransaction();
+        } catch (error) {
+            if (runner.isTransactionActive) await runner.rollbackTransaction();
+            throw error;
+        } finally {
+            try {
+                if (locked) await runner.query('SELECT RELEASE_LOCK(?)', [lock]);
+            } finally {
+                await runner.release();
+            }
+        }
+    }
 
     async findById(id: string): Promise<User | null> {
         return this.repository.findOne({ where: { id } });

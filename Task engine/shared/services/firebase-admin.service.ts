@@ -126,10 +126,11 @@ export class FirebaseAdminService implements OnModuleInit {
 
       // 1. If targeted eligible tokens are provided, send via Multicast strictly to those devices
       if (params.targetTokens !== undefined) {
-        if (params.targetTokens.length > 0) {
+        const uniqueTokens = [...new Set(params.targetTokens.filter((token) => typeof token === 'string' && token.trim().length > 20))];
+        if (uniqueTokens.length > 0) {
           const chunkSize = 500;
-          for (let i = 0; i < params.targetTokens.length; i += chunkSize) {
-            const chunk = params.targetTokens.slice(i, i + chunkSize);
+          for (let i = 0; i < uniqueTokens.length; i += chunkSize) {
+            const chunk = uniqueTokens.slice(i, i + chunkSize);
             try {
               const response = await this.messaging.sendEachForMulticast({
                 tokens: chunk,

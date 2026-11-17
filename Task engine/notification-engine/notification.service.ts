@@ -199,6 +199,10 @@ export class NotificationEngineService {
             return metaToken;
         }
 
+        // Worker token ownership is established only by device registration.
+        // An old Firestore profile must not reclaim a device after an account switch.
+        if (user?.role === UserRole.WORKER) return null;
+
         // 2. From Firestore users collection
         if (this.firebaseAdmin) {
             const lookupKeys = [

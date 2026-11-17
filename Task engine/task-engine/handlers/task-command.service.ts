@@ -3,7 +3,7 @@ import { DataSource, In } from 'typeorm';
 import { Task } from '../../shared/database/entities/task.entity';
 import { CampaignWorkerParticipation, ParticipationStatus } from '../../shared/database/entities/campaign-worker-participation.entity';
 import { TaskAssignment, TaskAssignmentStatus } from '../../shared/database/entities/task-assignment.entity';
-import { SystemSetting } from '../../shared/database/entities/system-settings.entity';
+import { executionDeadline, WORKER_EXECUTION_TIMEOUT_MS } from '../../shared/common/utils/worker-execution-deadline';
 import { User } from '../../shared/database/entities/user.entity';
 import { Worker } from '../../shared/database/entities/worker.entity';
 import { TaskRepository } from '../../shared/database/repositories/task.repository';
@@ -21,7 +21,7 @@ import { ApproveTaskCommand } from '../commands/approve-task.command';
 import { RejectTaskCommand } from '../commands/reject-task.command';
 import { RequestChangesCommand } from '../commands/request-changes.command';
 import { CancelTaskCommand } from '../commands/cancel-task.command';
-import { extractTaskIdentity } from '../../shared/common/utils/task-identity.util';
+import { extractTaskIdentity, hasStableGoogleBusinessIdentity } from '../../shared/common/utils/task-identity.util';
 
 @Injectable()
 export class TaskCommandService {
@@ -144,7 +144,8 @@ export class TaskCommandService {
                     );
                 } catch (dupErr: any) {
                     // Unique constraint or warning
-                    this.logger.warn(`Could not insert into worker_completed_identities: ${dupErr?.message}`);
+                    this.logger.error(`Could not record worker task identity: ${dupErr?.message}`);
+                    throw dupErr;
                 }
             }
         }
@@ -156,6 +157,9 @@ export class TaskCommandService {
         allIds: string[],
         targetIdentity: any,
     ) {
+        if (targetIdentity.googleBusiness && !hasStableGoogleBusinessIdentity(targetIdentity)) {
+            throw new BadRequestException('This Google Business listing ID could not be verified. Please contact support.');
+        }
         if (
             !targetIdentity.packageId &&
             !targetIdentity.normalizedUrl &&
@@ -189,7 +193,8 @@ export class TaskCommandService {
                 }
             } catch (err: any) {
                 if (err instanceof BadRequestException) throw err;
-                this.logger.warn(`Could not check worker_completed_identities table: ${err?.message}`);
+                this.logger.error(`Could not verify worker task identity: ${err?.message}`);
+                throw err;
             }
         }
 
@@ -347,14 +352,20 @@ export class TaskCommandService {
                     await this.recordWorkerCompletedIdentities(manager, allIds, keysToRecord, task.id);
                 }
 
-                const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
+                const maxAttemptRow = await manager.query(
+                    'SELECT COALESCE(MAX(attempt_number), 0) AS max_attempt FROM task_assignments WHERE task_id = ?',
+                    [task.id],
+                );
+                const maxAttempt = Number(maxAttemptRow?.[0]?.max_attempt || 0);
+                const nextAttemptNumber = Math.max(maxAttempt, task.attemptCount || 0) + 1;
+
                 const assignment = manager.create(TaskAssignment, {
                     taskId: task.id,
                     campaignId,
                     orderId,
                     orderUnitId,
                     workerId: primaryWorkerKey,
-                    attemptNumber: attempts.length + 1,
+                    attemptNumber: nextAttemptNumber,
                     status: TaskAssignmentStatus.ASSIGNED,
                     assignedAt: new Date(),
                 });
@@ -363,6 +374,7 @@ export class TaskCommandService {
                 task.assignedTo = primaryWorkerKey;
                 task.orderUnitId = orderUnitId;
                 task.assignedAt = new Date();
+                task.attemptCount = nextAttemptNumber;
                 task.status = TaskStatus.ASSIGNED;
                 task.metadata = { ...(task.metadata || {}), ...(command.metadata || {}) };
                 const saved = await manager.save(task);
@@ -407,6 +419,7 @@ export class TaskCommandService {
             }
 
             if (task.status === TaskStatus.ACCEPTED && allIds.includes(task.assignedTo || '')) {
+                this.ensureExecutionNotExpired(task);
                 await queryRunner.commitTransaction();
                 return task;
             }
@@ -492,43 +505,35 @@ export class TaskCommandService {
                     await this.recordWorkerCompletedIdentities(manager, allIds, keysToRecord, task.id);
                 }
 
-                const attempts = await manager.find(TaskAssignment, { where: { taskId: task.id } });
+                const maxAttemptRow = await manager.query(
+                    'SELECT COALESCE(MAX(attempt_number), 0) AS max_attempt FROM task_assignments WHERE task_id = ?',
+                    [task.id],
+                );
+                const maxAttempt = Number(maxAttemptRow?.[0]?.max_attempt || 0);
+                const nextAttemptNumber = Math.max(maxAttempt, task.attemptCount || 0) + 1;
+
                 const assignment = manager.create(TaskAssignment, {
                     taskId: task.id,
                     campaignId,
                     orderId,
                     orderUnitId,
                     workerId: primaryWorkerKey,
-                    attemptNumber: attempts.length + 1,
+                    attemptNumber: nextAttemptNumber,
                     status: TaskAssignmentStatus.ACCEPTED,
                     assignedAt: new Date(),
                     acceptedAt: new Date(),
                 });
                 await manager.save(assignment);
 
-                // Dynamic deadline calculation: Strictly prioritize Admin system setting
-                let executionHours = 2.0;
-                try {
-                    const timeoutSetting = await manager.findOne(SystemSetting, { where: { key: 'worker_execution_timeout_hours' } });
-                    if (timeoutSetting && timeoutSetting.value !== null && timeoutSetting.value !== undefined) {
-                        executionHours = Number(timeoutSetting.value);
-                    } else if (task.requirements?.timeToCompleteHours) {
-                        executionHours = Number(task.requirements.timeToCompleteHours);
-                    }
-                } catch (_) {
-                    if (task.requirements?.timeToCompleteHours) {
-                        executionHours = Number(task.requirements.timeToCompleteHours);
-                    }
-                }
-
                 const now = new Date();
-                const deadline = new Date(now.getTime() + executionHours * 3600 * 1000);
+                const deadline = new Date(now.getTime() + WORKER_EXECUTION_TIMEOUT_MS);
 
                 task.status = TaskStatus.ACCEPTED;
                 task.acceptedAt = now;
                 task.assignedAt = now;
                 task.assignedTo = primaryWorkerKey;
                 task.orderUnitId = orderUnitId;
+                task.attemptCount = nextAttemptNumber;
                 task.deadline = deadline;
                 const saved = await manager.save(task);
 
@@ -555,27 +560,12 @@ export class TaskCommandService {
                 await manager.save(activeAssignment);
             }
 
-            // Dynamic deadline calculation for pre-assigned task acceptance
-            let executionHours = 2.0;
-            try {
-                const timeoutSetting = await manager.findOne(SystemSetting, { where: { key: 'worker_execution_timeout_hours' } });
-                if (timeoutSetting && timeoutSetting.value !== null && timeoutSetting.value !== undefined) {
-                    executionHours = Number(timeoutSetting.value);
-                } else if (task.requirements?.timeToCompleteHours) {
-                    executionHours = Number(task.requirements.timeToCompleteHours);
-                }
-            } catch (_) {
-                if (task.requirements?.timeToCompleteHours) {
-                    executionHours = Number(task.requirements.timeToCompleteHours);
-                }
-            }
-
             const now = new Date();
             task.status = TaskStatus.ACCEPTED;
             task.acceptedAt = now;
             task.assignedTo = primaryWorkerKey;
             task.orderUnitId = orderUnitId;
-            task.deadline = new Date(now.getTime() + executionHours * 3600 * 1000);
+            task.deadline = new Date(now.getTime() + WORKER_EXECUTION_TIMEOUT_MS);
             const saved = await manager.save(task);
 
             await queryRunner.commitTransaction();
@@ -599,6 +589,7 @@ export class TaskCommandService {
             const { allIds } = await this.resolveWorkerIdentifiers(manager, command.workerId, command.workerEmail);
             this.validationService.ensureWorkerOwnership(task, command.workerId, command.workerEmail, allIds);
 
+            this.ensureExecutionNotExpired(task);
             if (task.status === TaskStatus.IN_PROGRESS) return task;
 
             this.stateMachine.validateTransition({
@@ -632,6 +623,7 @@ export class TaskCommandService {
             this.validationService.ensureWorkerOwnership(task, command.workerId, command.workerEmail, allIds);
 
             if (task.status === TaskStatus.UNDER_REVIEW) return task;
+            this.ensureExecutionNotExpired(task);
 
             this.stateMachine.validateTransition({
                 taskId: task.id,
@@ -815,6 +807,13 @@ export class TaskCommandService {
             task.metadata = { ...(task.metadata || {}), cancellationReason: command.reason, cancelledBy: command.actorId };
             return manager.save(task);
         });
+    }
+
+    private ensureExecutionNotExpired(task: Task): void {
+        const deadline = executionDeadline(task);
+        if (!task.submittedAt && deadline && deadline.getTime() <= Date.now()) {
+            throw new BadRequestException('Your 30-minute task window has expired. This task will be available to another worker.');
+        }
     }
 
     private async ensureTaskTransactional(manager: any, taskId: string) {

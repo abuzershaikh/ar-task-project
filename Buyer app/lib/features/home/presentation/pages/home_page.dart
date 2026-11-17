@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../../../services/data/repositories/service_repository_impl.dart';
+import '../../../services/domain/models/service_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,7 +22,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _fadeController;
   late PageController _carouselController;
   Timer? _carouselTimer;
@@ -126,206 +128,84 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     },
   ];
 
-  final List<Map<String, dynamic>> _serviceCatalog = [
-    {
-      'id': 'play_review',
-      'category': 'Play Store',
-      'title': 'Play Store 5-Star Rating & Review',
-      'tag': 'MOST POPULAR',
-      'tagColor': const Color(0xFFF59E0B),
-      'description':
-          'Boost keyword ranking & app conversion. Workers download, test for 30s, give 5★ rating & post authentic keyword-rich reviews.',
-      'price': 'From ₹25 / review',
-      'gradient': [const Color(0xFF047857), const Color(0xFF059669)],
-      'iconType': 'playstore',
-      'features': [
-        '100% Real Android Devices',
-        'Keyword Placement',
-        'Verified Badges'
-      ],
+  final ServiceRepositoryImpl _serviceRepository = ServiceRepositoryImpl();
+  List<ServiceModel> _liveServices = [];
+  Timer? _serviceRefreshTimer;
+  bool _refreshingServices = false;
+
+  List<Map<String, dynamic>> get _serviceCatalog => _liveServices.map((service) {
+    final identity = '${service.code} ${service.category}'.toUpperCase();
+    var category = service.category;
+    var icon = 'app_install';
+    var color = const Color(0xFF0284C7);
+    if (identity.contains('GOOGLE_BUSINESS') || identity.contains('GMB') || identity.contains('MAP')) {
+      category = 'Google Maps';
+      icon = 'google_maps';
+      color = const Color(0xFF2563EB);
+    } else if (identity.contains('INSTA') && !identity.contains('INSTALL')) {
+      category = 'Instagram';
+      icon = 'insta_combo';
+      color = const Color(0xFFEC4899);
+    } else if (identity.contains('YOUTUBE') || identity.contains('YT_')) {
+      category = 'YouTube';
+      icon = 'youtube_combo';
+      color = const Color(0xFFEF4444);
+    } else if (identity.contains('INSTALL') || identity.contains('MOBILE APP')) {
+      category = 'Mobile Apps';
+    } else if (identity.contains('PLAY') || identity.contains('RATING') || identity.contains('REVIEW')) {
+      category = 'Play Store';
+      icon = 'playstore';
+      color = const Color(0xFF10B981);
+    }
+    return <String, dynamic>{
+      'id': service.id,
+      'category': category,
+      'title': service.name,
+      'tag': 'AVAILABLE',
+      'tagColor': color,
+      'description': service.description,
+      'price': CurrencyService.instance.formatPrice(service.pricing.buyerPrice),
+      'gradient': <Color>[color, color],
+      'iconType': icon,
+      'features': <String>[],
       'route': AppRouter.services,
-    },
-    {
-      'id': 'play_keyword_install',
-      'category': 'Play Store',
-      'title': 'Play Store Keyword Search & Install',
-      'tag': 'ASO RANK BOOST',
-      'tagColor': const Color(0xFF10B981),
-      'description':
-          'Targeted users search your app with exact keywords, install & open for 2 mins to elevate search visibility and store rankings.',
-      'price': 'From ₹12 / install',
-      'gradient': [const Color(0xFF065F46), const Color(0xFF047857)],
-      'iconType': 'playstore',
-      'features': [
-        'Organic Keyword Simulation',
-        '2-Min Retention Verification',
-        'Anti-Fraud Shield'
-      ],
-      'route': AppRouter.services,
-    },
-    {
-      'id': 'gmaps_review',
-      'category': 'Google Maps',
-      'title': 'Google Maps 5-Star Rating & Review',
-      'tag': 'LOCAL SEO BOOST',
-      'tagColor': const Color(0xFF3B82F6),
-      'description':
-          'Dominate local search on Google Maps. Real users post authentic 5-star ratings & detailed positive reviews to elevate your business ranking.',
-      'price': 'From ₹35 / review',
-      'gradient': [const Color(0xFF1D4ED8), const Color(0xFF2563EB)],
-      'iconType': 'google_maps',
-      'features': [
-        '100% Real Google Accounts',
-        'Local Geolocation Delivery',
-        'Permanent 5-Star Reviews'
-      ],
-      'route': AppRouter.services,
-    },
-    {
-      'id': 'gmaps_rating_only',
-      'category': 'Google Maps',
-      'title': 'Google Maps 5-Star Rating (Quick Star)',
-      'tag': 'FAST RATING',
-      'tagColor': const Color(0xFF60A5FA),
-      'description':
-          'Instant 5-star rating without text review for fast, safe reputation growth and higher aggregate rating on Google Maps.',
-      'price': 'From ₹20 / rating',
-      'gradient': [const Color(0xFF1E40AF), const Color(0xFF1D4ED8)],
-      'iconType': 'google_maps',
-      'features': [
-        'Quick Star Submission',
-        'Improves Average Rating',
-        'Safe & Permanent'
-      ],
-      'route': AppRouter.services,
-    },
-    {
-      'id': 'insta_combo',
-      'category': 'Instagram',
-      'title': 'Instagram Engagement Combo (Like + Follow + Comment)',
-      'tag': 'ALL-IN-ONE VIRAL COMBO',
-      'tagColor': const Color(0xFFEC4899),
-      'description':
-          'Accelerate algorithm reach. Workers follow your profile, like recent reels/posts, and leave contextual comments with genuine engagement.',
-      'price': 'From ₹2.50 / combo',
-      'gradient': [const Color(0xFFBE185D), const Color(0xFFE11D48)],
-      'iconType': 'insta_combo',
-      'features': [
-        'Follow + Like + AI Comment',
-        'Real Active Accounts',
-        'High Retention'
-      ],
-      'route': AppRouter.services,
-    },
-    {
-      'id': 'yt_combo',
-      'category': 'YouTube',
-      'title': 'YouTube Growth Combo (Watch + Like + Sub + Comment)',
-      'tag': 'ALL-IN-ONE COMBO',
-      'tagColor': const Color(0xFFEF4444),
-      'description':
-          'Full-funnel viral booster: Real workers watch video, like, subscribe, and leave genuine positive comments.',
-      'price': 'From ₹8.00 / combo',
-      'gradient': [const Color(0xFF991B1B), const Color(0xFFDC2626)],
-      'iconType': 'youtube_combo',
-      'features': [
-        'Watch + Like + Sub + Comment',
-        'Genuine Video Comments',
-        'Full Video Watch Retention'
-      ],
-      'route': AppRouter.services,
-    },
-    {
-      'id': 'yt_comments',
-      'category': 'YouTube',
-      'title': 'YouTube Targeted Comments',
-      'tag': 'VIRAL ALGORITHM',
-      'tagColor': const Color(0xFFEF4444),
-      'description':
-          'Trigger the YouTube recommendation algorithm with context-aware, topic-specific comments and natural active discussions.',
-      'price': 'From ₹5 / comment',
-      'gradient': [const Color(0xFFBE123C), const Color(0xFFE11D48)],
-      'iconType': 'youtube_comment',
-      'features': [
-        'Custom Topics & Prompts',
-        'High Retention',
-        'Spam-Free Accounts'
-      ],
-      'route': AppRouter.services,
-    },
-    {
-      'id': 'insta_followers',
-      'category': 'Instagram',
-      'title': 'Instagram Profile Followers & Likes',
-      'tag': 'RAPID GROWTH',
-      'tagColor': const Color(0xFFF43F5E),
-      'description':
-          'Gain active Indian followers and boost like count on posts and reels from verified worker accounts.',
-      'price': 'From ₹2.00 / follower',
-      'gradient': [const Color(0xFF9F1239), const Color(0xFFBE123C)],
-      'iconType': 'insta_follow',
-      'features': [
-        'Non-Drop Accounts',
-        'Fast Organic Delivery',
-        'Algorithm Safe'
-      ],
-      'route': AppRouter.services,
-    },
-    {
-      'id': 'yt_likes_subs',
-      'category': 'YouTube',
-      'title': 'YouTube Likes & Channel Subscribers',
-      'tag': 'AUTHORITY BUILDER',
-      'tagColor': const Color(0xFF8B5CF6),
-      'description':
-          'Permanent channel subscribers and genuine video likes from unique IP addresses to establish instant social proof.',
-      'price': 'From ₹3 / like',
-      'gradient': [const Color(0xFF6D28D9), const Color(0xFF7C3AED)],
-      'iconType': 'youtube_sub',
-      'features': [
-        'Permanent Subscribers',
-        'Fast Delivery',
-        'Safe for Monetization'
-      ],
-      'route': AppRouter.services,
-    },
-    {
-      'id': 'app_install',
-      'category': 'Mobile Apps',
-      'title': 'Android App Install & Open',
-      'tag': 'DOWNLOADS SURGE',
-      'tagColor': const Color(0xFF0284C7),
-      'description':
-          'Drive massive direct installs to your app from active Android users. Guaranteed installation and open verification.',
-      'price': 'From ₹15 / install',
-      'gradient': [const Color(0xFF0369A1), const Color(0xFF0284C7)],
-      'iconType': 'app_install',
-      'features': [
-        'Unique Device IDs',
-        'Open App Verification',
-        'Organic Search Surge'
-      ],
-      'route': AppRouter.services,
-    },
-    {
-      'id': 'app_signup',
-      'category': 'Mobile Apps',
-      'title': 'App Registration & Signup Flow',
-      'tag': 'USER ACQUISITION',
-      'tagColor': const Color(0xFF0EA5E9),
-      'description':
-          'Verified Indian users download your application and register an account with SMS/OTP authentication verified by audit logs.',
-      'price': 'From ₹20 / signup',
-      'gradient': [const Color(0xFF0284C7), const Color(0xFF2563EB)],
-      'iconType': 'app_install',
-      'features': [
-        'OTP / SMS Verification',
-        'Real Phone Numbers',
-        'Anti-Duplicate Safety'
-      ],
-      'route': AppRouter.services,
-    },
-  ];
+    };
+  }).toList();
+
+  Future<void> _refreshServiceCatalog() async {
+    if (_refreshingServices) return;
+    _refreshingServices = true;
+    try {
+      final services = await _serviceRepository.getPublishedServices();
+      if (!mounted) return;
+      setState(() {
+        _liveServices = services;
+        final categories = _serviceCatalog.map((s) => s['category'] as String).toSet();
+        if (categories.isNotEmpty && !categories.contains(_selectedCategory)) {
+          _selectedCategory = categories.first;
+        }
+      });
+    } catch (_) {
+      if (mounted) setState(() => _liveServices = []);
+    } finally {
+      _refreshingServices = false;
+    }
+  }
+
+  void _startServiceRefresh() {
+    _serviceRefreshTimer?.cancel();
+    _serviceRefreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => _refreshServiceCatalog());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshServiceCatalog();
+      _startServiceRefresh();
+    } else {
+      _serviceRefreshTimer?.cancel();
+    }
+  }
 
   @override
   void initState() {
@@ -336,6 +216,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
     _carouselController = PageController(viewportFraction: 0.94);
     _startCarouselTimer();
+    WidgetsBinding.instance.addObserver(this);
+    _refreshServiceCatalog();
+    _startServiceRefresh();
     context.read<WalletBloc>().add(const GetBalanceEvent());
     context.read<DashboardBloc>().add(LoadDashboardDataEvent());
     _fadeController.forward();
@@ -358,6 +241,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _serviceRefreshTimer?.cancel();
     _carouselTimer?.cancel();
     _carouselController.dispose();
     _fadeController.dispose();
@@ -1405,11 +1290,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 18),
             children: [
-              _buildCategoryChip('Play Store'),
-              _buildCategoryChip('Google Maps'),
-              _buildCategoryChip('YouTube'),
-              _buildCategoryChip('Instagram'),
-              _buildCategoryChip('Mobile Apps'),
+              ..._serviceCatalog.map((s) => s['category'] as String).toSet().map(_buildCategoryChip),
             ],
           ),
         ),
@@ -1419,9 +1300,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18),
           child: Column(
-            children: filteredServices.map((service) {
-              return _build3DServiceCard(context, service);
-            }).toList(),
+            children: [
+              if (filteredServices.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No services are available right now.', style: TextStyle(color: Colors.white70)),
+                ),
+              ...filteredServices.map((service) => _build3DServiceCard(context, service)),
+            ],
           ),
         ),
       ],

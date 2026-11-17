@@ -128,15 +128,7 @@ export class WorkerNotificationController {
     @ApiOperation({ summary: 'Update worker device FCM token' })
     async updateDeviceToken(@CurrentUser() user: User, @Body() body: { deviceToken: string }) {
         if (body?.deviceToken) {
-            const currentMetadata = user.metadata || {};
-            await this.userRepo.update(user.id, {
-                metadata: {
-                    ...currentMetadata,
-                    deviceToken: body.deviceToken,
-                    fcmToken: body.deviceToken,
-                    tokenUpdatedAt: new Date().toISOString(),
-                },
-            });
+            await this.userRepo.claimWorkerDeviceToken(user.id, body.deviceToken);
         }
         return {
             success: true,

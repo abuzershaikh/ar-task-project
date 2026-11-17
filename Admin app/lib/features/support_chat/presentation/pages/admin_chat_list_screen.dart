@@ -32,6 +32,7 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _hasMore = false;
+  String? _loadError;
   int _totalUnread = 0;
   int _totalChatsInDb = 0;
   ChatFilter _selectedFilter = ChatFilter.all;
@@ -353,6 +354,13 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
     );
 
     if (mounted) {
+      if (res['success'] != true) {
+        setState(() {
+          _isLoading = false;
+          _loadError = 'Could not load support chats. Check connection and retry.';
+        });
+        return;
+      }
       final convs = (res['conversations'] as List<SupportConversationModel>?) ?? [];
       final totalCount = (res['totalCount'] as int?) ?? convs.length;
       setState(() {
@@ -361,6 +369,7 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
         _totalChatsInDb = totalCount;
         _hasMore = convs.length < totalCount;
         _isLoading = false;
+        _loadError = null;
       });
     }
   }
@@ -376,6 +385,13 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
     );
 
     if (mounted) {
+      if (res['success'] != true) {
+        setState(() {
+          _isLoadingMore = false;
+          _loadError = 'Could not load more chats. Pull to retry.';
+        });
+        return;
+      }
       final newConvs = (res['conversations'] as List<SupportConversationModel>?) ?? [];
       final totalCount = (res['totalCount'] as int?) ?? _totalChatsInDb;
       setState(() {
@@ -389,6 +405,7 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
         _totalChatsInDb = totalCount;
         _hasMore = _conversations.length < totalCount && newConvs.isNotEmpty;
         _isLoadingMore = false;
+        _loadError = null;
       });
     }
   }
@@ -421,6 +438,8 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
       appBar: _isSelectionMode ? _buildSelectionAppBar() : _buildNormalAppBar(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
+          : _conversations.isEmpty && _loadError != null
+              ? _buildLoadErrorState()
           : _conversations.isEmpty
               ? _buildEmptyState()
               : displayList.isEmpty
@@ -473,6 +492,32 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
                 }
               },
             ),
+    );
+  }
+
+  Widget _buildLoadErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_rounded, size: 52, color: Color(0xFF64748B)),
+            const SizedBox(height: 14),
+            Text(
+              _loadError ?? 'Could not load support chats.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF475569)),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () => _loadConversations(),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -65,14 +65,18 @@ class _BuyerChatPageState extends State<BuyerChatPage> {
 
   String get _buyerName {
     final authUser = FirebaseAuth.instance.currentUser;
-    if (authUser?.displayName != null && authUser!.displayName!.isNotEmpty) return authUser.displayName!;
+    if (authUser?.displayName != null && authUser!.displayName!.isNotEmpty) {
+      return authUser.displayName!;
+    }
     final biz = getIt<LocalStorageService>().getBusinessName();
     if (biz != null && biz.isNotEmpty) return biz;
     return authUser?.email?.split('@')[0] ?? 'Buyer';
   }
 
-  String get _buyerEmail => FirebaseAuth.instance.currentUser?.email ?? getIt<LocalStorageService>().getUserEmail() ?? '';
-  String? get _buyerAvatar => FirebaseAuth.instance.currentUser?.photoURL ?? getIt<LocalStorageService>().getUserPhoto();
+  String get _buyerEmail =>
+      FirebaseAuth.instance.currentUser?.email ?? getIt<LocalStorageService>().getUserEmail() ?? '';
+  String? get _buyerAvatar =>
+      FirebaseAuth.instance.currentUser?.photoURL ?? getIt<LocalStorageService>().getUserPhoto();
 
   @override
   void initState() {
@@ -110,7 +114,9 @@ class _BuyerChatPageState extends State<BuyerChatPage> {
         }
         if (msg.isImage && msg.mediaUrl != null) {
           _mediaCache.getOrDownloadMedia(msg.mediaUrl!).then((f) {
-            if (f != null && mounted) setState(() => _cachedImageFiles[msg.mediaUrl!] = f);
+            if (f != null && mounted) {
+              setState(() => _cachedImageFiles[msg.mediaUrl!] = f);
+            }
           });
         }
       }
@@ -372,8 +378,7 @@ class _BuyerChatPageState extends State<BuyerChatPage> {
       body: Column(
         children: [
           // Inline YouTube Video Player
-          if (_activeInlineYoutubeId != null && _ytPlayerController != null)
-            _buildInlineYoutubePlayer(),
+          if (_activeInlineYoutubeId != null && _ytPlayerController != null) _buildInlineYoutubePlayer(),
 
           // Messages List
           Expanded(
@@ -605,9 +610,7 @@ class _BuyerChatPageState extends State<BuyerChatPage> {
                     bottomLeft: Radius.circular(isBuyer ? 16 : 4),
                     bottomRight: Radius.circular(isBuyer ? 4 : 16),
                   ),
-                  border: isBuyer
-                      ? null
-                      : Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.25)),
+                  border: isBuyer ? null : Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.25)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.2),
@@ -653,6 +656,8 @@ class _BuyerChatPageState extends State<BuyerChatPage> {
                       _buildAudioCard(msg)
                     else if (msg.isImage)
                       _buildImageCard(msg)
+                    else if (msg.hasWebLink)
+                      _buildWebLinkCard(msg)
                     else
                       SelectableText(
                         msg.content,
@@ -664,31 +669,31 @@ class _BuyerChatPageState extends State<BuyerChatPage> {
                       ),
 
                     const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        msg.formattedTime,
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          color: isBuyer ? const Color(0xFFC7D2FE) : const Color(0xFF94A3B8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          msg.formattedTime,
+                          style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            color: isBuyer ? const Color(0xFFC7D2FE) : const Color(0xFF94A3B8),
+                          ),
                         ),
-                      ),
-                      if (isBuyer) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          msg.isRead ? Icons.done_all_rounded : Icons.done_rounded,
-                          size: 14,
-                          color: msg.isRead ? const Color(0xFF38BDF8) : const Color(0xFFC7D2FE),
-                        ),
+                        if (isBuyer) ...[
+                          const SizedBox(width: 4),
+                          Icon(
+                            msg.isRead ? Icons.done_all_rounded : Icons.done_rounded,
+                            size: 14,
+                            color: msg.isRead ? const Color(0xFF38BDF8) : const Color(0xFFC7D2FE),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
         ],
       ),
     );
@@ -830,7 +835,9 @@ class _BuyerChatPageState extends State<BuyerChatPage> {
         InkWell(
           onTap: () async {
             final uri = Uri.parse(url);
-            if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
           },
           child: Text(
             url,
@@ -846,6 +853,75 @@ class _BuyerChatPageState extends State<BuyerChatPage> {
   }
 
   // ── Local Disk Cached Image Card ───────────────────────────────────────────
+  Widget _buildWebLinkCard(BuyerChatMessage msg) {
+    final linkUrl = msg.effectiveWebUrl ?? '';
+    final headerText = msg.textWithoutLink;
+    final uri = Uri.tryParse(linkUrl);
+    final host = uri?.host.replaceFirst(RegExp(r'^www\.', caseSensitive: false), '') ?? '';
+    final isBuyer = msg.isBuyer;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (headerText.isNotEmpty) ...[
+          SelectableText(
+            headerText,
+            style: GoogleFonts.outfit(fontSize: 14, color: Colors.white, height: 1.35),
+          ),
+          const SizedBox(height: 8),
+        ],
+        InkWell(
+          onTap: () async {
+            if (uri != null && await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: isBuyer ? 0.13 : 0.22),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.link_rounded, color: Color(0xFF67E8F9), size: 22),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (host.isNotEmpty)
+                        Text(
+                          host,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF67E8F9),
+                          ),
+                        ),
+                      Text(
+                        linkUrl,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(fontSize: 11, color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.arrow_outward_rounded, color: Color(0xFF67E8F9), size: 17),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildImageCard(BuyerChatMessage msg) {
     final mediaUrl = msg.mediaUrl;
     if (mediaUrl == null || mediaUrl.isEmpty) return const SizedBox.shrink();

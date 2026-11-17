@@ -47,7 +47,8 @@ class SupportConversationModel {
         resolvedName = rawPhone;
       } else {
         final wId = json['worker_id']?.toString() ?? '';
-        resolvedName = wId.length > 6 ? 'Worker #${wId.substring(0, 6)}' : 'Worker';
+        resolvedName =
+            wId.length > 6 ? 'Worker #${wId.substring(0, 6)}' : 'Worker';
       }
     }
 
@@ -60,17 +61,23 @@ class SupportConversationModel {
       workerEmail: rawEmail,
       lastMessageText: json['last_message_text']?.toString() ?? '',
       lastMessageType: json['last_message_type']?.toString() ?? 'TEXT',
-      lastMessageAt: json['last_message_at'] != null 
-          ? DateTime.tryParse(json['last_message_at'].toString()) ?? DateTime.now() 
+      lastMessageAt: json['last_message_at'] != null
+          ? DateTime.tryParse(json['last_message_at'].toString()) ??
+              DateTime.now()
           : DateTime.now(),
-      unreadAdminCount: int.tryParse(json['unread_admin_count']?.toString() ?? '0') ?? 0,
-      unreadWorkerCount: int.tryParse(json['unread_worker_count']?.toString() ?? '0') ?? 0,
-      lastActiveAt: json['last_active_at'] != null 
-          ? DateTime.tryParse(json['last_active_at'].toString()) 
+      unreadAdminCount:
+          int.tryParse(json['unread_admin_count']?.toString() ?? '0') ?? 0,
+      unreadWorkerCount:
+          int.tryParse(json['unread_worker_count']?.toString() ?? '0') ?? 0,
+      lastActiveAt: json['last_active_at'] != null
+          ? DateTime.tryParse(json['last_active_at'].toString())
           : null,
-      totalTasksCompleted: int.tryParse(json['total_tasks_completed']?.toString() ?? '0') ?? 0,
+      totalTasksCompleted:
+          int.tryParse(json['total_tasks_completed']?.toString() ?? '0') ?? 0,
       workerStatus: json['worker_status']?.toString(),
-      workerAvatarUrl: json['worker_avatar_url']?.toString() ?? json['avatar_url']?.toString() ?? json['avatarUrl']?.toString(),
+      workerAvatarUrl: json['worker_avatar_url']?.toString() ??
+          json['avatar_url']?.toString() ??
+          json['avatarUrl']?.toString(),
     );
   }
 
